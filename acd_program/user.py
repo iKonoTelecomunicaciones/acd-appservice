@@ -103,7 +103,6 @@ class User(DBUser, BaseUser):
             return user
 
         if create:
-            cls.log.debug(f"###### {mxid}")
             user = cls(mxid)
             await user.insert()
             user._add_to_cache()

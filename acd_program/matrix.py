@@ -24,10 +24,21 @@ class MatrixHandler(BaseMatrixHandler):
         super().__init__(bridge=bridge)
         self.message_handler = MessageHandler(config=self.config)
 
+    async def send_welcome_message(self, room_id: RoomID, inviter: User) -> None:
+        await super().send_welcome_message(room_id, inviter)
+        if not inviter.notice_room:
+            inviter.notice_room = room_id
+            await inviter.update()
+            await self.az.intent.send_notice(
+                room_id, "This room has been marked as your Instagram bridge notice room."
+            )
+
     async def handle_message(
         self, room_id: RoomID, user_id: UserID, message: MessageEventContent, event_id: EventID
     ) -> None:
-        self.log.debug("###################")
+        self.log.debug(f"### {message}")
+        is_command, text = self.is_command(message)
+        self.log.debug(f"### {is_command} ---- {text}")
         if user_id == self.config["bridge.bot_user_id"]:
             if message.msgtype == MessageType.NOTICE:
                 self.log.info(f"Notice message received [{room_id}] - {message.body}")

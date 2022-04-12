@@ -1,4 +1,4 @@
-from mautrix.types import UserID
+from mautrix.types import RoomID, UserID
 
 from acd_program.acd import ACD
 from acd_program.config import Config

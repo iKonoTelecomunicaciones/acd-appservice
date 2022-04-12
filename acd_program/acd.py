@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import asyncio
 import sys
+from abc import ABC, abstractmethod
 from typing import Optional, Type
 
 from aiohttp import web
@@ -11,11 +14,15 @@ from mautrix.bridge.state_store.asyncpg import PgBridgeStateStore
 from mautrix.client.state_store.asyncpg import \
     PgStateStore as PgClientStateStore
 from mautrix.errors import MExclusive, MUnknownToken
+from mautrix.types import RoomID, UserID
 from mautrix.util.async_db import Database, UpgradeTable
 from mautrix.util.program import Program
 
+from acd_program.puppet import Puppet
+from acd_program.user import User
 
-class ACD(Program):
+
+class ACD(Program, ABC):
     """Este es el programa principal, de aquí sale la instancia completa para usar este módulo
     como un appservice del Synapse, tenemos la inicialización del appservice y la conexión con matrix
     """
@@ -185,3 +192,15 @@ class ACD(Program):
         await self.az.stop()
         await super().stop()
         await self.stop_db()
+
+    @abstractmethod
+    async def get_user(self, user_id: UserID, create: bool = True) -> User | None:
+        pass
+
+    @abstractmethod
+    async def get_puppet(self, user_id: UserID, create: bool = False) -> Puppet | None:
+        pass
+
+    @abstractmethod
+    def is_bridge_ghost(self, user_id: UserID) -> bool:
+        pass
