@@ -1,0 +1,13 @@
+id: acd_az
+as_token: ve_UIUkAcCSzZEL0PGlxYKfvtXaGHxu-KVegflmwe5MkAbE94GnpDibHulRAY6cp
+hs_token: a2MMjHBzutIF5u5ECZuREbaEG-zusWkYJ_QLhgdsctcYENehpHIvznnW-qXmlBRW
+namespaces:
+    users:
+    - exclusive: true
+      regex: '@acd_.*:darknet'
+    - exclusive: true
+      regex: '@acd:darknet'
+    aliases: []
+url: http://acd-az:26666
+sender_localpart: oEs29g4vIcSTMBdYbxOZFDapyailDK6kr6SD6FEWzIaj5QMhifJ-2Cfw7jOYAcVw
+rate_limited: false
