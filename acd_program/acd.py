@@ -18,6 +18,7 @@ from mautrix.types import RoomID, UserID
 from mautrix.util.async_db import Database, UpgradeTable
 from mautrix.util.program import Program
 
+from acd_program.portal import Portal
 from acd_program.puppet import Puppet
 from acd_program.user import User
 
@@ -199,6 +200,10 @@ class ACD(Program, ABC):
 
     @abstractmethod
     async def get_puppet(self, user_id: UserID, create: bool = False) -> Puppet | None:
+        pass
+
+    @abstractmethod
+    async def get_portal(self, room_id: RoomID) -> Portal | None:
         pass
 
     @abstractmethod

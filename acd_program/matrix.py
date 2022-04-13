@@ -26,29 +26,26 @@ class MatrixHandler(BaseMatrixHandler):
 
     async def send_welcome_message(self, room_id: RoomID, inviter: User) -> None:
         await super().send_welcome_message(room_id, inviter)
-        if not inviter.notice_room:
-            inviter.notice_room = room_id
+        if not inviter.management_room:
+            inviter.management_room = room_id
             await inviter.update()
             await self.az.intent.send_notice(
-                room_id, "This room has been marked as your Instagram bridge notice room."
+                room_id, "This room has been marked as your ACD_AZ management room."
             )
 
-    async def handle_message(
-        self, room_id: RoomID, user_id: UserID, message: MessageEventContent, event_id: EventID
-    ) -> None:
-        self.log.debug(f"### {message}")
-        is_command, text = self.is_command(message)
-        self.log.debug(f"### {is_command} ---- {text}")
-        if user_id == self.config["bridge.bot_user_id"]:
-            if message.msgtype == MessageType.NOTICE:
-                self.log.info(f"Notice message received [{room_id}] - {message.body}")
-                await self.message_handler.handle_notice_message(message=message, room_id=room_id)
-            elif message.msgtype == MessageType.IMAGE:
-                self.log.info(f"Image message received [{room_id}] - {message.body}")
-                await self.message_handler.handle_image_message(message=message, room_id=room_id)
-            elif message.msgtype == MessageType.TEXT:
-                self.log.info(f"Text message received [{room_id}] - {message.body}")
-                await self.message_handler.handle_text_message(message=message, room_id=room_id)
+    # async def handle_message( #TODO SI USA ESTE AHNDLE SE ANULARA EL QUE TIENE LA CLASE PADRE Y NO FUNCIONARA COMO ESPERAMOS EL CODIGO :/
+    #     self, room_id: RoomID, user_id: UserID, message: MessageEventContent, event_id: EventID
+    # ) -> None:
+    #     if user_id == self.config["bridge.bot_user_id"]:
+    #         if message.msgtype == MessageType.NOTICE:
+    #             self.log.info(f"Notice message received [{room_id}] - {message.body}")
+    #             await self.message_handler.handle_notice_message(message=message, room_id=room_id)
+    #         elif message.msgtype == MessageType.IMAGE:
+    #             self.log.info(f"Image message received [{room_id}] - {message.body}")
+    #             await self.message_handler.handle_image_message(message=message, room_id=room_id)
+    #         elif message.msgtype == MessageType.TEXT:
+    #             self.log.info(f"Text message received [{room_id}] - {message.body}")
+    #             await self.message_handler.handle_text_message(message=message, room_id=room_id)
 
     async def handle_puppet_invite(
         self, room_id: RoomID, puppet: Puppet, invited_by: User, event_id: EventID

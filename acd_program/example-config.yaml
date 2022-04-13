@@ -50,6 +50,7 @@ appservice:
 bridge:
     # Localpart template of MXIDs for AppService users.
     # {userid} is replaced with the user ID of the AppService user.
+    command_prefix: "!acd"
     username_template: "ik_{userid}"
     periodic_reconnect:
         # Interval in seconds in which to automatically reconnect all users.

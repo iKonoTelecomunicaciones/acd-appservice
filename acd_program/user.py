@@ -32,10 +32,13 @@ class User(DBUser, BaseUser):
         mxid: UserID,
         email: str | None = None,
         room_id: RoomID | None = None,
+        management_room: RoomID | None = None,
     ) -> None:
-        super().__init__(mxid=mxid, email=email, room_id=room_id)
+        super().__init__(mxid=mxid, email=email, room_id=room_id, management_room=management_room)
         BaseUser.__init__(self)
         self.is_whitelisted = "admin"
+        self._is_logged_in = False
+        self.is_admin = False
 
     @classmethod
     def init_cls(cls, acd: "ACDAppService") -> AsyncIterable[Awaitable[None]]:
@@ -276,3 +279,7 @@ class User(DBUser, BaseUser):
             return False
 
         return True
+
+
+    async def get_portal_with(self):
+        pass

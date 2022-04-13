@@ -15,3 +15,4 @@ class Config(BaseBridgeConfig):
         copy("bridge.invitees_to_rooms")
         copy("bridge.username_template")
         copy("utils.wait_promise_time")
+        copy("bridge.command_prefix")

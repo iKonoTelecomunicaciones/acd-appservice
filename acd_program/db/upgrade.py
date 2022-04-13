@@ -9,11 +9,22 @@ upgrade_table = UpgradeTable()
 @upgrade_table.register(description="Initial revision")
 async def upgrade_v1(conn: Connection) -> None:
     await conn.execute(
+        """CREATE TABLE portal (
+        receiver      BIGINT PRIMARY KEY,
+        mxid          TEXT,
+        name          TEXT,
+        avatar_url TEXT,
+        name_set BOOLEAN NOT NULL DEFAULT false,
+        avatar_set BOOLEAN NOT NULL DEFAULT false
+        )"""
+    )
+    await conn.execute("UPDATE portal SET name_set=true WHERE name<>''")
+    await conn.execute(
         """CREATE TABLE "user" (
         mxid        TEXT PRIMARY KEY,
         email       TEXT,
         room_id     TEXT,
-        notice_room TEXT
+        management_room TEXT
         )"""
     )
     await conn.execute(
