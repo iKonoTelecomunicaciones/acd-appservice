@@ -33,7 +33,7 @@ class MatrixHandler(BaseMatrixHandler):
                 room_id, "This room has been marked as your ACD_AZ management room."
             )
 
-    # async def handle_message( #TODO SI USA ESTE AHNDLE SE ANULARA EL QUE TIENE LA CLASE PADRE Y NO FUNCIONARA COMO ESPERAMOS EL CODIGO :/
+    # async def handle_message( #TODO SI USA ESTE HANDLE SE ANULARA EL QUE TIENE LA CLASE PADRE Y NO FUNCIONARA COMO ESPERAMOS EL CODIGO :/
     #     self, room_id: RoomID, user_id: UserID, message: MessageEventContent, event_id: EventID
     # ) -> None:
     #     if user_id == self.config["bridge.bot_user_id"]:
