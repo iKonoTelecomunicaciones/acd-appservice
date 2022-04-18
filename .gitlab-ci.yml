@@ -15,5 +15,5 @@ lint:
       - echo "** Ejecutando Isort **"
       - isort --check --diff acd_program/
 
-      - echo "** Ejecutando los test de la API **"
-      - pytest --cache-clear
+      # - echo "** Ejecutando los test de la API **"
+      # - pytest --cache-clear
