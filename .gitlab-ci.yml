@@ -1,0 +1,19 @@
+stages:
+  - test
+
+lint:
+  image: alpine:3.15
+  stage: test
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - python3 -m pip install -r requirements-dev.txt
+  script:
+      - echo "** Ejecutando Black **"
+      - black --check --diff app/
+
+      - echo "** Ejecutando Isort **"
+      - isort --check --diff app/
+
+      - echo "** Ejecutando los test de la API **"
+      - pytest --cache-clear
