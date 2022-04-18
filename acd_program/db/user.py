@@ -23,12 +23,7 @@ class User:
 
     @property
     def _values(self):
-        return (
-            self.mxid,
-            self.management_room,
-            self.email,
-            self.room_id
-        )
+        return (self.mxid, self.management_room, self.email, self.room_id)
 
     async def insert(self) -> None:
         q = 'INSERT INTO "user" (mxid, email, room_id, management_room) VALUES ($1, $2, $3, $4)'

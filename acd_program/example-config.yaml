@@ -15,14 +15,14 @@ homeserver:
 # Changing these values requires regeneration of the registration.
 appservice:
     # The address that the homeserver can use to connect to this appservice.
-    address: http://nombrecliente-mapi:29666
+    address: http://nombrecliente-mapi:29000
     # When using https:// the TLS certificate and key files for the address.
     tls_cert: false
     tls_key: false
 
     # The hostname and port where this appservice should listen.
     hostname: 0.0.0.0
-    port: 29666
+    port: 29000
     # The maximum body size of appservice API requests (from the homeserver) in mebibytes
     # Usually 1 is enough, but on high-traffic bridges you might need to increase this to avoid 413s
     max_body_size: 1
@@ -36,7 +36,7 @@ appservice:
         max_size: 10
 
     # The unique ID of this appservice.
-    id: ik_mapi
+    id: acd_az
     # bot_displayname: AppService bridge bot
     # bot_avatar: mxc://maunium.net/JxjlbZUlCPULEeHZSwleUXQv
     community_id: false
@@ -44,14 +44,14 @@ appservice:
     as_token: "This value is generated when generating the registration"
     hs_token: "This value is generated when generating the registration"
     # Primary user of the appservice
-    bot_username: mapibot
+    bot_username: acd
 
 # Bridge config
 bridge:
     # Localpart template of MXIDs for AppService users.
     # {userid} is replaced with the user ID of the AppService user.
     command_prefix: "!acd"
-    username_template: "ik_{userid}"
+    username_template: "acd{userid}"
     periodic_reconnect:
         # Interval in seconds in which to automatically reconnect all users.
         # This can be used to automatically mitigate the bug where AppService stops sending messages.
@@ -115,21 +115,25 @@ logging:
     version: 1
     formatters:
         normal:
-            format: "[%(asctime)s] [%(levelname)s@%(name)s] %(message)s"
+            format: '[%(asctime)s] [%(levelname)s@%(name)s] %(message)s'
     handlers:
         file:
             class: logging.handlers.RotatingFileHandler
             formatter: normal
-            filename: ./mapi-appservice.log
+            filename: ./acd-az.log
             maxBytes: 10485760
             backupCount: 10
         console:
             class: logging.StreamHandler
-            formatter: normal
+            formatter:
     loggers:
         mau:
             level: DEBUG
+        mauigpapi:
+            level: DEBUG
         aiohttp:
+            level: INFO
+        paho.mqtt:
             level: INFO
     root:
         level: DEBUG

@@ -11,14 +11,19 @@ from mautrix.util.logging import TraceLogger
 from acd_program.config import Config
 from acd_program.user import User
 from acd_program.web import SUPPORTED_MESSAGE_TYPES
-from acd_program.web.error_responses import (INVALID_EMAIL, INVALID_PHONE,
-                                             MESSAGE_NOT_SENT,
-                                             MESSAGE_TYPE_NOT_SUPPORTED,
-                                             NOT_DATA, NOT_EMAIL,
-                                             REQUEST_ALREADY_EXISTS,
-                                             REQUIRED_VARIABLES, TIMEOUT_ERROR,
-                                             USER_ALREADY_EXISTS,
-                                             USER_DOESNOT_EXIST)
+from acd_program.web.error_responses import (
+    INVALID_EMAIL,
+    INVALID_PHONE,
+    MESSAGE_NOT_SENT,
+    MESSAGE_TYPE_NOT_SUPPORTED,
+    NOT_DATA,
+    NOT_EMAIL,
+    REQUEST_ALREADY_EXISTS,
+    REQUIRED_VARIABLES,
+    TIMEOUT_ERROR,
+    USER_ALREADY_EXISTS,
+    USER_DOESNOT_EXIST,
+)
 from acd_program.web.utils import Utils
 
 from .. import VERSION

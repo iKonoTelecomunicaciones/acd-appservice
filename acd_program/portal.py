@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING, AsyncGenerator, cast
 
 from mautrix.appservice import AppService, IntentAPI
 from mautrix.bridge import BasePortal, async_getter_lock
-from mautrix.types import (ContentURI, EventID, EventType, MessageEventContent,
-                           RoomID)
+from mautrix.types import ContentURI, EventID, EventType, MessageEventContent, RoomID
 
 from . import matrix as m
 from . import puppet as p
@@ -88,13 +87,10 @@ class Portal(DBPortal, BasePortal):
                 confirmed=True,
             )
 
-
     async def _handle_matrix_message(
         self, orig_sender: u.User, message: MessageEventContent, event_id: EventID
     ) -> None:
         pass
-
-
 
     async def delete(self) -> None:
         # await DBMessage.delete_all(self.mxid)

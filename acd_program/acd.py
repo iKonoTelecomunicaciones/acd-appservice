@@ -11,8 +11,7 @@ from mautrix.appservice import AppService, ASStateStore
 from mautrix.bridge.config import BaseBridgeConfig
 from mautrix.bridge.matrix import BaseMatrixHandler
 from mautrix.bridge.state_store.asyncpg import PgBridgeStateStore
-from mautrix.client.state_store.asyncpg import \
-    PgStateStore as PgClientStateStore
+from mautrix.client.state_store.asyncpg import PgStateStore as PgClientStateStore
 from mautrix.errors import MExclusive, MUnknownToken
 from mautrix.types import RoomID, UserID
 from mautrix.util.async_db import Database, UpgradeTable
@@ -124,7 +123,7 @@ class ACD(Program, ABC):
     def prepare_appservice(self) -> None:
         # Se hacen los pasos necesarios para que el appservice funcione bien
         self.make_state_store()
-        mb = 1024 ** 2
+        mb = 1024**2
         if self.name not in HTTPAPI.default_ua:
             HTTPAPI.default_ua = f"{self.name}/{self.version} {HTTPAPI.default_ua}"
         self.az = AppService(

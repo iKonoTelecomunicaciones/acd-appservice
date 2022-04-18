@@ -6,9 +6,11 @@ from mautrix.util.logging import TraceLogger
 
 from acd_program.config import Config
 from acd_program.user import User
-from acd_program.web.provisioning_api import (LOGIN_PENDING_PROMISES,
-                                              LOGOUT_PENDING_PROMISES,
-                                              MESSAGE_PENDING_PROMISES)
+from acd_program.web.provisioning_api import (
+    LOGIN_PENDING_PROMISES,
+    LOGOUT_PENDING_PROMISES,
+    MESSAGE_PENDING_PROMISES,
+)
 
 
 class MessageHandler:

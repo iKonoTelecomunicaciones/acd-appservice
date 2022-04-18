@@ -4,8 +4,7 @@ from typing import TYPE_CHECKING
 
 from mautrix.bridge import BaseMatrixHandler
 from mautrix.errors import IntentError
-from mautrix.types import (EventID, MessageEventContent, MessageType, RoomID,
-                           UserID)
+from mautrix.types import EventID, MessageEventContent, MessageType, RoomID, UserID
 
 from acd_program.message_handler import MessageHandler
 from acd_program.puppet import Puppet
@@ -33,7 +32,7 @@ class MatrixHandler(BaseMatrixHandler):
                 room_id, "This room has been marked as your ACD_AZ management room."
             )
 
-    # async def handle_message( #TODO SI USA ESTE AHNDLE SE ANULARA EL QUE TIENE LA CLASE PADRE Y NO FUNCIONARA COMO ESPERAMOS EL CODIGO :/
+    # async def handle_message( #TODO SI USA ESTE HANDLE SE ANULARA EL QUE TIENE LA CLASE PADRE Y NO FUNCIONARA COMO ESPERAMOS EL CODIGO :/
     #     self, room_id: RoomID, user_id: UserID, message: MessageEventContent, event_id: EventID
     # ) -> None:
     #     if user_id == self.config["bridge.bot_user_id"]:

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import (TYPE_CHECKING, AsyncGenerator, AsyncIterable, Awaitable,
-                    cast)
+from typing import TYPE_CHECKING, AsyncGenerator, AsyncIterable, Awaitable, cast
 
 from mautrix.bridge import BaseUser, async_getter_lock
 from mautrix.types import RoomID, UserID
@@ -279,7 +278,6 @@ class User(DBUser, BaseUser):
             return False
 
         return True
-
 
     async def get_portal_with(self):
         pass
