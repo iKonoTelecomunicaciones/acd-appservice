@@ -1,5 +1,6 @@
 /.venv
 /env/
+/synapse/
 /config.yaml
 /registration.yaml
 __pycache__
