@@ -1,4 +1,3 @@
-
 from mautrix.bridge.commands import HelpSection, command_handler
 
 from .typehint import CommandEvent
@@ -17,6 +16,5 @@ async def pm(evt: CommandEvent) -> None:
     if len(evt.args) < 1:
         await evt.reply("**Usage:** `$cmdprefix+sp search <phone>`")
         return
-
 
     evt.log.debug(f"######### {evt.args}")

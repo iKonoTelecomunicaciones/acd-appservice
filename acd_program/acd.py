@@ -11,8 +11,7 @@ from mautrix.appservice import AppService, ASStateStore
 from mautrix.bridge.config import BaseBridgeConfig
 from mautrix.bridge.matrix import BaseMatrixHandler
 from mautrix.bridge.state_store.asyncpg import PgBridgeStateStore
-from mautrix.client.state_store.asyncpg import \
-    PgStateStore as PgClientStateStore
+from mautrix.client.state_store.asyncpg import PgStateStore as PgClientStateStore
 from mautrix.errors import MExclusive, MUnknownToken
 from mautrix.types import RoomID, UserID
 from mautrix.util.async_db import Database, UpgradeTable

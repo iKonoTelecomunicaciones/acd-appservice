@@ -4,8 +4,7 @@ from typing import TYPE_CHECKING
 
 from mautrix.bridge import BaseMatrixHandler
 from mautrix.errors import IntentError
-from mautrix.types import (EventID, MessageEventContent, MessageType, RoomID,
-                           UserID)
+from mautrix.types import EventID, MessageEventContent, MessageType, RoomID, UserID
 
 from acd_program.message_handler import MessageHandler
 from acd_program.puppet import Puppet

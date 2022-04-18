@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import (TYPE_CHECKING, AsyncGenerator, AsyncIterable, Awaitable,
-                    cast)
+from typing import TYPE_CHECKING, AsyncGenerator, AsyncIterable, Awaitable, cast
 
 from mautrix.appservice import IntentAPI
 from mautrix.bridge import BasePuppet, async_getter_lock
