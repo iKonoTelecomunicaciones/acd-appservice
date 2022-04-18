@@ -123,7 +123,7 @@ class ACD(Program, ABC):
     def prepare_appservice(self) -> None:
         # Se hacen los pasos necesarios para que el appservice funcione bien
         self.make_state_store()
-        mb = 1024 ** 2
+        mb = 1024**2
         if self.name not in HTTPAPI.default_ua:
             HTTPAPI.default_ua = f"{self.name}/{self.version} {HTTPAPI.default_ua}"
         self.az = AppService(
