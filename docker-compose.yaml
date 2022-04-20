@@ -28,7 +28,7 @@ services:
     depends_on:
       - acd-az-db
       - synapse
-    # entrypoint: watchmedo auto-restart --recursive --pattern="*.py;*.yaml" --directory="." /opt/acd-appservice/docker-run.sh
+    entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="." /opt/acd-appservice/docker-run.sh
     ports:
       - 26666:26666
 

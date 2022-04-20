@@ -32,26 +32,26 @@ class ProvisioningAPI:
     def __init__(self) -> None:
         self.app = web.Application()
 
-        swagger = SwaggerDocs(
-            self.app,
-            title="WAPI documentation",
-            version=VERSION,
-            components=f"acd_program/web/components.yaml",
-            swagger_ui_settings=SwaggerUiSettings(
-                path="/docs",
-                layout="BaseLayout",
-            ),
-        )
-        swagger.add_routes(
-            [
-                # Región de autenticación
-                web.post("/create_user", self.create_user),
-                web.post("/link_phone", self.link_phone),
-                web.post("/unlink_phone", self.unlink_phone),
-                # Región de mensajería
-                web.post("/send_message", self.send_message),
-            ]
-        )
+        # swagger = SwaggerDocs(
+        #     self.app,
+        #     title="WAPI documentation",
+        #     version=VERSION,
+        #     components=f"acd_appservice/web/components.yaml",
+        #     swagger_ui_settings=SwaggerUiSettings(
+        #         path="/docs",
+        #         layout="BaseLayout",
+        #     ),
+        # )
+        # swagger.add_routes(
+        #     [
+        #         # Región de autenticación
+        #         web.post("/create_user", self.create_user),
+        #         web.post("/link_phone", self.link_phone),
+        #         web.post("/unlink_phone", self.unlink_phone),
+        #         # Región de mensajería
+        #         web.post("/send_message", self.send_message),
+        #     ]
+        # )
         self.loop = asyncio.get_running_loop()
 
     # async def create_user(self, request: web.Request) -> web.Response:
