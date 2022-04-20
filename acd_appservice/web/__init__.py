@@ -1,0 +1,1 @@
+SUPPORTED_MESSAGE_TYPES = ["text"]

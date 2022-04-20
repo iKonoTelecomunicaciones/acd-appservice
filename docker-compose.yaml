@@ -14,32 +14,21 @@ services:
       - SYNAPSE_CONFIG_PATH=/data/homeserver.yaml
     volumes:
       - ./synapse:/data/
-    depends_on:
-      - synapse-db
+
     ports:
       - 8008:8008
 
-  synapse-db:
-    image: postgres:10-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ikono
-      POSTGRES_PASSWORD: secretfoo
-      POSTGRES_DB: synapse
-      POSTGRES_INITDB_ARGS: --encoding=UTF-8 --lc-collate=C --lc-ctype=C
-    volumes:
-      - ./schemas-synapse:/var/lib/postgresql/data
 
   acd-az:
     build: .
     restart: unless-stopped
     volumes:
-      - .:/opt/acd-program
-      - /home/alejo/Documentos/ikono/python/mautrix:/usr/lib/python3.9/site-packages/mautrix
+      - .:/opt/acd-appservice
+      # - /home/alejo/Documentos/ikono/python/mautrix:/usr/lib/python3.9/site-packages/mautrix
     depends_on:
       - acd-az-db
       - synapse
-    entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="." /opt/acd-program/docker-run.sh
+    entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="." /opt/acd-appservice/docker-run.sh
     ports:
       - 26666:26666
 

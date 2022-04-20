@@ -1,5 +1,5 @@
 #!/bin/sh
-cd /opt/acd-program
+cd /opt/acd-appservice
 
 
 if [ ! -f config.yaml ]; then
@@ -12,8 +12,8 @@ if [ ! -f config.yaml ]; then
 fi
 
 if [ ! -f registration.yaml ]; then
-	python3 -m acd_program -g -c config.yaml -r registration.yaml
+	python3 -m acd_appservice -g -c config.yaml -r registration.yaml
 	exit
 fi
 
-exec python3 -m acd_program -c config.yaml
+exec python3 -m acd_appservice -c config.yaml
