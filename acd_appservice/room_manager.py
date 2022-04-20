@@ -39,9 +39,7 @@ class RoomManager:
             )
             await self.send_cmd_set_relay(room_id=room_id, intent=intent, bridge=bridge)
 
-        await asyncio.create_task(
-            self.initial_room_setup(room_id=room_id, intent=intent)
-        )
+        await asyncio.create_task(self.initial_room_setup(room_id=room_id, intent=intent))
 
         self.log.info(f"Room {room_id} initialization is complete")
         return True
@@ -73,9 +71,7 @@ class RoomManager:
 
             await asyncio.sleep(1)
 
-    async def send_cmd_set_relay(
-        self, room_id: RoomID, intent: IntentAPI, bridge: str
-    ) -> bool:
+    async def send_cmd_set_relay(self, room_id: RoomID, intent: IntentAPI, bridge: str) -> bool:
         bridge = self.config[f"bridges.{bridge}"]
 
         cmd = f"{bridge['prefix']} {bridge['set_relay']}"

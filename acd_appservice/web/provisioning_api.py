@@ -11,11 +11,19 @@ from mautrix.util.logging import TraceLogger
 from .. import VERSION
 from ..config import Config
 from . import SUPPORTED_MESSAGE_TYPES
-from .error_responses import (INVALID_EMAIL, INVALID_PHONE, MESSAGE_NOT_SENT,
-                              MESSAGE_TYPE_NOT_SUPPORTED, NOT_DATA, NOT_EMAIL,
-                              REQUEST_ALREADY_EXISTS, REQUIRED_VARIABLES,
-                              TIMEOUT_ERROR, USER_ALREADY_EXISTS,
-                              USER_DOESNOT_EXIST)
+from .error_responses import (
+    INVALID_EMAIL,
+    INVALID_PHONE,
+    MESSAGE_NOT_SENT,
+    MESSAGE_TYPE_NOT_SUPPORTED,
+    NOT_DATA,
+    NOT_EMAIL,
+    REQUEST_ALREADY_EXISTS,
+    REQUIRED_VARIABLES,
+    TIMEOUT_ERROR,
+    USER_ALREADY_EXISTS,
+    USER_DOESNOT_EXIST,
+)
 
 LOGIN_PENDING_PROMISES = {}
 LOGOUT_PENDING_PROMISES = {}

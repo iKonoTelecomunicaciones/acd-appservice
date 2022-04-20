@@ -10,8 +10,7 @@ from mautrix.api import HTTPAPI
 from mautrix.appservice import AppService, ASStateStore
 from mautrix.bridge.config import BaseBridgeConfig
 from mautrix.bridge.state_store.asyncpg import PgBridgeStateStore
-from mautrix.client.state_store.asyncpg import \
-    PgStateStore as PgClientStateStore
+from mautrix.client.state_store.asyncpg import PgStateStore as PgClientStateStore
 from mautrix.errors import MExclusive, MUnknownToken
 from mautrix.types import UserID
 from mautrix.util.async_db import Database, UpgradeTable
@@ -132,9 +131,7 @@ class ACD(Program):
             default_ua=HTTPAPI.default_ua,
             log="acd.events",
             loop=self.loop,
-            aiohttp_params={
-                "client_max_size": self.config["appservice.max_body_size"] * mb
-            },
+            aiohttp_params={"client_max_size": self.config["appservice.max_body_size"] * mb},
         )
 
     def prepare_db(self) -> None:
@@ -163,9 +160,7 @@ class ACD(Program):
         await self.start_db()
         self.log.debug("Starting appservice...")
         # Definimos el host y puerto para nuestro appservice
-        await self.az.start(
-            self.config["appservice.hostname"], self.config["appservice.port"]
-        )
+        await self.az.start(self.config["appservice.hostname"], self.config["appservice.port"])
         try:
             # Esperamos que la conexión como appservice sé de correctamente
             await self.matrix.wait_for_connection()

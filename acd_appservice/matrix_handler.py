@@ -7,11 +7,23 @@ from mautrix.appservice import AppService, IntentAPI
 from mautrix.bridge import commands as cmd
 from mautrix.bridge import config
 from mautrix.errors import MExclusive, MForbidden, MUnknownToken
-from mautrix.types import (Event, EventID, EventType, Membership,
-                           MemberStateEventContent, MessageEvent,
-                           MessageEventContent, MessageType, PresenceEvent,
-                           ReceiptEvent, RoomID, StateEvent, StateUnsigned,
-                           TypingEvent, UserID)
+from mautrix.types import (
+    Event,
+    EventID,
+    EventType,
+    Membership,
+    MemberStateEventContent,
+    MessageEvent,
+    MessageEventContent,
+    MessageType,
+    PresenceEvent,
+    ReceiptEvent,
+    RoomID,
+    StateEvent,
+    StateUnsigned,
+    TypingEvent,
+    UserID,
+)
 from mautrix.util.logging import TraceLogger
 
 from acd_appservice import room_manager
@@ -65,9 +77,7 @@ class MatrixHandler:
             except Exception:
                 errors += 1
                 if errors <= 6:
-                    self.log.exception(
-                        "Connection to homeserver failed, retrying in 10 seconds"
-                    )
+                    self.log.exception("Connection to homeserver failed, retrying in 10 seconds")
                     await asyncio.sleep(10)
                 else:
                     raise
@@ -90,9 +100,7 @@ class MatrixHandler:
         avatar = self.config["appservice.bot_avatar"]
         if avatar:
             try:
-                await self.az.intent.set_avatar_url(
-                    avatar if avatar != "remove" else ""
-                )
+                await self.az.intent.set_avatar_url(avatar if avatar != "remove" else "")
             except Exception:
                 self.log.exception("Failed to set bot avatar")
 
@@ -110,17 +118,13 @@ class MatrixHandler:
     ) -> None:
         pass
 
-    async def handle_join(
-        self, room_id: RoomID, user_id: UserID, event_id: EventID
-    ) -> None:
+    async def handle_join(self, room_id: RoomID, user_id: UserID, event_id: EventID) -> None:
         self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
 
         intent = await self.process_puppet(user_id=user_id)
 
         if not intent:
-            self.log(
-                f"The user who has joined is neither a puppet nor the appservice_bot"
-            )
+            self.log(f"The user who has joined is neither a puppet nor the appservice_bot")
             return
 
         if not await self.room_manager.initialize_room(room_id=room_id, intent=intent):
@@ -128,17 +132,13 @@ class MatrixHandler:
 
     async def int_handle_event(self, evt: Event) -> None:
 
-        self.log.debug(
-            f"Received event: {evt.event_id} - {evt.type} in the room {evt.room_id}"
-        )
+        self.log.debug(f"Received event: {evt.event_id} - {evt.type} in the room {evt.room_id}")
 
         if evt.type == EventType.ROOM_MEMBER:
             evt: StateEvent
             unsigned = evt.unsigned or StateUnsigned()
             prev_content = unsigned.prev_content or MemberStateEventContent()
-            prev_membership = (
-                prev_content.membership if prev_content else Membership.JOIN
-            )
+            prev_membership = prev_content.membership if prev_content else Membership.JOIN
             if evt.content.membership == Membership.INVITE:
                 intent = await self.process_puppet(user_id=UserID(evt.state_key))
                 await self.handle_invide(evt, intent)
@@ -154,9 +154,7 @@ class MatrixHandler:
                 #         evt.event_id,
                 #     )
                 elif prev_membership == Membership.INVITE:
-                    puppet = await self.acd_appservice.get_puppet(
-                        user_id=UserID(evt.state_key)
-                    )
+                    puppet = await self.acd_appservice.get_puppet(user_id=UserID(evt.state_key))
                     # self.handle_disinvite(room_id=room)
                 #     if evt.sender == evt.state_key:
                 #         await self.handle_reject(
@@ -190,9 +188,7 @@ class MatrixHandler:
             #     )
             elif evt.content.membership == Membership.JOIN:
                 if prev_membership != Membership.JOIN:
-                    await self.handle_join(
-                        evt.room_id, UserID(evt.state_key), evt.event_id
-                    )
+                    await self.handle_join(evt.room_id, UserID(evt.state_key), evt.event_id)
                 # else:
                 #     await self.handle_member_info_change(
                 #         evt.room_id, UserID(evt.state_key), evt.content, prev_content, evt.event_id
@@ -201,9 +197,7 @@ class MatrixHandler:
             evt: MessageEvent
             if evt.type != EventType.ROOM_MESSAGE:
                 evt.content.msgtype = MessageType(str(evt.type))
-            await self.handle_message(
-                evt.room_id, evt.sender, evt.content, evt.event_id
-            )
+            await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
         # elif evt.type == EventType.ROOM_ENCRYPTED:
         #     await self.handle_encrypted(evt)
         # elif evt.type == EventType.ROOM_ENCRYPTION:
