@@ -10,10 +10,10 @@ lint:
     - python3 -m pip install -r requirements-dev.txt
   script:
       - echo "** Ejecutando Black **"
-      - black --check --diff acd_program/
+      - black --check --diff acd_appservice/
 
       - echo "** Ejecutando Isort **"
-      - isort --check --diff acd_program/
+      - isort --check --diff acd_appservice/
 
       # - echo "** Ejecutando los test de la API **"
       # - pytest --cache-clear
