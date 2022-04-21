@@ -18,3 +18,4 @@ class Config(BaseBridgeConfig):
         copy("bridge.command_prefix")
         copy_dict("bridges")
         copy_dict("bridge.management_room_text")
+        copy_dict("acd")

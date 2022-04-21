@@ -48,17 +48,6 @@ appservice:
 
 # Bridge config
 bridge:
-    # Messages sent upon joining a management room.
-    # Markdown is supported. The defaults are listed below.
-    management_room_text:
-        # Sent when joining a room.
-        welcome: "Hello, I'm a WhatsApp bridge bat."
-        # Sent when joining a management room and the user is already logged in.
-        welcome_connected: "Use `help` for help."
-        # Sent when joining a management room and the user is not logged in.
-        welcome_unconnected: "Use `help` for help or `login` to log in."
-        # Optional extra text sent when joining a management room.
-        additional_help: ""
 
     # Localpart template of MXIDs for AppService users.
     # {userid} is replaced with the user ID of the AppService user.
@@ -82,6 +71,12 @@ bridge:
         # The shared secret to authorize users of the API.
         # Set to "generate" to generate and save a new token.
         shared_secret: generate
+
+
+acd:
+    # Feature for naming customer rooms
+    force_name_change: false
+
 
 # ACD will send below commands to interact with any WA bridge
 bridges:

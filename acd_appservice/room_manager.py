@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 
+from mautrix.api import Method
 from mautrix.appservice import IntentAPI
-from mautrix.types import EventType, JoinRule, RoomDirectoryVisibility, RoomID
+from mautrix.types import EventType, JoinRule, RoomDirectoryVisibility, RoomID, StateEvent, UserID
 from mautrix.util.logging import TraceLogger
 
 from .config import Config
@@ -71,6 +73,56 @@ class RoomManager:
 
             await asyncio.sleep(1)
 
+        await self.put_name_customer_room(room_id=room_id, intent=intent)
+
+    async def put_name_customer_room(self, room_id: RoomID, intent: IntentAPI) -> bool:
+        if (
+            not await self.is_customer_room(room_id=room_id, intent=intent)
+            and not self.config["acd.force_name_change"]
+        ):
+            return False
+
+        creator = await self.get_room_creator(room_id=room_id, intent=intent)
+
+        new_room_name = await self.get_update_name(creator=creator, intent=intent)
+        if not new_room_name:
+            return False
+
+        await intent.set_room_name(room_id, new_room_name)
+        return True
+
+    async def get_update_name(self, creator: UserID, intent: IntentAPI) -> str:
+
+        new_room_name = None
+        bridges = self.config["bridges"]
+        for bridge in bridges:
+            user_prefix = self.config[f"bridges.{bridge}.user_prefix"]
+            if creator.startswith(f"@{user_prefix}"):
+                new_room_name = await self.create_room_name(sender=creator, intent=intent)
+                if new_room_name:
+                    postfix_template = self.config[f"bridges.{bridge}.postfix_template"]
+                    new_room_name = new_room_name.replace(postfix_template, "")
+                break
+
+        return new_room_name
+
+    async def create_room_name(self, sender: UserID, intent: IntentAPI):
+
+        # Get username
+        phone_match = re.findall(r"\d+", sender)
+        if phone_match:
+            self.log.debug(f"Formatting phone number {phone_match[0]}")
+
+            customer_displayname = await intent.get_displayname(sender)
+            if customer_displayname:
+                room_name = f"{customer_displayname} ({phone_match[0]})"
+            else:
+                room_name = f"({phone_match[0]})"
+
+            return room_name
+
+        return None
+
     async def send_cmd_set_relay(self, room_id: RoomID, intent: IntentAPI, bridge: str) -> bool:
         bridge = self.config[f"bridges.{bridge}"]
 
@@ -118,21 +170,16 @@ class RoomManager:
                     return True
         return False
 
-    @classmethod
-    async def get_room_creator(cls, room_id: RoomID, intent: IntentAPI) -> str:
+    async def is_mx_whatsapp_status_broadcast(self, room_id: RoomID, intent: IntentAPI) -> bool:
         try:
-            events = await intent.get_state(room_id=room_id)
+            room_name = await RoomManager.get_room_name(room_id=room_id, intent=intent)
         except Exception as e:
-            cls.log.error(e)
+            self.log.error(e)
 
-        creator = None
-        for event in events:
-            if event.type.ROOM_CREATE:
-                creator = event.sender
-                cls.log.debug(f"The creator of the room {room_id} is {creator} ")
-                break
+        if room_name == "WhatsApp Status Broadcast":
+            return True
 
-        return creator
+        return False
 
     async def get_room_bridge(self, room_id: RoomID, intent: IntentAPI) -> str:
         creator = await RoomManager.get_room_creator(room_id=room_id, intent=intent)
@@ -144,3 +191,27 @@ class RoomManager:
                     self.log.debug(f"The bridge obtained is {bridge}")
                     return bridge
         return None
+
+    @classmethod
+    async def get_room_creator(cls, room_id: RoomID, intent: IntentAPI) -> str:
+        try:
+            room_info = await intent.api.request(
+                method=Method.GET, path=f"/_synapse/admin/v1/rooms/{room_id}"
+            )
+            creator = room_info.get("creator")
+        except Exception as e:
+            cls.log.error(e)
+
+        return creator
+
+    @classmethod
+    async def get_room_name(cls, room_id: RoomID, intent: IntentAPI) -> str:
+        try:
+            room_info = await intent.api.request(
+                method=Method.GET, path=f"/_synapse/admin/v1/rooms/{room_id}"
+            )
+            room_name = room_info.get("name")
+        except Exception as e:
+            cls.log.error(e)
+
+        return room_name
