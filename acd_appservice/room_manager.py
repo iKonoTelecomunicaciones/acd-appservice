@@ -143,8 +143,7 @@ class RoomManager:
         await intent.set_room_name(room_id, new_room_name)
         return True
 
-
-    async def create_room_name(self, user_id: UserID, intent: IntentAPI)-> str:
+    async def create_room_name(self, user_id: UserID, intent: IntentAPI) -> str:
         """Given a customer's mxid, pull the phone number and concatenate it to the name.
 
         Parameters
@@ -268,7 +267,6 @@ class RoomManager:
                     self.ROOMS[room_id]["is_customer_room"] = True
                     return True
         return False
-
 
     async def is_mx_whatsapp_status_broadcast(self, room_id: RoomID, intent: IntentAPI) -> bool:
         """Check if a room is whatsapp_status_broadcast.
