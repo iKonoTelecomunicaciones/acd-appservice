@@ -219,15 +219,25 @@ class MatrixHandler:
         message: MessageEventContent,
         event_id: EventID,
     ) -> None:
-        pass
+
+        intent = await self.process_puppet(user_id=user_id)
+
+        if not intent:
+            return
+
+        # Ignorar la sala de status broadcast
+        if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):
+            self.log.debug(f"Ignoring the room {room_id} because it is whatsapp_status_broadcast")
+            return
+
+        # Intentamos cambiarle el nombre a la sala
+        if not await self.room_manager.put_name_customer_room(room_id=room_id, intent=intent):
+            self.log.debug(f"Room {room_id} name has not been changed")
 
     async def process_puppet(self, user_id: UserID) -> IntentAPI:
 
-        if not user_id == self.az.bot_mxid:
+        if not (user_id == self.az.bot_mxid) and Puppet.get_id_from_mxid(user_id):
             puppet = await Puppet.get_by_custom_mxid(user_id)
             return puppet.intent
-
-        elif user_id == self.az.bot_mxid:
+        else:
             return self.az.intent
-
-        return None

@@ -7,6 +7,7 @@ lint:
   before_script:
     - python --version
     - pip install --upgrade pip
+    - python3 -m pip install -r requirements.txt
     - python3 -m pip install -r requirements-dev.txt
   script:
       - echo "** Ejecutando Black **"
@@ -15,5 +16,5 @@ lint:
       - echo "** Ejecutando Isort **"
       - isort --check --diff acd_appservice/
 
-      # - echo "** Ejecutando los test de la API **"
-      # - pytest --cache-clear
+      - echo "** Ejecutando los test de la API **"
+      - pytest acd_appservice -vv
