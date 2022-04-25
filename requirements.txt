@@ -5,5 +5,3 @@ shortuuid==1.0.8
 asyncpg==0.23.0
 commonmark==0.9.1
 aiohttp-swagger3==0.7.1
-watchdog==2.1.6
-nest-asyncio==1.4.1
