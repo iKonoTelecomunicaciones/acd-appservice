@@ -7,7 +7,7 @@ from typing import Dict
 
 from mautrix.api import Method
 from mautrix.appservice import IntentAPI
-from mautrix.types import EventType, JoinRule, RoomDirectoryVisibility, RoomID, StateEvent, UserID
+from mautrix.types import EventType, JoinRule, RoomDirectoryVisibility, RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
 from .config import Config
@@ -22,6 +22,25 @@ class RoomManager:
         self.config = config
 
     async def initialize_room(self, room_id: RoomID, intent: IntentAPI) -> bool:
+        """Initializing a room.
+
+        Given a room and an IntentAPI, a room is configured, the room must be a room of a client.
+        The acd is given permissions of 100, and a task is run that runs 10 times,
+        it tries to add the room to the directory, that the room has a public join,
+        and the history of the room is made public.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to initialize.
+        intent: IntentAPI
+            Matrix client.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
 
         if not await self.is_customer_room(room_id=room_id, intent=intent):
             return False
@@ -43,10 +62,28 @@ class RoomManager:
 
         await asyncio.create_task(self.initial_room_setup(room_id=room_id, intent=intent))
 
+        if not await self.put_name_customer_room(room_id=room_id, intent=intent):
+            return False
+
         self.log.info(f"Room {room_id} initialization is complete")
         return True
 
     async def initial_room_setup(self, room_id: RoomID, intent: IntentAPI):
+        """Initializing a room visibility.
+
+        it tries to add the room to the directory, that the room has a public join,
+        and the history of the room is made public.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to initialize.
+        intent: IntentAPI
+            Matrix client.
+
+        Returns
+        -------
+        """
 
         for attempt in range(0, 10):
             self.log.debug(f"Attempt # {attempt} of room configuration")
@@ -73,9 +110,24 @@ class RoomManager:
 
             await asyncio.sleep(1)
 
-        await self.put_name_customer_room(room_id=room_id, intent=intent)
-
     async def put_name_customer_room(self, room_id: RoomID, intent: IntentAPI) -> bool:
+        """Name a customer's room.
+
+        Given a room and a matrix client, name the room correctly if needed.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to initialize.
+        intent: IntentAPI
+            Matrix client.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+
         if (
             not await self.is_customer_room(room_id=room_id, intent=intent)
             and not self.config["acd.force_name_change"]
@@ -91,29 +143,28 @@ class RoomManager:
         await intent.set_room_name(room_id, new_room_name)
         return True
 
-    async def get_update_name(self, creator: UserID, intent: IntentAPI) -> str:
 
-        new_room_name = None
-        bridges = self.config["bridges"]
-        for bridge in bridges:
-            user_prefix = self.config[f"bridges.{bridge}.user_prefix"]
-            if creator.startswith(f"@{user_prefix}"):
-                new_room_name = await self.create_room_name(sender=creator, intent=intent)
-                if new_room_name:
-                    postfix_template = self.config[f"bridges.{bridge}.postfix_template"]
-                    new_room_name = new_room_name.replace(postfix_template, "")
-                break
+    async def create_room_name(self, user_id: UserID, intent: IntentAPI)-> str:
+        """Given a customer's mxid, pull the phone number and concatenate it to the name.
 
-        return new_room_name
+        Parameters
+        ----------
+        user_id: UserID
+            User to get new name.
+        intent: IntentAPI
+            Matrix client.
 
-    async def create_room_name(self, sender: UserID, intent: IntentAPI):
+        Returns
+        -------
+        str
+            new_name if successful, None otherwise.
+        """
 
-        # Get username
-        phone_match = re.findall(r"\d+", sender)
+        phone_match = re.findall(r"\d+", user_id)
         if phone_match:
             self.log.debug(f"Formatting phone number {phone_match[0]}")
 
-            customer_displayname = await intent.get_displayname(sender)
+            customer_displayname = await intent.get_displayname(user_id)
             if customer_displayname:
                 room_name = f"{customer_displayname}({phone_match[0]})"
             else:
@@ -123,7 +174,19 @@ class RoomManager:
 
         return None
 
-    async def send_cmd_set_relay(self, room_id: RoomID, intent: IntentAPI, bridge: str) -> bool:
+    async def send_cmd_set_relay(self, room_id: RoomID, intent: IntentAPI, bridge: str) -> None:
+        """Given a room, send the command set-relay.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to send command.
+        intent: IntentAPI
+            Matrix client.
+
+        Returns
+        -------
+        """
         bridge = self.config[f"bridges.{bridge}"]
 
         cmd = f"{bridge['prefix']} {bridge['set_relay']}"
@@ -141,7 +204,19 @@ class RoomManager:
         bridge: str,
         user_id: str,
         power_level: int,
-    ) -> bool:
+    ) -> None:
+        """Given a room, send the command set-pl.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to send command.
+        intent: IntentAPI
+            Matrix client.
+
+        Returns
+        -------
+        """
         bridge = self.config[f"bridges.{bridge}"]
         cmd = (
             f"{bridge['prefix']} "
@@ -161,7 +236,20 @@ class RoomManager:
     # OTRO TIPO DE SALA (Cuando es la sala de control, sala de agentes o de colas)
 
     async def is_customer_room(self, room_id: RoomID, intent: IntentAPI) -> bool:
+        """Given a room, verify that it is a customer's room.
 
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to check.
+        intent: IntentAPI
+            Matrix client.
+
+        Returns
+        -------
+        bool
+            True if it is a customer's room, False otherwise.
+        """
         creator = await self.get_room_creator(room_id=room_id, intent=intent)
 
         try:
@@ -181,7 +269,78 @@ class RoomManager:
                     return True
         return False
 
+
+    async def is_mx_whatsapp_status_broadcast(self, room_id: RoomID, intent: IntentAPI) -> bool:
+        """Check if a room is whatsapp_status_broadcast.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to check.
+        intent: IntentAPI
+            Matrix client.
+
+        Returns
+        -------
+        bool
+            True if is whatsapp_status_broadcast, False otherwise.
+        """
+        room_name = None
+        try:
+            room_name = await self.get_room_name(room_id=room_id, intent=intent)
+        except Exception as e:
+            self.log.error(e)
+
+        if room_name and room_name == "WhatsApp Status Broadcast":
+            return True
+
+        return False
+
+    async def get_update_name(self, creator: UserID, intent: IntentAPI) -> str:
+        """Given a customer's mxid, pull the phone number and concatenate it to the name
+        and delete the postfix_template (WA).
+
+        Parameters
+        ----------
+        creator: UserID
+            User to get new name.
+        intent: IntentAPI
+            Matrix client.
+
+        Returns
+        -------
+        str
+            new_name if successful, None otherwise.
+        """
+
+        new_room_name = None
+        bridges = self.config["bridges"]
+        for bridge in bridges:
+            user_prefix = self.config[f"bridges.{bridge}.user_prefix"]
+            if creator.startswith(f"@{user_prefix}"):
+                new_room_name = await self.create_room_name(user_id=creator, intent=intent)
+                if new_room_name:
+                    postfix_template = self.config[f"bridges.{bridge}.postfix_template"]
+                    new_room_name = new_room_name.replace(postfix_template, "")
+                break
+
+        return new_room_name
+
     async def get_room_creator(self, room_id: RoomID, intent: IntentAPI) -> str:
+        """Given a room, get its creator.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to check.
+        intent: IntentAPI
+            Matrix client.
+
+        Returns
+        -------
+        str
+            Creator if successful, None otherwise.
+        """
         creator = None
 
         try:
@@ -198,19 +357,21 @@ class RoomManager:
 
         return creator
 
-    async def is_mx_whatsapp_status_broadcast(self, room_id: RoomID, intent: IntentAPI) -> bool:
-        room_name = None
-        try:
-            room_name = await self.get_room_name(room_id=room_id, intent=intent)
-        except Exception as e:
-            self.log.error(e)
-
-        if room_name and room_name == "WhatsApp Status Broadcast":
-            return True
-
-        return False
-
     async def get_room_bridge(self, room_id: RoomID, intent: IntentAPI) -> str:
+        """Given a room, get its bridge.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to check.
+        intent: IntentAPI
+            Matrix client.
+
+        Returns
+        -------
+        str
+            Bridge if successful, None otherwise.
+        """
         try:
             room = self.ROOMS[room_id]
             bridge = room.get("bridge")
@@ -227,11 +388,25 @@ class RoomManager:
                 user_prefix = self.config[f"bridges.{bridge}.user_prefix"]
                 if creator.startswith(f"@{user_prefix}"):
                     self.log.debug(f"The bridge obtained is {bridge}")
-                    self.ROOMS[room_id]["brdige"] = bridge
+                    self.ROOMS[room_id]["bridge"] = bridge
                     return bridge
         return None
 
     async def get_room_name(self, room_id: RoomID, intent: IntentAPI) -> str:
+        """Given a room, get its name.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to check.
+        intent: IntentAPI
+            Matrix client.
+
+        Returns
+        -------
+        str
+            Name if successful, None otherwise.
+        """
         room_name = None
         try:
             room_info = await self.get_room_info(room_id=room_id, intent=intent)
@@ -242,6 +417,20 @@ class RoomManager:
         return room_name
 
     async def get_room_info(self, room_id: RoomID, intent: IntentAPI) -> Dict:
+        """Given a room, get its room_info.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to check.
+        intent: IntentAPI
+            Matrix client.
+
+        Returns
+        -------
+        Dict
+            room_info if successful, None otherwise.
+        """
         try:
             room_info = await intent.api.request(
                 method=Method.GET, path=f"/_synapse/admin/v1/rooms/{room_id}"

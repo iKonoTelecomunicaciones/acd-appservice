@@ -115,3 +115,17 @@ class TestRoomManager:
             room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org"), intent=intent
         )
         assert result == False
+
+    async def test_get_update_name(self, mocker, room_manager_mock: room_manager.RoomManager):
+        """
+        Returns the updated name of a client's room.
+        """
+        new_room_name = "Alejandro Herrera (WA) (573058790293)"
+        mocker.patch.object(
+            room_manager.RoomManager, "create_room_name", return_value=new_room_name
+        )
+        intent: IntentAPI = None
+        result = await room_manager_mock.get_update_name(
+            creator="@mxwa_573058790293", intent=intent
+        )
+        assert result == "Alejandro Herrera  (573058790293)"
