@@ -4,6 +4,7 @@ import asyncio
 import logging
 
 from mautrix.appservice import AppService, IntentAPI
+from mautrix.bridge import BaseUser
 from mautrix.bridge import commands as cmd
 from mautrix.bridge import config
 from mautrix.errors import MExclusive, MForbidden, MUnknownToken
@@ -212,6 +213,14 @@ class MatrixHandler:
         #     else:
         #         await self.handle_event(evt)
 
+    def is_command(self, message: MessageEventContent) -> tuple[bool, str]:
+        text = message.body
+        prefix = self.config["bridge.command_prefix"]
+        is_command = text.startswith(prefix)
+        if is_command:
+            text = text[len(prefix) + 1 :].lstrip()
+        return is_command, text
+
     async def handle_message(
         self,
         room_id: RoomID,
@@ -219,6 +228,31 @@ class MatrixHandler:
         message: MessageEventContent,
         event_id: EventID,
     ) -> None:
+
+        is_command, text = self.is_command(message=message)
+        if is_command:
+            try:
+                command, arguments = text.split(" ", 1)
+                args = arguments.split(" ")
+            except ValueError:
+                # Not enough values to unpack, i.e. no arguments
+                command = text
+                args = []
+            sender = BaseUser()
+            try:
+                await self.commands.handle(
+                    room_id,
+                    event_id,
+                    sender,
+                    command,
+                    args,
+                    message,
+                    portal,
+                    is_management,
+                    bridge_bot_in_room,
+                )
+            except Exception as e:
+                self.log.error(e)
 
         intent = await self.process_puppet(user_id=user_id)
 
