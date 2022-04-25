@@ -12,3 +12,4 @@ pytest-asyncio==0.18.3
 pytest-randomly==3.11.0
 black==22.3.0
 pytest-mock==3.7.0
+nest-asyncio==1.4.1
