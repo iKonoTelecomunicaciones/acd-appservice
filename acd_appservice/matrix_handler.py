@@ -28,6 +28,7 @@ from mautrix.types import (
 from mautrix.util.logging import TraceLogger
 
 from acd_appservice import room_manager
+from acd_appservice.commands.command_processor import command_handlers, command_processor
 from acd_appservice.puppet import Puppet
 
 from . import acd_program as acd_pr
@@ -36,7 +37,6 @@ from . import acd_program as acd_pr
 class MatrixHandler:
     log: TraceLogger = logging.getLogger("mau.matrix")
     az: AppService
-    commands: cmd.CommandProcessor
     config: config.BaseBridgeConfig
     acd_appservice: acd_pr.ACD
 
@@ -44,13 +44,11 @@ class MatrixHandler:
 
     def __init__(
         self,
-        command_processor: cmd.CommandProcessor | None = None,
         acd_appservice: acd_pr.ACD | None = None,
     ) -> None:
         self.az = acd_appservice.az
         self.acd_appservice = acd_appservice
         self.config = acd_appservice.config
-        self.commands = command_processor or cmd.CommandProcessor(bridge=acd_appservice)
         self.az.matrix_event_handler(self.int_handle_event)
 
     async def wait_for_connection(self) -> None:
@@ -229,35 +227,16 @@ class MatrixHandler:
         event_id: EventID,
     ) -> None:
 
-        is_command, text = self.is_command(message=message)
-        if is_command:
-            try:
-                command, arguments = text.split(" ", 1)
-                args = arguments.split(" ")
-            except ValueError:
-                # Not enough values to unpack, i.e. no arguments
-                command = text
-                args = []
-            sender = BaseUser()
-            try:
-                await self.commands.handle(
-                    room_id,
-                    event_id,
-                    sender,
-                    command,
-                    args,
-                    message,
-                    portal,
-                    is_management,
-                    bridge_bot_in_room,
-                )
-            except Exception as e:
-                self.log.error(e)
-
         intent = await self.process_puppet(user_id=user_id)
-
         if not intent:
             return
+
+        is_command, text = self.is_command(message=message)
+        self.log.debug(await self.room_manager.is_customer_room(room_id=room_id, intent=intent)) # TODO MEJORAR ESTA VALIDACIÓN
+        if is_command and not await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
+            result = await command_processor(text=text)
+            if result:
+                await intent.send_notice(room_id=room_id, text=result)
 
         # Ignorar la sala de status broadcast
         if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):
