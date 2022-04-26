@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 import asyncpg
 from attr import dataclass
-from mautrix.types import ContentURI, SyncToken, UserID
+from mautrix.types import ContentURI, RoomID, SyncToken, UserID
 from mautrix.util.async_db import Database
 from yarl import URL
 
@@ -31,6 +31,7 @@ class Puppet:
     access_token: str | None
     next_batch: SyncToken | None
     base_url: URL | None
+    control_room_id: RoomID
 
     @property
     def _values(self):
@@ -46,13 +47,14 @@ class Puppet:
             self.access_token,
             self.next_batch,
             str(self.base_url) if self.base_url else None,
+            self.control_room_id,
         )
 
     async def insert(self) -> None:
         q = (
             "INSERT INTO puppet (custom_mxid, name, username, photo_id, photo_mxc, name_set, avatar_set,"
-            "                    is_registered, access_token, next_batch, base_url) "
-            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
+            "                    is_registered, access_token, next_batch, base_url, control_room_id) "
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12. $13)"
         )
         await self.db.execute(q, *self._values)
 
@@ -60,7 +62,7 @@ class Puppet:
         q = (
             "UPDATE puppet SET custom_mxid=$2, name=$3, username=$4, photo_id=$5, photo_mxc=$6, name_set=$7,"
             "                  avatar_set=$8, is_registered=$9, access_token=$10,"
-            "                  next_batch=$11, base_url=$12 "
+            "                  next_batch=$11, base_url=$12, control_room_id=$13 "
             "WHERE pk=$1"
         )
         await self.db.execute(q, *self._values)
@@ -76,7 +78,7 @@ class Puppet:
     async def get_by_custom_mxid(cls, mxid: UserID) -> Puppet | None:
         q = (
             "SELECT pk, name, username, photo_id, photo_mxc, name_set, avatar_set, is_registered,"
-            "       custom_mxid, access_token, next_batch, base_url "
+            "       custom_mxid, access_token, next_batch, base_url, control_room_id "
             "FROM puppet WHERE custom_mxid=$1"
         )
         row = await cls.db.fetchrow(q, mxid)
@@ -88,7 +90,7 @@ class Puppet:
     async def get_by_pk(cls, pk: int) -> Puppet | None:
         q = (
             "SELECT pk, name, username, photo_id, photo_mxc, name_set, avatar_set, is_registered,"
-            "       custom_mxid, access_token, next_batch, base_url "
+            "       custom_mxid, access_token, next_batch, base_url, control_room_id "
             "FROM puppet WHERE pk=$1"
         )
         row = await cls.db.fetchrow(q, pk)
@@ -100,7 +102,7 @@ class Puppet:
     async def all_with_custom_mxid(cls) -> list[Puppet]:
         q = (
             "SELECT pk, name, username, photo_id, photo_mxc, name_set, avatar_set, is_registered,"
-            "       custom_mxid, access_token, next_batch, base_url "
+            "       custom_mxid, access_token, next_batch, base_url, control_room_id "
             "FROM puppet WHERE custom_mxid IS NOT NULL"
         )
         rows = await cls.db.fetch(q)

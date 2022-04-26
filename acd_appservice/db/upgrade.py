@@ -21,6 +21,7 @@ async def upgrade_v1(conn: Connection) -> None:
         is_registered BOOLEAN NOT NULL DEFAULT false,
         access_token  TEXT,
         next_batch    TEXT,
-        base_url      TEXT
+        base_url      TEXT,
+        control_room_id      TEXT
     )"""
     )

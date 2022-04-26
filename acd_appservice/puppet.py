@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, AsyncGenerator, AsyncIterable, Awaitable, cast
 
 from mautrix.appservice import IntentAPI
 from mautrix.bridge import BasePuppet, async_getter_lock
-from mautrix.types import ContentURI, SyncToken, UserID
+from mautrix.types import ContentURI, RoomID, SyncToken, UserID
 from mautrix.util.simple_template import SimpleTemplate
 from yarl import URL
 
@@ -28,6 +28,9 @@ class Puppet(DBPuppet, BasePuppet):
     default_mxid_intent: IntentAPI
     default_mxid: UserID
 
+    # Sala de control del puppet
+    control_room_id: RoomID
+
     def __init__(
         self,
         pk: int | None = None,
@@ -42,6 +45,7 @@ class Puppet(DBPuppet, BasePuppet):
         access_token: str | None = None,
         next_batch: SyncToken | None = None,
         base_url: URL | None = None,
+        control_room_id: RoomID | None = None
     ) -> None:
         super().__init__(
             pk=pk,
@@ -56,6 +60,7 @@ class Puppet(DBPuppet, BasePuppet):
             access_token=access_token,
             next_batch=next_batch,
             base_url=base_url,
+            control_room_id=control_room_id
         )
         self.log = self.log.getChild(str(custom_mxid))
         # IMPORTANTE: A cada marioneta de le genera un intent para poder enviar eventos a nombre
@@ -163,7 +168,6 @@ class Puppet(DBPuppet, BasePuppet):
             puppet = cls(custom_mxid=customer_mxid)
             await puppet.insert()
             puppet._add_to_cache()
-            print("#$#$#", puppet)
             return puppet
 
         return None

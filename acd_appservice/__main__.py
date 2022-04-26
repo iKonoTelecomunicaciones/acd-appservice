@@ -1,6 +1,7 @@
 from mautrix.types import UserID
 
 from .acd_program import ACD
+from .agent_manager import AgentManager
 from .config import Config
 from .db import init as init_db
 from .db import upgrade_table
@@ -52,6 +53,8 @@ class ACDAppService(ACD):
         self.az.app.add_subapp(api_route, self.provisioning_api.app)
         # Iniciamos la aplicación
         self.matrix.room_manager = RoomManager(config=self.config)
+        self.matrix.agent_manager = AgentManager(config=self.config, az=self.az)
+
         await super().start()
 
     def prepare_stop(self) -> None:

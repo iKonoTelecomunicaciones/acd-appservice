@@ -17,6 +17,8 @@ class RoomManager:
     config: Config
     log: TraceLogger = logging.getLogger("mau.room_manager")
     ROOMS: dict[RoomID, Dict] = {}
+    # list of room_ids to know if distribution process is taking place
+    LOCKED_ROOMS = set()
 
     def __init__(self, config: Config) -> None:
         self.config = config
@@ -293,6 +295,23 @@ class RoomManager:
             return True
 
         return False
+
+    @classmethod
+    def lock_room(cls, room_id: RoomID) -> None:
+        """Lock the room."""
+        cls.log.debug(f"LOCKING ROOM {room_id}...")
+        cls.LOCKED_ROOMS.add(room_id)
+
+    @classmethod
+    def unlock_room(cls, room_id: RoomID) -> None:
+        """Unlock the room."""
+        cls.log.debug(f"UNLOCKING ROOM {room_id}...")
+        cls.LOCKED_ROOMS.discard(room_id)
+
+    @classmethod
+    def is_room_locked(cls, room_id: RoomID) -> bool:
+        """Check if room is locked."""
+        return room_id in cls.LOCKED_ROOMS
 
     async def get_update_name(self, creator: UserID, intent: IntentAPI) -> str:
         """Given a customer's mxid, pull the phone number and concatenate it to the name

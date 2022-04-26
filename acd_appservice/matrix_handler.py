@@ -27,11 +27,10 @@ from mautrix.types import (
 )
 from mautrix.util.logging import TraceLogger
 
-from acd_appservice import room_manager
-from acd_appservice.commands.command_processor import command_handlers, command_processor
-from acd_appservice.puppet import Puppet
-
 from . import acd_program as acd_pr
+from . import agent_manager, room_manager
+from .commands.handler import command_processor
+from .puppet import Puppet
 
 
 class MatrixHandler:
@@ -41,6 +40,7 @@ class MatrixHandler:
     acd_appservice: acd_pr.ACD
 
     room_manager: room_manager.RoomManager
+    agent_manager: agent_manager.AgentManager
 
     def __init__(
         self,
@@ -232,11 +232,14 @@ class MatrixHandler:
             return
 
         is_command, text = self.is_command(message=message)
-        self.log.debug(await self.room_manager.is_customer_room(room_id=room_id, intent=intent)) # TODO MEJORAR ESTA VALIDACIÓN
-        if is_command and not await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
+        if is_command and not await self.room_manager.is_customer_room(
+            room_id=room_id, intent=intent
+        ):
             result = await command_processor(text=text)
             if result:
-                await intent.send_notice(room_id=room_id, text=result)
+                await intent.send_notice(room_id=room_id, text=result, html=result)
+
+        self.log.debug(self.room_manager.LOCKED_ROOMS)
 
         # Ignorar la sala de status broadcast
         if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):
