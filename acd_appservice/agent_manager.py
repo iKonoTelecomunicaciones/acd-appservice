@@ -62,7 +62,7 @@ class AgentManager:
             # if a campaign is provided, the loop is done over the agents of that campaign.
             # if campaign is None, the loop is done over the control room
             if initializer_id and initializer_id != self.intent.bot.mxid:
-                puppet: Puppet = await Puppet.get_puppet_by_mxid(initializer_id)
+                puppet: Puppet = await Puppet.get_puppet_by_mxid(initializer_id) # TODO quedamos aqui
                 control_room_id = puppet.control_room_id
             else:
                 control_room_id = self.control_room_id
