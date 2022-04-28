@@ -21,7 +21,6 @@ class CommandEvent:
     def __init__(
         self,
         acd_appservice: ACDAppService,
-
         sender_user_id: UserID,
         room_id: RoomID,
         text: str,

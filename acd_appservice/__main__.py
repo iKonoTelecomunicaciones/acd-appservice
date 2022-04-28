@@ -10,7 +10,7 @@ from .puppet import Puppet
 from .room_manager import RoomManager
 from .web.provisioning_api import ProvisioningAPI
 
-ptvsd.enable_attach(address=('0.0.0.0', 5678))
+ptvsd.enable_attach(address=("0.0.0.0", 5678))
 
 
 class ACDAppService(ACD):

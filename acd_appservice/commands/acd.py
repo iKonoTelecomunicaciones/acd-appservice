@@ -27,9 +27,10 @@ async def acd(evt: CommandEvent) -> str:
         )
     else:
         agent_manager: AgentManager = AgentManager(
-            intent=evt.acd_appservice.az.intent, config=evt.acd_appservice.config, control_room_id=evt.acd_appservice.config["acd.control_room_id"]
+            intent=evt.acd_appservice.az.intent,
+            config=evt.acd_appservice.config,
+            control_room_id=evt.acd_appservice.config["acd.control_room_id"],
         )
-
 
     await agent_manager.process_distribution(
         customer_room_id=customer_room_id,
