@@ -3,11 +3,19 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from typing import Dict
+from typing import Dict, List, Tuple
 
 from mautrix.api import Method
 from mautrix.appservice import IntentAPI
-from mautrix.types import EventType, JoinRule, RoomDirectoryVisibility, RoomID, UserID
+from mautrix.errors.base import IntentError
+from mautrix.types import (
+    EventType,
+    JoinRule,
+    PresenceEventContent,
+    RoomDirectoryVisibility,
+    RoomID,
+    UserID,
+)
 from mautrix.util.logging import TraceLogger
 
 from .config import Config
@@ -313,6 +321,11 @@ class RoomManager:
         """Check if room is locked."""
         return room_id in cls.LOCKED_ROOMS
 
+    @classmethod
+    def get_future_key(cls, room_id: RoomID, agent_id: UserID) -> str:
+        """Return the key for the dict of futures for a specific agent."""
+        return f"[{room_id}]-[{agent_id}]"
+
     async def get_update_name(self, creator: UserID, intent: IntentAPI) -> str:
         """Given a customer's mxid, pull the phone number and concatenate it to the name
         and delete the postfix_template (WA).
@@ -342,6 +355,40 @@ class RoomManager:
                 break
 
         return new_room_name
+
+    async def get_user_presence(self, user_id: UserID, intent: IntentAPI) -> PresenceEventContent:
+        """Get user presence status."""
+        self.log.debug(f"Checking presence for....... [{user_id}]")
+        response = None
+        try:
+            response = await intent.get_presence(user_id=user_id)
+        except IntentError as e:
+            self.log.error(e)
+
+        return response
+
+    async def is_in_mobile_device(self, user_id: UserID, intent: IntentAPI) -> bool:
+        devices = await self.get_user_devices(user_id=user_id, intent=intent)
+        device_name_regex = self.config["acd.device_name_regex"]
+        if devices:
+            for device in devices["devices"]:
+                if device.get("display_name") and re.search(
+                    device_name_regex, device["display_name"]
+                ):
+                    return True
+
+    async def get_user_devices(self, user_id: UserID, intent: IntentAPI) -> Dict[str, List[Dict]]:
+        """Get devices where agent have sessions"""
+        response: Dict[str, List[Dict]] = None
+        try:
+            response = await intent.api.request(
+                method=Method.GET, path=f"/_synapse/admin/v2/users/{user_id}/devices"
+            )
+
+        except IntentError as e:
+            self.log.error(e)
+
+        return response
 
     async def get_room_creator(self, room_id: RoomID, intent: IntentAPI) -> str:
         """Given a room, get its creator.
@@ -373,6 +420,67 @@ class RoomManager:
             self.log.error(e)
 
         return creator
+
+    async def kick_menubot(self, room_id: RoomID, reason: str, intent: IntentAPI) -> None:
+        """Kick menubot from some room."""
+        menubot_id = await self.get_menubot_id(room_id=room_id)
+        if menubot_id:
+            self.log.debug("Kicking the menubot [{menubot_id}]")
+            await self.send_menubot_command(
+                menubot_id=menubot_id, command="cancel_task", args=(room_id)
+            )
+            try:
+                await intent.kick_user(room_id=room_id, user_id=menubot_id, reason=reason)
+            except IntentError as e:
+                self.log.error(e)
+            self.log.debug(f"User [{menubot_id}] KICKED from room [{room_id}]")
+
+    async def send_menubot_command(
+        self, menubot_id: UserID, command: str, intent: IntentAPI, *args: Tuple
+    ) -> None:
+        """Send a command to menubot."""
+        if menubot_id:
+            if self.config["acd.menubot"]:
+                prefix = self.config["acd.menubot.command_prefix"]
+            else:
+                prefix = self.config[f"acd.menubots.[{menubot_id}].command_prefix"]
+
+            cmd = f"{prefix} {command} {' '.join(args)}"
+
+            cmd = cmd.strip()
+
+            self.log.debug(f"Sending command {command} for the menubot [{menubot_id}]")
+            await intent.send_text(room_id=self.control_room_id, text=cmd)
+
+    async def get_menubot_id(
+        self, intent: IntentAPI, room_id: RoomID = None, user_id: UserID = None
+    ) -> UserID:
+        """Get menubot_id by room_id or user_id or user_prefix"""
+
+        menubot_id: UserID = None
+
+        if self.config["acd.menubot"]:
+            menubot_id = self.config["acd.menubot.user_id"]
+            return menubot_id
+
+        if room_id:
+            members = await intent.get_joined_members(room_id=room_id)
+            if members:
+                for user_id in members:
+                    if user_id in self.config["acd.menubots"]:
+                        menubot_id = user_id
+                        break
+
+        if user_id:
+            username_regex = self.config["utils.username_regex"]
+            user_prefix = re.search(username_regex, user_id).group("user_prefix")
+            menubots: Dict[UserID, Dict] = self.config["acd.menubots"]
+            for menubot in menubots:
+                if user_prefix == self.config[f"acd.menubots{menubot}.user_prefix"]:
+                    menubot_id = menubot
+                    break
+
+        return menubot_id
 
     async def get_room_bridge(self, room_id: RoomID, intent: IntentAPI) -> str:
         """Given a room, get its bridge.

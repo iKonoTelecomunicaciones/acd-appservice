@@ -23,7 +23,7 @@ from mautrix.types import (
 from mautrix.util.logging import TraceLogger
 
 from . import acd_program as acd_pr
-from . import agent_manager, room_manager
+from . import room_manager
 from .commands.handler import command_processor
 from .commands.typehint import CommandEvent
 from .puppet import Puppet
@@ -36,7 +36,6 @@ class MatrixHandler:
     acd_appservice: acd_pr.ACD
 
     room_manager: room_manager.RoomManager
-    agent_manager: agent_manager.AgentManager
 
     def __init__(
         self,
@@ -99,8 +98,11 @@ class MatrixHandler:
             except Exception:
                 self.log.exception("Failed to set bot avatar")
 
-    async def handle_invide(self, evt: Event, intent: IntentAPI):
+    async def handle_invide(self, evt: Event):
         self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
+
+        intent = await self.process_puppet(user_id=UserID(evt.state_key))
+
         await intent.join_room(evt.room_id)
 
     async def handle_disinvite(
@@ -138,8 +140,7 @@ class MatrixHandler:
             prev_content = unsigned.prev_content or MemberStateEventContent()
             prev_membership = prev_content.membership if prev_content else Membership.JOIN
             if evt.content.membership == Membership.INVITE:
-                intent = await self.process_puppet(user_id=UserID(evt.state_key))
-                await self.handle_invide(evt, intent)
+                await self.handle_invide(evt)
 
             elif evt.content.membership == Membership.LEAVE:
                 if prev_membership == Membership.BAN:
@@ -152,7 +153,7 @@ class MatrixHandler:
                 #         evt.event_id,
                 #     )
                 elif prev_membership == Membership.INVITE:
-                    puppet = await self.acd_appservice.get_puppet(user_id=UserID(evt.state_key))
+                    pass
                     # self.handle_disinvite(room_id=room)
                 #     if evt.sender == evt.state_key:
                 #         await self.handle_reject(

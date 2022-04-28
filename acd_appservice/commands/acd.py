@@ -4,8 +4,20 @@ from .handler import command_handler
 from .typehint import CommandEvent
 
 
-@command_handler(name="acd", help_text="comando acd", help_args="<_anything_>")
+@command_handler(
+    name="acd",
+    help_text=(
+        "Command that allows to distribute the chat of a client, "
+        "optionally a campaign room and a joining message can be given."
+    ),
+    help_args="<_customer_room_id_> <_campaign_room_id_> <_joined_message_>",
+)
 async def acd(evt: CommandEvent) -> str:
+    """
+    Command that allows to distribute the chat of a client,
+    optionally a campaign room and a joining message can be given.
+    """
+
     evt.log.debug(f"{evt.args}")
 
     if len(evt.args) < 2:
@@ -21,14 +33,14 @@ async def acd(evt: CommandEvent) -> str:
     if evt.sender_user_id != evt.acd_appservice.az.bot_mxid:
         puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.sender_user_id)
         agent_manager: AgentManager = AgentManager(
+            room_manager=evt.acd_appservice.matrix.room_manager,
             intent=puppet.intent,
-            config=evt.acd_appservice.config,
             control_room_id=puppet.control_room_id,
         )
     else:
         agent_manager: AgentManager = AgentManager(
+            room_manager=evt.acd_appservice.matrix.room_manager,
             intent=evt.acd_appservice.az.intent,
-            config=evt.acd_appservice.config,
             control_room_id=evt.acd_appservice.config["acd.control_room_id"],
         )
 
