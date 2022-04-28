@@ -45,7 +45,7 @@ class Puppet(DBPuppet, BasePuppet):
         access_token: str | None = None,
         next_batch: SyncToken | None = None,
         base_url: URL | None = None,
-        control_room_id: RoomID | None = None
+        control_room_id: RoomID | None = None,
     ) -> None:
         super().__init__(
             pk=pk,
@@ -60,7 +60,7 @@ class Puppet(DBPuppet, BasePuppet):
             access_token=access_token,
             next_batch=next_batch,
             base_url=base_url,
-            control_room_id=control_room_id
+            control_room_id=control_room_id,
         )
         self.log = self.log.getChild(str(custom_mxid))
         # IMPORTANTE: A cada marioneta de le genera un intent para poder enviar eventos a nombre

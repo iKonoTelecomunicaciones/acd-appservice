@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Type
+from typing import Type
 
 from markdown import markdown
 from mautrix.util.logging import TraceLogger
+
+from ..commands.typehint import CommandEvent
 
 command_handlers: dict[str, CommandHandler] = {}
 
@@ -29,7 +31,6 @@ class CommandHandler:
     @property
     def help(self) -> str:
         """Returns the help text to this command."""
-        log.debug(self._help_args)
         return f"* {self.name} {self._help_args} - {self._help_text}"
 
 
@@ -60,12 +61,12 @@ def command_handler(
     return decorator if _func is None else decorator(_func)
 
 
-async def command_processor(text: str):
-    args = text.split()
-    if args[0] == "help":
+async def command_processor(command_event: CommandEvent):
+    command_event.args = command_event.text.split()
+    if command_event.args[0] == "help":
         return make_help_text()
-    elif args[0] in command_handlers:
-        return await command_handlers[args[0]]._handler(args[1:])
+    elif command_event.args[0] in command_handlers:
+        return await command_handlers[command_event.args[0]]._handler(command_event)
     else:
         return "Unrecognized command"
 

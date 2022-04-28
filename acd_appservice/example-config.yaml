@@ -96,6 +96,9 @@ acd:
     #     user_prefix: "gswB"
     #     command_prefix: "!menubotB"
 
+    # force join
+    device_name_regex: "Element Android|Móvil|Mobile"
+    force_join: false
 
 # ACD will send below commands to interact with any WA bridge
 bridges:

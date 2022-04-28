@@ -1,22 +1,38 @@
-import logging
-from typing import List
-
-from mautrix.util.logging import TraceLogger
-
-from ..room_manager import RoomManager
+from ..agent_manager import AgentManager
+from ..puppet import Puppet
 from .handler import command_handler
-
-log: TraceLogger = logging.getLogger("mau.acd_cmd")
+from .typehint import CommandEvent
 
 
 @command_handler(name="acd", help_text="comando acd", help_args="<_anything_>")
-async def acd(args: List) -> str:
-    if len(args) < 2:
+async def acd(evt: CommandEvent) -> str:
+    evt.log.debug(f"{evt.args}")
+
+    if len(evt.args) < 2:
         detail = "acd command incomplete arguments"
-        log.error(detail)
+        evt.log.error(detail)
         return detail
 
-    user_room_id = args[0]
-    campaign_room_id = args[1] if len(args) >= 2 else None
-    room_params = f"acd {user_room_id} {campaign_room_id}"
-    joined_message = (args[len(room_params) :]).strip() if len(args) > 3 else None
+    customer_room_id = evt.args[1]
+    campaign_room_id = evt.args[2] if len(evt.args) >= 3 else None
+    room_params = f"acd {customer_room_id} {campaign_room_id}"
+    joined_message = (evt.args[len(room_params) :]).strip() if len(evt.args) > 3 else None
+
+    if evt.sender_user_id != evt.acd_appservice.az.bot_mxid:
+        puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.sender_user_id)
+        agent_manager: AgentManager = AgentManager(
+            intent=puppet.intent,
+            config=evt.acd_appservice.config,
+            control_room_id=puppet.control_room_id,
+        )
+    else:
+        agent_manager: AgentManager = AgentManager(
+            intent=evt.acd_appservice.az.intent, config=evt.acd_appservice.config, control_room_id=evt.acd_appservice.config["acd.control_room_id"]
+        )
+
+
+    await agent_manager.process_distribution(
+        customer_room_id=customer_room_id,
+        campaign_room_id=campaign_room_id,
+        joined_message=joined_message,
+    )

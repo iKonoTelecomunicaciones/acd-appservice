@@ -397,7 +397,7 @@ class RoomManager:
         except KeyError:
             pass
 
-        creator = await RoomManager.get_room_creator(room_id=room_id, intent=intent)
+        creator = await self.get_room_creator(room_id=room_id, intent=intent)
 
         bridges = self.config["bridges"]
         if creator:

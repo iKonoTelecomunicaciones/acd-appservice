@@ -1,7 +1,7 @@
+import ptvsd
 from mautrix.types import UserID
 
 from .acd_program import ACD
-from .agent_manager import AgentManager
 from .config import Config
 from .db import init as init_db
 from .db import upgrade_table
@@ -9,6 +9,8 @@ from .matrix_handler import MatrixHandler
 from .puppet import Puppet
 from .room_manager import RoomManager
 from .web.provisioning_api import ProvisioningAPI
+
+ptvsd.enable_attach(address=('0.0.0.0', 5678))
 
 
 class ACDAppService(ACD):
@@ -53,8 +55,6 @@ class ACDAppService(ACD):
         self.az.app.add_subapp(api_route, self.provisioning_api.app)
         # Iniciamos la aplicación
         self.matrix.room_manager = RoomManager(config=self.config)
-        self.matrix.agent_manager = AgentManager(config=self.config, az=self.az)
-
         await super().start()
 
     def prepare_stop(self) -> None:

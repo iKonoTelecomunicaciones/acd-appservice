@@ -4,8 +4,6 @@ import asyncio
 import logging
 
 from mautrix.appservice import AppService, IntentAPI
-from mautrix.bridge import BaseUser
-from mautrix.bridge import commands as cmd
 from mautrix.bridge import config
 from mautrix.errors import MExclusive, MForbidden, MUnknownToken
 from mautrix.types import (
@@ -17,12 +15,9 @@ from mautrix.types import (
     MessageEvent,
     MessageEventContent,
     MessageType,
-    PresenceEvent,
-    ReceiptEvent,
     RoomID,
     StateEvent,
     StateUnsigned,
-    TypingEvent,
     UserID,
 )
 from mautrix.util.logging import TraceLogger
@@ -30,6 +25,7 @@ from mautrix.util.logging import TraceLogger
 from . import acd_program as acd_pr
 from . import agent_manager, room_manager
 from .commands.handler import command_processor
+from .commands.typehint import CommandEvent
 from .puppet import Puppet
 
 
@@ -126,7 +122,10 @@ class MatrixHandler:
             self.log(f"The user who has joined is neither a puppet nor the appservice_bot")
             return
 
-        if not await self.room_manager.initialize_room(room_id=room_id, intent=intent):
+        # Solo se inicializa la sala si el que se une es el usuario acd*
+        if intent.api.bot_mxid == user_id and not await self.room_manager.initialize_room(
+            room_id=room_id, intent=intent
+        ):
             self.log.debug(f"Room {room_id} initialization has failed")
 
     async def int_handle_event(self, evt: Event) -> None:
@@ -235,11 +234,15 @@ class MatrixHandler:
         if is_command and not await self.room_manager.is_customer_room(
             room_id=room_id, intent=intent
         ):
-            result = await command_processor(text=text)
+            command_event = CommandEvent(
+                acd_appservice=self.acd_appservice,
+                sender_user_id=intent.mxid,
+                room_id=room_id,
+                text=text,
+            )
+            result = await command_processor(command_event=command_event)
             if result:
                 await intent.send_notice(room_id=room_id, text=result, html=result)
-
-        self.log.debug(self.room_manager.LOCKED_ROOMS)
 
         # Ignorar la sala de status broadcast
         if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):
@@ -253,7 +256,7 @@ class MatrixHandler:
     async def process_puppet(self, user_id: UserID) -> IntentAPI:
 
         if not (user_id == self.az.bot_mxid) and Puppet.get_id_from_mxid(user_id):
-            puppet = await Puppet.get_by_custom_mxid(user_id)
+            puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
             return puppet.intent
         else:
             return self.az.intent
