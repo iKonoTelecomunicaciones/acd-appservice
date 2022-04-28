@@ -31,6 +31,7 @@ services:
     entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="." /opt/acd-appservice/docker-run.sh
     ports:
       - 26666:26666
+      - 5678:5678
 
   acd-az-db:
     image: postgres:10-alpine

@@ -4,7 +4,6 @@ import asyncio
 import logging
 
 from mautrix.appservice import AppService, IntentAPI
-from mautrix.bridge import commands as cmd
 from mautrix.bridge import config
 from mautrix.errors import MExclusive, MForbidden, MUnknownToken
 from mautrix.types import (
@@ -16,26 +15,23 @@ from mautrix.types import (
     MessageEvent,
     MessageEventContent,
     MessageType,
-    PresenceEvent,
-    ReceiptEvent,
     RoomID,
     StateEvent,
     StateUnsigned,
-    TypingEvent,
     UserID,
 )
 from mautrix.util.logging import TraceLogger
 
-from acd_appservice import room_manager
-from acd_appservice.puppet import Puppet
-
 from . import acd_program as acd_pr
+from . import room_manager
+from .commands.handler import command_processor
+from .commands.typehint import CommandEvent
+from .puppet import Puppet
 
 
 class MatrixHandler:
     log: TraceLogger = logging.getLogger("mau.matrix")
     az: AppService
-    commands: cmd.CommandProcessor
     config: config.BaseBridgeConfig
     acd_appservice: acd_pr.ACD
 
@@ -43,13 +39,11 @@ class MatrixHandler:
 
     def __init__(
         self,
-        command_processor: cmd.CommandProcessor | None = None,
         acd_appservice: acd_pr.ACD | None = None,
     ) -> None:
         self.az = acd_appservice.az
         self.acd_appservice = acd_appservice
         self.config = acd_appservice.config
-        self.commands = command_processor or cmd.CommandProcessor(bridge=acd_appservice)
         self.az.matrix_event_handler(self.int_handle_event)
 
     async def wait_for_connection(self) -> None:
@@ -104,8 +98,11 @@ class MatrixHandler:
             except Exception:
                 self.log.exception("Failed to set bot avatar")
 
-    async def handle_invide(self, evt: Event, intent: IntentAPI):
+    async def handle_invide(self, evt: Event):
         self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
+
+        intent = await self.process_puppet(user_id=UserID(evt.state_key))
+
         await intent.join_room(evt.room_id)
 
     async def handle_disinvite(
@@ -127,7 +124,10 @@ class MatrixHandler:
             self.log(f"The user who has joined is neither a puppet nor the appservice_bot")
             return
 
-        if not await self.room_manager.initialize_room(room_id=room_id, intent=intent):
+        # Solo se inicializa la sala si el que se une es el usuario acd*
+        if intent.api.bot_mxid == user_id and not await self.room_manager.initialize_room(
+            room_id=room_id, intent=intent
+        ):
             self.log.debug(f"Room {room_id} initialization has failed")
 
     async def int_handle_event(self, evt: Event) -> None:
@@ -140,8 +140,7 @@ class MatrixHandler:
             prev_content = unsigned.prev_content or MemberStateEventContent()
             prev_membership = prev_content.membership if prev_content else Membership.JOIN
             if evt.content.membership == Membership.INVITE:
-                intent = await self.process_puppet(user_id=UserID(evt.state_key))
-                await self.handle_invide(evt, intent)
+                await self.handle_invide(evt)
 
             elif evt.content.membership == Membership.LEAVE:
                 if prev_membership == Membership.BAN:
@@ -154,7 +153,7 @@ class MatrixHandler:
                 #         evt.event_id,
                 #     )
                 elif prev_membership == Membership.INVITE:
-                    puppet = await self.acd_appservice.get_puppet(user_id=UserID(evt.state_key))
+                    pass
                     # self.handle_disinvite(room_id=room)
                 #     if evt.sender == evt.state_key:
                 #         await self.handle_reject(
@@ -212,6 +211,14 @@ class MatrixHandler:
         #     else:
         #         await self.handle_event(evt)
 
+    def is_command(self, message: MessageEventContent) -> tuple[bool, str]:
+        text = message.body
+        prefix = self.config["bridge.command_prefix"]
+        is_command = text.startswith(prefix)
+        if is_command:
+            text = text[len(prefix) + 1 :].lstrip()
+        return is_command, text
+
     async def handle_message(
         self,
         room_id: RoomID,
@@ -219,15 +226,38 @@ class MatrixHandler:
         message: MessageEventContent,
         event_id: EventID,
     ) -> None:
-        pass
+
+        intent = await self.process_puppet(user_id=user_id)
+        if not intent:
+            return
+
+        is_command, text = self.is_command(message=message)
+        if is_command and not await self.room_manager.is_customer_room(
+            room_id=room_id, intent=intent
+        ):
+            command_event = CommandEvent(
+                acd_appservice=self.acd_appservice,
+                sender_user_id=intent.mxid,
+                room_id=room_id,
+                text=text,
+            )
+            result = await command_processor(command_event=command_event)
+            if result:
+                await intent.send_notice(room_id=room_id, text=result, html=result)
+
+        # Ignorar la sala de status broadcast
+        if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):
+            self.log.debug(f"Ignoring the room {room_id} because it is whatsapp_status_broadcast")
+            return
+
+        # Intentamos cambiarle el nombre a la sala
+        if not await self.room_manager.put_name_customer_room(room_id=room_id, intent=intent):
+            self.log.debug(f"Room {room_id} name has not been changed")
 
     async def process_puppet(self, user_id: UserID) -> IntentAPI:
 
-        if not user_id == self.az.bot_mxid:
-            puppet = await Puppet.get_by_custom_mxid(user_id)
+        if not (user_id == self.az.bot_mxid) and Puppet.get_id_from_mxid(user_id):
+            puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
             return puppet.intent
-
-        elif user_id == self.az.bot_mxid:
+        else:
             return self.az.intent
-
-        return None

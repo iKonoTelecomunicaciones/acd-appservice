@@ -1,13 +1,9 @@
-mautrix>=0.14.1
-ruamel.yaml>=0.15.35,<0.18
-aiohttp>=3,<4
-shortuuid==1.0.8
-asyncpg==0.23.0
-commonmark==0.9.1
-aiohttp-swagger3==0.7.1
-watchdog==2.1.6
 isort==5.10.1
 pytest==7.1.1
 pytest-asyncio==0.18.3
 pytest-randomly==3.11.0
 black==22.3.0
+pytest-mock==3.7.0
+nest-asyncio==1.4.1
+watchdog==2.1.6
+ptvsd==4.3.2
