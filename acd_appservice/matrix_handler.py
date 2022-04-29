@@ -22,6 +22,8 @@ from mautrix.types import (
 )
 from mautrix.util.logging import TraceLogger
 
+from acd_appservice.agent_manager import AgentManager
+
 from . import acd_program as acd_pr
 from . import room_manager
 from .commands.handler import command_processor

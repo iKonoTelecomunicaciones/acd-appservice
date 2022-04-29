@@ -19,6 +19,7 @@ from mautrix.types import (
 from mautrix.util.logging import TraceLogger
 
 from .config import Config
+from .db import Room
 
 
 class RoomManager:
@@ -565,3 +566,131 @@ class RoomManager:
             self.log.error(e)
 
         return room_info
+
+    @classmethod
+    async def set_user_selected_menu(cls, room_id: RoomID, selected_option: str) -> bool:  # ok
+        """Given a room, get its room_info.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to save data.
+        selected_option: RoomID
+            Room selected by the customer
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        room = await Room.get_by_room_id(room_id)
+        if room:
+            return await cls.update_room_in_db(room_id=room_id, selected_option=selected_option)
+        else:
+            return await cls.insert_room_in_db(room_id=room_id, selected_option=selected_option)
+
+    @classmethod
+    async def save_pending_room(cls, room_id: RoomID, selected_option: str = None) -> bool:  # ok
+        """Given a room, get its room_info.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to save data.
+        selected_option: RoomID
+            Room selected by the customer
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        room = await Room.get_by_room_id(room_id)
+        if room:
+            return await cls.update_room_in_db(
+                room_id=room_id, selected_option=selected_option, is_pending_room=True
+            )
+        else:
+            return await cls.insert_room_in_db(
+                room_id=room_id, selected_option=selected_option, is_pending_room=True
+            )
+
+    @classmethod
+    async def remove_pending_room(cls, room_id: RoomID) -> bool:  # ok
+        """Update is_pendid_room = False.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to remove data.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        return await Room.update_pending_room_by_room_id(room_id, False)
+
+    @classmethod
+    async def insert_room_in_db(
+        cls, room_id: RoomID, selected_option: str, is_pending_room: bool = False
+    ) -> bool:  # ok
+        """Inserts a room in the database.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to save data.
+        selected_option: RoomID
+            Room selected by the customer.
+        is_pending_room: bool
+            If it is a pending room.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        try:
+            room = await Room.get_by_room_id(room_id)
+            if room:
+                return False
+            else:
+                await Room.insert(room_id, selected_option, is_pending_room)
+        except Exception as e:
+            cls.log.error(e)
+            return False
+
+        return True
+
+    @classmethod
+    async def update_room_in_db(
+        cls, room_id: RoomID, selected_option: str, is_pending_room: bool = False
+    ) -> bool:  # ok
+        """Updates a room in the database.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to save data.
+        selected_option: RoomID
+            Room selected by the customer.
+        is_pending_room: bool
+            If it is a pending room.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        try:
+            room = await Room.get_by_room_id(room_id)
+            if room:
+                await Room.update_by_room_id(room_id, selected_option, is_pending_room)
+            else:
+                cls.log.error(f"The room {room_id} does not exist so it will not be updated")
+        except Exception as e:
+            cls.log.error(e)
+            return False
+
+        return True
