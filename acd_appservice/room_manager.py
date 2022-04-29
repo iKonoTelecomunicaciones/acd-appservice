@@ -569,7 +569,7 @@ class RoomManager:
 
     @classmethod
     async def set_user_selected_menu(cls, room_id: RoomID, selected_option: str) -> bool:  # ok
-        """Given a room, get its room_info.
+        """Sets the customer's menu selection.
 
         Parameters
         ----------
@@ -591,7 +591,7 @@ class RoomManager:
 
     @classmethod
     async def save_pending_room(cls, room_id: RoomID, selected_option: str = None) -> bool:  # ok
-        """Given a room, get its room_info.
+        """Save or update a pending room.
 
         Parameters
         ----------
