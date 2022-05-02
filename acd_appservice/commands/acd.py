@@ -49,3 +49,4 @@ async def acd(evt: CommandEvent) -> str:
         campaign_room_id=campaign_room_id,
         joined_message=joined_message,
     )
+    
