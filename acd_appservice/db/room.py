@@ -89,7 +89,7 @@ class Room:
     async def get_pending_rooms(cls) -> List[Room] | None:
         q = (
             "SELECT id, room_id, is_pending_room, selected_option FROM room "
-            "WHERE is_pending_room=t ORDER BY selected_option"
+            "WHERE is_pending_room='t' ORDER BY selected_option"
         )
         rows = await cls.db.fetch(q)
         if not rows:
@@ -100,7 +100,7 @@ class Room:
     @classmethod
     async def get_user_selected_menu(cls, room_id: RoomID) -> str | None:
         q = "SELECT selected_option FROM room WHERE room_id=$1"
-        row = await cls.db.fetchrow(q, room_id)
+        row = await cls.db.fetchval(q, room_id)
         if not row:
             return None
 

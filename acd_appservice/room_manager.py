@@ -694,3 +694,21 @@ class RoomManager:
             return False
 
         return True
+
+    @classmethod
+    async def get_pending_rooms(cls)->List[RoomID]:
+        try:
+            rooms = await Room.get_pending_rooms()
+        except Exception as e:
+            cls.log.error(e)
+
+        return [room.room_id for room in rooms]
+
+    @classmethod
+    async def get_campaign_of_pending_room(cls, room_id: RoomID)-> RoomID:
+        try:
+            return await Room.get_user_selected_menu(room_id=room_id)
+        except Exception as e:
+            cls.log.error(e)
+
+

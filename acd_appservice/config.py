@@ -24,3 +24,4 @@ class Config(BaseBridgeConfig):
         copy_dict("acd.menubots")
         copy("acd.force_join")
         copy("acd.agent_invite_timeout")
+        copy("acd.search_pending_rooms_interval")

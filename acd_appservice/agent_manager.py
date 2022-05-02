@@ -80,8 +80,69 @@ class AgentManager:
                 )
             )
         else:
-            self.log.debug(f"This room [[{customer_room_id}]] doesn't have online agents")
+            self.log.debug(f"This room [{customer_room_id}] doesn't have online agents")
             RoomManager.unlock_room(room_id=customer_room_id)
+
+    async def process_pending_rooms(self) -> None:
+        """Task to run every X second looking for pending rooms"""
+        while True:
+
+            self.log.debug("Searching for pending rooms...")
+            # room_ids = self.bot.store.get_pending_rooms()
+            customer_room_ids = await RoomManager.get_pending_rooms()
+
+            if len(customer_room_ids) > 0:
+                last_campaign_room_id = None
+                online_agent = None
+
+                for customer_room_id in customer_room_ids:
+                    result = await self.get_room_agent(room_id=customer_room_id)
+                    if result:
+                        self.log.debug(
+                            f"Room {customer_room_id} has already an agent, removing from pending rooms..."
+                        )
+                        # self.bot.store.remove_pending_room(room_id)
+                        await RoomManager.remove_pending_room(room_id=customer_room_id)
+
+                    else:
+                        # campaign_room_id = self.bot.store.get_campaign_of_pending_room(room_id)
+                        campaign_room_id = await RoomManager.get_campaign_of_pending_room(
+                            customer_room_id
+                        )
+
+                        self.log.debug(
+                            "Searching for online agent in campaign "
+                            f"{campaign_room_id if campaign_room_id else '👻'} "
+                            f"to room: {customer_room_id}"
+                        )
+
+                        if campaign_room_id != last_campaign_room_id:
+                            online_agent = await self.get_online_agent_in_room(campaign_room_id)
+                        else:
+                            self.log.debug(
+                                f"Same campaign, continue with other room waiting "
+                                "for other online agent different than last one"
+                            )
+                            continue
+
+                        if online_agent:
+                            self.log.debug(
+                                f"The agent {online_agent.user_id} is online to join "
+                                f"room: {customer_room_id}"
+                            )
+
+                            await self.process_distribution(customer_room_id, campaign_room_id)
+
+                        else:
+                            self.log.debug("There's no online agents yet")
+
+                        last_campaign_room_id = campaign_room_id
+
+            else:
+                self.log.debug("There's no pending rooms")
+
+            self.log.debug("\n")
+            await sleep(self.config["search_pending_rooms_interval"])
 
     async def loop_agents(
         self,
@@ -430,6 +491,31 @@ class AgentManager:
                 return True
 
         return False
+
+    async def get_room_agent(self, room_id: RoomID) -> UserID:
+        """Return room's assigned agent."""
+        agents = await self.intent.get_joined_members(room_id=room_id)
+        if agents:
+            for user_id in agents:
+                member_is_agent = self.is_agent(agent_id=user_id)
+                if member_is_agent:
+                    return user_id
+
+        return None
+
+    async def get_online_agent_in_room(self, room_id: RoomID) -> UserID:
+        """Return online agent from room_id."""
+        agents = await self.get_agents(room_id)
+        if not agents:
+            self.log.debug(f"There's no agent in room: {room_id}")
+            return None
+
+        for agent_id in agents:
+            presence_response = await self.intent.get_presence(agent_id)
+            if presence_response and presence_response.presence.ONLINE:
+                return agent_id
+
+        return None
 
     async def get_agents(self, room_id: RoomID) -> List[UserID]:
         """Get a room agent list."""

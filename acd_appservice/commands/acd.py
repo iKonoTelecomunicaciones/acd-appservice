@@ -1,3 +1,7 @@
+from asyncio import create_task
+
+from acd_appservice.room_manager import RoomManager
+
 from ..agent_manager import AgentManager
 from ..puppet import Puppet
 from .handler import command_handler
@@ -43,6 +47,8 @@ async def acd(evt: CommandEvent) -> str:
             intent=evt.acd_appservice.az.intent,
             control_room_id=evt.acd_appservice.config["acd.control_room_id"],
         )
+
+    create_task(agent_manager.process_pending_rooms())
 
     await agent_manager.process_distribution(
         customer_room_id=customer_room_id,

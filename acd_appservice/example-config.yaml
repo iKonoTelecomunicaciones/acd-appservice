@@ -101,6 +101,8 @@ acd:
     force_join: false
     # Timeout for agent invites
     agent_invite_timeout: 15
+    # Interval for automatic search pending rooms (3 minutes by default | 180s)
+    search_pending_rooms_interval: 180
 
 # ACD will send below commands to interact with any WA bridge
 bridges:
