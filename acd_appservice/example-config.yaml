@@ -99,6 +99,8 @@ acd:
     # force join
     device_name_regex: "Element Android|Móvil|Mobile"
     force_join: false
+    # Timeout for agent invites
+    agent_invite_timeout: 15
 
 # ACD will send below commands to interact with any WA bridge
 bridges:

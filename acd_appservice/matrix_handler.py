@@ -22,6 +22,8 @@ from mautrix.types import (
 )
 from mautrix.util.logging import TraceLogger
 
+from acd_appservice.agent_manager import AgentManager
+
 from . import acd_program as acd_pr
 from . import room_manager
 from .commands.handler import command_processor
@@ -45,6 +47,7 @@ class MatrixHandler:
         self.acd_appservice = acd_appservice
         self.config = acd_appservice.config
         self.az.matrix_event_handler(self.int_handle_event)
+        
 
     async def wait_for_connection(self) -> None:
         self.log.info("Ensuring connectivity to homeserver")
@@ -98,38 +101,6 @@ class MatrixHandler:
             except Exception:
                 self.log.exception("Failed to set bot avatar")
 
-    async def handle_invide(self, evt: Event):
-        self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
-
-        intent = await self.process_puppet(user_id=UserID(evt.state_key))
-
-        await intent.join_room(evt.room_id)
-
-    async def handle_disinvite(
-        self,
-        room_id: RoomID,
-        user_id: UserID,
-        disinvited_by: UserID,
-        reason: str,
-        event_id: EventID,
-    ) -> None:
-        pass
-
-    async def handle_join(self, room_id: RoomID, user_id: UserID, event_id: EventID) -> None:
-        self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
-
-        intent = await self.process_puppet(user_id=user_id)
-
-        if not intent:
-            self.log(f"The user who has joined is neither a puppet nor the appservice_bot")
-            return
-
-        # Solo se inicializa la sala si el que se une es el usuario acd*
-        if intent.api.bot_mxid == user_id and not await self.room_manager.initialize_room(
-            room_id=room_id, intent=intent
-        ):
-            self.log.debug(f"Room {room_id} initialization has failed")
-
     async def int_handle_event(self, evt: Event) -> None:
 
         self.log.debug(f"Received event: {evt.event_id} - {evt.type} in the room {evt.room_id}")
@@ -140,7 +111,7 @@ class MatrixHandler:
             prev_content = unsigned.prev_content or MemberStateEventContent()
             prev_membership = prev_content.membership if prev_content else Membership.JOIN
             if evt.content.membership == Membership.INVITE:
-                await self.handle_invide(evt)
+                await self.handle_invite(evt)
 
             elif evt.content.membership == Membership.LEAVE:
                 if prev_membership == Membership.BAN:
@@ -210,6 +181,45 @@ class MatrixHandler:
         #         await self.handle_ephemeral_event(evt)
         #     else:
         #         await self.handle_event(evt)
+
+    async def handle_invite(self, evt: Event):
+        self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
+        intent = await self.process_puppet(user_id=UserID(evt.state_key))
+        await intent.join_room(evt.room_id)
+
+    async def handle_disinvite(
+        self,
+        room_id: RoomID,
+        user_id: UserID,
+        disinvited_by: UserID,
+        reason: str,
+        event_id: EventID,
+    ) -> None:
+        pass
+
+    async def handle_join(self, room_id: RoomID, user_id: UserID, event_id: EventID) -> None:
+        self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
+
+        future_key = room_manager.RoomManager.get_future_key(room_id=room_id, agent_id=user_id)
+        if (
+            future_key in AgentManager.PENDING_INVITES
+            and not AgentManager.PENDING_INVITES[future_key].done()
+        ):
+            # when the agent accepts the invite, the Future is resolved and the waiting
+            # timer stops
+            self.log.debug(f"Resolving to True the promise [{future_key}]")
+            AgentManager.PENDING_INVITES[future_key].set_result(True)
+
+        intent = await self.process_puppet(user_id=user_id)
+        if not intent:
+            self.log(f"The user who has joined is neither a puppet nor the appservice_bot")
+            return
+
+        # Solo se inicializa la sala si el que se une es el usuario acd*
+        if intent.api.bot_mxid == user_id and not await self.room_manager.initialize_room(
+            room_id=room_id, intent=intent
+        ):
+            self.log.debug(f"Room {room_id} initialization has failed")
 
     def is_command(self, message: MessageEventContent) -> tuple[bool, str]:
         text = message.body

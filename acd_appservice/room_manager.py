@@ -325,7 +325,7 @@ class RoomManager:
     @classmethod
     def get_future_key(cls, room_id: RoomID, agent_id: UserID) -> str:
         """Return the key for the dict of futures for a specific agent."""
-        return f"[{room_id}]-[{agent_id}]"
+        return f"{room_id}-{agent_id}"
 
     async def get_update_name(self, creator: UserID, intent: IntentAPI) -> str:
         """Given a customer's mxid, pull the phone number and concatenate it to the name

@@ -147,13 +147,18 @@ class AgentManager:
             if presence_response and presence_response.presence.ONLINE:
                 # only invite agents online
                 online_agents += 1
-                response = await self.invite_agent(
+                # response = await self.invite_agent(
+                #     customer_room_id, agent_id, campaign_room_id, joined_message
+                # )
+                # if response:
+                #     self.log.debug(f"TRYING [{agent_id}] ...")
+                #     RoomManager.unlock_room(customer_room_id)
+                #     break
+                await self.force_invite_agent(
                     customer_room_id, agent_id, campaign_room_id, joined_message
                 )
-                if response:
-                    self.log.debug(f"TRYING [{agent_id}] ...")
-                    RoomManager.unlock_room(customer_room_id)
-                    break
+                RoomManager.unlock_room(customer_room_id)
+                break
 
             agent_count += 1
 
@@ -181,39 +186,39 @@ class AgentManager:
 
             self.log.debug(f"agent count: [{agent_count}] online_agents: [{online_agents}]")
 
-    async def invite_agent(
-        self,
-        customer_room_id: RoomID,
-        agent_id: UserID,
-        campaign_room_id: RoomID,
-        joined_message: str = None,
-    ) -> bool:
-        """Invite an agent."""
-        self.log.debug(f"Inviting [[{agent_id}]]...")
-        try:
-            await self.intent.invite_user(room_id=customer_room_id, user_id=agent_id)
-        except IntentError as e:
-            self.log.error(e)
-            return False
+    # async def invite_agent(
+    #     self,
+    #     customer_room_id: RoomID,
+    #     agent_id: UserID,
+    #     campaign_room_id: RoomID,
+    #     joined_message: str = None,
+    # ) -> bool:
+    #     """Invite an agent."""
+    #     self.log.debug(f"Inviting [[{agent_id}]]...")
+    #     try:
+    #         await self.intent.invite_user(room_id=customer_room_id, user_id=agent_id)
+    #     except IntentError as e:
+    #         self.log.error(e)
+    #         return False
 
-        # get the current event loop
-        loop = get_running_loop()
+    #     # get the current event loop
+    #     loop = get_running_loop()
 
-        # create a new Future object.
-        pending_invite = loop.create_future()
-        future_key = RoomManager.get_future_key(customer_room_id, agent_id)
-        # mantain an array of futures for every invite to get notification of joins
-        self.PENDING_INVITES[future_key] = pending_invite
-        self.log.debug(f"Futures are... [{self.PENDING_INVITES}]")
+    #     # create a new Future object.
+    #     pending_invite = loop.create_future()
+    #     future_key = RoomManager.get_future_key(customer_room_id, agent_id)
+    #     # mantain an array of futures for every invite to get notification of joins
+    #     self.PENDING_INVITES[future_key] = pending_invite
+    #     self.log.debug(f"Futures are... [{self.PENDING_INVITES}]")
 
-        # spawn a task that does not block the asyncio loop
-        create_task(
-            self.check_agent_joined(
-                customer_room_id, pending_invite, agent_id, campaign_room_id, joined_message
-            )
-        )
+    #     # spawn a task that does not block the asyncio loop
+    #     create_task(
+    #         self.check_agent_joined(
+    #             customer_room_id, pending_invite, agent_id, campaign_room_id, joined_message
+    #         )
+    #     )
 
-        return True
+    #     return True
 
     async def get_next_agent(self, agent_id: UserID, room_id: RoomID) -> UserID:
         """Get next agent in line."""
@@ -260,7 +265,7 @@ class AgentManager:
         future_key = RoomManager.get_future_key(room_id, agent_id)
         # mantain an array of futures for every invite to get notification of joins
         self.PENDING_INVITES[future_key] = pending_invite
-        self.log.debug(f"Futures are... [{self.PENDING_INVITES}]")
+        self.log.debug(f"Futures are...$ [{self.PENDING_INVITES}]")
 
         await self.force_join_agent(room_id, agent_id)
 
@@ -280,9 +285,9 @@ class AgentManager:
         joined_message: str = None,
     ) -> None:
         """Start a loop of x seconds that is interrupted when the agent accepts the invite."""
-        agent_joined = None
         loop = get_running_loop()
-        end_time = loop.time() + float(self.config.get("agent_invite_timeout"))
+        end_time = loop.time() + float(self.config["acd.agent_invite_timeout"])
+
         while True:
             self.log.debug(datetime.now())
             if pending_invite.done():
