@@ -20,7 +20,7 @@ async def acd(evt: CommandEvent) -> str:
     optionally a campaign room and a joining message can be given.
     """
 
-    evt.log.debug(f"{evt.args}")
+    evt.log.debug(f"Incoming command is :: {evt.args}")
 
     if len(evt.args) < 2:
         detail = "acd command incomplete arguments"
@@ -39,17 +39,15 @@ async def acd(evt: CommandEvent) -> str:
             intent=puppet.intent,
             control_room_id=puppet.control_room_id,
         )
-    else:
-        agent_manager: AgentManager = AgentManager(
-            room_manager=evt.acd_appservice.matrix.room_manager,
-            intent=evt.acd_appservice.az.intent,
-            control_room_id=evt.acd_appservice.config["acd.control_room_id"],
+
+        await agent_manager.process_distribution(
+            customer_room_id=customer_room_id,
+            campaign_room_id=campaign_room_id,
+            joined_message=joined_message,
         )
-
-    create_task(agent_manager.process_pending_rooms())
-
-    await agent_manager.process_distribution(
-        customer_room_id=customer_room_id,
-        campaign_room_id=campaign_room_id,
-        joined_message=joined_message,
-    )
+    else:
+        await evt.acd_appservice.matrix.agent_manager.process_distribution(
+            customer_room_id=customer_room_id,
+            campaign_room_id=campaign_room_id,
+            joined_message=joined_message,
+        )

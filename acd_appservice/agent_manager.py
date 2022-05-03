@@ -8,8 +8,10 @@ from typing import List
 from mautrix.api import Method
 from mautrix.appservice import IntentAPI
 from mautrix.errors.base import IntentError
-from mautrix.types import Member, RoomAlias, RoomID, UserID
+from mautrix.types import Member, PresenceState, RoomAlias, RoomID, UserID
 from mautrix.util.logging import TraceLogger
+
+from acd_appservice import acd_program
 
 from .room_manager import RoomManager
 
@@ -17,7 +19,7 @@ from .room_manager import RoomManager
 class AgentManager:
     log: TraceLogger = logging.getLogger("mau.agent_manager")
     intent: IntentAPI
-    room_manager: RoomManager
+    acd_appservice: acd_program.ACD
 
     # last invited agent per control room (i.e. campaigns)
     CURRENT_AGENT = {}
@@ -29,13 +31,12 @@ class AgentManager:
 
     def __init__(
         self,
-        room_manager: RoomManager,
+        acd_appservice: acd_program.ACD,
         intent: IntentAPI,
         control_room_id: RoomID,
     ) -> None:
-        self.room_manager = room_manager
         self.intent = intent
-        self.config = room_manager.config
+        self.config = acd_appservice.config
         self.control_room_id = control_room_id
 
     async def process_distribution(
@@ -218,24 +219,24 @@ class AgentManager:
                 RoomManager.unlock_room(customer_room_id)
                 break
 
-            if self.config["acd.force_join"] and await self.room_manager.is_in_mobile_device(
+            if self.config["acd.force_join"] and await self.acd_appservice.matrix.room_manager.is_in_mobile_device(
                 user_id=agent_id, intent=self.intent
             ):
                 # force agent join to room when agent is in mobile device
-                self.log.debug(f"Agent [[{agent_id}]] is in mobile device")
+                self.log.debug(f"Agent [{agent_id}] is in mobile device")
                 await self.force_invite_agent(
                     customer_room_id, agent_id, campaign_room_id, joined_message
                 )
                 break
 
-            presence_response = await self.room_manager.get_user_presence(
+            presence_response = await self.acd_appservice.matrix.room_manager.get_user_presence(
                 user_id=agent_id, intent=self.intent
             )
             self.log.debug(
                 f"PRESENCE RESPONSE: "
-                f"[{presence_response.presence if presence_response else None}]"
+                f"[{agent_id}] -> [{presence_response.presence if presence_response else None}]"
             )
-            if presence_response and presence_response.presence.ONLINE:
+            if presence_response and presence_response.presence == PresenceState.ONLINE:
                 # only invite agents online
                 online_agents += 1
                 # response = await self.invite_agent(
@@ -261,9 +262,12 @@ class AgentManager:
                 else:
                     self.log.debug("THERE ARE ONLINE AGENTS BUT ERROR ON INVITE")
 
-                await self.show_no_agents_message(
-                    customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
-                )
+                try:
+                    await self.show_no_agents_message(
+                        customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
+                    )
+                except Exception as e:
+                    self.log.error(e)
 
                 self.log.debug(f"Saving room [{customer_room_id}] in pending list")
                 # self.bot.store.save_pending_room(customer_room_id, campaign_room_id) # TODO GUARDAR EN BASE DE DATOS
@@ -460,7 +464,7 @@ class AgentManager:
             )
 
             # kick menu bot
-            await self.room_manager.kick_menubot(
+            await self.acd_appservice.matrix.room_manager.kick_menubot(
                 room_id=customer_room_id,
                 reason=f"agent [{agent_id}] accepted invite",
                 intent=self.intent,
@@ -548,15 +552,17 @@ class AgentManager:
             The room ID of the campaign room.
 
         """
-        menubot_id = await self.room_manager.get_menubot_id(
+        menubot_id = await self.acd_appservice.matrix.room_manager.get_menubot_id(
             intent=self.intent, room_id=customer_room_id
         )
         if menubot_id:
-            await self.room_manager.send_menubot_command(
-                menubot_id=menubot_id,
-                command="no_agents_message",
-                intent=self.intent,
-                args=(customer_room_id, campaign_room_id),
+            await self.acd_appservice.matrix.room_manager.send_menubot_command(
+                menubot_id,
+                "no_agents_message",
+                self.control_room_id,
+                self.intent,
+                customer_room_id,
+                campaign_room_id,
             )
 
     async def get_agent_count(self, room_id: RoomID) -> int:
@@ -602,8 +608,8 @@ class AgentManager:
             if not member_is_agent:
                 # count only agents, not customers
                 continue
-            response = await self.intent.get_presence(user_id)
-            if response.presence.ONLINE:
+            presence_response = await self.intent.get_presence(user_id)
+            if presence_response.presence == PresenceState.ONLINE:
                 self.log.debug(f"Online agent {user_id} in the room [{room_id}]")
                 return True
 
@@ -651,7 +657,7 @@ class AgentManager:
 
         for agent_id in agents:
             presence_response = await self.intent.get_presence(agent_id)
-            if presence_response and presence_response.presence.ONLINE:
+            if presence_response and presence_response == PresenceState.ONLINE:
                 return agent_id
 
         return None

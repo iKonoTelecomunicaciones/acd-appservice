@@ -438,7 +438,12 @@ class RoomManager:
             self.log.debug(f"User [{menubot_id}] KICKED from room [{room_id}]")
 
     async def send_menubot_command(
-        self, menubot_id: UserID, command: str, intent: IntentAPI, *args: Tuple
+        self,
+        menubot_id: UserID,
+        command: str,
+        control_room_id: RoomID,
+        intent: IntentAPI,
+        *args: Tuple,
     ) -> None:
         """Send a command to menubot."""
         if menubot_id:
@@ -452,7 +457,7 @@ class RoomManager:
             cmd = cmd.strip()
 
             self.log.debug(f"Sending command {command} for the menubot [{menubot_id}]")
-            await intent.send_text(room_id=self.control_room_id, text=cmd)
+            await intent.send_text(room_id=control_room_id, text=cmd)
 
     async def get_menubot_id(
         self, intent: IntentAPI, room_id: RoomID = None, user_id: UserID = None

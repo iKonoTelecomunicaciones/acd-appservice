@@ -38,6 +38,7 @@ class MatrixHandler:
     acd_appservice: acd_pr.ACD
 
     room_manager: room_manager.RoomManager
+    agent_manager: AgentManager
 
     def __init__(
         self,
@@ -47,6 +48,13 @@ class MatrixHandler:
         self.acd_appservice = acd_appservice
         self.config = acd_appservice.config
         self.az.matrix_event_handler(self.int_handle_event)
+        self.agent_manager = AgentManager( # TODO ARREGLAR ESTA MIERDA
+            acd_appservice= acd_appservice,
+            intent=acd_appservice.az.intent,
+            control_room_id=self.config["acd.control_room_id"],
+        )
+
+        asyncio.create_task(self.agent_manager.process_pending_rooms())
 
     async def wait_for_connection(self) -> None:
         self.log.info("Ensuring connectivity to homeserver")
