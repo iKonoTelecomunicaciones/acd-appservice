@@ -47,7 +47,7 @@ class MatrixHandler:
         self.acd_appservice = acd_appservice
         self.config = acd_appservice.config
         self.az.matrix_event_handler(self.int_handle_event)
-        
+
     async def wait_for_connection(self) -> None:
         self.log.info("Ensuring connectivity to homeserver")
         errors = 0
