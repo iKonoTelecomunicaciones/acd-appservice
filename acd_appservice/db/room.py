@@ -161,8 +161,6 @@ class Room:
     async def get_campaign_of_pending_room(cls, room_id: RoomID) -> str | None:
         """ "Get the campaign of a pending room."
 
-        The first line is a docstring. It's a good idea to write docstrings for all your functions
-
         Parameters
         ----------
         room_id : RoomID
