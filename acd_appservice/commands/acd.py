@@ -1,7 +1,5 @@
 from asyncio import create_task
 
-from acd_appservice.room_manager import RoomManager
-
 from ..agent_manager import AgentManager
 from ..puppet import Puppet
 from .handler import command_handler

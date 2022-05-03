@@ -39,16 +39,28 @@ class AgentManager:
         self.control_room_id = control_room_id
 
     async def process_distribution(
-        self,
-        customer_room_id: RoomID,
-        campaign_room_id: RoomID = None,
-        joined_message: str = None,
+        self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
     ) -> None:
         """Start distribution process if no online agents in the room.
 
-        This loop is done over agents in campaign_room_id
-        """
+        If the room is locked, return. If the room is not locked, lock it.
+        If there are no online agents in the room, create a task to loop over the agents in the campaign room.
+        If there are online agents in the room, unlock the room
 
+        Parameters
+        ----------
+        customer_room_id : RoomID
+            RoomID
+        campaign_room_id : RoomID
+            RoomID = None
+        joined_message : str
+            str = None
+
+        Returns
+        -------
+            The return value is a list of tuples.
+
+        """
         if RoomManager.is_room_locked(room_id=customer_room_id):
             self.log.debug(f"Room [{customer_room_id}] LOCKED")
             return
@@ -84,7 +96,13 @@ class AgentManager:
             RoomManager.unlock_room(room_id=customer_room_id)
 
     async def process_pending_rooms(self) -> None:
-        """Task to run every X second looking for pending rooms"""
+        """Task to run every X second looking for pending rooms
+
+        Every X seconds, check if there are pending rooms, if there are,
+        check if there are online agents in the campaign room, if there are,
+        assign the agent to the pending room
+        """
+
         while True:
 
             self.log.debug("Searching for pending rooms...")
@@ -151,7 +169,19 @@ class AgentManager:
         agent_id: UserID,
         joined_message: str,
     ) -> None:
-        """Loop through agents to assign one to the chat."""
+        """It loops through a list of agents and tries to invite them to a room
+
+        Parameters
+        ----------
+        customer_room_id : RoomID
+            The room ID of the customer.
+        campaign_room_id : RoomID
+            The room ID of the campaign room.
+        agent_id : UserID
+            The ID of the agent to start the loop with.
+        joined_message : str
+            str
+        """
         total_agents = await self.get_agent_count(room_id=campaign_room_id)
         online_agents = 0
 
@@ -282,7 +312,20 @@ class AgentManager:
     #     return True
 
     async def get_next_agent(self, agent_id: UserID, room_id: RoomID) -> UserID:
-        """Get next agent in line."""
+        """It takes a room ID and an agent ID, and returns the next agent in the room
+
+        Parameters
+        ----------
+        agent_id : UserID
+            UserID
+        room_id : RoomID
+            The room ID of the room you want to get the next agent from.
+
+        Returns
+        -------
+            The next agent in line.
+
+        """
         members = await self.intent.get_joined_members(room_id)
         # print([member.user_id for member in members])
         if members:
@@ -318,6 +361,20 @@ class AgentManager:
         campaign_room_id: RoomID,
         joined_message: str = None,
     ) -> None:
+        """It creates a new Future object, adds it to a dictionary, and then spawns a task that waits for the Future to be set
+
+        Parameters
+        ----------
+        room_id : RoomID
+            RoomID
+        agent_id : UserID
+            UserID
+        campaign_room_id : RoomID
+            RoomID
+        joined_message : str
+            str = None,
+
+        """
         # get the current event loop
         loop = get_running_loop()
 
@@ -326,7 +383,7 @@ class AgentManager:
         future_key = RoomManager.get_future_key(room_id, agent_id)
         # mantain an array of futures for every invite to get notification of joins
         self.PENDING_INVITES[future_key] = pending_invite
-        self.log.debug(f"Futures are...$ [{self.PENDING_INVITES}]")
+        self.log.debug(f"Futures are... [{self.PENDING_INVITES}]")
 
         await self.force_join_agent(room_id, agent_id)
 
@@ -345,7 +402,26 @@ class AgentManager:
         campaign_room_id: RoomID,
         joined_message: str = None,
     ) -> None:
-        """Start a loop of x seconds that is interrupted when the agent accepts the invite."""
+        """Start a loop of x seconds that is interrupted when the agent accepts the invite.
+
+        It checks if an agent has joined a room within a certain amount of time.
+        If the agent has joined, it sets the agent as the current agent for the room,
+        and if the agent has not joined, it kicks the agent and invites the next agent in the list
+
+        Parameters
+        ----------
+        customer_room_id : RoomID
+            The room ID of the customer.
+        pending_invite : Future
+            Future object that is resolved when the agent accepts the invite.
+        agent_id : UserID
+            The user ID of the agent to invite.
+        campaign_room_id : RoomID
+            The room ID of the campaign that the customer has selected.
+        joined_message : str
+            The message to send to the customer when the agent joins the room.
+
+        """
         loop = get_running_loop()
         end_time = loop.time() + float(self.config["acd.agent_invite_timeout"])
 
@@ -438,8 +514,18 @@ class AgentManager:
     async def force_join_agent(
         self, room_id: RoomID, agent_id: UserID, room_alias: RoomAlias = None
     ) -> None:
-        """Force agent join to room"""
+        """It takes a room ID, an agent ID, and a room alias (optional) and forces the agent to join the room
 
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to join.
+        agent_id : UserID
+            The user ID of the agent you want to force join the room.
+        room_alias : RoomAlias
+            The alias of the room to join.
+
+        """
         data = {"user_id": agent_id}
         try:
             response = await self.intent.api.request(
@@ -452,7 +538,16 @@ class AgentManager:
             self.log.error(e)
 
     async def show_no_agents_message(self, customer_room_id, campaign_room_id) -> None:
-        """Ask menubot to show no-agents message for the given room."""
+        """It asks the menubot to show a message to the customer saying that there are no agents available
+
+        Parameters
+        ----------
+        customer_room_id
+            The room ID of the customer's room.
+        campaign_room_id
+            The room ID of the campaign room.
+
+        """
         menubot_id = await self.room_manager.get_menubot_id(
             intent=self.intent, room_id=customer_room_id
         )
@@ -465,7 +560,18 @@ class AgentManager:
             )
 
     async def get_agent_count(self, room_id: RoomID) -> int:
-        """Get a room agent count."""
+        """Get a room agent count
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to get the agent count from.
+
+        Returns
+        -------
+            The number of agents in the room.
+
+        """
         total = 0
         agents = await self.get_agents(room_id=room_id)
         if agents:
@@ -473,7 +579,18 @@ class AgentManager:
         return total
 
     async def is_a_room_with_online_agents(self, room_id: RoomID) -> bool:
-        """Check if there is an online agent in the room."""
+        """It checks if there is an online agent in the room
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room to check.
+
+        Returns
+        -------
+            A boolean value.
+
+        """
         members = await self.intent.get_joined_members(room_id=room_id)
         if not members:
             # probably an error has occurred
@@ -493,7 +610,18 @@ class AgentManager:
         return False
 
     async def get_room_agent(self, room_id: RoomID) -> UserID:
-        """Return room's assigned agent."""
+        """Return the room's assigned agent
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to get the agent for.
+
+        Returns
+        -------
+            The user_id of the agent assigned to the room.
+
+        """
         agents = await self.intent.get_joined_members(room_id=room_id)
         if agents:
             for user_id in agents:
@@ -504,7 +632,18 @@ class AgentManager:
         return None
 
     async def get_online_agent_in_room(self, room_id: RoomID) -> UserID:
-        """Return online agent from room_id."""
+        """ "Return online agent from room_id."
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to get the agent from.
+
+        Returns
+        -------
+            The user_id of the agent that is online.
+
+        """
         agents = await self.get_agents(room_id)
         if not agents:
             self.log.debug(f"There's no agent in room: {room_id}")
@@ -518,7 +657,18 @@ class AgentManager:
         return None
 
     async def get_agents(self, room_id: RoomID) -> List[UserID]:
-        """Get a room agent list."""
+        """Get a room agent list
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to get the agent list from.
+
+        Returns
+        -------
+            A list of user IDs.
+
+        """
         members = None
         try:
             members = await self.intent.get_joined_members(room_id=room_id)
@@ -533,7 +683,18 @@ class AgentManager:
         return None
 
     def remove_not_agents(self, members: dict[UserID, Member]) -> List[UserID]:
-        """Remove other users like bots from room members."""
+        """Removes non-agents from the list of members in a room
+
+        Parameters
+        ----------
+        members : dict[UserID, Member]
+            dict[UserID, Member]
+
+        Returns
+        -------
+            A list of user_ids that start with the agent_prefix.
+
+        """
 
         only_agents: List[UserID] = []
         if members:
@@ -546,5 +707,16 @@ class AgentManager:
         return only_agents
 
     def is_agent(self, agent_id: UserID) -> bool:
-        """Check if user_id is agent."""
+        """`Check if user_id is agent.`
+
+        Parameters
+        ----------
+        agent_id : UserID
+            The agent's ID.
+
+        Returns
+        -------
+            True or False
+
+        """
         return True if agent_id.startswith(self.config["acd.agent_prefix"]) else False
