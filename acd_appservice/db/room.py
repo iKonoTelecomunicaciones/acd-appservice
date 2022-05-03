@@ -22,7 +22,8 @@ class Room:
 
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> Room:
-        """It takes a class and a row from a database, and returns an instance of the class with the row's values
+        """It takes a class and a row from a database,
+        and returns an instance of the class with the row's values
 
         Parameters
         ----------
