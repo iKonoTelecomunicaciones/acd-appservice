@@ -48,8 +48,8 @@ class MatrixHandler:
         self.acd_appservice = acd_appservice
         self.config = acd_appservice.config
         self.az.matrix_event_handler(self.int_handle_event)
-        self.agent_manager = AgentManager( # TODO ARREGLAR ESTA MIERDA
-            acd_appservice= acd_appservice,
+        self.agent_manager = AgentManager(  # TODO ARREGLAR ESTA MIERDA
+            acd_appservice=acd_appservice,
             intent=acd_appservice.az.intent,
             control_room_id=self.config["acd.control_room_id"],
         )

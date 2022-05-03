@@ -219,7 +219,9 @@ class AgentManager:
                 RoomManager.unlock_room(customer_room_id)
                 break
 
-            if self.config["acd.force_join"] and await self.acd_appservice.matrix.room_manager.is_in_mobile_device(
+            if self.config[
+                "acd.force_join"
+            ] and await self.acd_appservice.matrix.room_manager.is_in_mobile_device(
                 user_id=agent_id, intent=self.intent
             ):
                 # force agent join to room when agent is in mobile device
