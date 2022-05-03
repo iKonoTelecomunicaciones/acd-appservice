@@ -1,10 +1,7 @@
-import logging
-
 import nest_asyncio
 import pytest
 from mautrix.appservice import IntentAPI
 from mautrix.types import RoomID
-from mautrix.util.logging import TraceLogger
 
 from acd_appservice import room_manager
 

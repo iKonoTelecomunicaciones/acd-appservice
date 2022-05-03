@@ -80,7 +80,7 @@ class AgentManager:
                 )
             )
         else:
-            self.log.debug(f"This room [[{customer_room_id}]] doesn't have online agents")
+            self.log.debug(f"This room [{customer_room_id}] doesn't have online agents")
             RoomManager.unlock_room(room_id=customer_room_id)
 
     async def loop_agents(
@@ -151,7 +151,7 @@ class AgentManager:
                     customer_room_id, agent_id, campaign_room_id, joined_message
                 )
                 if response:
-                    self.log.debug(f"TRYING [[{agent_id}]] ...")
+                    self.log.debug(f"TRYING [{agent_id}] ...")
                     RoomManager.unlock_room(customer_room_id)
                     break
 
@@ -169,8 +169,12 @@ class AgentManager:
                     customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
                 )
 
-                self.log.debug(f"Saving room [[{customer_room_id}]] in pending list")
+                self.log.debug(f"Saving room [{customer_room_id}] in pending list")
                 # self.bot.store.save_pending_room(customer_room_id, campaign_room_id) # TODO GUARDAR EN BASE DE DATOS
+                await RoomManager.save_pending_room(
+                    room_id=customer_room_id,
+                    selected_option=campaign_room_id,
+                )
 
                 RoomManager.unlock_room(room_id=customer_room_id)
                 break
@@ -302,10 +306,16 @@ class AgentManager:
             self.log.debug(f"[[{agent_id}]] ACCEPTED the invite. CHAT ASSIGNED.")
             self.log.debug(f"NEW CURRENT_AGENT : [{self.CURRENT_AGENT}]")
             self.log.debug(f"======> [{customer_room_id}] selected [{campaign_room_id}]")
-            self.bot.store.set_user_selected_menu(customer_room_id, campaign_room_id)
+            # self.bot.store.set_user_selected_menu(customer_room_id, campaign_room_id)
+            await RoomManager.set_user_selected_menu(
+                room_id=customer_room_id, selected_option=campaign_room_id
+            )
 
             self.log.debug(f"Removing room [{customer_room_id}] from pending list")
             # self.bot.store.remove_pending_room(customer_room_id) # TODO BASE DE DATOS
+            await RoomManager.remove_pending_room(
+                room_id=customer_room_id,
+            )
 
             # kick menu bot
             await self.room_manager.kick_menubot(

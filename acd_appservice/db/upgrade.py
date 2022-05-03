@@ -10,18 +10,34 @@ upgrade_table = UpgradeTable()
 async def upgrade_v1(conn: Connection) -> None:
     await conn.execute(
         """CREATE TABLE puppet (
-        pk            SERIAL PRIMARY KEY,
-        custom_mxid   TEXT,
-        name          TEXT,
-        username      TEXT,
-        photo_id      TEXT,
-        photo_mxc     TEXT,
-        name_set      BOOLEAN NOT NULL DEFAULT false,
-        avatar_set    BOOLEAN NOT NULL DEFAULT false,
-        is_registered BOOLEAN NOT NULL DEFAULT false,
-        access_token  TEXT,
-        next_batch    TEXT,
-        base_url      TEXT,
-        control_room_id      TEXT
-    )"""
+        pk              SERIAL PRIMARY KEY,
+        custom_mxid     TEXT,
+        name            TEXT,
+        username        TEXT,
+        photo_id        TEXT,
+        photo_mxc       TEXT,
+        name_set        BOOLEAN NOT NULL DEFAULT false,
+        avatar_set      BOOLEAN NOT NULL DEFAULT false,
+        is_registered   BOOLEAN NOT NULL DEFAULT false,
+        access_token    TEXT,
+        next_batch      TEXT,
+        base_url        TEXT,
+        control_room_id TEXT
+        )"""
+    )
+    await conn.execute(
+        """CREATE TABLE room (
+        id                  SERIAL PRIMARY KEY,
+        room_id             TEXT NOT NULL,
+        selected_option     TEXT,
+        UNIQUE (room_id)
+        )"""
+    )
+    await conn.execute(
+        """CREATE TABLE pending_room (
+        id                  SERIAL PRIMARY KEY,
+        room_id             TEXT NOT NULL,
+        selected_option     TEXT,
+        UNIQUE (room_id)
+        )"""
     )

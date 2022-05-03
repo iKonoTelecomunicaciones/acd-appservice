@@ -19,6 +19,7 @@ from mautrix.types import (
 from mautrix.util.logging import TraceLogger
 
 from .config import Config
+from .db import Room
 
 
 class RoomManager:
@@ -433,6 +434,7 @@ class RoomManager:
                 await intent.kick_user(room_id=room_id, user_id=menubot_id, reason=reason)
             except IntentError as e:
                 self.log.error(e)
+
             self.log.debug(f"User [{menubot_id}] KICKED from room [{room_id}]")
 
     async def send_menubot_command(
@@ -538,6 +540,7 @@ class RoomManager:
             room_name = room_info.get("name")
         except Exception as e:
             self.log.error(e)
+            return
 
         return room_name
 
@@ -563,5 +566,252 @@ class RoomManager:
             self.ROOMS[room_id] = room_info
         except Exception as e:
             self.log.error(e)
+            return
 
         return room_info
+
+    @classmethod
+    async def set_user_selected_menu(cls, room_id: RoomID, selected_option: str) -> bool:
+        """Sets the customer's menu selection (Table room).
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to save data.
+        selected_option: RoomID
+            Room selected by the customer
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        room = await Room.get_room_by_room_id(room_id)
+        if room:
+            return await cls.update_room_in_db(room_id=room_id, selected_option=selected_option)
+        else:
+            return await cls.insert_room_in_db(room_id=room_id, selected_option=selected_option)
+
+    @classmethod
+    async def save_pending_room(cls, room_id: RoomID, selected_option: str = None) -> bool:
+        """Save or update a pending room.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to save data.
+        selected_option: RoomID
+            Room selected by the customer
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        room = await Room.get_room_by_room_id(room_id)
+        if room:
+            return await cls.update_pending_room_in_db(
+                room_id=room_id, selected_option=selected_option
+            )
+        else:
+            return await cls.insert_pending_room_in_db(
+                room_id=room_id, selected_option=selected_option
+            )
+
+    @classmethod
+    async def remove_pending_room(cls, room_id: RoomID) -> bool:
+        """Delete the pending room.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to remove data.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        try:
+            room = await Room.get_pending_room_by_room_id(room_id)
+            if not room:
+                return False
+
+            return await Room.remove_pending_room(room_id)
+        except Exception as e:
+            cls.log.error(e)
+            return False
+
+    @classmethod
+    async def insert_room_in_db(cls, room_id: RoomID, selected_option: str) -> bool:
+        """Inserts a room in the database.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to save data.
+        selected_option: RoomID
+            Room selected by the customer.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        try:
+            room = await Room.get_room_by_room_id(room_id)
+            if room:
+                return False
+            else:
+                await Room.insert_room(room_id, selected_option)
+        except Exception as e:
+            cls.log.error(e)
+            return False
+
+        return True
+
+    @classmethod
+    async def insert_pending_room_in_db(cls, room_id: RoomID, selected_option: str) -> bool:
+        """Inserts a pending_room in the database.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to save data.
+        selected_option: RoomID
+            Room selected by the customer.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        try:
+            room = await Room.get_pending_room_by_room_id(room_id)
+            if room:
+                return False
+            else:
+                await Room.insert_pending_room(room_id, selected_option)
+        except Exception as e:
+            cls.log.error(e)
+            return False
+
+        return True
+
+    @classmethod
+    async def update_pending_room_in_db(
+        cls, room_id: RoomID, selected_option: str, is_pending_room: bool = False
+    ) -> bool:
+        """Updates a pending_room in the database.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to save data.
+        selected_option: RoomID
+            Room selected by the customer.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        try:
+            room = await Room.get_pending_room_by_room_id(room_id)
+            if room:
+                await Room.update_pending_room_by_room_id(
+                    room_id, selected_option, is_pending_room
+                )
+            else:
+                cls.log.error(f"The room {room_id} does not exist so it will not be updated")
+        except Exception as e:
+            cls.log.error(e)
+            return False
+
+        return True
+
+    @classmethod
+    async def update_room_in_db(cls, room_id: RoomID, selected_option: str) -> bool:
+        """Updates a room in the database.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to save data.
+        selected_option: RoomID
+            Room selected by the customer.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        try:
+            room = await Room.get_room_by_room_id(room_id)
+            if room:
+                await Room.update_room_by_room_id(room_id, selected_option)
+            else:
+                cls.log.error(f"The room {room_id} does not exist so it will not be updated")
+        except Exception as e:
+            cls.log.error(e)
+            return False
+
+        return True
+
+    @classmethod
+    async def get_pending_rooms(cls) -> List[RoomID]:
+        """Get a pending rooms in the database.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to query.
+
+        Returns
+        -------
+        List[RoomID]
+            List[RoomID] if successful, None otherwise.
+        """
+        try:
+            rooms = await Room.get_pending_rooms()
+        except Exception as e:
+            cls.log.error(e)
+            return
+
+        return [room.room_id for room in rooms]
+
+    @classmethod
+    async def get_campaign_of_pending_room(cls, room_id: RoomID) -> RoomID:
+        """Given a pending room, its selected campaign is obtained.
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to query.
+
+        Returns
+        -------
+        RoomID
+            RoomID if successful, None otherwise.
+        """
+        try:
+            return await Room.get_campaign_of_pending_room(room_id=room_id)
+        except Exception as e:
+            cls.log.error(e)
+
+    @classmethod
+    async def get_campaign_of_room(cls, room_id: RoomID) -> RoomID:
+        """Given a room, its selected campaign is obtained.
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to query.
+
+        Returns
+        -------
+        RoomID
+            RoomID if successful, None otherwise.
+        """
+        try:
+            return await Room.get_user_selected_menu(room_id=room_id)
+        except Exception as e:
+            cls.log.error(e)
