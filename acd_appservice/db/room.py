@@ -27,7 +27,6 @@ class Room:
         Parameters
         ----------
         row : asyncpg.Record
-            asyncpg.Record
 
         Returns
         -------
@@ -67,23 +66,6 @@ class Room:
         await cls.db.execute(q, *(room_id, selected_option))
 
     @classmethod
-    async def update_room_by_id(cls, id: int, room_id: RoomID, selected_option: str) -> None:
-        """Update the room with the given id, setting the room_id to the given room_id and the selected_option to the given selected_option
-
-        Parameters
-        ----------
-        id : int
-            int - The id of the room to update
-        room_id : RoomID
-            RoomID = RoomID.from_string(room_id)
-        selected_option : str
-            This is the option that the user has selected.
-
-        """
-        q = "UPDATE room SET room_id=$2, selected_option=$3 WHERE id=$1"
-        await cls.db.execute(q, *(id, room_id, selected_option))
-
-    @classmethod
     async def update_room_by_room_id(cls, room_id: RoomID, selected_option: str) -> None:
         """Update the selected_option column of the room table with the given room_id
 
@@ -97,25 +79,6 @@ class Room:
         """
         q = "UPDATE room SET selected_option=$2 WHERE room_id=$1"
         await cls.db.execute(q, *(room_id, selected_option))
-
-    @classmethod
-    async def update_pending_room_by_id(
-        cls, id: int, room_id: RoomID, selected_option: str
-    ) -> None:
-        """It updates the pending_room table with the room_id and selected_option
-
-        Parameters
-        ----------
-        id : int
-            The id of the pending room.
-        room_id : RoomID
-            The room ID of the room that the user is in.
-        selected_option : str
-            The option that the user selected.
-
-        """
-        q = "UPDATE pending_room SET room_id=$2, selected_option=$3 WHERE id=$1"
-        await cls.db.execute(q, *(id, room_id, selected_option))
 
     @classmethod
     async def update_pending_room_by_room_id(cls, room_id: RoomID, selected_option: str) -> None:
@@ -216,25 +179,6 @@ class Room:
         return row
 
     @classmethod
-    async def get_rooms(cls) -> List[Room] | None:
-        """It returns a list of Room objects, or None if there are no rooms in the database
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-            A list of Room objects
-
-        """
-        q = "SELECT id, room_id, selected_option  FROM room ORDER BY selected_option"
-        rows = await cls.db.fetch(q)
-        if not rows:
-            return None
-
-        return [cls._from_row(room) for room in rows]
-
-    @classmethod
     async def get_pending_rooms(cls) -> List[Room] | None:
         """It returns a list of rooms that are pending
 
@@ -246,7 +190,7 @@ class Room:
             A list of Room objects
 
         """
-        q = "SELECT id, room_id, selected_option  FROM pending_room ORDER BY selected_option"
+        q = "SELECT id, room_id, selected_option FROM pending_room ORDER BY selected_option"
         rows = await cls.db.fetch(q)
         if not rows:
             return None
@@ -257,13 +201,11 @@ class Room:
     async def remove_pending_room(cls, room_id: RoomID) -> None:
         """Remove the room from the pending room table.
 
-        The first line is a docstring. It's a string that describes what the function does. It's a good idea to write a docstring for every function you write
-
         Parameters
         ----------
         room_id : RoomID
             The room ID of the room to be removed from the pending room list.
 
         """
-        q = "DELETE FROM pending_room FROM room_id=$1"
+        q = "DELETE FROM pending_room WHERE room_id=$1"
         await cls.db.execute(q, room_id)
