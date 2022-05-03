@@ -20,14 +20,6 @@ class Room:
     room_id: RoomID
     selected_option: str
 
-    @property
-    def _values(self):
-        return (
-            self.id,
-            self.room_id,
-            self.selected_option,
-        )
-
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> Room:
         return cls(**row)
@@ -53,7 +45,7 @@ class Room:
         await cls.db.execute(q, *(room_id, selected_option))
 
     @classmethod
-    async def update_room_by_id(cls, id: int, room_id: RoomID, selected_option: str) -> None:
+    async def update_pending_room_by_id(cls, id: int, room_id: RoomID, selected_option: str) -> None:
         q = "UPDATE pending_room SET room_id=$2, selected_option=$3 WHERE id=$1"
         await cls.db.execute(q, *(id, room_id, selected_option))
 
