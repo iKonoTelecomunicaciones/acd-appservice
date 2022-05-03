@@ -29,7 +29,14 @@ async def upgrade_v1(conn: Connection) -> None:
         """CREATE TABLE room (
         id           SERIAL PRIMARY KEY,
         room_id      TEXT NOT NULL,
-        is_pending_room      BOOLEAN NOT NULL DEFAULT false,
+        selected_option      TEXT,
+        UNIQUE (room_id)
+    )"""
+    )
+    await conn.execute(
+        """CREATE TABLE pending_room (
+        id           SERIAL PRIMARY KEY,
+        room_id      TEXT NOT NULL,
         selected_option      TEXT,
         UNIQUE (room_id)
     )"""
