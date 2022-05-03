@@ -1,4 +1,3 @@
-
 import nest_asyncio
 import pytest
 from mautrix.appservice import IntentAPI
