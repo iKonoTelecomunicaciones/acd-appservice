@@ -34,7 +34,7 @@ async def acd(evt: CommandEvent) -> str:
         puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.sender_user_id)
         agent_manager: AgentManager = AgentManager(
             acd_appservice=evt.acd_appservice,
-            az=puppet.az,
+            intent=puppet.intent,
             control_room_id=puppet.control_room_id,
         )
 

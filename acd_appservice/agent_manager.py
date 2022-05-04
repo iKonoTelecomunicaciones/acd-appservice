@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List
 
 from mautrix.api import Method
-from mautrix.appservice import AppService
+from mautrix.appservice import IntentAPI
 from mautrix.errors.base import IntentError
 from mautrix.types import Member, PresenceState, RoomAlias, RoomID, UserID
 from mautrix.util.logging import TraceLogger
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 class AgentManager:
     log: TraceLogger = logging.getLogger("mau.agent_manager")
-    az: AppService
+    intent: IntentAPI
     acd_appservice: ACDAppService
 
     # last invited agent per control room (i.e. campaigns)
@@ -33,10 +33,10 @@ class AgentManager:
     def __init__(
         self,
         acd_appservice: ACDAppService,
-        az: AppService,
+        intent: IntentAPI,
         control_room_id: RoomID,
     ) -> None:
-        self.az = az
+        self.intent = intent
         self.acd_appservice = acd_appservice
         self.config = acd_appservice.config
         self.room_manager = acd_appservice.matrix.room_manager
@@ -208,23 +208,23 @@ class AgentManager:
                 RoomManager.unlock_room(room_id=customer_room_id)
                 break
 
-            joined_members = await self.az.intent.get_room_members(room_id=customer_room_id)
+            joined_members = await self.intent.get_room_members(room_id=customer_room_id)
             if not joined_members:
                 self.log.debug(f"No joined members in the room [{customer_room_id}]")
                 RoomManager.unlock_room(customer_room_id)
                 break
 
-            if len(joined_members) == 1 and joined_members[0] == self.az.intent.mxid:
+            if len(joined_members) == 1 and joined_members[0] == self.intent.mxid:
                 # customer leaves when trying to connect an agent
                 self.log.info("NOBODY IN THIS ROOM, I'M LEAVING")
-                await self.az.intent.leave_room(
+                await self.intent.leave_room(
                     room_id=customer_room_id, reason="NOBODY IN THIS ROOM, I'M LEAVING"
                 )
                 RoomManager.unlock_room(customer_room_id)
                 break
 
             if self.config["acd.force_join"] and await self.room_manager.is_in_mobile_device(
-                user_id=agent_id, intent=self.az.intent
+                user_id=agent_id, intent=self.intent
             ):
                 # force agent join to room when agent is in mobile device
                 self.log.debug(f"Agent [{agent_id}] is in mobile device")
@@ -235,7 +235,7 @@ class AgentManager:
 
             try:
                 presence_response = await self.room_manager.get_user_presence(
-                    user_id=agent_id, intent=self.az.intent
+                    user_id=agent_id, intent=self.intent
                 )
             except Exception as e:
                 self.log.error(e)
@@ -299,7 +299,7 @@ class AgentManager:
             The next agent in line.
 
         """
-        members = await self.az.intent.get_joined_members(room_id)
+        members = await self.intent.get_joined_members(room_id)
         # print([member.user_id for member in members])
         if members:
             # remove bots from member list
@@ -436,10 +436,10 @@ class AgentManager:
             await self.room_manager.kick_menubot(
                 room_id=customer_room_id,
                 reason=f"agent [{agent_id}] accepted invite",
-                intent=self.az.intent,
+                intent=self.intent,
             )
 
-            displayname = await self.az.intent.get_displayname(user_id=agent_id)
+            displayname = await self.intent.get_displayname(user_id=agent_id)
             msg = ""
             if joined_message:
                 msg = joined_message.format(agentname=displayname)
@@ -447,7 +447,7 @@ class AgentManager:
                 msg = self.config.get("joined_agent_message").format(agentname=displayname)
 
             if msg:
-                await self.az.intent.send_text(room_id=customer_room_id, text=msg)
+                await self.intent.send_text(room_id=customer_room_id, text=msg)
 
             # signaling = Signaling(self.bot)
 
@@ -472,7 +472,7 @@ class AgentManager:
             RoomManager.unlock_room(room_id=customer_room_id)
         else:
             self.log.debug(f"[{agent_id}] DID NOT ACCEPT the invite. Inviting next agent ...")
-            await self.az.intent.kick_user(
+            await self.intent.kick_user(
                 room_id=customer_room_id,
                 user_id=agent_id,
                 reason="Tiempo de espera cumplido para unirse a la conversación",
@@ -501,7 +501,7 @@ class AgentManager:
         """
         data = {"user_id": agent_id}
         try:
-            response = await self.az.intent.api.request(
+            response = await self.intent.api.request(
                 method=Method.POST,
                 path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
                 content=data,
@@ -522,14 +522,14 @@ class AgentManager:
 
         """
         menubot_id = await self.room_manager.get_menubot_id(
-            intent=self.az.intent, room_id=customer_room_id
+            intent=self.intent, room_id=customer_room_id
         )
         if menubot_id:
             await self.room_manager.send_menubot_command(
                 menubot_id,
                 "no_agents_message",
                 self.control_room_id,
-                self.az.intent,
+                self.intent,
                 customer_room_id,
                 campaign_room_id,
             )
@@ -565,7 +565,7 @@ class AgentManager:
         -------
             A boolean value.
         """
-        members = await self.az.intent.get_joined_members(room_id=room_id)
+        members = await self.intent.get_joined_members(room_id=room_id)
         if not members:
             # probably an error has occurred
             self.log.debug(f"No joined members in the room [{room_id}]")
@@ -576,7 +576,7 @@ class AgentManager:
             if not member_is_agent:
                 # count only agents, not customers
                 continue
-            presence_response = await self.az.intent.get_presence(user_id)
+            presence_response = await self.intent.get_presence(user_id)
             if presence_response.presence == PresenceState.ONLINE:
                 self.log.debug(f"Online agent {user_id} in the room [{room_id}]")
                 return True
@@ -596,7 +596,7 @@ class AgentManager:
             The user_id of the agent assigned to the room.
 
         """
-        agents = await self.az.intent.get_joined_members(room_id=room_id)
+        agents = await self.intent.get_joined_members(room_id=room_id)
         if agents:
             for user_id in agents:
                 member_is_agent = self.is_agent(agent_id=user_id)
@@ -624,7 +624,7 @@ class AgentManager:
             return None
 
         for agent_id in agents:
-            presence_response = await self.az.intent.get_presence(agent_id)
+            presence_response = await self.intent.get_presence(agent_id)
             if presence_response and presence_response.presence == PresenceState.ONLINE:
                 return agent_id
 
@@ -645,7 +645,7 @@ class AgentManager:
         """
         members = None
         try:
-            members = await self.az.intent.get_joined_members(room_id=room_id)
+            members = await self.intent.get_joined_members(room_id=room_id)
         except IntentError as e:
             self.log.error(e)
 

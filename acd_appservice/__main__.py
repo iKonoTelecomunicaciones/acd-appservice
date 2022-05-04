@@ -1,3 +1,4 @@
+import asyncio
 import ptvsd
 from mautrix.types import UserID
 
@@ -57,16 +58,19 @@ class ACDAppService(ACD):
         # Usan la app de aiohttp, creamos una subaplicacion especifica para la API
         self.az.app.add_subapp(api_route, self.provisioning_api.app)
         self.matrix.room_manager = RoomManager(config=self.config)
-        self.matrix.agent_manager = AgentManager(
-            acd_appservice=self,
-            az=self.az,
-            control_room_id=self.config["acd.control_room_id"],
-        )
         self.room_manager = self.matrix.room_manager
-        self.add_startup_actions(self.matrix.agent_manager.process_pending_rooms())
 
         # Iniciamos la aplicación
+
         await super().start()
+
+        # El manejador de ventos debe ir despues del start para poder utilizar los intents
+        self.matrix.agent_manager = AgentManager(
+            acd_appservice=self,
+            intent=self.az.intent,
+            control_room_id=self.config["acd.control_room_id"],
+        )
+        asyncio.create_task(self.matrix.agent_manager.process_pending_rooms())
 
     def prepare_stop(self) -> None:
         # Detenemos todos los puppets que se estén sincronizando con el Synapse
