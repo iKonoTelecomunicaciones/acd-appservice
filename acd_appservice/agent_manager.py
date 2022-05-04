@@ -287,7 +287,7 @@ class AgentManager:
                     )
                 except Exception as e:
                     self.log.error(e)
-                    
+
                 RoomManager.unlock_room(room_id=customer_room_id)
                 break
 
