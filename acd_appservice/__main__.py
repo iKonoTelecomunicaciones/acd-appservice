@@ -1,6 +1,8 @@
 import ptvsd
 from mautrix.types import UserID
 
+from acd_appservice.agent_manager import AgentManager
+
 from .acd_program import ACD
 from .config import Config
 from .db import init as init_db
@@ -26,6 +28,7 @@ class ACDAppService(ACD):
     config = Config
     matrix = MatrixHandler
 
+    room_manager = RoomManager
     # provisioning_api: ProvisioningAPI
 
     upgrade_table = upgrade_table
@@ -53,8 +56,16 @@ class ACDAppService(ACD):
 
         # Usan la app de aiohttp, creamos una subaplicacion especifica para la API
         self.az.app.add_subapp(api_route, self.provisioning_api.app)
-        # Iniciamos la aplicación
         self.matrix.room_manager = RoomManager(config=self.config)
+        self.matrix.agent_manager = AgentManager(
+            acd_appservice=self,
+            az=self.az,
+            control_room_id=self.config["acd.control_room_id"],
+        )
+        self.room_manager = self.matrix.room_manager
+        self.add_startup_actions(self.matrix.agent_manager.process_pending_rooms())
+
+        # Iniciamos la aplicación
         await super().start()
 
     def prepare_stop(self) -> None:

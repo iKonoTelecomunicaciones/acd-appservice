@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import TYPE_CHECKING
 
 from mautrix.appservice import AppService, IntentAPI
 from mautrix.bridge import config
@@ -23,9 +24,9 @@ from mautrix.types import (
 from mautrix.util.logging import TraceLogger
 
 from acd_appservice.agent_manager import AgentManager
+from acd_appservice.room_manager import RoomManager
 
 from . import acd_program as acd_pr
-from . import room_manager
 from .commands.handler import command_processor
 from .commands.typehint import CommandEvent
 from .puppet import Puppet
@@ -37,8 +38,8 @@ class MatrixHandler:
     config: config.BaseBridgeConfig
     acd_appservice: acd_pr.ACD
 
-    room_manager: room_manager.RoomManager
     agent_manager: AgentManager
+    room_manager: RoomManager
 
     def __init__(
         self,
@@ -48,11 +49,6 @@ class MatrixHandler:
         self.acd_appservice = acd_appservice
         self.config = acd_appservice.config
         self.az.matrix_event_handler(self.int_handle_event)
-        self.agent_manager = AgentManager(
-            acd_appservice=acd_appservice,
-            az=acd_appservice.az,
-            control_room_id=self.config["acd.control_room_id"],
-        )
 
     async def wait_for_connection(self) -> None:
         self.log.info("Ensuring connectivity to homeserver")
@@ -205,7 +201,7 @@ class MatrixHandler:
     async def handle_join(self, room_id: RoomID, user_id: UserID, event_id: EventID) -> None:
         self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
 
-        future_key = room_manager.RoomManager.get_future_key(room_id=room_id, agent_id=user_id)
+        future_key = RoomManager.get_future_key(room_id=room_id, agent_id=user_id)
         if (
             future_key in AgentManager.PENDING_INVITES
             and not AgentManager.PENDING_INVITES[future_key].done()

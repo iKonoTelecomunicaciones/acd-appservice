@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from asyncio import Future, create_task, get_running_loop, sleep
 from datetime import datetime
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from mautrix.api import Method
 from mautrix.appservice import AppService
@@ -11,15 +11,16 @@ from mautrix.errors.base import IntentError
 from mautrix.types import Member, PresenceState, RoomAlias, RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
-from acd_appservice import acd_program
-
 from .room_manager import RoomManager
+
+if TYPE_CHECKING:
+    from .__main__ import ACDAppService
 
 
 class AgentManager:
     log: TraceLogger = logging.getLogger("mau.agent_manager")
     az: AppService
-    acd_appservice: acd_program.ACD
+    acd_appservice: ACDAppService
 
     # last invited agent per control room (i.e. campaigns)
     CURRENT_AGENT = {}
@@ -31,13 +32,14 @@ class AgentManager:
 
     def __init__(
         self,
-        acd_appservice: acd_program.ACD,
+        acd_appservice: ACDAppService,
         az: AppService,
         control_room_id: RoomID,
     ) -> None:
         self.az = az
         self.acd_appservice = acd_appservice
         self.config = acd_appservice.config
+        self.room_manager = acd_appservice.matrix.room_manager
         self.control_room_id = control_room_id
 
     async def process_distribution(
@@ -221,9 +223,7 @@ class AgentManager:
                 RoomManager.unlock_room(customer_room_id)
                 break
 
-            if self.config[
-                "acd.force_join"
-            ] and await self.acd_appservice.matrix.room_manager.is_in_mobile_device(
+            if self.config["acd.force_join"] and await self.room_manager.is_in_mobile_device(
                 user_id=agent_id, intent=self.az.intent
             ):
                 # force agent join to room when agent is in mobile device
@@ -234,10 +234,8 @@ class AgentManager:
                 break
 
             try:
-                presence_response = (
-                    await self.acd_appservice.matrix.room_manager.get_user_presence(
-                        user_id=agent_id, intent=self.az.intent
-                    )
+                presence_response = await self.room_manager.get_user_presence(
+                    user_id=agent_id, intent=self.az.intent
                 )
             except Exception as e:
                 self.log.error(e)
@@ -246,15 +244,8 @@ class AgentManager:
                 f"[{agent_id}] -> [{presence_response.presence if presence_response else None}]"
             )
             if presence_response and presence_response.presence == PresenceState.ONLINE:
-                # only invite agents online
                 online_agents += 1
-                # response = await self.invite_agent(
-                #     customer_room_id, agent_id, campaign_room_id, joined_message
-                # )
-                # if response:
-                #     self.log.debug(f"TRYING [{agent_id}] ...")
-                #     RoomManager.unlock_room(customer_room_id)
-                #     break
+
                 await self.force_invite_agent(
                     customer_room_id, agent_id, campaign_room_id, joined_message
                 )
@@ -442,7 +433,7 @@ class AgentManager:
             )
 
             # kick menu bot
-            await self.acd_appservice.matrix.room_manager.kick_menubot(
+            await self.room_manager.kick_menubot(
                 room_id=customer_room_id,
                 reason=f"agent [{agent_id}] accepted invite",
                 intent=self.az.intent,
@@ -530,11 +521,11 @@ class AgentManager:
             The room ID of the campaign room.
 
         """
-        menubot_id = await self.acd_appservice.matrix.room_manager.get_menubot_id(
+        menubot_id = await self.room_manager.get_menubot_id(
             intent=self.az.intent, room_id=customer_room_id
         )
         if menubot_id:
-            await self.acd_appservice.matrix.room_manager.send_menubot_command(
+            await self.room_manager.send_menubot_command(
                 menubot_id,
                 "no_agents_message",
                 self.control_room_id,
