@@ -62,15 +62,16 @@ class ACDAppService(ACD):
         self.room_manager = self.matrix.room_manager
 
         # Iniciamos la aplicación
-
         await super().start()
 
-        # El manejador de ventos debe ir despues del start para poder utilizar los intents
+        # El manejador de agentes debe ir despues del start para poder utilizar los intents
+        # Los intents de los puppets y el bot se inicializan en el start
         self.matrix.agent_manager = AgentManager(
             acd_appservice=self,
             intent=self.az.intent,
             control_room_id=self.config["acd.control_room_id"],
         )
+        # Creamos la tarea que va revisar si las salas pendintes ya tienen a un agente para asignar
         asyncio.create_task(self.matrix.agent_manager.process_pending_rooms())
 
     def prepare_stop(self) -> None:

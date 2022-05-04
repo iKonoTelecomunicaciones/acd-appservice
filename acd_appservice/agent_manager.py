@@ -208,6 +208,7 @@ class AgentManager:
                 RoomManager.unlock_room(room_id=customer_room_id)
                 break
 
+            # Usar get_room_members porque regresa solo una lista de UserIDs
             joined_members = await self.intent.get_room_members(room_id=customer_room_id)
             if not joined_members:
                 self.log.debug(f"No joined members in the room [{customer_room_id}]")
@@ -233,12 +234,9 @@ class AgentManager:
                 )
                 break
 
-            try:
-                presence_response = await self.room_manager.get_user_presence(
-                    user_id=agent_id, intent=self.intent
-                )
-            except Exception as e:
-                self.log.error(e)
+            presence_response = await self.room_manager.get_user_presence(
+                user_id=agent_id, intent=self.intent
+            )
             self.log.debug(
                 f"PRESENCE RESPONSE: "
                 f"[{agent_id}] -> [{presence_response.presence if presence_response else None}]"
@@ -262,22 +260,16 @@ class AgentManager:
                 else:
                     self.log.debug("THERE ARE ONLINE AGENTS BUT ERROR ON INVITE")
 
-                try:
-                    await self.show_no_agents_message(
-                        customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
-                    )
-                except Exception as e:
-                    self.log.error(e)
+                await self.show_no_agents_message(
+                    customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
+                )
 
                 self.log.debug(f"Saving room [{customer_room_id}] in pending list")
                 # self.bot.store.save_pending_room(customer_room_id, campaign_room_id) # TODO GUARDAR EN BASE DE DATOS
-                try:
-                    await RoomManager.save_pending_room(
-                        room_id=customer_room_id,
-                        selected_option=campaign_room_id,
-                    )
-                except Exception as e:
-                    self.log.error(e)
+                await RoomManager.save_pending_room(
+                    room_id=customer_room_id,
+                    selected_option=campaign_room_id,
+                )
 
                 RoomManager.unlock_room(room_id=customer_room_id)
                 break

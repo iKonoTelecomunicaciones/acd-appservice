@@ -103,6 +103,14 @@ class MatrixHandler:
                 self.log.exception("Failed to set bot avatar")
 
     async def int_handle_event(self, evt: Event) -> None:
+        """If the event is a room member event, then handle it
+
+        Parameters
+        ----------
+        evt : Event
+            Event has arrived
+
+        """
 
         self.log.debug(f"Received event: {evt.event_id} - {evt.type} in the room {evt.room_id}")
 
@@ -184,6 +192,14 @@ class MatrixHandler:
         #         await self.handle_event(evt)
 
     async def handle_invite(self, evt: Event):
+        """`handle_invite` is called when a user is invited to a room
+
+        Parameters
+        ----------
+        evt : Event
+            Event has arrived
+
+        """
         self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
         intent = await self.process_puppet(user_id=UserID(evt.state_key))
         await intent.join_room(evt.room_id)
@@ -199,6 +215,22 @@ class MatrixHandler:
         pass
 
     async def handle_join(self, room_id: RoomID, user_id: UserID, event_id: EventID) -> None:
+        """If the user who has joined the room is the bot, then the room is initialized
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The ID of the room the user has joined.
+        user_id : UserID
+            The user who has joined the room
+        event_id : EventID
+            The ID of the event that triggered this call.
+
+        Returns
+        -------
+            The intent of the user who has joined the room
+
+        """
         self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
 
         future_key = RoomManager.get_future_key(room_id=room_id, agent_id=user_id)
@@ -223,6 +255,19 @@ class MatrixHandler:
             self.log.debug(f"Room {room_id} initialization has failed")
 
     def is_command(self, message: MessageEventContent) -> tuple[bool, str]:
+        """It checks if a message starts with the command prefix, and if it does,
+        it removes the prefix and returns the message without the prefix
+
+        Parameters
+        ----------
+        message : MessageEventContent
+            The message that was sent.
+
+        Returns
+        -------
+            A tuple of a boolean and a string.
+
+        """
         text = message.body
         prefix = self.config["bridge.command_prefix"]
         is_command = text.startswith(prefix)
@@ -231,12 +276,26 @@ class MatrixHandler:
         return is_command, text
 
     async def handle_message(
-        self,
-        room_id: RoomID,
-        user_id: UserID,
-        message: MessageEventContent,
-        event_id: EventID,
+        self, room_id: RoomID, user_id: UserID, message: MessageEventContent, event_id: EventID
     ) -> None:
+        """If the message is a command, process it. If not, ignore it
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room the message was sent in.
+        user_id : UserID
+            The user ID of the user who sent the message.
+        message : MessageEventContent
+            The message that was sent.
+        event_id : EventID
+            The ID of the event that triggered this call.
+
+        Returns
+        -------
+            The return value of the function is the value of the last expression evaluated.
+
+        """
 
         intent = await self.process_puppet(user_id=user_id)
         if not intent:
@@ -266,6 +325,19 @@ class MatrixHandler:
             self.log.debug(f"Room {room_id} name has not been changed")
 
     async def process_puppet(self, user_id: UserID) -> IntentAPI:
+        """If the user_id is not the bot's mxid and the user_id is a puppet,
+        return the puppet's intent. Otherwise, return the bot's intent
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user you want to get the intent of.
+
+        Returns
+        -------
+            The intent of the puppet or the intent of the bot.
+
+        """
 
         if not (user_id == self.az.bot_mxid) and Puppet.get_id_from_mxid(user_id):
             puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
