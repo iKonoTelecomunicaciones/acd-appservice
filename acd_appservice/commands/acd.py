@@ -1,5 +1,3 @@
-from asyncio import create_task
-
 from ..agent_manager import AgentManager
 from ..puppet import Puppet
 from .handler import command_handler
@@ -35,8 +33,8 @@ async def acd(evt: CommandEvent) -> str:
     if evt.sender_user_id != evt.acd_appservice.az.bot_mxid:
         puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.sender_user_id)
         agent_manager: AgentManager = AgentManager(
-            room_manager=evt.acd_appservice.matrix.room_manager,
-            intent=puppet.intent,
+            acd_appservice=evt.acd_appservice,
+            az=puppet.az,
             control_room_id=puppet.control_room_id,
         )
 

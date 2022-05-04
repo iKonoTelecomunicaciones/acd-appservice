@@ -179,6 +179,7 @@ class ACD(Program):
             sys.exit(16)
         # Iniciamos nuestra conexión al synapse como un bot (whapibot)
         self.add_startup_actions(self.matrix.init_as_bot())
+        self.add_startup_actions(self.matrix.agent_manager.process_pending_rooms())
         await super().start()
         self.az.ready = True
 

@@ -613,7 +613,7 @@ class RoomManager:
         bool
             True if successful, False otherwise.
         """
-        room = await Room.get_room_by_room_id(room_id)
+        room = await Room.get_pending_room_by_room_id(room_id)
         if room:
             return await cls.update_pending_room_in_db(
                 room_id=room_id, selected_option=selected_option
@@ -782,6 +782,9 @@ class RoomManager:
         except Exception as e:
             cls.log.error(e)
             return
+
+        if not rooms:
+            return []
 
         return [room.room_id for room in rooms]
 

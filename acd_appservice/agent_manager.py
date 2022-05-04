@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import List
 
 from mautrix.api import Method
-from mautrix.appservice import IntentAPI
+from mautrix.appservice import AppService
 from mautrix.errors.base import IntentError
 from mautrix.types import Member, PresenceState, RoomAlias, RoomID, UserID
 from mautrix.util.logging import TraceLogger
@@ -18,7 +18,7 @@ from .room_manager import RoomManager
 
 class AgentManager:
     log: TraceLogger = logging.getLogger("mau.agent_manager")
-    intent: IntentAPI
+    az: AppService
     acd_appservice: acd_program.ACD
 
     # last invited agent per control room (i.e. campaigns)
@@ -32,10 +32,11 @@ class AgentManager:
     def __init__(
         self,
         acd_appservice: acd_program.ACD,
-        intent: IntentAPI,
+        az: AppService,
         control_room_id: RoomID,
     ) -> None:
-        self.intent = intent
+        self.az = az
+        self.acd_appservice = acd_appservice
         self.config = acd_appservice.config
         self.control_room_id = control_room_id
 
@@ -62,6 +63,7 @@ class AgentManager:
             The return value is a list of tuples.
 
         """
+
         if RoomManager.is_room_locked(room_id=customer_room_id):
             self.log.debug(f"Room [{customer_room_id}] LOCKED")
             return
@@ -146,7 +148,7 @@ class AgentManager:
 
                         if online_agent:
                             self.log.debug(
-                                f"The agent {online_agent.user_id} is online to join "
+                                f"The agent {online_agent} is online to join "
                                 f"room: {customer_room_id}"
                             )
 
@@ -161,7 +163,7 @@ class AgentManager:
                 self.log.debug("There's no pending rooms")
 
             self.log.debug("\n")
-            await sleep(self.config["search_pending_rooms_interval"])
+            await sleep(self.config["acd.search_pending_rooms_interval"])
 
     async def loop_agents(
         self,
@@ -204,16 +206,16 @@ class AgentManager:
                 RoomManager.unlock_room(room_id=customer_room_id)
                 break
 
-            joined_members = await self.intent.get_joined_members(room_id=customer_room_id)
+            joined_members = await self.az.intent.get_room_members(room_id=customer_room_id)
             if not joined_members:
-                self.log.debug(f"No joined members in the room [[{customer_room_id}]]")
+                self.log.debug(f"No joined members in the room [{customer_room_id}]")
                 RoomManager.unlock_room(customer_room_id)
                 break
 
-            if len(joined_members) == 1 and joined_members[0].user_id == self.intent.mxid:
+            if len(joined_members) == 1 and joined_members[0] == self.az.intent.mxid:
                 # customer leaves when trying to connect an agent
                 self.log.info("NOBODY IN THIS ROOM, I'M LEAVING")
-                await self.intent.leave_room(
+                await self.az.intent.leave_room(
                     room_id=customer_room_id, reason="NOBODY IN THIS ROOM, I'M LEAVING"
                 )
                 RoomManager.unlock_room(customer_room_id)
@@ -222,7 +224,7 @@ class AgentManager:
             if self.config[
                 "acd.force_join"
             ] and await self.acd_appservice.matrix.room_manager.is_in_mobile_device(
-                user_id=agent_id, intent=self.intent
+                user_id=agent_id, intent=self.az.intent
             ):
                 # force agent join to room when agent is in mobile device
                 self.log.debug(f"Agent [{agent_id}] is in mobile device")
@@ -231,9 +233,14 @@ class AgentManager:
                 )
                 break
 
-            presence_response = await self.acd_appservice.matrix.room_manager.get_user_presence(
-                user_id=agent_id, intent=self.intent
-            )
+            try:
+                presence_response = (
+                    await self.acd_appservice.matrix.room_manager.get_user_presence(
+                        user_id=agent_id, intent=self.az.intent
+                    )
+                )
+            except Exception as e:
+                self.log.error(e)
             self.log.debug(
                 f"PRESENCE RESPONSE: "
                 f"[{agent_id}] -> [{presence_response.presence if presence_response else None}]"
@@ -273,49 +280,18 @@ class AgentManager:
 
                 self.log.debug(f"Saving room [{customer_room_id}] in pending list")
                 # self.bot.store.save_pending_room(customer_room_id, campaign_room_id) # TODO GUARDAR EN BASE DE DATOS
-                await RoomManager.save_pending_room(
-                    room_id=customer_room_id,
-                    selected_option=campaign_room_id,
-                )
-
+                try:
+                    await RoomManager.save_pending_room(
+                        room_id=customer_room_id,
+                        selected_option=campaign_room_id,
+                    )
+                except Exception as e:
+                    self.log.error(e)
+                    
                 RoomManager.unlock_room(room_id=customer_room_id)
                 break
 
             self.log.debug(f"agent count: [{agent_count}] online_agents: [{online_agents}]")
-
-    # async def invite_agent(
-    #     self,
-    #     customer_room_id: RoomID,
-    #     agent_id: UserID,
-    #     campaign_room_id: RoomID,
-    #     joined_message: str = None,
-    # ) -> bool:
-    #     """Invite an agent."""
-    #     self.log.debug(f"Inviting [[{agent_id}]]...")
-    #     try:
-    #         await self.intent.invite_user(room_id=customer_room_id, user_id=agent_id)
-    #     except IntentError as e:
-    #         self.log.error(e)
-    #         return False
-
-    #     # get the current event loop
-    #     loop = get_running_loop()
-
-    #     # create a new Future object.
-    #     pending_invite = loop.create_future()
-    #     future_key = RoomManager.get_future_key(customer_room_id, agent_id)
-    #     # mantain an array of futures for every invite to get notification of joins
-    #     self.PENDING_INVITES[future_key] = pending_invite
-    #     self.log.debug(f"Futures are... [{self.PENDING_INVITES}]")
-
-    #     # spawn a task that does not block the asyncio loop
-    #     create_task(
-    #         self.check_agent_joined(
-    #             customer_room_id, pending_invite, agent_id, campaign_room_id, joined_message
-    #         )
-    #     )
-
-    #     return True
 
     async def get_next_agent(self, agent_id: UserID, room_id: RoomID) -> UserID:
         """It takes a room ID and an agent ID, and returns the next agent in the room
@@ -332,7 +308,7 @@ class AgentManager:
             The next agent in line.
 
         """
-        members = await self.intent.get_joined_members(room_id)
+        members = await self.az.intent.get_joined_members(room_id)
         # print([member.user_id for member in members])
         if members:
             # remove bots from member list
@@ -469,10 +445,10 @@ class AgentManager:
             await self.acd_appservice.matrix.room_manager.kick_menubot(
                 room_id=customer_room_id,
                 reason=f"agent [{agent_id}] accepted invite",
-                intent=self.intent,
+                intent=self.az.intent,
             )
 
-            displayname = await self.intent.get_displayname(user_id=agent_id)
+            displayname = await self.az.intent.get_displayname(user_id=agent_id)
             msg = ""
             if joined_message:
                 msg = joined_message.format(agentname=displayname)
@@ -480,7 +456,7 @@ class AgentManager:
                 msg = self.config.get("joined_agent_message").format(agentname=displayname)
 
             if msg:
-                await self.intent.send_text(room_id=customer_room_id, text=msg)
+                await self.az.intent.send_text(room_id=customer_room_id, text=msg)
 
             # signaling = Signaling(self.bot)
 
@@ -505,7 +481,7 @@ class AgentManager:
             RoomManager.unlock_room(room_id=customer_room_id)
         else:
             self.log.debug(f"[{agent_id}] DID NOT ACCEPT the invite. Inviting next agent ...")
-            await self.intent.kick_user(
+            await self.az.intent.kick_user(
                 room_id=customer_room_id,
                 user_id=agent_id,
                 reason="Tiempo de espera cumplido para unirse a la conversación",
@@ -534,7 +510,7 @@ class AgentManager:
         """
         data = {"user_id": agent_id}
         try:
-            response = await self.intent.api.request(
+            response = await self.az.intent.api.request(
                 method=Method.POST,
                 path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
                 content=data,
@@ -555,14 +531,14 @@ class AgentManager:
 
         """
         menubot_id = await self.acd_appservice.matrix.room_manager.get_menubot_id(
-            intent=self.intent, room_id=customer_room_id
+            intent=self.az.intent, room_id=customer_room_id
         )
         if menubot_id:
             await self.acd_appservice.matrix.room_manager.send_menubot_command(
                 menubot_id,
                 "no_agents_message",
                 self.control_room_id,
-                self.intent,
+                self.az.intent,
                 customer_room_id,
                 campaign_room_id,
             )
@@ -597,9 +573,8 @@ class AgentManager:
         Returns
         -------
             A boolean value.
-
         """
-        members = await self.intent.get_joined_members(room_id=room_id)
+        members = await self.az.intent.get_joined_members(room_id=room_id)
         if not members:
             # probably an error has occurred
             self.log.debug(f"No joined members in the room [{room_id}]")
@@ -610,7 +585,7 @@ class AgentManager:
             if not member_is_agent:
                 # count only agents, not customers
                 continue
-            presence_response = await self.intent.get_presence(user_id)
+            presence_response = await self.az.intent.get_presence(user_id)
             if presence_response.presence == PresenceState.ONLINE:
                 self.log.debug(f"Online agent {user_id} in the room [{room_id}]")
                 return True
@@ -630,7 +605,7 @@ class AgentManager:
             The user_id of the agent assigned to the room.
 
         """
-        agents = await self.intent.get_joined_members(room_id=room_id)
+        agents = await self.az.intent.get_joined_members(room_id=room_id)
         if agents:
             for user_id in agents:
                 member_is_agent = self.is_agent(agent_id=user_id)
@@ -658,8 +633,8 @@ class AgentManager:
             return None
 
         for agent_id in agents:
-            presence_response = await self.intent.get_presence(agent_id)
-            if presence_response and presence_response == PresenceState.ONLINE:
+            presence_response = await self.az.intent.get_presence(agent_id)
+            if presence_response and presence_response.presence == PresenceState.ONLINE:
                 return agent_id
 
         return None
@@ -679,7 +654,7 @@ class AgentManager:
         """
         members = None
         try:
-            members = await self.intent.get_joined_members(room_id=room_id)
+            members = await self.az.intent.get_joined_members(room_id=room_id)
         except IntentError as e:
             self.log.error(e)
 
