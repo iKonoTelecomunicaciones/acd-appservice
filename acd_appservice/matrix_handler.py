@@ -199,16 +199,25 @@ class MatrixHandler:
         #         await self.handle_event(evt)
 
     async def handle_invite(self, evt: Event):
-        """`handle_invite` is called when a user is invited to a room
+        """If the user who was invited is a bot, then join the room
 
         Parameters
         ----------
         evt : Event
-            Event has arrived
+            Incoming event
+
+        Returns
+        -------
 
         """
+
         self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
         intent = await self.process_puppet(user_id=UserID(evt.state_key))
+
+        if not intent:
+            return None
+
+        self.log.debug(f"The guest user {evt.state_key} is a bot")
         await intent.join_room(evt.room_id)
 
     async def handle_disinvite(
@@ -252,13 +261,11 @@ class MatrixHandler:
 
         intent = await self.process_puppet(user_id=user_id)
         if not intent:
-            self.log(f"The user who has joined is neither a puppet nor the appservice_bot")
+            self.log.debug(f"The user who has joined is neither a puppet nor the appservice_bot")
             return
 
         # Solo se inicializa la sala si el que se une es el usuario acd*
-        if intent.api.bot_mxid == user_id and not await self.room_manager.initialize_room(
-            room_id=room_id, intent=intent
-        ):
+        if not await self.room_manager.initialize_room(room_id=room_id, intent=intent):
             self.log.debug(f"Room {room_id} initialization has failed")
 
     def is_command(self, message: MessageEventContent) -> tuple[bool, str]:
@@ -335,22 +342,27 @@ class MatrixHandler:
             return
 
     async def process_puppet(self, user_id: UserID) -> IntentAPI:
-        """If the user_id is not the bot's mxid and the user_id is a puppet,
-        return the puppet's intent. Otherwise, return the bot's intent
+        """
+        If the user is a puppet, return the puppet's intent.
+        If the user is the bot, return the bot's intent.
+        Otherwise, return None
 
         Parameters
         ----------
         user_id : UserID
-            The user ID of the user you want to get the intent of.
+            The user ID of the user who sent the message.
 
         Returns
         -------
-            The intent of the puppet or the intent of the bot.
+            The intent of the user.
 
         """
-
-        if not (user_id == self.az.bot_mxid) and Puppet.get_id_from_mxid(user_id):
+        if user_id != self.az.bot_mxid and Puppet.get_id_from_mxid(user_id):
             puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
             return puppet.intent
-        else:
+
+        elif user_id == self.az.bot_mxid:
             return self.az.intent
+
+        else:
+            return None

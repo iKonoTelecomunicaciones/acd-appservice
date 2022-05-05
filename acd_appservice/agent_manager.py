@@ -153,8 +153,10 @@ class AgentManager:
                                 f"The agent {online_agent} is online to join "
                                 f"room: {customer_room_id}"
                             )
-
-                            await self.process_distribution(customer_room_id, campaign_room_id)
+                            try:
+                                await self.process_distribution(customer_room_id, campaign_room_id)
+                            except Exception as e:
+                                self.log.error(f"### process_distribution Error: {e}")
 
                         else:
                             self.log.debug("There's no online agents yet")
