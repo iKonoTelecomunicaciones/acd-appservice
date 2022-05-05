@@ -31,7 +31,7 @@ class ACDAppService(ACD):
     matrix = MatrixHandler
 
     room_manager = RoomManager
-    # provisioning_api: ProvisioningAPI
+    provisioning_api: ProvisioningAPI
 
     upgrade_table = upgrade_table
 

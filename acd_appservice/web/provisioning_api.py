@@ -60,68 +60,84 @@ class ProvisioningAPI:
         #         web.post("/send_message", self.send_message),
         #     ]
         # )
+        swagger = SwaggerDocs(
+            self.app,
+            title="ACD AppService documentation",
+            version=VERSION,
+            components=f"acd_appservice/web/components.yaml",
+            swagger_ui_settings=SwaggerUiSettings(
+                path="/docs",
+                layout="BaseLayout",
+            ),
+        )
+        swagger.add_routes(
+            [
+                # Región de autenticación
+                web.post("/create_user", self.create_user),
+            ]
+        )
         self.loop = asyncio.get_running_loop()
 
-    # async def create_user(self, request: web.Request) -> web.Response:
-    #     """
-    #     Receives a user_email and creates a user in the User table and its respective puppet
-    #     ---
-    #     summary: Creates a user in the platform to be able to scan the WhatsApp QR code and send messages later using the API endpoints.
-    #     tags:
-    #         - users
+    async def create_user(self, request: web.Request) -> web.Response:
+        """
+        Receives a user_email and creates a user in the User table and its respective puppet
+        ---
+        summary: Creates a user in the platform to be able to scan the WhatsApp QR code and send messages later using the API endpoints.
+        tags:
+            - users
 
-    #     requestBody:
-    #       required: true
-    #       description: A json with `user_email`
-    #       content:
-    #         application/json:
-    #           schema:
-    #             type: object
-    #             properties:
-    #               user_email:
-    #                 type: string
-    #             example:
-    #                 user_email: nobody@somewhere.com
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_email:
+                    type: string
+                example:
+                    user_email: nobody@somewhere.com
 
-    #     responses:
-    #         '201':
-    #             $ref: '#/components/responses/UserCreated'
-    #         '400':
-    #             $ref: '#/components/responses/BadRequest'
-    #         '422':
-    #             $ref: '#/components/responses/ErrorData'
-    #     """
+        responses:
+            '201':
+                $ref: '#/components/responses/UserCreated'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '422':
+                $ref: '#/components/responses/ErrorData'
+        """
 
-    #     if not request.body_exists:
-    #         return web.json_response(**NOT_DATA)
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
 
-    #     data = await request.json()
+        data = await request.json()
 
-    #     if not data.get("user_email"):
-    #         return web.json_response(**NOT_EMAIL)
+        if not data.get("user_email"):
+            return web.json_response(**NOT_EMAIL)
 
-    #     email = data.get("user_email").lower()
-    #     if not re.match(self.config["utils.regex_email"], email):
-    #         return web.json_response(**INVALID_EMAIL)
-    #     if await User.user_exists(email):
-    #         return web.json_response(**USER_ALREADY_EXISTS)
+        email = data.get("user_email").lower()
+        if not re.match(self.config["utils.regex_email"], email):
+            return web.json_response(**INVALID_EMAIL)
+        # if await User.user_exists(email):
+        #     return web.json_response(**USER_ALREADY_EXISTS)
 
-    #     user, pupp = await self.utils.create_puppet_and_user(email=email)
-    #     pupp = await user.get_puppet()
-    #     if not user.room_id:
-    #         room_id = await pupp.intent.create_room(
-    #             invitees=self.config["bridge.invitees_to_rooms"]
-    #         )
-    #         self.log.debug(
-    #             f"user {user.mxid} and his room {room_id} - "
-    #             f"{self.config['bridge.invitees_to_rooms']} have been created and invited"
-    #         )
-    #         user.room_id = room_id
-    #     await user.save()
-    #     response = {
-    #         "message": "User has been created",
-    #     }
-    #     return web.json_response(response, status=201)
+        # user, pupp = await self.utils.create_puppet_and_user(email=email)
+        # pupp = await user.get_puppet()
+        # if not user.room_id:
+        #     room_id = await pupp.intent.create_room(
+        #         invitees=self.config["bridge.invitees_to_rooms"]
+        #     )
+        #     self.log.debug(
+        #         f"user {user.mxid} and his room {room_id} - "
+        #         f"{self.config['bridge.invitees_to_rooms']} have been created and invited"
+        #     )
+        #     user.room_id = room_id
+        # await user.save()
+        response = {
+            "message": "User has been created",
+        }
+        return web.json_response(response, status=201)
 
     # async def link_phone(self, request: web.Request) -> web.Response:
     #     """
