@@ -39,15 +39,20 @@ async def acd(evt: CommandEvent) -> str:
             intent=puppet.intent,
             control_room_id=puppet.control_room_id,
         )
-
-        await agent_manager.process_distribution(
-            customer_room_id=customer_room_id,
-            campaign_room_id=campaign_room_id,
-            joined_message=joined_message,
-        )
+        try:
+            await agent_manager.process_distribution(
+                customer_room_id=customer_room_id,
+                campaign_room_id=campaign_room_id,
+                joined_message=joined_message,
+            )
+        except Exception as e:
+            evt.log.error(f"### process_distribution Error: {e}")
     else:
-        await evt.acd_appservice.matrix.agent_manager.process_distribution(
-            customer_room_id=customer_room_id,
-            campaign_room_id=campaign_room_id,
-            joined_message=joined_message,
-        )
+        try:
+            await evt.acd_appservice.matrix.agent_manager.process_distribution(
+                customer_room_id=customer_room_id,
+                campaign_room_id=campaign_room_id,
+                joined_message=joined_message,
+            )
+        except Exception as e:
+            evt.log.error(f"### process_distribution Error: {e}")
