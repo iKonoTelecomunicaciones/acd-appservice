@@ -113,7 +113,7 @@ class MatrixHandler:
         """
 
         self.log.debug(f"Received event: {evt.event_id} - {evt.type} in the room {evt.room_id}")
-
+        self.log.debug(evt)
         if evt.type == EventType.ROOM_MEMBER:
             evt: StateEvent
             unsigned = evt.unsigned or StateUnsigned()
@@ -177,6 +177,13 @@ class MatrixHandler:
             if evt.type != EventType.ROOM_MESSAGE:
                 evt.content.msgtype = MessageType(str(evt.type))
             await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
+        elif evt.type == EventType.ROOM_NAME:
+            if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
+                unsigned: StateUnsigned = evt.unsigned
+                await self.room_manager.put_name_customer_room(
+                    room_id=evt.room_id, intent=self.az.intent, old_name=unsigned.prev_content.name
+                )
+
         # elif evt.type == EventType.ROOM_ENCRYPTED:
         #     await self.handle_encrypted(evt)
         # elif evt.type == EventType.ROOM_ENCRYPTION:
@@ -301,6 +308,13 @@ class MatrixHandler:
         if not intent:
             return
 
+        room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
+        creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
+        if not room_name:
+            new_room_name = await self.room_manager.get_update_name(creator=creator, intent=intent)
+            if new_room_name:
+                await intent.set_room_name(room_id=room_id, name=new_room_name)
+
         is_command, text = self.is_command(message=message)
         if is_command and not await self.room_manager.is_customer_room(
             room_id=room_id, intent=intent
@@ -321,7 +335,10 @@ class MatrixHandler:
             return
 
         # Intentamos cambiarle el nombre a la sala
-        if not await self.room_manager.put_name_customer_room(room_id=room_id, intent=intent):
+        if not await self.room_manager.put_name_customer_room(
+            room_id=room_id,
+            intent=intent,
+        ):
             self.log.debug(f"Room {room_id} name has not been changed")
 
     async def process_puppet(self, user_id: UserID) -> IntentAPI:

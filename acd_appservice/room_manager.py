@@ -73,9 +73,6 @@ class RoomManager:
 
         await asyncio.create_task(self.initial_room_setup(room_id=room_id, intent=intent))
 
-        if not await self.put_name_customer_room(room_id=room_id, intent=intent):
-            return False
-
         self.log.info(f"Room {room_id} initialization is complete")
         return True
 
@@ -121,7 +118,9 @@ class RoomManager:
 
             await asyncio.sleep(1)
 
-    async def put_name_customer_room(self, room_id: RoomID, intent: IntentAPI) -> bool:
+    async def put_name_customer_room(
+        self, room_id: RoomID, intent: IntentAPI, old_name: str = None
+    ) -> bool:
         """Name a customer's room.
 
         Given a room and a matrix client, name the room correctly if needed.
@@ -139,20 +138,21 @@ class RoomManager:
             True if successful, False otherwise.
         """
 
-        if (
-            not await self.is_customer_room(room_id=room_id, intent=intent)
-            and not self.config["acd.force_name_change"]
-        ):
-            return False
+        if await self.is_customer_room(room_id=room_id, intent=intent):
+            if self.config["acd.keep_room_name"] or self.config["acd.keep_room_name"] is None:
 
-        creator = await self.get_room_creator(room_id=room_id, intent=intent)
+                new_room_name = old_name
+            else:
 
-        new_room_name = await self.get_update_name(creator=creator, intent=intent)
-        if not new_room_name:
-            return False
+                creator = await self.get_room_creator(room_id=room_id, intent=intent)
 
-        await intent.set_room_name(room_id, new_room_name)
-        return True
+                new_room_name = await self.get_update_name(creator=creator, intent=intent)
+
+        if new_room_name:
+            await intent.set_room_name(room_id, new_room_name)
+            return True
+
+        return False
 
     async def create_room_name(self, user_id: UserID, intent: IntentAPI) -> str:
         """Given a customer's mxid, pull the phone number and concatenate it to the name.
