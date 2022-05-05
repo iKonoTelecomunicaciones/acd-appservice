@@ -113,7 +113,7 @@ class MatrixHandler:
         """
 
         self.log.debug(f"Received event: {evt.event_id} - {evt.type} in the room {evt.room_id}")
-        self.log.debug(evt)
+
         if evt.type == EventType.ROOM_MEMBER:
             evt: StateEvent
             unsigned = evt.unsigned or StateUnsigned()
@@ -333,13 +333,6 @@ class MatrixHandler:
         if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):
             self.log.debug(f"Ignoring the room {room_id} because it is whatsapp_status_broadcast")
             return
-
-        # Intentamos cambiarle el nombre a la sala
-        if not await self.room_manager.put_name_customer_room(
-            room_id=room_id,
-            intent=intent,
-        ):
-            self.log.debug(f"Room {room_id} name has not been changed")
 
     async def process_puppet(self, user_id: UserID) -> IntentAPI:
         """If the user_id is not the bot's mxid and the user_id is a puppet,

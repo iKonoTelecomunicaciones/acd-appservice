@@ -119,7 +119,7 @@ class RoomManager:
             await asyncio.sleep(1)
 
     async def put_name_customer_room(
-        self, room_id: RoomID, intent: IntentAPI, old_name: str = None
+        self, room_id: RoomID, intent: IntentAPI, old_name: str
     ) -> bool:
         """Name a customer's room.
 
