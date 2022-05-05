@@ -8,8 +8,11 @@ from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from mautrix.types.event.message import MessageType
 from mautrix.util.logging import TraceLogger
 
+from acd_appservice import puppet
+
 from .. import VERSION
 from ..config import Config
+from ..puppet import Puppet
 from . import SUPPORTED_MESSAGE_TYPES
 from .error_responses import (
     INVALID_EMAIL,
@@ -119,24 +122,27 @@ class ProvisioningAPI:
         email = data.get("user_email").lower()
         if not re.match(self.config["utils.regex_email"], email):
             return web.json_response(**INVALID_EMAIL)
-        # if await User.user_exists(email):
-        #     return web.json_response(**USER_ALREADY_EXISTS)
 
-        # user, pupp = await self.utils.create_puppet_and_user(email=email)
-        # pupp = await user.get_puppet()
-        # if not user.room_id:
-        #     room_id = await pupp.intent.create_room(
-        #         invitees=self.config["bridge.invitees_to_rooms"]
-        #     )
-        #     self.log.debug(
-        #         f"user {user.mxid} and his room {room_id} - "
-        #         f"{self.config['bridge.invitees_to_rooms']} have been created and invited"
-        #     )
-        #     user.room_id = room_id
-        # await user.save()
+        puppet = await Puppet.get_by_email(email)
+
+        self.log.debug(puppet)
+
+        if not puppet:
+            next_puppet = await Puppet.get_next_puppet()
+            self.log.debug(next_puppet)
+
+            puppet:Puppet = await Puppet.get_by_pk(int(next_puppet), email)
+            puppet.email = email
+            puppet.custom_mxid = Puppet.get_mxid_from_id(puppet.pk)
+            await puppet.save()
+        else:
+            await puppet.intent.join_room_by_id("!YLGVnyUJURfVHmYleL:darknet")
+            return web.json_response(**USER_ALREADY_EXISTS)
+
         response = {
             "message": "User has been created",
         }
+
         return web.json_response(response, status=201)
 
     # async def link_phone(self, request: web.Request) -> web.Response:
