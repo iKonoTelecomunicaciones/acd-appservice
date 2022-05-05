@@ -131,7 +131,7 @@ class ProvisioningAPI:
             next_puppet = await Puppet.get_next_puppet()
             self.log.debug(next_puppet)
 
-            puppet:Puppet = await Puppet.get_by_pk(int(next_puppet), email)
+            puppet: Puppet = await Puppet.get_by_pk(int(next_puppet), email)
             puppet.email = email
             puppet.custom_mxid = Puppet.get_mxid_from_id(puppet.pk)
             await puppet.save()
