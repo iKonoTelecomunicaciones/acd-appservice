@@ -495,7 +495,7 @@ class AgentManager:
         """
         data = {"user_id": agent_id}
         try:
-            response = await self.intent.api.request(
+            response = await self.intent.bot.api.request(
                 method=Method.POST,
                 path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
                 content=data,

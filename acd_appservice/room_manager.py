@@ -137,7 +137,7 @@ class RoomManager:
         bool
             True if successful, False otherwise.
         """
-
+        new_room_name = None
         if await self.is_customer_room(room_id=room_id, intent=intent):
             if self.config["acd.keep_room_name"] or self.config["acd.keep_room_name"] is None:
 
