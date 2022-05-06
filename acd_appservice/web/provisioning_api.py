@@ -23,6 +23,7 @@ from .error_responses import (
     NOT_EMAIL,
     REQUEST_ALREADY_EXISTS,
     REQUIRED_VARIABLES,
+    SERVER_ERROR,
     TIMEOUT_ERROR,
     USER_ALREADY_EXISTS,
     USER_DOESNOT_EXIST,
@@ -123,20 +124,28 @@ class ProvisioningAPI:
         if not re.match(self.config["utils.regex_email"], email):
             return web.json_response(**INVALID_EMAIL)
 
+        # Obtenemos el puppet de este emial si existe
         puppet = await Puppet.get_by_email(email)
 
-        self.log.debug(puppet)
-
         if not puppet:
-            next_puppet = await Puppet.get_next_puppet()
-            self.log.debug(next_puppet)
+            # Si no existe creamos un puppet para este email
 
-            puppet: Puppet = await Puppet.get_by_pk(int(next_puppet), email)
-            puppet.email = email
-            puppet.custom_mxid = Puppet.get_mxid_from_id(puppet.pk)
-            await puppet.save()
+            # Primero obtenemos el sieguiente puppet
+            next_puppet = await Puppet.get_next_puppet()
+            if next_puppet is None:
+                return web.json_response(**SERVER_ERROR)
+            try:
+                # Creamos el puppet con el siguiente pk
+                puppet: Puppet = await Puppet.get_by_pk(int(next_puppet), email)
+                puppet.email = email
+
+                # Obtenemos el mxid correspondiente para este puppet @acd*:localhost
+                puppet.custom_mxid = Puppet.get_mxid_from_id(puppet.pk)
+                await puppet.save()
+            except Exception as e:
+                self.log.error(f"create_user Error: {e}")
+                return web.json_response(**SERVER_ERROR)
         else:
-            await puppet.intent.join_room_by_id("!YLGVnyUJURfVHmYleL:darknet")
             return web.json_response(**USER_ALREADY_EXISTS)
 
         response = {

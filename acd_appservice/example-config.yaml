@@ -74,6 +74,8 @@ bridge:
 
 
 acd:
+    # Regex for get the puppet ID
+    acd_regex: "^@[a-zA-Z-_]+(?P<userid>[0-9]+):.+$"
     # Feature for naming customer rooms
     keep_room_name: false
     # Prefix for identification of agent user

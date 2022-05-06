@@ -114,13 +114,14 @@ class Puppet:
         return cls._from_row(row)
 
     @classmethod
-    async def get_next_puppet_seq(cls) -> str | None:
-        q = "SELECT count(*) FROM puppet"
-        row = await cls.db.fetchval(q)
-        if not row:
-            q = 0
+    async def get_all_puppets(cls) -> list[UserID]:
+        q = "SELECT * FROM puppet WHERE custom_mxid IS NOT NULL"
+        rows = await cls.db.fetch(q)
 
-        return row
+        if not rows:
+            return []
+
+        return [cls._from_row(row).custom_mxid for row in rows]
 
     @classmethod
     async def all_with_custom_mxid(cls) -> list[Puppet]:

@@ -58,3 +58,8 @@ REQUEST_ALREADY_EXISTS = {
     "data": {"error": "You already have a pending request"},
     "status": 429,
 }
+
+SERVER_ERROR = {
+    "data": {"error": "Server error"},
+    "status": 500,
+}

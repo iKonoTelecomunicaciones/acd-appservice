@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, AsyncGenerator, AsyncIterable, Awaitable, cast
 
 from mautrix.appservice import IntentAPI
@@ -195,24 +196,63 @@ class Puppet(DBPuppet, BasePuppet):
         return None
 
     @classmethod
-    async def get_next_puppet(cls) -> str:
-        """Get the next puppet from the database
+    def get_puppet_userid(cls, puppet_user_id: UserID) -> int:
+        """It takes a user ID and returns the user ID without the prefix
+
+        Parameters
+        ----------
+        puppet_user_id : UserID
+            The userid of the user that is being puppeted.
+
+        Returns
+        -------
+            The userid of the puppet user.
+
+        """
+        puppet_match = re.match(cls.config["acd.acd_regex"], puppet_user_id)
+        if puppet_match:
+            return int(puppet_match.group("userid"))
+
+    @classmethod
+    async def get_next_puppet(cls) -> int:
+        """It returns the next available puppet userid
 
         Parameters
         ----------
 
         Returns
         -------
-            The next puppet in the sequence.
+            The next available puppet userid.
 
         """
-
         next_puppet = None
         try:
-            next_puppet = await cls.get_next_puppet_seq()
-            next_puppet = int(next_puppet) + 1
+            # Obtenemos todos los UserIDs de los puppets que tengan custom_mxid
+            all_puppets: list[UserID] = await cls.get_all_puppets()
+            if len(all_puppets) > 0:
+                # A cada UserID le sacamos el número en el que va
+                # luego ordenamos la lista de menor a mayor
+                all_puppets_sorted = list(
+                    map(lambda x: int(re.match(cls.config["acd.acd_regex"], x)[1]), all_puppets)
+                )
+                all_puppets_sorted.sort()
+                cls.log.debug(all_puppets)
+                cls.log.debug(all_puppets_sorted)
+
+                for i in range(0, len(all_puppets_sorted)):
+                    if i < len(all_puppets_sorted) - 1:
+                        if (all_puppets_sorted[i] + 1) != (all_puppets_sorted[i + 1]):
+                            next_puppet = all_puppets_sorted[i] + 1
+                            break
+
+                if i == len(all_puppets_sorted) - 1:
+                    next_puppet = all_puppets_sorted[i] + 1
+
+            else:
+                next_puppet = 1
+
         except Exception as e:
-            cls.log.error(f"### Puppet error: {e}")
+            cls.log.error(f"### Error in get_next_puppet: {e}")
 
         return next_puppet
 
