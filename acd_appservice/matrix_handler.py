@@ -212,7 +212,7 @@ class MatrixHandler:
         """
 
         self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
-        intent = await self.process_puppet(user_id=UserID(evt.state_key))
+        intent = await self.get_intent(user_id=UserID(evt.state_key))
 
         if not intent:
             return None
@@ -259,7 +259,7 @@ class MatrixHandler:
             self.log.debug(f"Resolving to True the promise [{future_key}]")
             AgentManager.PENDING_INVITES[future_key].set_result(True)
 
-        intent = await self.process_puppet(user_id=user_id)
+        intent = await self.get_intent(user_id=user_id)
         if not intent:
             self.log.debug(f"The user who has joined is neither a puppet nor the appservice_bot")
             return
@@ -311,7 +311,7 @@ class MatrixHandler:
 
         """
 
-        intent = await self.process_puppet(user_id=user_id)
+        intent = await self.get_intent(user_id=user_id)
         if not intent:
             return
 
@@ -341,7 +341,11 @@ class MatrixHandler:
             self.log.debug(f"Ignoring the room {room_id} because it is whatsapp_status_broadcast")
             return
 
-    async def process_puppet(self, user_id: UserID) -> IntentAPI:
+        # Intentamos cambiarle el nombre a la sala
+        if not await self.room_manager.put_name_customer_room(room_id=room_id, intent=intent):
+            self.log.debug(f"Room {room_id} name has not been changed")
+
+    async def get_intent(self, user_id: UserID) -> IntentAPI:
         """
         If the user is a puppet, return the puppet's intent.
         If the user is the bot, return the bot's intent.
