@@ -500,12 +500,18 @@ class AgentManager:
         """
         data = {"user_id": agent_id}
         try:
-            response = await self.intent.bot.api.request(
-                method=Method.POST,
-                path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
-                content=data,
-            )
-            self.log.debug(response)
+            if self.intent.bot:
+                await self.intent.bot.api.request(
+                    method=Method.POST,
+                    path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
+                    content=data,
+                )
+            else:
+                await self.intent.api.request(
+                    method=Method.POST,
+                    path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
+                    content=data,
+                )
         except IntentError as e:
             self.log.error(e)
 

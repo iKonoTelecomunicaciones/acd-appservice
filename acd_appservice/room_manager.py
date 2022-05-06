@@ -382,9 +382,14 @@ class RoomManager:
         """Get devices where agent have sessions"""
         response: Dict[str, List[Dict]] = None
         try:
-            response = await intent.bot.api.request(
-                method=Method.GET, path=f"/_synapse/admin/v2/users/{user_id}/devices"
-            )
+            if intent.bot:
+                response = await intent.bot.api.request(
+                    method=Method.GET, path=f"/_synapse/admin/v2/users/{user_id}/devices"
+                )
+            else:
+                response = await intent.api.request(
+                    method=Method.GET, path=f"/_synapse/admin/v2/users/{user_id}/devices"
+                )
 
         except IntentError as e:
             self.log.error(e)
@@ -565,9 +570,14 @@ class RoomManager:
             room_info if successful, None otherwise.
         """
         try:
-            room_info = await intent.bot.api.request(
-                method=Method.GET, path=f"/_synapse/admin/v1/rooms/{room_id}"
-            )
+            if intent.bot:
+                room_info = await intent.bot.api.request(
+                    method=Method.GET, path=f"/_synapse/admin/v1/rooms/{room_id}"
+                )
+            else:
+                room_info = await intent.api.request(
+                    method=Method.GET, path=f"/_synapse/admin/v1/rooms/{room_id}"
+                )
             self.ROOMS[room_id] = room_info
         except Exception as e:
             self.log.error(e)
