@@ -311,7 +311,6 @@ class MatrixHandler:
 
         """
 
-
         intent = await self.get_intent(user_id=user_id)
         if not intent:
             return
@@ -319,9 +318,7 @@ class MatrixHandler:
         room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
         creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
         if not room_name:
-            new_room_name = await self.room_manager.get_update_name(
-                creator=creator, intent=intent
-            )
+            new_room_name = await self.room_manager.get_update_name(creator=creator, intent=intent)
             if new_room_name:
                 await intent.set_room_name(room_id=room_id, name=new_room_name)
 
