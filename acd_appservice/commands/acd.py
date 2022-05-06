@@ -30,7 +30,7 @@ async def acd(evt: CommandEvent) -> str:
     room_params = f"acd {customer_room_id} {campaign_room_id}"
     joined_message = (evt.args[len(room_params) :]).strip() if len(evt.args) > 3 else None
 
-    # Si el ususiario es un puppet entonces ejecutamos el proceso de distribución con el
+    # Si el usuario es un puppet entonces ejecutamos el proceso de distribución con el
     # Sino entonces con el bot del appservice
     if evt.sender_user_id != evt.acd_appservice.az.bot_mxid:
         puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.sender_user_id)

@@ -212,7 +212,7 @@ class MatrixHandler:
         """
 
         self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
-        intent = await self.process_puppet(user_id=UserID(evt.state_key))
+        intent = await self.get_intent(user_id=UserID(evt.state_key))
 
         if not intent:
             return None
@@ -259,7 +259,7 @@ class MatrixHandler:
             self.log.debug(f"Resolving to True the promise [{future_key}]")
             AgentManager.PENDING_INVITES[future_key].set_result(True)
 
-        intent = await self.process_puppet(user_id=user_id)
+        intent = await self.get_intent(user_id=user_id)
         if not intent:
             self.log.debug(f"The user who has joined is neither a puppet nor the appservice_bot")
             return
@@ -307,25 +307,27 @@ class MatrixHandler:
 
         Returns
         -------
-            The return value of the function is the value of the last expression evaluated.
 
         """
 
-        intent = await self.process_puppet(user_id=user_id)
+        intent = await self.get_intent(user_id=user_id)
         if not intent:
             return
 
-        room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
-        creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
-        if not room_name:
-            new_room_name = await self.room_manager.get_update_name(creator=creator, intent=intent)
-            if new_room_name:
-                await intent.set_room_name(room_id=room_id, name=new_room_name)
+        if await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
+            room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
+            creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
+            if not room_name:
+                new_room_name = await self.room_manager.get_update_name(
+                    creator=creator, intent=intent
+                )
+                if new_room_name:
+                    await intent.set_room_name(room_id=room_id, name=new_room_name)
+                    self.log.info(f"User {room_id} has changed the name of the room {intent.mxid}")
+            return
 
         is_command, text = self.is_command(message=message)
-        if is_command and not await self.room_manager.is_customer_room(
-            room_id=room_id, intent=intent
-        ):
+        if is_command:
             command_event = CommandEvent(
                 acd_appservice=self.acd_appservice,
                 sender_user_id=intent.mxid,
@@ -341,7 +343,7 @@ class MatrixHandler:
             self.log.debug(f"Ignoring the room {room_id} because it is whatsapp_status_broadcast")
             return
 
-    async def process_puppet(self, user_id: UserID) -> IntentAPI:
+    async def get_intent(self, user_id: UserID) -> IntentAPI:
         """
         If the user is a puppet, return the puppet's intent.
         If the user is the bot, return the bot's intent.
