@@ -325,7 +325,7 @@ class RoomManager:
     @classmethod
     def get_future_key(cls, room_id: RoomID, agent_id: UserID) -> str:
         """Return the key for the dict of futures for a specific agent."""
-        return f"[{room_id}]-[{agent_id}]"
+        return f"{room_id}-{agent_id}"
 
     async def get_update_name(self, creator: UserID, intent: IntentAPI) -> str:
         """Given a customer's mxid, pull the phone number and concatenate it to the name
@@ -438,7 +438,12 @@ class RoomManager:
             self.log.debug(f"User [{menubot_id}] KICKED from room [{room_id}]")
 
     async def send_menubot_command(
-        self, menubot_id: UserID, command: str, intent: IntentAPI, *args: Tuple
+        self,
+        menubot_id: UserID,
+        command: str,
+        control_room_id: RoomID,
+        intent: IntentAPI,
+        *args: Tuple,
     ) -> None:
         """Send a command to menubot."""
         if menubot_id:
@@ -452,7 +457,7 @@ class RoomManager:
             cmd = cmd.strip()
 
             self.log.debug(f"Sending command {command} for the menubot [{menubot_id}]")
-            await intent.send_text(room_id=self.control_room_id, text=cmd)
+            await intent.send_text(room_id=control_room_id, text=cmd)
 
     async def get_menubot_id(
         self, intent: IntentAPI, room_id: RoomID = None, user_id: UserID = None
@@ -608,7 +613,7 @@ class RoomManager:
         bool
             True if successful, False otherwise.
         """
-        room = await Room.get_room_by_room_id(room_id)
+        room = await Room.get_pending_room_by_room_id(room_id)
         if room:
             return await cls.update_pending_room_in_db(
                 room_id=room_id, selected_option=selected_option
@@ -777,6 +782,9 @@ class RoomManager:
         except Exception as e:
             cls.log.error(e)
             return
+
+        if not rooms:
+            return []
 
         return [room.room_id for room in rooms]
 

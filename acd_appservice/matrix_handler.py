@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import TYPE_CHECKING
 
 from mautrix.appservice import AppService, IntentAPI
 from mautrix.bridge import config
@@ -22,8 +23,10 @@ from mautrix.types import (
 )
 from mautrix.util.logging import TraceLogger
 
+from acd_appservice.agent_manager import AgentManager
+from acd_appservice.room_manager import RoomManager
+
 from . import acd_program as acd_pr
-from . import room_manager
 from .commands.handler import command_processor
 from .commands.typehint import CommandEvent
 from .puppet import Puppet
@@ -35,7 +38,8 @@ class MatrixHandler:
     config: config.BaseBridgeConfig
     acd_appservice: acd_pr.ACD
 
-    room_manager: room_manager.RoomManager
+    agent_manager: AgentManager
+    room_manager: RoomManager
 
     def __init__(
         self,
@@ -98,39 +102,15 @@ class MatrixHandler:
             except Exception:
                 self.log.exception("Failed to set bot avatar")
 
-    async def handle_invide(self, evt: Event):
-        self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
-
-        intent = await self.process_puppet(user_id=UserID(evt.state_key))
-
-        await intent.join_room(evt.room_id)
-
-    async def handle_disinvite(
-        self,
-        room_id: RoomID,
-        user_id: UserID,
-        disinvited_by: UserID,
-        reason: str,
-        event_id: EventID,
-    ) -> None:
-        pass
-
-    async def handle_join(self, room_id: RoomID, user_id: UserID, event_id: EventID) -> None:
-        self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
-
-        intent = await self.process_puppet(user_id=user_id)
-
-        if not intent:
-            self.log(f"The user who has joined is neither a puppet nor the appservice_bot")
-            return
-
-        # Solo se inicializa la sala si el que se une es el usuario acd*
-        if intent.api.bot_mxid == user_id and not await self.room_manager.initialize_room(
-            room_id=room_id, intent=intent
-        ):
-            self.log.debug(f"Room {room_id} initialization has failed")
-
     async def int_handle_event(self, evt: Event) -> None:
+        """If the event is a room member event, then handle it
+
+        Parameters
+        ----------
+        evt : Event
+            Event has arrived
+
+        """
 
         self.log.debug(f"Received event: {evt.event_id} - {evt.type} in the room {evt.room_id}")
 
@@ -140,7 +120,7 @@ class MatrixHandler:
             prev_content = unsigned.prev_content or MemberStateEventContent()
             prev_membership = prev_content.membership if prev_content else Membership.JOIN
             if evt.content.membership == Membership.INVITE:
-                await self.handle_invide(evt)
+                await self.handle_invite(evt)
 
             elif evt.content.membership == Membership.LEAVE:
                 if prev_membership == Membership.BAN:
@@ -211,7 +191,90 @@ class MatrixHandler:
         #     else:
         #         await self.handle_event(evt)
 
+    async def handle_invite(self, evt: Event):
+        """If the user who was invited is a bot, then join the room
+
+        Parameters
+        ----------
+        evt : Event
+            Incoming event
+
+        Returns
+        -------
+
+        """
+
+        self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
+        intent = await self.get_intent(user_id=UserID(evt.state_key))
+
+        if not intent:
+            return None
+
+        self.log.debug(f"The guest user {evt.state_key} is a bot")
+        await intent.join_room(evt.room_id)
+
+    async def handle_disinvite(
+        self,
+        room_id: RoomID,
+        user_id: UserID,
+        disinvited_by: UserID,
+        reason: str,
+        event_id: EventID,
+    ) -> None:
+        pass
+
+    async def handle_join(self, room_id: RoomID, user_id: UserID, event_id: EventID) -> None:
+        """If the user who has joined the room is the bot, then the room is initialized
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The ID of the room the user has joined.
+        user_id : UserID
+            The user who has joined the room
+        event_id : EventID
+            The ID of the event that triggered this call.
+
+        Returns
+        -------
+            The intent of the user who has joined the room
+
+        """
+        self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
+
+        future_key = RoomManager.get_future_key(room_id=room_id, agent_id=user_id)
+        if (
+            future_key in AgentManager.PENDING_INVITES
+            and not AgentManager.PENDING_INVITES[future_key].done()
+        ):
+            # when the agent accepts the invite, the Future is resolved and the waiting
+            # timer stops
+            self.log.debug(f"Resolving to True the promise [{future_key}]")
+            AgentManager.PENDING_INVITES[future_key].set_result(True)
+
+        intent = await self.get_intent(user_id=user_id)
+        if not intent:
+            self.log.debug(f"The user who has joined is neither a puppet nor the appservice_bot")
+            return
+
+        # Solo se inicializa la sala si el que se une es el usuario acd*
+        if not await self.room_manager.initialize_room(room_id=room_id, intent=intent):
+            self.log.debug(f"Room {room_id} initialization has failed")
+
     def is_command(self, message: MessageEventContent) -> tuple[bool, str]:
+        """It checks if a message starts with the command prefix, and if it does,
+        it removes the prefix and returns the message without the prefix
+
+        Parameters
+        ----------
+        message : MessageEventContent
+            The message that was sent.
+
+        Returns
+        -------
+            A tuple of a boolean and a string.
+
+        """
         text = message.body
         prefix = self.config["bridge.command_prefix"]
         is_command = text.startswith(prefix)
@@ -220,14 +283,28 @@ class MatrixHandler:
         return is_command, text
 
     async def handle_message(
-        self,
-        room_id: RoomID,
-        user_id: UserID,
-        message: MessageEventContent,
-        event_id: EventID,
+        self, room_id: RoomID, user_id: UserID, message: MessageEventContent, event_id: EventID
     ) -> None:
+        """If the message is a command, process it. If not, ignore it
 
-        intent = await self.process_puppet(user_id=user_id)
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room the message was sent in.
+        user_id : UserID
+            The user ID of the user who sent the message.
+        message : MessageEventContent
+            The message that was sent.
+        event_id : EventID
+            The ID of the event that triggered this call.
+
+        Returns
+        -------
+            The return value of the function is the value of the last expression evaluated.
+
+        """
+
+        intent = await self.get_intent(user_id=user_id)
         if not intent:
             return
 
@@ -254,10 +331,28 @@ class MatrixHandler:
         if not await self.room_manager.put_name_customer_room(room_id=room_id, intent=intent):
             self.log.debug(f"Room {room_id} name has not been changed")
 
-    async def process_puppet(self, user_id: UserID) -> IntentAPI:
+    async def get_intent(self, user_id: UserID) -> IntentAPI:
+        """
+        If the user is a puppet, return the puppet's intent.
+        If the user is the bot, return the bot's intent.
+        Otherwise, return None
 
-        if not (user_id == self.az.bot_mxid) and Puppet.get_id_from_mxid(user_id):
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user who sent the message.
+
+        Returns
+        -------
+            The intent of the user.
+
+        """
+        if user_id != self.az.bot_mxid and Puppet.get_id_from_mxid(user_id):
             puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
             return puppet.intent
-        else:
+
+        elif user_id == self.az.bot_mxid:
             return self.az.intent
+
+        else:
+            return None
