@@ -307,7 +307,6 @@ class MatrixHandler:
 
         Returns
         -------
-            The return value of the function is the value of the last expression evaluated.
 
         """
 
@@ -315,17 +314,20 @@ class MatrixHandler:
         if not intent:
             return
 
-        room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
-        creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
-        if not room_name:
-            new_room_name = await self.room_manager.get_update_name(creator=creator, intent=intent)
-            if new_room_name:
-                await intent.set_room_name(room_id=room_id, name=new_room_name)
+        if await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
+            room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
+            creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
+            if not room_name:
+                new_room_name = await self.room_manager.get_update_name(
+                    creator=creator, intent=intent
+                )
+                if new_room_name:
+                    await intent.set_room_name(room_id=room_id, name=new_room_name)
+                    self.log.info(f"User {room_id} has changed the name of the room {intent.mxid}")
+            return
 
         is_command, text = self.is_command(message=message)
-        if is_command and not await self.room_manager.is_customer_room(
-            room_id=room_id, intent=intent
-        ):
+        if is_command:
             command_event = CommandEvent(
                 acd_appservice=self.acd_appservice,
                 sender_user_id=intent.mxid,
