@@ -249,7 +249,6 @@ class AgentManager:
                 await self.force_invite_agent(
                     customer_room_id, agent_id, campaign_room_id, joined_message
                 )
-                RoomManager.unlock_room(customer_room_id)
                 break
 
             agent_count += 1
@@ -464,6 +463,12 @@ class AgentManager:
             # )
 
             RoomManager.unlock_room(room_id=customer_room_id)
+
+        elif await self.get_room_agent(room_id=customer_room_id):
+            RoomManager.unlock_room(room_id=customer_room_id)
+            self.log.debug(
+                f"Unlocking room {customer_room_id}..., agent {agent_id} already in room"
+            )
         else:
             self.log.debug(f"[{agent_id}] DID NOT ACCEPT the invite. Inviting next agent ...")
             await self.intent.kick_user(
