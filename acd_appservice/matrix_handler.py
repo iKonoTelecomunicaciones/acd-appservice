@@ -314,14 +314,15 @@ class MatrixHandler:
         room_name = await self.room_manager.get_room_name(room_id=room_id, intent=self.az.intent)
         creator = await self.room_manager.get_room_creator(room_id=room_id, intent=self.az.intent)
         if not room_name:
-            new_room_name = await self.room_manager.get_update_name(creator=creator, intent=self.az.intent)
+            new_room_name = await self.room_manager.get_update_name(
+                creator=creator, intent=self.az.intent
+            )
             if new_room_name:
                 await self.az.intent.set_room_name(room_id=room_id, name=new_room_name)
 
         intent = await self.get_intent(user_id=user_id)
         if not intent:
             return
-
 
         is_command, text = self.is_command(message=message)
         if is_command and not await self.room_manager.is_customer_room(
