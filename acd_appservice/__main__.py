@@ -1,10 +1,10 @@
 import asyncio
 
-import ptvsd
 from mautrix.types import UserID
 
 from acd_appservice.agent_manager import AgentManager
 
+from . import VERSION
 from .acd_program import ACD
 from .config import Config
 from .db import init as init_db
@@ -14,15 +14,13 @@ from .puppet import Puppet
 from .room_manager import RoomManager
 from .web.provisioning_api import ProvisioningAPI
 
-ptvsd.enable_attach(address=("0.0.0.0", 5678))
-
 
 class ACDAppService(ACD):
     name = "acd-appservice"
     module = "acd_appservice"
     command = "python -m acd_appservice"
     description = "An appservice for Automatic Chat Distribution with diferents bridges"
-    version = "0.0.0"
+    version = VERSION
 
     config_class = Config
     matrix_class = MatrixHandler

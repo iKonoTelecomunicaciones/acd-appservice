@@ -6,10 +6,15 @@ from typing import Type
 from markdown import markdown
 from mautrix.util.logging import TraceLogger
 
+from .. import VERSION
 from ..commands.typehint import CommandEvent
 
 command_handlers: dict[str, CommandHandler] = {}
 
+helpers = {
+    "help": "Prints this help.",
+    "version": "View the software version.",
+}
 
 class CommandHandler:
     name: str
@@ -67,6 +72,8 @@ async def command_processor(command_event: CommandEvent):
         return make_help_text(
             command_prefix=command_event.acd_appservice.config["bridge.command_prefix"]
         )
+    elif command_event.args[0] == "version":
+        return markdown(f"The version is **v{VERSION}**")
     elif command_event.args[0] in command_handlers:
         return await command_handlers[command_event.args[0]]._handler(command_event)
     else:
@@ -75,6 +82,10 @@ async def command_processor(command_event: CommandEvent):
 
 def make_help_text(command_prefix: str) -> str:
     text = "# Description of commands \n"
+
+    for helper in helpers:
+        text = f"{text} * **{command_prefix}** {helper} - {helpers[helper]} \n"
+
     for cmd in command_handlers:
         text = f"{text} * **{command_prefix}** {command_handlers[cmd].help} \n"
 

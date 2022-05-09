@@ -116,21 +116,34 @@ bridges:
     create_portal_command: "pm"
     send_template_command: "template"
   mautrix:
+    # Mautrix UserID
+    mxid: "@mx_whatsappbot:localhost"
     # Prefix to be listened by bridge
     prefix: "!wa"
     # Prefix for users created
     user_prefix: "mxwa"
     create_portal_command: "pm"
     send_template_command: ""
+    login: "login"
     # Postfix to identify a customer
     postfix_template: "(WA)"
     set_relay: "set-relay"
     set_permissions: "set-pl {mxid} {power_level}"
     notice_messages:
-      # When a chat already exists
-      existing_portal: "You already have a private chat portal"
       # When I can't create a chat with WhatsApp
       phone_is_not_on_whatsapp: "^The server said \\+(?P<phone_number>[0-9]+) is not on WhatsApp$"
+      # Mautrix login notice
+      logged_in: "You're already logged in"
+      logged_out: "Logged out successfully."
+      not_logged_in: "You're not logged in."
+      # Toca agregar este notice porque Tulir no le puso apóstrofe a este notice :'v
+      not_logged_in_2: "You are not logged in"
+      external_loggged_out: "You were logged out from another device. Please link the bridge to your phone again."
+      # When a chat was successfully created
+      created_portal_room: "^Created portal room with \\+(?P<phone_number>[0-9]+) and invited you to it.$"
+      # When a chat already exists
+      existing_portal: "^You already have a private chat portal with \\+(?P<phone_number>[0-9]+) at .+(?P<room_id>!\\w+:[\\w.-]+).+$"
+
   instagram:
     # Prefix to be listened by bridge
     prefix: "!ig"

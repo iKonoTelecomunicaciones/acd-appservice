@@ -17,6 +17,7 @@ class Config(BaseBridgeConfig):
         copy("utils.wait_promise_time")
         copy("bridge.command_prefix")
         copy_dict("bridges")
+        copy("bridges.mautrix.mxid")
         copy("bridge.provisioning.prefix")
         copy("acd.keep_room_name")
         copy("acd.control_room_id")

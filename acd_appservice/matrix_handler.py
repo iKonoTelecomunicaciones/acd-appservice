@@ -11,6 +11,7 @@ from mautrix.types import (
     Event,
     EventID,
     EventType,
+    MediaMessageEventContent,
     Membership,
     MemberStateEventContent,
     MessageEvent,
@@ -30,6 +31,7 @@ from . import acd_program as acd_pr
 from .commands.handler import command_processor
 from .commands.typehint import CommandEvent
 from .puppet import Puppet
+from .web.provisioning_api import LOGIN_PENDING_PROMISES, LOGOUT_PENDING_PROMISES
 
 
 class MatrixHandler:
@@ -173,10 +175,13 @@ class MatrixHandler:
                 #         evt.room_id, UserID(evt.state_key), evt.content, prev_content, evt.event_id
                 #     )
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
-            evt: MessageEvent
-            if evt.type != EventType.ROOM_MESSAGE:
+            evt: MessageEvent = evt
+            if evt.content.msgtype == MessageType.IMAGE:
+                await self.handle_image(message=evt.content, room_id=evt.room_id, sender=evt.sender)
+            elif evt.type != EventType.ROOM_MESSAGE:
                 evt.content.msgtype = MessageType(str(evt.type))
-            await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
+                await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
+
         elif evt.type == EventType.ROOM_NAME:
             if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
                 unsigned: StateUnsigned = evt.unsigned
@@ -197,6 +202,25 @@ class MatrixHandler:
         #         await self.handle_ephemeral_event(evt)
         #     else:
         #         await self.handle_event(evt)
+
+    async def handle_image(self, message: MediaMessageEventContent, room_id: RoomID, sender: UserID):
+        """Receives a message and processes it.
+
+        Parameters
+        ----------
+        message
+            Image message arriving
+        room_id
+            Room where the notice arrived
+        """
+        if room_id in LOGIN_PENDING_PROMISES and sender == self.config["bridges.mautrix.mxid"]:
+            self.log.info(f"QR code: {message.body} for the room {room_id}")
+            # Verify that promise hasn't solved to avoid
+            # that a second request try to solve the same promise
+            if not LOGIN_PENDING_PROMISES[room_id].done():
+                LOGIN_PENDING_PROMISES[room_id].set_result(
+                    {"msgtype": "qr_code", "response": message.body}
+                )
 
     async def handle_invite(self, evt: Event):
         """If the user who was invited is a bot, then join the room
@@ -309,6 +333,47 @@ class MatrixHandler:
         -------
 
         """
+        if (
+            message.body.startswith(self.config["bridges.mautrix.notice_messages.logged_in"])
+            and room_id in LOGIN_PENDING_PROMISES
+        ):
+            # Verify that promise hasn't solved to avoid
+            # that a second request try to solve the same promise
+            if not LOGIN_PENDING_PROMISES[room_id].done():
+                LOGIN_PENDING_PROMISES[room_id].set_result(
+                    {
+                        "msgtype": "logged_in",
+                        "response": self.config["bridges.mautrix.notice_messages.logged_in"],
+                    }
+                )
+        elif (
+            message.body == self.config["bridges.mautrix.notice_messages.logged_out"]
+            and room_id in LOGOUT_PENDING_PROMISES
+        ):
+            # Verify that promise hasn't solved to avoid
+            # that a second request try to solve the same promise
+            if not LOGOUT_PENDING_PROMISES[room_id].done():
+                LOGOUT_PENDING_PROMISES[room_id].set_result(
+                    {
+                        "msgtype": "logged_out",
+                        "response": self.config["bridges.mautrix.notice_messages.logged_out"],
+                    }
+                )
+        elif (
+            message.body == self.config["bridges.mautrix.notice_messages.not_logged_in"]
+            or message.body.startswith(
+                self.config["bridges.mautrix.notice_messages.not_logged_in_2"]
+            )
+        ) and room_id in LOGOUT_PENDING_PROMISES:
+            # Verify that promise hasn't solved to avoid
+            # that a second request try to solve the same promise
+            if not LOGOUT_PENDING_PROMISES[room_id].done():
+                LOGOUT_PENDING_PROMISES[room_id].set_result(
+                    {
+                        "msgtype": "not_logged_in",
+                        "response": self.config["bridges.mautrix.notice_messages.not_logged_in"],
+                    }
+                )
 
         intent = await self.get_intent(user_id=user_id)
         if not intent:
@@ -360,8 +425,12 @@ class MatrixHandler:
 
         """
         if user_id != self.az.bot_mxid and Puppet.get_id_from_mxid(user_id):
-            puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
-            return puppet.intent
+            try:
+                puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
+                return puppet.intent
+            except AttributeError as e:
+                self.log.error(f"Error get_intent: {e}")
+                return None
 
         elif user_id == self.az.bot_mxid:
             return self.az.intent

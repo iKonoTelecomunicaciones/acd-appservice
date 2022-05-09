@@ -78,6 +78,7 @@ class ProvisioningAPI:
             [
                 # Región de autenticación
                 web.post("/create_user", self.create_user),
+                web.post("/link_phone", self.link_phone),
             ]
         )
         self.loop = asyncio.get_running_loop()
@@ -141,6 +142,10 @@ class ProvisioningAPI:
 
                 # Obtenemos el mxid correspondiente para este puppet @acd*:localhost
                 puppet.custom_mxid = Puppet.get_mxid_from_id(puppet.pk)
+                control_room_id = await puppet.intent.create_room(
+                    invitees=[self.config["bridges.mautrix.mxid"]]
+                )
+                puppet.control_room_id = control_room_id
                 await puppet.save()
             except Exception as e:
                 self.log.error(f"create_user Error: {e}")
@@ -154,97 +159,93 @@ class ProvisioningAPI:
 
         return web.json_response(response, status=201)
 
-    # async def link_phone(self, request: web.Request) -> web.Response:
-    #     """
-    #     Given a user_email send a `!wa login` bridge command to stablish Whatsapp communication
-    #     ---
-    #     summary: Generates a QR code for an existing user in order to create a QR image and link the WhatsApp number by scanning the QR code with the cell phone.
-    #     tags:
-    #         - users
+    async def link_phone(self, request: web.Request) -> web.Response:
+        """
+        Given a user_email send a `!wa login` bridge command to stablish Whatsapp communication
+        ---
+        summary: Generates a QR code for an existing user in order to create a QR image and link the WhatsApp number by scanning the QR code with the cell phone.
+        tags:
+            - users
 
-    #     requestBody:
-    #       required: true
-    #       description: A json with `user_email`
-    #       content:
-    #         application/json:
-    #           schema:
-    #             type: object
-    #             properties:
-    #               user_email:
-    #                 type: string
-    #             example:
-    #                 user_email: nobody@somewhere.com
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_email:
+                    type: string
+                example:
+                    user_email: nobody@somewhere.com
 
-    #     responses:
-    #         '201':
-    #             $ref: '#/components/responses/QrGenerated'
-    #         '400':
-    #             $ref: '#/components/responses/BadRequest'
-    #         '404':
-    #             $ref: '#/components/responses/NotExist'
-    #         '422':
-    #             $ref: '#/components/responses/ErrorData'
-    #         '429':
-    #             $ref: '#/components/responses/TooManyRequests'
-    #     """
+        responses:
+            '201':
+                $ref: '#/components/responses/QrGenerated'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+            '422':
+                $ref: '#/components/responses/ErrorData'
+            '429':
+                $ref: '#/components/responses/TooManyRequests'
+        """
 
-    #     if not request.body_exists:
-    #         return web.json_response(**NOT_DATA)
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
 
-    #     data = await request.json()
+        data = await request.json()
 
-    #     if not data.get("user_email"):
-    #         return web.json_response(**NOT_EMAIL)
+        if not data.get("user_email"):
+            return web.json_response(**NOT_EMAIL)
 
-    #     email = data.get("user_email").lower()
-    #     if not re.match(self.config["utils.regex_email"], email):
-    #         return web.json_response(**INVALID_EMAIL)
+        email = data.get("user_email").lower()
+        if not re.match(self.config["utils.regex_email"], email):
+            return web.json_response(**INVALID_EMAIL)
 
-    #     if not await User.user_exists(email):
-    #         return web.json_response(**USER_DOESNOT_EXIST)
+        puppet: Puppet = await Puppet.get_by_email(email)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
 
-    #     user, _ = await self.utils.create_puppet_and_user(email=email)
+        if puppet.control_room_id in LOGIN_PENDING_PROMISES:
+            return web.json_response(**REQUEST_ALREADY_EXISTS)
 
-    #     try:
-    #         login_command = self.config["bridge.commands.login"]
-    #         await user.send_command(login_command)
-    #     except Exception as e:
-    #         self.log.error(f"Message not sent: {e}")
-    #         return web.json_response(**MESSAGE_NOT_SENT)
+        login_command = self.config["bridges.mautrix.login"]
+        if not await puppet.send_command(login_command):
+            return web.json_response(**SERVER_ERROR)
 
-    #     if user.room_id in LOGIN_PENDING_PROMISES:
-    #         return web.json_response(**REQUEST_ALREADY_EXISTS)
+        pending_promise = self.loop.create_future()
+        LOGIN_PENDING_PROMISES[puppet.control_room_id] = pending_promise
 
-    #     pending_promise = self.loop.create_future()
-    #     LOGIN_PENDING_PROMISES[user.room_id] = pending_promise
+        promise_response = await asyncio.create_task(
+            self.check_promise(puppet.control_room_id, pending_promise)
+        )
 
-    #     promise_response = await asyncio.create_task(
-    #         self.check_promise(user.room_id, pending_promise)
-    #     )
+        if promise_response.get("msgtype") == "qr_code":
+            response = {
+                "data": {
+                    "qr": promise_response.get("response"),
+                    "message": "QR has been generated",
+                },
+                "status": 201,
+            }
+        elif promise_response.get("msgtype") == "logged_in":
+            response = {
+                "data": {
+                    "error": promise_response.get("response"),
+                },
+                "status": 422,
+            }
+        elif promise_response.get("msgtype") == "error":
+            # When an error occurred the 'promise_response.get("response")' has data and status
+            # look out this error template in 'error_responses.py'
+            response = promise_response.get("response")
 
-    #     if promise_response.get("msgtype") == "qr_code":
-    #         response = {
-    #             "data": {
-    #                 "qr": promise_response.get("response"),
-    #                 "message": "QR has been generated",
-    #             },
-    #             "status": 201,
-    #         }
-    #     elif promise_response.get("msgtype") == "logged_in":
-    #         response = {
-    #             "data": {
-    #                 "error": promise_response.get("response"),
-    #             },
-    #             "status": 422,
-    #         }
-    #     elif promise_response.get("msgtype") == "error":
-    #         # When an error occurred the 'promise_response.get("response")' has data and status
-    #         # look out this error template in 'error_responses.py'
-    #         response = promise_response.get("response")
+        del LOGIN_PENDING_PROMISES[puppet.control_room_id]
 
-    #     del LOGIN_PENDING_PROMISES[user.room_id]
-
-    #     return web.json_response(**response)
+        return web.json_response(**response)
 
     # async def unlink_phone(self, request: web.Request) -> web.Response:
     #     """
@@ -474,44 +475,44 @@ class ProvisioningAPI:
 
     #     return web.json_response(**response)
 
-    # async def check_promise(self, key_promise: str, pending_response) -> tuple:
-    #     """Verify that QR code was generated.
+    async def check_promise(self, key_promise: str, pending_response) -> tuple:
+        """Verify that QR code was generated.
 
-    #     Parameters
-    #     ----------
-    #     key_promise
-    #         key for the promise in the respective dictionary of promises
-    #     pendig_response
-    #         promise response request
+        Parameters
+        ----------
+        key_promise
+            key for the promise in the respective dictionary of promises
+        pendig_response
+            promise response request
 
-    #     Returns
-    #     -------
-    #     tuple
-    #         (response, status)
-    #     """
+        Returns
+        -------
+        tuple
+            (response, status)
+        """
 
-    #     end_time = self.loop.time() + float(self.config["utils.wait_promise_time"])
+        end_time = self.loop.time() + float(self.config["utils.wait_promise_time"])
 
-    #     # In this cycle we wait for the response of message_handler to obtain QR code
-    #     while True:
-    #         self.log.debug(f"[{datetime.now()}] - [{key_promise}] - [{pending_response.done()}]")
+        # In this cycle we wait for the response of message_handler to obtain QR code
+        while True:
+            self.log.debug(f"[{datetime.now()}] - [{key_promise}] - [{pending_response.done()}]")
 
-    #         if pending_response.done():
-    #             # when a message event is received, the Future object is resolved
-    #             self.log.info(f"FUTURE {key_promise} IS DONE")
-    #             future_response = pending_response.result()
-    #             break
-    #         if (self.loop.time() + 1.0) >= end_time:
-    #             self.log.info(f"TIMEOUT COMPLETED FOR THE PROMISE {key_promise}")
-    #             pending_response.set_result(
-    #                 {
-    #                     "msgtype": "error",
-    #                     "response": TIMEOUT_ERROR,
-    #                 }
-    #             )
-    #             future_response = pending_response.result()
-    #             break
+            if pending_response.done():
+                # when a message event is received, the Future object is resolved
+                self.log.info(f"FUTURE {key_promise} IS DONE")
+                future_response = pending_response.result()
+                break
+            if (self.loop.time() + 1.0) >= end_time:
+                self.log.info(f"TIMEOUT COMPLETED FOR THE PROMISE {key_promise}")
+                pending_response.set_result(
+                    {
+                        "msgtype": "error",
+                        "response": TIMEOUT_ERROR,
+                    }
+                )
+                future_response = pending_response.result()
+                break
 
-    #         await asyncio.sleep(1)
+            await asyncio.sleep(1)
 
-    #     return future_response
+        return future_response
