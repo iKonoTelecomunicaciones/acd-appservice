@@ -178,6 +178,7 @@ class MatrixHandler:
                 evt.content.msgtype = MessageType(str(evt.type))
             await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
         elif evt.type == EventType.ROOM_NAME:
+            # Setting the room name to the customer's name.
             if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
                 unsigned: StateUnsigned = evt.unsigned
                 await self.room_manager.put_name_customer_room(
@@ -314,6 +315,9 @@ class MatrixHandler:
         if not intent:
             return
 
+        # The above code is checking if the room is a customer room, if it is,
+        # it is getting the room name, and the creator of the room.
+        # If the room name is empty, it is setting the room name to the new room name.
         if await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
             room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
             creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
