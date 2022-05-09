@@ -147,7 +147,7 @@ class RoomManager:
                 creator = await self.get_room_creator(room_id=room_id, intent=intent)
 
                 new_room_name = await self.get_update_name(creator=creator, intent=intent)
- 
+
             if new_room_name:
                 await intent.set_room_name(room_id, new_room_name)
                 return True
@@ -176,10 +176,9 @@ class RoomManager:
 
             customer_displayname = await intent.get_displayname(user_id)
             if customer_displayname:
-                room_name = f"{customer_displayname}({phone_match[0]})"
+                room_name = f"{customer_displayname.strip()} ({phone_match[0].strip()})"
             else:
-                room_name = f"({phone_match[0]})"
-
+                room_name = f"({phone_match[0]})".strip()
             return room_name
 
         return None
