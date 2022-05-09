@@ -177,7 +177,9 @@ class MatrixHandler:
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
             evt: MessageEvent = evt
             if evt.content.msgtype == MessageType.IMAGE:
-                await self.handle_image(message=evt.content, room_id=evt.room_id, sender=evt.sender)
+                await self.handle_image(
+                    message=evt.content, room_id=evt.room_id, sender=evt.sender
+                )
             elif evt.type != EventType.ROOM_MESSAGE:
                 evt.content.msgtype = MessageType(str(evt.type))
                 await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
@@ -203,7 +205,9 @@ class MatrixHandler:
         #     else:
         #         await self.handle_event(evt)
 
-    async def handle_image(self, message: MediaMessageEventContent, room_id: RoomID, sender: UserID):
+    async def handle_image(
+        self, message: MediaMessageEventContent, room_id: RoomID, sender: UserID
+    ):
         """Receives a message and processes it.
 
         Parameters

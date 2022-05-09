@@ -16,6 +16,7 @@ helpers = {
     "version": "View the software version.",
 }
 
+
 class CommandHandler:
     name: str
     _help_text: str
