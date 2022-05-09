@@ -18,6 +18,8 @@ from mautrix.types import (
 )
 from mautrix.util.logging import TraceLogger
 
+from acd_appservice.puppet import Puppet
+
 from .config import Config
 from .db import Room
 
@@ -26,6 +28,7 @@ class RoomManager:
     config: Config
     log: TraceLogger = logging.getLogger("mau.room_manager")
     ROOMS: dict[RoomID, Dict] = {}
+    CONTROL_ROOMS: List[RoomID] = []
     # list of room_ids to know if distribution process is taking place
     LOCKED_ROOMS = set()
 
@@ -147,7 +150,7 @@ class RoomManager:
                 creator = await self.get_room_creator(room_id=room_id, intent=intent)
 
                 new_room_name = await self.get_update_name(creator=creator, intent=intent)
- 
+
             if new_room_name:
                 await intent.set_room_name(room_id, new_room_name)
                 return True
@@ -823,3 +826,51 @@ class RoomManager:
             return await Room.get_user_selected_menu(room_id=room_id)
         except Exception as e:
             cls.log.error(e)
+
+    @classmethod
+    async def is_a_control_room(cls, room_id: RoomID) -> bool:
+        """If the room ID is in the list of control rooms,
+        or if the room ID is in the list of control room IDs,
+        then the room is a control room
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to check.
+
+        Returns
+        -------
+            A list of room IDs.
+
+        """
+        if room_id in cls.CONTROL_ROOMS:
+            return True
+
+        if room_id in await cls.get_control_room_ids():
+            return True
+
+        return False
+
+    @classmethod
+    async def get_control_room_ids(cls) -> List[RoomID]:
+        """This function is used to get the list of control rooms from the Puppet
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            A list of room ids
+
+        """
+        try:
+            control_room_ids = await Puppet.get_control_room_ids()
+        except Exception as e:
+            cls.log.error(f"Error get_control_room_ids: {e}")
+            return []
+
+        if not control_room_ids:
+            return []
+
+        cls.CONTROL_ROOMS = control_room_ids
+        return control_room_ids

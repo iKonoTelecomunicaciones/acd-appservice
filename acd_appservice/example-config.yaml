@@ -80,7 +80,8 @@ acd:
     agent_prefix: "@agent"
     # agent control room, all agents must be here
     control_room_id: ""
-
+    # Prefix for identification of supervisor user
+    supervisor_prefix: "@supervisor"
     # bot that manages the menu
     # If the menubot property is, then menubots cannot be.
     menubot:
@@ -114,6 +115,8 @@ bridges:
     create_portal_command: "pm"
     send_template_command: "template"
   mautrix:
+    # Mautrix UserID
+    mxid: "@mx_whatsappbot:localhost"
     # Prefix to be listened by bridge
     prefix: "!wa"
     # Prefix for users created
