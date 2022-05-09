@@ -359,15 +359,14 @@ class MatrixHandler:
         # If the room name is empty, it is setting the room name to the new room name.
         if await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
             room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
-            creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
             if not room_name:
+                creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
                 new_room_name = await self.room_manager.get_update_name(
                     creator=creator, intent=intent
                 )
                 if new_room_name:
                     await intent.set_room_name(room_id=room_id, name=new_room_name)
                     self.log.info(f"User {room_id} has changed the name of the room {intent.mxid}")
-            return
 
         # Ignorar la sala de status broadcast
         if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):

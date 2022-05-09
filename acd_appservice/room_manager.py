@@ -179,10 +179,9 @@ class RoomManager:
 
             customer_displayname = await intent.get_displayname(user_id)
             if customer_displayname:
-                room_name = f"{customer_displayname}({phone_match[0]})"
+                room_name = f"{customer_displayname.strip()} ({phone_match[0].strip()})"
             else:
-                room_name = f"({phone_match[0]})"
-
+                room_name = f"({phone_match[0]})".strip()
             return room_name
 
         return None
