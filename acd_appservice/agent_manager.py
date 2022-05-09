@@ -416,7 +416,9 @@ class AgentManager:
             self.log.debug(f"======> [{customer_room_id}] selected [{campaign_room_id}]")
             # self.bot.store.set_user_selected_menu(customer_room_id, campaign_room_id)
             await RoomManager.set_user_selected_menu(
-                room_id=customer_room_id, selected_option=campaign_room_id
+                room_id=customer_room_id,
+                selected_option=campaign_room_id,
+                puppet_mxid=self.intent.mxid,
             )
 
             self.log.debug(f"Removing room [{customer_room_id}] from pending list")

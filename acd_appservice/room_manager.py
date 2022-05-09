@@ -578,7 +578,9 @@ class RoomManager:
         return room_info
 
     @classmethod
-    async def set_user_selected_menu(cls, room_id: RoomID, selected_option: str) -> bool:
+    async def set_user_selected_menu(
+        cls, room_id: RoomID, selected_option: str, puppet_mxid: UserID
+    ) -> bool:
         """Sets the customer's menu selection (Table room).
 
         Parameters
@@ -595,9 +597,14 @@ class RoomManager:
         """
         room = await Room.get_room_by_room_id(room_id)
         if room:
-            return await cls.update_room_in_db(room_id=room_id, selected_option=selected_option)
+            return await cls.update_room_in_db(
+                room_id=room_id, selected_option=selected_option, puppet_mxid=puppet_mxid
+            )
         else:
-            return await cls.insert_room_in_db(room_id=room_id, selected_option=selected_option)
+            return await cls.insert_room_in_db(
+                room_id=room_id,
+                selected_option=selected_option,
+            )
 
     @classmethod
     async def save_pending_room(cls, room_id: RoomID, selected_option: str = None) -> bool:
@@ -626,6 +633,32 @@ class RoomManager:
             )
 
     @classmethod
+    async def save_room(cls, room_id: RoomID, selected_option: str, puppet_mxid: str) -> bool:
+        """Save or update a room.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to save data.
+        selected_option: RoomID
+            Room selected by the customer
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        room = await Room.get_room_by_room_id(room_id)
+        if room:
+            return await cls.update_room_in_db(
+                room_id=room_id, selected_option=selected_option, puppet_mxid=puppet_mxid
+            )
+        else:
+            return await cls.insert_room_in_db(
+                room_id=room_id, selected_option=selected_option, puppet_mxid=puppet_mxid
+            )
+
+    @classmethod
     async def remove_pending_room(cls, room_id: RoomID) -> bool:
         """Delete the pending room.
 
@@ -650,7 +683,9 @@ class RoomManager:
             return False
 
     @classmethod
-    async def insert_room_in_db(cls, room_id: RoomID, selected_option: str) -> bool:
+    async def insert_room_in_db(
+        cls, room_id: RoomID, selected_option: str, puppet_mxid: UserID
+    ) -> bool:
         """Inserts a room in the database.
 
         Parameters
@@ -670,7 +705,8 @@ class RoomManager:
             if room:
                 return False
             else:
-                await Room.insert_room(room_id, selected_option)
+                puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
+                await Room.insert_room(room_id, selected_option, puppet.pk)
         except Exception as e:
             cls.log.error(e)
             return False
@@ -738,7 +774,9 @@ class RoomManager:
         return True
 
     @classmethod
-    async def update_room_in_db(cls, room_id: RoomID, selected_option: str) -> bool:
+    async def update_room_in_db(
+        cls, room_id: RoomID, selected_option: str, puppet_mxid: UserID
+    ) -> bool:
         """Updates a room in the database.
 
         Parameters
@@ -756,7 +794,15 @@ class RoomManager:
         try:
             room = await Room.get_room_by_room_id(room_id)
             if room:
-                await Room.update_room_by_room_id(room_id, selected_option)
+                room_id = room_id if room_id != room.room_id else room.room_id
+                selected_option = (
+                    selected_option
+                    if selected_option != room.selected_option
+                    else room.selected_option
+                )
+                puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
+                fk_puppet = puppet.pk if puppet.pk != room.fk_puppet else room.fk_puppet
+                await Room.update_room_by_room_id(room_id, selected_option, fk_puppet)
             else:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
         except Exception as e:

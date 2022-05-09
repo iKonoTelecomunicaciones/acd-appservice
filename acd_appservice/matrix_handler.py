@@ -260,10 +260,16 @@ class MatrixHandler:
             self.log.debug(f"Resolving to True the promise [{future_key}]")
             AgentManager.PENDING_INVITES[future_key].set_result(True)
 
+        if Puppet.get_id_from_mxid(user_id):
+            await RoomManager.save_room(
+                room_id=room_id, selected_option=None, puppet_mxid=user_id
+            )
+
         intent = await self.get_intent(user_id=user_id)
         if not intent:
             self.log.debug(f"The user who has joined is neither a puppet nor the appservice_bot")
             return
+
 
         # Solo se inicializa la sala si el que se une es el usuario acd*
         if not await self.room_manager.initialize_room(room_id=room_id, intent=intent):
@@ -311,7 +317,7 @@ class MatrixHandler:
 
         """
 
-        intent = await self.get_intent(user_id=sender)
+        intent = await self.get_intent(room_id=room_id)
         if not intent:
             return
 
@@ -342,13 +348,11 @@ class MatrixHandler:
             return
 
         # ignore messages other than commands from menu bot
-        if self.config.get("menubot"):
-            if sender == self.config["acd.menubot.user_id"]:
-                return
+        if self.config["acd.menubot"] and sender == self.config["acd.menubot.user_id"]:
+            return
 
-        if self.config.get("menubots"):
-            if sender in self.config["acd.menubots"]:
-                return
+        if self.config["acd.menubots"] and sender in self.config["acd.menubots"]:
+            return
 
         # ignore messages other than commands from supervisor
         if sender.startswith(self.config["acd.supervisor_prefix"]):
@@ -373,28 +377,36 @@ class MatrixHandler:
             self.log.debug(f"Ignoring the room {room_id} because it is whatsapp_status_broadcast")
             return
 
-    async def get_intent(self, user_id: UserID) -> IntentAPI:
-        """
-        If the user is a puppet, return the puppet's intent.
-        If the user is the bot, return the bot's intent.
-        Otherwise, return None
+    async def get_intent(self, user_id: UserID = None, room_id: RoomID = None) -> IntentAPI:
+        """If the user_id is not the bot's mxid,
+        then it's a custom mxid, so we get the puppet by the custom mxid,
+        and return the intent of the puppet
 
         Parameters
         ----------
         user_id : UserID
-            The user ID of the user who sent the message.
+            The user's MXID.
+        room_id : RoomID
+            The room ID of the room you want to send the message to.
 
         Returns
         -------
-            The intent of the user.
+            IntentAPI
 
         """
-        if user_id != self.az.bot_mxid and Puppet.get_id_from_mxid(user_id):
-            puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
+
+        if user_id:
+            if user_id != self.az.bot_mxid and Puppet.get_id_from_mxid(user_id):
+                puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
+                return puppet.intent
+
+            elif user_id == self.az.bot_mxid:
+                return self.az.intent
+        elif room_id:
+            puppet = await Puppet.get_puppet_from_a_customer_room(room_id=room_id)
+            if not puppet:
+                return
             return puppet.intent
 
-        elif user_id == self.az.bot_mxid:
-            return self.az.intent
-
         else:
-            return None
+            return

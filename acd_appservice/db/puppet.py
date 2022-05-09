@@ -17,7 +17,7 @@ class Puppet:
 
     db: ClassVar[Database] = fake_db
 
-    pk: int
+    pk: int | None
     name: str | None
     username: str | None
     photo_id: str | None
