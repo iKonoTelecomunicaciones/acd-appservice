@@ -260,7 +260,7 @@ class MatrixHandler:
             self.log.debug(f"Resolving to True the promise [{future_key}]")
             AgentManager.PENDING_INVITES[future_key].set_result(True)
 
-        if Puppet.get_id_from_mxid(user_id):
+        if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
             await RoomManager.save_room(
                 room_id=room_id, selected_option=None, puppet_mxid=user_id
             )
