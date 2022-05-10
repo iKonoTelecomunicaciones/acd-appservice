@@ -315,7 +315,7 @@ class MatrixHandler:
         if not intent:
             return
 
-        # The above code is checking if the room is a customer room, if it is,
+        # The below code is checking if the room is a customer room, if it is,
         # it is getting the room name, and the creator of the room.
         # If the room name is empty, it is setting the room name to the new room name.
         if await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
@@ -329,6 +329,8 @@ class MatrixHandler:
                     await intent.set_room_name(room_id=room_id, name=new_room_name)
                     self.log.info(f"User {room_id} has changed the name of the room {intent.mxid}")
 
+        # Checking if the message is a command, and if it is,
+        # it is sending the command to the command processor.
         is_command, text = self.is_command(message=message)
         if is_command:
             command_event = CommandEvent(
