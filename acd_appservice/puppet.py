@@ -11,6 +11,7 @@ from yarl import URL
 
 from .config import Config
 from .db import Puppet as DBPuppet
+from .db.room import Room
 
 if TYPE_CHECKING:
     from .__main__ import ACDAppService
@@ -265,6 +266,34 @@ class Puppet(DBPuppet, BasePuppet):
             cls.log.error(f"### Error in get_next_puppet: {e}")
 
         return next_puppet
+
+    async def get_puppet_from_a_customer_room(cls, room_id: RoomID):
+        """Get the puppet from a customer room
+
+        Parameters
+        ----------
+        room_id : RoomID
+            Customer room_id
+
+        Returns
+        -------
+            A puppet
+
+        """
+
+        puppet: Puppet = None
+
+        try:
+            room = await Room.get_room_by_room_id(room_id)
+            if not (room and room.fk_puppet):
+                return
+
+            puppet = await Puppet.get_by_pk(room.fk_puppet)
+        except Exception as e:
+            cls.log.error(f"Error get_puppet_from_a_customer_room: {e}")
+            return
+
+        return puppet
 
     @classmethod
     async def all_with_custom_mxid(cls) -> AsyncGenerator[Puppet, None]:

@@ -123,6 +123,17 @@ class Puppet:
 
         return [cls._from_row(row).custom_mxid for row in rows]
 
+    async def get_control_room_ids(cls) -> list[RoomID]:
+        q = (
+            "SELECT pk, name, username, photo_id, photo_mxc, name_set, avatar_set, is_registered,"
+            "       custom_mxid, access_token, next_batch, base_url, control_room_id "
+            "FROM puppet WHERE control_room_id IS NOT NULL"
+        )
+        rows = await cls.db.fetch(q)
+        if not rows:
+            return None
+        return [cls._from_row(row).control_room_id for row in rows]
+
     @classmethod
     async def all_with_custom_mxid(cls) -> list[Puppet]:
         q = (
