@@ -73,9 +73,6 @@ class RoomManager:
 
         await asyncio.create_task(self.initial_room_setup(room_id=room_id, intent=intent))
 
-        if not await self.put_name_customer_room(room_id=room_id, intent=intent):
-            return False
-
         self.log.info(f"Room {room_id} initialization is complete")
         return True
 
@@ -121,7 +118,9 @@ class RoomManager:
 
             await asyncio.sleep(1)
 
-    async def put_name_customer_room(self, room_id: RoomID, intent: IntentAPI) -> bool:
+    async def put_name_customer_room(
+        self, room_id: RoomID, intent: IntentAPI, old_name: str
+    ) -> bool:
         """Name a customer's room.
 
         Given a room and a matrix client, name the room correctly if needed.
@@ -138,21 +137,22 @@ class RoomManager:
         bool
             True if successful, False otherwise.
         """
+        new_room_name = None
+        if await self.is_customer_room(room_id=room_id, intent=intent):
+            if self.config["acd.keep_room_name"]:
 
-        if (
-            not await self.is_customer_room(room_id=room_id, intent=intent)
-            and not self.config["acd.force_name_change"]
-        ):
-            return False
+                new_room_name = old_name
+            else:
 
-        creator = await self.get_room_creator(room_id=room_id, intent=intent)
+                creator = await self.get_room_creator(room_id=room_id, intent=intent)
 
-        new_room_name = await self.get_update_name(creator=creator, intent=intent)
-        if not new_room_name:
-            return False
+                new_room_name = await self.get_update_name(creator=creator, intent=intent)
 
-        await intent.set_room_name(room_id, new_room_name)
-        return True
+            if new_room_name:
+                await intent.set_room_name(room_id, new_room_name)
+                return True
+
+        return False
 
     async def create_room_name(self, user_id: UserID, intent: IntentAPI) -> str:
         """Given a customer's mxid, pull the phone number and concatenate it to the name.
@@ -176,10 +176,9 @@ class RoomManager:
 
             customer_displayname = await intent.get_displayname(user_id)
             if customer_displayname:
-                room_name = f"{customer_displayname}({phone_match[0]})"
+                room_name = f"{customer_displayname.strip()} ({phone_match[0].strip()})"
             else:
-                room_name = f"({phone_match[0]})"
-
+                room_name = f"({phone_match[0].strip()})"
             return room_name
 
         return None
@@ -352,7 +351,7 @@ class RoomManager:
                 new_room_name = await self.create_room_name(user_id=creator, intent=intent)
                 if new_room_name:
                     postfix_template = self.config[f"bridges.{bridge}.postfix_template"]
-                    new_room_name = new_room_name.replace(postfix_template, "")
+                    new_room_name = new_room_name.replace(f" {postfix_template}", "")
                 break
 
         return new_room_name
@@ -539,10 +538,21 @@ class RoomManager:
         str
             Name if successful, None otherwise.
         """
+
         room_name = None
+
+        try:
+            room = self.ROOMS[room_id]
+            room_name = room.get("name")
+            if room_name:
+                return room_name
+        except KeyError:
+            pass
+
         try:
             room_info = await self.get_room_info(room_id=room_id, intent=intent)
             room_name = room_info.get("name")
+            self.ROOMS[room_id]["name"] = room_name
         except Exception as e:
             self.log.error(e)
             return

@@ -17,6 +17,7 @@ from mautrix.types import (
     MessageEventContent,
     MessageType,
     RoomID,
+    RoomNameStateEventContent,
     StateEvent,
     StateUnsigned,
     UserID,
@@ -177,6 +178,24 @@ class MatrixHandler:
             if evt.type != EventType.ROOM_MESSAGE:
                 evt.content.msgtype = MessageType(str(evt.type))
             await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
+        elif evt.type == EventType.ROOM_NAME:
+            # Setting the room name to the customer's name.
+            if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
+                unsigned: StateUnsigned = evt.unsigned
+                await self.room_manager.put_name_customer_room(
+                    room_id=evt.room_id, intent=self.az.intent, old_name=unsigned.prev_content.name
+                )
+
+            # Cuando el cliente cambia su perfil, ya sea que se quiera conservar el viejo
+            # nombre o no, este código, se encarga de actualizar el nombre
+            # en la caché de salas, si y solo si, la sala está cacheada en el
+            # diccionario RoomManager.ROOMS
+            try:
+                content: RoomNameStateEventContent = evt.content
+                RoomManager.ROOMS[evt.room_id]["name"] = content.name
+            except KeyError:
+                pass
+
         # elif evt.type == EventType.ROOM_ENCRYPTED:
         #     await self.handle_encrypted(evt)
         # elif evt.type == EventType.ROOM_ENCRYPTION:
@@ -300,7 +319,6 @@ class MatrixHandler:
 
         Returns
         -------
-            The return value of the function is the value of the last expression evaluated.
 
         """
 
@@ -308,10 +326,24 @@ class MatrixHandler:
         if not intent:
             return
 
+        # The below code is checking if the room is a customer room, if it is,
+        # it is getting the room name, and the creator of the room.
+        # If the room name is empty, it is setting the room name to the new room name.
+        if await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
+            room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
+            if not room_name:
+                creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
+                new_room_name = await self.room_manager.get_update_name(
+                    creator=creator, intent=intent
+                )
+                if new_room_name:
+                    await intent.set_room_name(room_id=room_id, name=new_room_name)
+                    self.log.info(f"User {room_id} has changed the name of the room {intent.mxid}")
+
+        # Checking if the message is a command, and if it is,
+        # it is sending the command to the command processor.
         is_command, text = self.is_command(message=message)
-        if is_command and not await self.room_manager.is_customer_room(
-            room_id=room_id, intent=intent
-        ):
+        if is_command:
             command_event = CommandEvent(
                 acd_appservice=self.acd_appservice,
                 sender_user_id=intent.mxid,
@@ -326,10 +358,6 @@ class MatrixHandler:
         if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):
             self.log.debug(f"Ignoring the room {room_id} because it is whatsapp_status_broadcast")
             return
-
-        # Intentamos cambiarle el nombre a la sala
-        if not await self.room_manager.put_name_customer_room(room_id=room_id, intent=intent):
-            self.log.debug(f"Room {room_id} name has not been changed")
 
     async def get_intent(self, user_id: UserID) -> IntentAPI:
         """

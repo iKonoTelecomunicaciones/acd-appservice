@@ -75,7 +75,7 @@ bridge:
 
 acd:
     # Feature for naming customer rooms
-    force_name_change: false
+    keep_room_name: false
     # Prefix for identification of agent user
     agent_prefix: "@agent"
     # agent control room, all agents must be here
