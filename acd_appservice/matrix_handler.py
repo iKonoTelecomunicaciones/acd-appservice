@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING
 
 from mautrix.appservice import AppService, IntentAPI
 from mautrix.bridge import config
@@ -17,6 +16,7 @@ from mautrix.types import (
     MessageEventContent,
     MessageType,
     RoomID,
+    RoomNameStateEventContent,
     StateEvent,
     StateUnsigned,
     UserID,
@@ -178,11 +178,18 @@ class MatrixHandler:
                 evt.content.msgtype = MessageType(str(evt.type))
             await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
         elif evt.type == EventType.ROOM_NAME:
+            # Setting the room name to the customer's name.
             if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
                 unsigned: StateUnsigned = evt.unsigned
                 await self.room_manager.put_name_customer_room(
                     room_id=evt.room_id, intent=self.az.intent, old_name=unsigned.prev_content.name
                 )
+
+            try:
+                content: RoomNameStateEventContent = evt.content
+                RoomManager.ROOMS[evt.room_id]["name"] = content.name
+            except KeyError:
+                pass
 
         # elif evt.type == EventType.ROOM_ENCRYPTED:
         #     await self.handle_encrypted(evt)
@@ -259,6 +266,9 @@ class MatrixHandler:
             self.log.debug(f"Resolving to True the promise [{future_key}]")
             AgentManager.PENDING_INVITES[future_key].set_result(True)
 
+        if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
+            await RoomManager.save_room(room_id=room_id, selected_option=None, puppet_mxid=user_id)
+
         intent = await self.get_intent(user_id=user_id)
         if not intent:
             self.log.debug(f"The user who has joined is neither a puppet nor the appservice_bot")
@@ -290,7 +300,7 @@ class MatrixHandler:
         return is_command, text
 
     async def handle_message(
-        self, room_id: RoomID, user_id: UserID, message: MessageEventContent, event_id: EventID
+        self, room_id: RoomID, sender: UserID, message: MessageEventContent, event_id: EventID
     ) -> None:
         """If the message is a command, process it. If not, ignore it
 
@@ -298,7 +308,7 @@ class MatrixHandler:
         ----------
         room_id : RoomID
             The room ID of the room the message was sent in.
-        user_id : UserID
+        sender : UserID
             The user ID of the user who sent the message.
         message : MessageEventContent
             The message that was sent.
@@ -310,61 +320,96 @@ class MatrixHandler:
 
         """
 
-        intent = await self.get_intent(user_id=user_id)
+        intent = await self.get_intent(room_id=room_id)
         if not intent:
+            self.log.debug(f"I can't get an intent for the room {room_id}")
             return
 
-        if await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
-            room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
-            creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
-            if not room_name:
-                new_room_name = await self.room_manager.get_update_name(
-                    creator=creator, intent=intent
-                )
-                if new_room_name:
-                    await intent.set_room_name(room_id=room_id, name=new_room_name)
-                    self.log.info(f"User {room_id} has changed the name of the room {intent.mxid}")
+        # Ignore messages from whatsapp bots
+        if sender in self.config["bridges.mautrix.mxid"]:
             return
 
+        # Checking if the message is a command, and if it is,
+        # it is sending the command to the command processor.
         is_command, text = self.is_command(message=message)
         if is_command:
             command_event = CommandEvent(
                 acd_appservice=self.acd_appservice,
-                sender_user_id=intent.mxid,
+                sender=sender,
                 room_id=room_id,
                 text=text,
+                intent=intent,
             )
-            result = await command_processor(command_event=command_event)
-            if result:
-                await intent.send_notice(room_id=room_id, text=result, html=result)
+            await command_processor(cmd_evt=command_event)
+
+        # Checking if the room is a control room.
+        if (
+            await RoomManager.is_a_control_room(room_id=room_id)
+            or room_id == self.config["acd.control_room_id"]
+        ):
+            return
+
+        # ignore messages other than commands from menu bot
+        if self.config["acd.menubot"] and sender == self.config["acd.menubot.user_id"]:
+            return
+
+        if self.config["acd.menubots"] and sender in self.config["acd.menubots"]:
+            return
+
+        # ignore messages other than commands from supervisor
+        if sender.startswith(self.config["acd.supervisor_prefix"]):
+            return
 
         # Ignorar la sala de status broadcast
         if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):
             self.log.debug(f"Ignoring the room {room_id} because it is whatsapp_status_broadcast")
             return
 
-    async def get_intent(self, user_id: UserID) -> IntentAPI:
-        """
-        If the user is a puppet, return the puppet's intent.
-        If the user is the bot, return the bot's intent.
-        Otherwise, return None
+        # The below code is checking if the room is a customer room, if it is,
+        # it is getting the room name, and the creator of the room.
+        # If the room name is empty, it is setting the room name to the new room name.
+        if await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
+            room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
+            if not room_name:
+                creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
+                new_room_name = await self.room_manager.get_update_name(
+                    creator=creator, intent=intent
+                )
+                if new_room_name:
+                    await intent.set_room_name(room_id=room_id, name=new_room_name)
+                    self.log.info(f"User {room_id} has changed the name of the room {intent.mxid}")
+
+    async def get_intent(self, user_id: UserID = None, room_id: RoomID = None) -> IntentAPI:
+        """If the user_id is not the bot's mxid, and the user_id is a custom mxid,
+        then return the intent of the puppet that has the custom mxid
 
         Parameters
         ----------
         user_id : UserID
-            The user ID of the user who sent the message.
+            The user ID of the user you want to get the intent of.
+        room_id : RoomID
+            The room ID of the room you want to send the message to.
 
         Returns
         -------
-            The intent of the user.
+            Puppet's intent
 
         """
-        if user_id != self.az.bot_mxid and Puppet.get_id_from_mxid(user_id):
-            puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
-            return puppet.intent
+        intent: IntentAPI = None
+        if user_id:
+            # Checking if the user_id is not the bot_mxid and if the user_id is a puppet.
+            if user_id != self.az.bot_mxid and Puppet.get_id_from_mxid(user_id):
+                puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
+                if puppet:
+                    intent = puppet.intent
 
-        elif user_id == self.az.bot_mxid:
-            return self.az.intent
+            # Checking if the user_id is the same as the bot_mxid.
+            elif user_id == self.az.bot_mxid:
+                intent = self.az.intent
+        elif room_id:
+            # Getting the puppet from a customer room.
+            puppet = await Puppet.get_puppet_from_a_customer_room(room_id=room_id)
+            if puppet:
+                intent = puppet.intent
 
-        else:
-            return None
+        return intent

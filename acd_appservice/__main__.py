@@ -71,6 +71,8 @@ class ACDAppService(ACD):
             intent=self.az.intent,
             control_room_id=self.config["acd.control_room_id"],
         )
+        # Registramos el bot principal en la tabla de puppet
+        await Puppet.get_puppet_by_mxid(self.az.intent.mxid)
         # Creamos la tarea que va revisar si las salas pendintes ya tienen a un agente para asignar
         asyncio.create_task(self.matrix.agent_manager.process_pending_rooms())
 
