@@ -185,6 +185,10 @@ class MatrixHandler:
                     room_id=evt.room_id, intent=self.az.intent, old_name=unsigned.prev_content.name
                 )
 
+            # Cuando el cliente cambia su perfil, ya sea que se quiera conservar el viejo
+            # nombre o no, este código, se encarga de actualizar el nombre
+            # en la caché de salas, si y solo si, la sala está cacheada en el
+            # diccionario RoomManager.ROOMS
             try:
                 content: RoomNameStateEventContent = evt.content
                 RoomManager.ROOMS[evt.room_id]["name"] = content.name

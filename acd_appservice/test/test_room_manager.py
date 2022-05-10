@@ -125,4 +125,4 @@ class TestRoomManager:
         result = await room_manager_mock.get_update_name(
             creator="@mxwa_573058790293", intent=intent
         )
-        assert result == "Alejandro Herrera  (573058790293)"
+        assert result == "Alejandro Herrera (573058790293)"
