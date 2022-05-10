@@ -317,43 +317,7 @@ class MatrixHandler:
         if not intent:
             return
 
-        # Ignore messages from whatsapp bots
-        if sender in self.config["bridges.mautrix.mxid"]:
-            return
-
-        # Checking if the message is a command. If it is, it will send the command to the command processor.
-        is_command, text = self.is_command(message=message)
-        if is_command:
-            command_event = CommandEvent(
-                acd_appservice=self.acd_appservice,
-                sender_user_id=intent.mxid,
-                room_id=room_id,
-                text=text,
-                intent=intent,
-            )
-            await command_processor(cmd_evt=command_event)
-
-            return
-
-        # Checking if the room is a control room.
-        if (
-            await RoomManager.is_a_control_room(room_id=room_id)
-            or room_id == self.config["acd.control_room_id"]
-        ):
-            return
-
-        # ignore messages other than commands from menu bot
-        if self.config["acd.menubot"] and sender == self.config["acd.menubot.user_id"]:
-            return
-
-        if self.config["acd.menubots"] and sender in self.config["acd.menubots"]:
-            return
-
-        # ignore messages other than commands from supervisor
-        if sender.startswith(self.config["acd.supervisor_prefix"]):
-            return
-
-        # The above code is checking if the room is a customer room, if it is,
+        # The below code is checking if the room is a customer room, if it is,
         # it is getting the room name, and the creator of the room.
         # If the room name is empty, it is setting the room name to the new room name.
         if await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
@@ -366,6 +330,18 @@ class MatrixHandler:
                 if new_room_name:
                     await intent.set_room_name(room_id=room_id, name=new_room_name)
                     self.log.info(f"User {room_id} has changed the name of the room {intent.mxid}")
+
+        # Checking if the message is a command, and if it is,
+        # it is sending the command to the command processor.
+        is_command, text = self.is_command(message=message)
+        if is_command:
+            command_event = CommandEvent(
+                acd_appservice=self.acd_appservice,
+                sender_user_id=intent.mxid,
+                room_id=room_id,
+                text=text,
+            )
+            await command_processor(command_event=command_event)
 
         # Ignorar la sala de status broadcast
         if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):
