@@ -54,7 +54,7 @@ class Puppet:
         q = (
             "INSERT INTO puppet (custom_mxid, name, username, photo_id, photo_mxc, name_set, avatar_set,"
             "                    is_registered, access_token, next_batch, base_url, control_room_id) "
-            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
         )
         await self.db.execute(q, *self._values)
 

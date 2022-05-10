@@ -19,8 +19,7 @@ class Room:
     id: int | None
     room_id: RoomID
     selected_option: str | None
-    fk_puppet: int | None
-
+    fk_puppet: int | None = None
 
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> Room:
@@ -69,7 +68,9 @@ class Room:
         await cls.db.execute(q, *(room_id, selected_option))
 
     @classmethod
-    async def update_room_by_room_id(cls, room_id: RoomID, selected_option: str, fk_puppet: int) -> None:
+    async def update_room_by_room_id(
+        cls, room_id: RoomID, selected_option: str, fk_puppet: int
+    ) -> None:
         """Update the selected_option column of the room table with the given room_id
 
         Parameters

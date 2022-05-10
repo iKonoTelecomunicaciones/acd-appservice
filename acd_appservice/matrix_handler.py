@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING
 
 from mautrix.appservice import AppService, IntentAPI
 from mautrix.bridge import config
@@ -261,15 +260,12 @@ class MatrixHandler:
             AgentManager.PENDING_INVITES[future_key].set_result(True)
 
         if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
-            await RoomManager.save_room(
-                room_id=room_id, selected_option=None, puppet_mxid=user_id
-            )
+            await RoomManager.save_room(room_id=room_id, selected_option=None, puppet_mxid=user_id)
 
         intent = await self.get_intent(user_id=user_id)
         if not intent:
             self.log.debug(f"The user who has joined is neither a puppet nor the appservice_bot")
             return
-
 
         # Solo se inicializa la sala si el que se une es el usuario acd*
         if not await self.room_manager.initialize_room(room_id=room_id, intent=intent):
@@ -333,10 +329,9 @@ class MatrixHandler:
                 sender_user_id=intent.mxid,
                 room_id=room_id,
                 text=text,
+                intent=intent,
             )
-            result = await command_processor(command_event=command_event)
-            if result:
-                await intent.send_notice(room_id=room_id, text=result, html=result)
+            await command_processor(cmd_evt=command_event)
 
             return
 
@@ -378,35 +373,36 @@ class MatrixHandler:
             return
 
     async def get_intent(self, user_id: UserID = None, room_id: RoomID = None) -> IntentAPI:
-        """If the user_id is not the bot's mxid,
-        then it's a custom mxid, so we get the puppet by the custom mxid,
-        and return the intent of the puppet
+        """If the user_id is not the bot's mxid, and the user_id is a custom mxid,
+        then return the intent of the puppet that has the custom mxid
 
         Parameters
         ----------
         user_id : UserID
-            The user's MXID.
+            The user ID of the user you want to get the intent of.
         room_id : RoomID
             The room ID of the room you want to send the message to.
 
         Returns
         -------
-            IntentAPI
+            Puppet's intent
 
         """
-
+        intent: IntentAPI = None
         if user_id:
+            # Checking if the user_id is not the bot_mxid and if the user_id is a puppet.
             if user_id != self.az.bot_mxid and Puppet.get_id_from_mxid(user_id):
                 puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
-                return puppet.intent
+                if puppet:
+                    intent = puppet.intent
 
+            # Checking if the user_id is the same as the bot_mxid.
             elif user_id == self.az.bot_mxid:
-                return self.az.intent
+                intent = self.az.intent
         elif room_id:
+            # Getting the puppet from a customer room.
             puppet = await Puppet.get_puppet_from_a_customer_room(room_id=room_id)
-            if not puppet:
-                return
-            return puppet.intent
+            if puppet:
+                intent = puppet.intent
 
-        else:
-            return
+        return intent

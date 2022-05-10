@@ -587,34 +587,6 @@ class RoomManager:
 
         return room_info
 
-    @classmethod
-    async def set_user_selected_menu(
-        cls, room_id: RoomID, selected_option: str, puppet_mxid: UserID
-    ) -> bool:
-        """Sets the customer's menu selection (Table room).
-
-        Parameters
-        ----------
-        room_id: RoomID
-            Room to save data.
-        selected_option: RoomID
-            Room selected by the customer
-
-        Returns
-        -------
-        bool
-            True if successful, False otherwise.
-        """
-        room = await Room.get_room_by_room_id(room_id)
-        if room:
-            return await cls.update_room_in_db(
-                room_id=room_id, selected_option=selected_option, puppet_mxid=puppet_mxid
-            )
-        else:
-            return await cls.insert_room_in_db(
-                room_id=room_id,
-                selected_option=selected_option,
-            )
 
     @classmethod
     async def save_pending_room(cls, room_id: RoomID, selected_option: str = None) -> bool:
@@ -718,7 +690,7 @@ class RoomManager:
                 puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
                 await Room.insert_room(room_id, selected_option, puppet.pk)
         except Exception as e:
-            cls.log.error(e)
+            cls.log.error(f"Error insert_room_in_db : {e}")
             return False
 
         return True
@@ -746,7 +718,7 @@ class RoomManager:
             else:
                 await Room.insert_pending_room(room_id, selected_option)
         except Exception as e:
-            cls.log.error(e)
+            cls.log.error(f"Error insert_pending_room_in_db : {e}")
             return False
 
         return True
@@ -777,8 +749,9 @@ class RoomManager:
                 )
             else:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
+                return False
         except Exception as e:
-            cls.log.error(e)
+            cls.log.error(f"Error update_pending_room_in_db : {e}")
             return False
 
         return True
@@ -815,8 +788,9 @@ class RoomManager:
                 await Room.update_room_by_room_id(room_id, selected_option, fk_puppet)
             else:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
+                return False
         except Exception as e:
-            cls.log.error(e)
+            cls.log.error(f"Error update_room_in_db : {e}")
             return False
 
         return True
@@ -838,7 +812,7 @@ class RoomManager:
         try:
             rooms = await Room.get_pending_rooms()
         except Exception as e:
-            cls.log.error(e)
+            cls.log.error(f"Error get_pending_rooms : {e}")
             return
 
         if not rooms:
@@ -862,7 +836,7 @@ class RoomManager:
         try:
             return await Room.get_campaign_of_pending_room(room_id=room_id)
         except Exception as e:
-            cls.log.error(e)
+            cls.log.error(f"Error get_campaign_of_pending_room : {e}")
 
     @classmethod
     async def get_campaign_of_room(cls, room_id: RoomID) -> RoomID:
@@ -880,7 +854,7 @@ class RoomManager:
         try:
             return await Room.get_user_selected_menu(room_id=room_id)
         except Exception as e:
-            cls.log.error(e)
+            cls.log.error(f"Error get_campaign_of_room : {e}")
 
     @classmethod
     async def is_a_control_room(cls, room_id: RoomID) -> bool:

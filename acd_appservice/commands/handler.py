@@ -34,9 +34,6 @@ class CommandHandler:
         return f"{self.name} {self._help_args} - {self._help_text}"
 
 
-log: TraceLogger = logging.getLogger("mau.matrix")
-
-
 def command_handler(
     _func: function | None = None,
     *,
@@ -61,19 +58,40 @@ def command_handler(
     return decorator if _func is None else decorator(_func)
 
 
-async def command_processor(command_event: CommandEvent):
-    command_event.args = command_event.text.split()
-    if command_event.args[0] == "help":
-        return make_help_text(
-            command_prefix=command_event.acd_appservice.config["bridge.command_prefix"]
+async def command_processor(cmd_evt: CommandEvent):
+    """It takes a command event, splits the text into arguments,
+    and then calls the appropriate handler function
+
+    Parameters
+    ----------
+    cmd_evt : CommandEvent
+        The CommandEvent object. This contains the following properties:
+
+    """
+    cmd_evt.args = cmd_evt.text.split()
+    if cmd_evt.args[0] == "help":
+        await cmd_evt.reply(
+            make_help_text(command_prefix=cmd_evt.acd_appservice.config["bridge.command_prefix"])
         )
-    elif command_event.args[0] in command_handlers:
-        return await command_handlers[command_event.args[0]]._handler(command_event)
+    elif cmd_evt.args[0] in command_handlers:
+        await cmd_evt.reply(await command_handlers[cmd_evt.args[0]]._handler(cmd_evt))
     else:
-        return "Unrecognized command"
+        await cmd_evt.reply("Unrecognized command")
 
 
 def make_help_text(command_prefix: str) -> str:
+    """It takes a command prefix and returns a string containing a markdown formatted help message
+
+    Parameters
+    ----------
+    command_prefix : str
+        The prefix that the bot will look for when it's trying to find a command.
+
+    Returns
+    -------
+        A string with the help text for all the commands.
+
+    """
     text = "# Description of commands \n"
     for cmd in command_handlers:
         text = f"{text} * **{command_prefix}** {command_handlers[cmd].help} \n"

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, AsyncGenerator, AsyncIterable, Awaitable, List, cast
+from typing import TYPE_CHECKING, AsyncGenerator, AsyncIterable, Awaitable, cast
 
 from mautrix.appservice import IntentAPI
 from mautrix.bridge import BasePuppet, async_getter_lock
@@ -175,7 +175,7 @@ class Puppet(DBPuppet, BasePuppet):
 
     @classmethod
     async def get_puppet_from_a_customer_room(cls, room_id: RoomID):
-        '''Get the puppet from a customer room
+        """Get the puppet from a customer room
 
         Parameters
         ----------
@@ -186,7 +186,7 @@ class Puppet(DBPuppet, BasePuppet):
         -------
             A puppet
 
-        '''
+        """
 
         puppet: Puppet = None
 
