@@ -587,7 +587,6 @@ class RoomManager:
 
         return room_info
 
-
     @classmethod
     async def save_pending_room(cls, room_id: RoomID, selected_option: str = None) -> bool:
         """Save or update a pending room.

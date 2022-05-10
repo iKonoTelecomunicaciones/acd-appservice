@@ -335,7 +335,6 @@ class MatrixHandler:
             )
             await command_processor(cmd_evt=command_event)
 
-
         # Checking if the room is a control room.
         if (
             await RoomManager.is_a_control_room(room_id=room_id)
@@ -353,7 +352,6 @@ class MatrixHandler:
         # ignore messages other than commands from supervisor
         if sender.startswith(self.config["acd.supervisor_prefix"]):
             return
-
 
         # Ignorar la sala de status broadcast
         if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):
@@ -373,9 +371,6 @@ class MatrixHandler:
                 if new_room_name:
                     await intent.set_room_name(room_id=room_id, name=new_room_name)
                     self.log.info(f"User {room_id} has changed the name of the room {intent.mxid}")
-
-
-
 
     async def get_intent(self, user_id: UserID = None, room_id: RoomID = None) -> IntentAPI:
         """If the user_id is not the bot's mxid, and the user_id is a custom mxid,
