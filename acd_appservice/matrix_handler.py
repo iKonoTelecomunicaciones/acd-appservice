@@ -16,6 +16,7 @@ from mautrix.types import (
     MessageEventContent,
     MessageType,
     RoomID,
+    RoomNameStateEventContent,
     StateEvent,
     StateUnsigned,
     UserID,
@@ -183,6 +184,12 @@ class MatrixHandler:
                 await self.room_manager.put_name_customer_room(
                     room_id=evt.room_id, intent=self.az.intent, old_name=unsigned.prev_content.name
                 )
+
+            try:
+                content: RoomNameStateEventContent = evt.content
+                RoomManager.ROOMS[evt.room_id]["name"] = content.name
+            except KeyError:
+                pass
 
         # elif evt.type == EventType.ROOM_ENCRYPTED:
         #     await self.handle_encrypted(evt)
