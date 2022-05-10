@@ -10,11 +10,12 @@ if TYPE_CHECKING:
 
 from mautrix.appservice import IntentAPI
 
+
 class CommandEvent:
     acd_appservice: "ACDAppService"
     log: TraceLogger
     intent: IntentAPI
-    sender_user_id: UserID
+    sender: UserID
     room_id: RoomID
     text: str
     args: List[str] | None = None
@@ -22,7 +23,7 @@ class CommandEvent:
     def __init__(
         self,
         acd_appservice: ACDAppService,
-        sender_user_id: UserID,
+        sender: UserID,
         room_id: RoomID,
         text: str,
         intent: IntentAPI,
@@ -31,7 +32,7 @@ class CommandEvent:
         self.acd_appservice = acd_appservice
         self.log = acd_appservice.log
 
-        self.sender_user_id = sender_user_id
+        self.sender = sender
         self.room_id = room_id
         self.text = text
         self.args = args
