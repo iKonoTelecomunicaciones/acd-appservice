@@ -176,7 +176,7 @@ class RoomManager:
 
             customer_displayname = await intent.get_displayname(user_id)
             if customer_displayname:
-                room_name = f"{customer_displayname.strip()} ({phone_match[0].strip()})"
+                room_name = f"{customer_displayname.strip()}({phone_match[0].strip()})"
             else:
                 room_name = f"({phone_match[0].strip()})"
             return room_name
@@ -538,10 +538,17 @@ class RoomManager:
         str
             Name if successful, None otherwise.
         """
+        try:
+            room = self.ROOMS[room_id]
+            room_name = room.get("name")
+        except KeyError:
+            pass
+
         room_name = None
         try:
             room_info = await self.get_room_info(room_id=room_id, intent=intent)
             room_name = room_info.get("name")
+            self.ROOMS[room_id]["name"] = room_name
         except Exception as e:
             self.log.error(e)
             return
