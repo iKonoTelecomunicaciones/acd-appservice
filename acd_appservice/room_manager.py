@@ -139,7 +139,7 @@ class RoomManager:
         """
         new_room_name = None
         if await self.is_customer_room(room_id=room_id, intent=intent):
-            if self.config["acd.keep_room_name"] or self.config["acd.keep_room_name"] is None:
+            if self.config["acd.keep_room_name"]:
 
                 new_room_name = old_name
             else:
