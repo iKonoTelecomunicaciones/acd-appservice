@@ -204,7 +204,7 @@ class Room:
         return [cls._from_row(room) for room in rows]
 
     @classmethod
-    async def get_all_rooms_by_puppet(cls, fk_puppet: int) -> List[Room] | None:
+    async def get_puppet_rooms(cls, fk_puppet: int) -> List[Room] | None:
         """It returns a list of rooms
 
         Parameters

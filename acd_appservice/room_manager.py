@@ -384,14 +384,10 @@ class RoomManager:
         """Get devices where agent have sessions"""
         response: Dict[str, List[Dict]] = None
         try:
-            if intent.bot:
-                response = await intent.bot.api.request(
-                    method=Method.GET, path=f"/_synapse/admin/v2/users/{user_id}/devices"
-                )
-            else:
-                response = await intent.api.request(
-                    method=Method.GET, path=f"/_synapse/admin/v2/users/{user_id}/devices"
-                )
+            api = intent.bot.api if intent.bot else intent.api
+            response = await api.request(
+                method=Method.GET, path=f"/_synapse/admin/v2/users/{user_id}/devices"
+            )
 
         except IntentError as e:
             self.log.error(e)
@@ -583,14 +579,10 @@ class RoomManager:
             room_info if successful, None otherwise.
         """
         try:
-            if intent.bot:
-                room_info = await intent.bot.api.request(
-                    method=Method.GET, path=f"/_synapse/admin/v1/rooms/{room_id}"
-                )
-            else:
-                room_info = await intent.api.request(
-                    method=Method.GET, path=f"/_synapse/admin/v1/rooms/{room_id}"
-                )
+            api = intent.bot.api if intent.bot else intent.api
+            room_info = await api.request(
+                method=Method.GET, path=f"/_synapse/admin/v1/rooms/{room_id}"
+            )
             self.ROOMS[room_id] = room_info
         except Exception as e:
             self.log.error(e)
@@ -831,7 +823,7 @@ class RoomManager:
         return [room.room_id for room in rooms]
 
     @classmethod
-    async def get_all_rooms_by_puppet(cls, fk_puppet: int) -> List[RoomID]:
+    async def get_puppet_rooms(cls, fk_puppet: int) -> List[RoomID]:
         """Get a pending rooms in the database.
 
         Parameters
@@ -845,9 +837,9 @@ class RoomManager:
             List[RoomID] if successful, None otherwise.
         """
         try:
-            rooms = await Room.get_all_rooms_by_puppet(fk_puppet)
+            rooms = await Room.get_puppet_rooms(fk_puppet)
         except Exception as e:
-            cls.log.error(f"Error get_all_rooms_by_puppet : {e}")
+            cls.log.error(f"Error get_puppet_rooms : {e}")
             return
         if not rooms:
             return []

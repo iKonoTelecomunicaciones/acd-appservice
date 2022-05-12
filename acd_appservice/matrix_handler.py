@@ -270,6 +270,7 @@ class MatrixHandler:
             self.log.debug(f"Resolving to True the promise [{future_key}]")
             AgentManager.PENDING_INVITES[future_key].set_result(True)
 
+        # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
         if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
             await RoomManager.save_room(room_id=room_id, selected_option=None, puppet_mxid=user_id)
 
@@ -330,7 +331,7 @@ class MatrixHandler:
             return
 
         # Ignore messages from whatsapp bots
-        if sender in self.config["bridges.mautrix.mxid"]:
+        if sender == self.config["bridges.mautrix.mxid"]:
             return
 
         # Checking if the message is a command, and if it is,
@@ -354,7 +355,6 @@ class MatrixHandler:
             await RoomManager.is_a_control_room(room_id=room_id)
             or room_id == self.config["acd.control_room_id"]
         ):
-            self.log.debug("IS CONTROL ROOM")
             return
 
         # ignore messages other than commands from menu bot
@@ -416,7 +416,7 @@ class MatrixHandler:
                 intent = self.az.intent
         elif room_id:
             # Getting the puppet from a customer room.
-            puppet = await Puppet.get_puppet_from_a_customer_room(room_id=room_id)
+            puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
             if puppet:
                 intent = puppet.intent
 

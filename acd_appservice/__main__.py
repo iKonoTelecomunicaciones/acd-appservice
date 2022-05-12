@@ -46,6 +46,8 @@ class ACDAppService(ACD):
     async def start(self) -> None:
         # Se cargan las acciones iniciales que deberán ser ejecutadas
         self.add_startup_actions(Puppet.init_cls(self))
+        # Se sincronizan las salas donde este los puppets en matrix
+        # creando las salas en nuestra bd
         self.add_startup_actions(Puppet.init_joined_rooms())
         # Definimos la ruta por la que se podrá acceder a la API
         api_route = self.config["bridge.provisioning.prefix"]
