@@ -9,6 +9,8 @@ from mautrix.types import ContentURI, RoomID, SyncToken, UserID
 from mautrix.util.simple_template import SimpleTemplate
 from yarl import URL
 
+from acd_appservice import room_manager as room_m
+
 from .config import Config
 from .db import Puppet as DBPuppet
 from .db.room import Room
@@ -98,6 +100,40 @@ class Puppet(DBPuppet, BasePuppet):
     @property
     def acdpk(self) -> int:
         return self.pk
+    @classmethod
+    def init_joined_rooms(cls) -> AsyncIterable[Awaitable[None]]:
+        """It returns an async iterator that yields an awaitable that will sync the joined rooms of each puppet
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            An async iterator of awaitables.
+
+        """
+        return (puppet.sync_joined_rooms_in_db() async for puppet in cls.all_with_custom_mxid())
+
+    async def sync_joined_rooms_in_db(self) -> None:
+        """If a room is in the matrix, but not in the database, add it in the database.
+
+        Returns
+        -------
+            A list of rooms that the puppet is in.
+
+        """
+        db_joined_rooms = await room_m.RoomManager.get_all_rooms_by_puppet(fk_puppet=self.pk)
+        matrix_joined_rooms = await self.intent.get_joined_rooms()
+
+        if not matrix_joined_rooms:
+            return
+
+        # Checking if the mx_joined_room is in a db_joined_rooms, if it is not, it adds it to the database.
+        for mx_joined_room in matrix_joined_rooms:
+            if not mx_joined_room in db_joined_rooms:
+                await room_m.RoomManager.save_room(
+                    room_id=mx_joined_room, selected_option=None, puppet_mxid=self.custom_mxid
+                )
 
     def _add_to_cache(self) -> None:
         self.by_pk[self.pk] = self

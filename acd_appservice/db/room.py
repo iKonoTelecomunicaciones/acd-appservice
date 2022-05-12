@@ -47,6 +47,8 @@ class Room:
             RoomID
         selected_option : str
             The option that the user has selected.
+        fk_puppet : int
+            The puppet foregin key.
 
         """
         q = "INSERT INTO room (room_id, selected_option, fk_puppet) VALUES ($1, $2, $3)"
@@ -79,9 +81,11 @@ class Room:
             RoomID
         selected_option : str
             str
+        fk_puppet : int
+            The puppet foregin key.
 
         """
-        q = "UPDATE room SET selected_option=$2 WHERE room_id=$1"
+        q = "UPDATE room SET selected_option=$2, fk_puppet=$3 WHERE room_id=$1"
         await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
 
     @classmethod
@@ -194,6 +198,25 @@ class Room:
         """
         q = "SELECT id, room_id, selected_option FROM pending_room ORDER BY selected_option"
         rows = await cls.db.fetch(q)
+        if not rows:
+            return None
+
+        return [cls._from_row(room) for room in rows]
+
+    @classmethod
+    async def get_all_rooms_by_puppet(cls, fk_puppet: int) -> List[Room] | None:
+        """It returns a list of rooms
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            A list of Room objects
+
+        """
+        q = "SELECT id, room_id, selected_option, fk_puppet FROM room where fk_puppet=$1"
+        rows = await cls.db.fetch(q, fk_puppet)
         if not rows:
             return None
 

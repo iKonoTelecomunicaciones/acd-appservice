@@ -142,7 +142,7 @@ class RoomManager:
         """
         new_room_name = None
         if await self.is_customer_room(room_id=room_id, intent=intent):
-            if self.config["acd.keep_room_name"] or self.config["acd.keep_room_name"] is None:
+            if self.config["acd.keep_room_name"]:
 
                 new_room_name = old_name
             else:
@@ -179,7 +179,7 @@ class RoomManager:
 
             customer_displayname = await intent.get_displayname(user_id)
             if customer_displayname:
-                room_name = f"{customer_displayname.strip()}({phone_match[0].strip()})"
+                room_name = f"{customer_displayname.strip()} ({phone_match[0].strip()})"
             else:
                 room_name = f"({phone_match[0].strip()})"
             return room_name
@@ -354,7 +354,7 @@ class RoomManager:
                 new_room_name = await self.create_room_name(user_id=creator, intent=intent)
                 if new_room_name:
                     postfix_template = self.config[f"bridges.{bridge}.postfix_template"]
-                    new_room_name = new_room_name.replace(postfix_template, "")
+                    new_room_name = new_room_name.replace(f" {postfix_template}", "")
                 break
 
         return new_room_name
@@ -546,13 +546,17 @@ class RoomManager:
         str
             Name if successful, None otherwise.
         """
+
+        room_name = None
+
         try:
             room = self.ROOMS[room_id]
             room_name = room.get("name")
+            if room_name:
+                return room_name
         except KeyError:
             pass
 
-        room_name = None
         try:
             room_info = await self.get_room_info(room_id=room_id, intent=intent)
             room_name = room_info.get("name")
@@ -821,6 +825,30 @@ class RoomManager:
             cls.log.error(f"Error get_pending_rooms : {e}")
             return
 
+        if not rooms:
+            return []
+
+        return [room.room_id for room in rooms]
+
+    @classmethod
+    async def get_all_rooms_by_puppet(cls, fk_puppet: int) -> List[RoomID]:
+        """Get a pending rooms in the database.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to query.
+
+        Returns
+        -------
+        List[RoomID]
+            List[RoomID] if successful, None otherwise.
+        """
+        try:
+            rooms = await Room.get_all_rooms_by_puppet(fk_puppet)
+        except Exception as e:
+            cls.log.error(f"Error get_all_rooms_by_puppet : {e}")
+            return
         if not rooms:
             return []
 

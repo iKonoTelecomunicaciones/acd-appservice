@@ -185,6 +185,10 @@ class MatrixHandler:
                     room_id=evt.room_id, intent=self.az.intent, old_name=unsigned.prev_content.name
                 )
 
+            # Cuando el cliente cambia su perfil, ya sea que se quiera conservar el viejo
+            # nombre o no, este código, se encarga de actualizar el nombre
+            # en la caché de salas, si y solo si, la sala está cacheada en el
+            # diccionario RoomManager.ROOMS
             try:
                 content: RoomNameStateEventContent = evt.content
                 RoomManager.ROOMS[evt.room_id]["name"] = content.name
@@ -332,7 +336,9 @@ class MatrixHandler:
         # Checking if the message is a command, and if it is,
         # it is sending the command to the command processor.
         is_command, text = self.is_command(message=message)
-        if is_command:
+        if is_command and not await self.room_manager.is_customer_room(
+            room_id=room_id, intent=intent
+        ):
             command_event = CommandEvent(
                 acd_appservice=self.acd_appservice,
                 sender=sender,
@@ -341,12 +347,14 @@ class MatrixHandler:
                 intent=intent,
             )
             await command_processor(cmd_evt=command_event)
+            return
 
         # Checking if the room is a control room.
         if (
             await RoomManager.is_a_control_room(room_id=room_id)
             or room_id == self.config["acd.control_room_id"]
         ):
+            self.log.debug("IS CONTROL ROOM")
             return
 
         # ignore messages other than commands from menu bot
