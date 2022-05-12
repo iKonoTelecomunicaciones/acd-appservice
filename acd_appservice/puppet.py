@@ -121,6 +121,7 @@ class Puppet(DBPuppet, BasePuppet):
         if not matrix_joined_rooms:
             return
 
+        # Checking if the mx_joined_room is in a db_joined_rooms, if it is not, it adds it to the database.
         for mx_joined_room in matrix_joined_rooms:
             if not mx_joined_room in db_joined_rooms:
                 await room_m.RoomManager.save_room(
