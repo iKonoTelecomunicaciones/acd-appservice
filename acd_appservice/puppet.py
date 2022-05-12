@@ -100,6 +100,7 @@ class Puppet(DBPuppet, BasePuppet):
     @property
     def acdpk(self) -> int:
         return self.pk
+
     @classmethod
     def init_joined_rooms(cls) -> AsyncIterable[Awaitable[None]]:
         """It returns an async iterator that yields an awaitable that will sync the joined rooms of each puppet
