@@ -336,7 +336,9 @@ class MatrixHandler:
         # Checking if the message is a command, and if it is,
         # it is sending the command to the command processor.
         is_command, text = self.is_command(message=message)
-        if is_command:
+        if is_command and not await self.room_manager.is_customer_room(
+            room_id=room_id, intent=intent
+        ):
             command_event = CommandEvent(
                 acd_appservice=self.acd_appservice,
                 sender=sender,
