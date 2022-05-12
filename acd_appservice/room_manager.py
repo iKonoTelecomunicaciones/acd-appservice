@@ -831,6 +831,30 @@ class RoomManager:
         return [room.room_id for room in rooms]
 
     @classmethod
+    async def get_all_rooms_by_puppet(cls, fk_puppet: int) -> List[RoomID]:
+        """Get a pending rooms in the database.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to query.
+
+        Returns
+        -------
+        List[RoomID]
+            List[RoomID] if successful, None otherwise.
+        """
+        try:
+            rooms = await Room.get_all_rooms_by_puppet(fk_puppet)
+        except Exception as e:
+            cls.log.error(f"Error get_all_rooms_by_puppet : {e}")
+            return
+        if not rooms:
+            return []
+
+        return [room.room_id for room in rooms]
+
+    @classmethod
     async def get_campaign_of_pending_room(cls, room_id: RoomID) -> RoomID:
         """Given a pending room, its selected campaign is obtained.
         Parameters
