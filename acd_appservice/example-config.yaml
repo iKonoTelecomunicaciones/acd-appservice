@@ -45,6 +45,8 @@ appservice:
     hs_token: "This value is generated when generating the registration"
     # Primary user of the appservice
     bot_username: acd
+    # Email to be able to use the main bot
+    email: "soporte@ikono.com.co"
 
 # Bridge config
 bridge:

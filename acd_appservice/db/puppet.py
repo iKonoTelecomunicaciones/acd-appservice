@@ -17,7 +17,7 @@ class Puppet:
 
     db: ClassVar[Database] = fake_db
 
-    pk: int
+    pk: int | None
     email: str
     name: str | None
     username: str | None
@@ -37,7 +37,6 @@ class Puppet:
     @property
     def _values(self):
         return (
-            self.pk,
             self.email,
             self.name,
             self.username,
@@ -55,9 +54,9 @@ class Puppet:
 
     async def insert(self) -> None:
         q = (
-            "INSERT INTO puppet (pk, email, name, username, photo_id, photo_mxc, name_set, avatar_set,"
+            "INSERT INTO puppet (email, name, username, photo_id, photo_mxc, name_set, avatar_set,"
             "                    is_registered, custom_mxid, access_token, next_batch, base_url, control_room_id) "
-            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
         )
         await self.db.execute(q, *self._values)
 
