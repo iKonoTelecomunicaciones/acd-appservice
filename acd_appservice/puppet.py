@@ -115,7 +115,7 @@ class Puppet(DBPuppet, BasePuppet):
             A list of rooms that the puppet is in.
 
         """
-        db_joined_rooms = await room_m.RoomManager.get_all_rooms_by_puppet(fk_puppet=self.pk)
+        db_joined_rooms = await room_m.RoomManager.get_puppet_rooms(fk_puppet=self.pk)
         matrix_joined_rooms = await self.intent.get_joined_rooms()
 
         if not matrix_joined_rooms:
@@ -212,7 +212,7 @@ class Puppet(DBPuppet, BasePuppet):
         return None
 
     @classmethod
-    async def get_puppet_from_a_customer_room(cls, room_id: RoomID):
+    async def get_customer_room_puppet(cls, room_id: RoomID):
         """Get the puppet from a customer room
 
         Parameters
@@ -235,7 +235,7 @@ class Puppet(DBPuppet, BasePuppet):
 
             puppet = await Puppet.get_by_pk(room.fk_puppet)
         except Exception as e:
-            cls.log.error(f"Error get_puppet_from_a_customer_room: {e}")
+            cls.log.error(f"Error get_customer_room_puppet: {e}")
             return
 
         return puppet
