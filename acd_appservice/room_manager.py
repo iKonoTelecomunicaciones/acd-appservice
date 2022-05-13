@@ -828,7 +828,7 @@ class RoomManager:
         return [room.room_id for room in rooms]
 
     @classmethod
-    async def get_puppet_rooms(cls, fk_puppet: int) -> List[RoomID]:
+    async def get_puppet_rooms(cls, fk_puppet: int) -> Dict[RoomID]:
         """Get a pending rooms in the database.
 
         Parameters
@@ -838,8 +838,8 @@ class RoomManager:
 
         Returns
         -------
-        List[RoomID]
-            List[RoomID] if successful, None otherwise.
+        Dict[RoomID]
+            Dict[RoomID] if successful, None otherwise.
         """
         try:
             rooms = await Room.get_puppet_rooms(fk_puppet)
