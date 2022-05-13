@@ -46,7 +46,7 @@ async def acd(evt: CommandEvent) -> str:
                 joined_message=joined_message,
             )
         except Exception as e:
-            evt.log.error(f"### process_distribution Error: {e}")
+            evt.log.exception(e)
     else:
         try:
             await evt.acd_appservice.matrix.agent_manager.process_distribution(
@@ -55,4 +55,4 @@ async def acd(evt: CommandEvent) -> str:
                 joined_message=joined_message,
             )
         except Exception as e:
-            evt.log.error(f"### process_distribution Error: {e}")
+            evt.log.exception(e)

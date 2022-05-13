@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class AgentManager:
-    log: TraceLogger = logging.getLogger("mau.agent_manager")
+    log: TraceLogger = logging.getLogger("acd.agent_manager")
     intent: IntentAPI
     acd_appservice: ACDAppService
 
@@ -156,7 +156,7 @@ class AgentManager:
                             try:
                                 await self.process_distribution(customer_room_id, campaign_room_id)
                             except Exception as e:
-                                self.log.error(f"### process_distribution Error: {e}")
+                                self.log.exception(e)
 
                         else:
                             self.log.debug("There's no online agents yet")

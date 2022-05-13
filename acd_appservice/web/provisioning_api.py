@@ -33,7 +33,7 @@ MESSAGE_PENDING_PROMISES = {}
 class ProvisioningAPI:
     """Clase que tiene todos los endpoints de la API"""
 
-    log: TraceLogger = logging.getLogger("mau.web.provisioning")
+    log: TraceLogger = logging.getLogger("acd.provisioning")
     app: web.Application
     config: Config
 

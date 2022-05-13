@@ -235,7 +235,7 @@ class Puppet(DBPuppet, BasePuppet):
 
             puppet = await Puppet.get_by_pk(room.fk_puppet)
         except Exception as e:
-            cls.log.error(f"Error get_customer_room_puppet: {e}")
+            cls.log.exception(e)
             return
 
         return puppet
