@@ -122,8 +122,6 @@ class Puppet(DBPuppet, BasePuppet):
         """
         db_joined_rooms = await room_m.RoomManager.get_puppet_rooms(fk_puppet=self.pk)
         matrix_joined_rooms = await self.intent.get_joined_rooms()
-        self.log.debug(self.custom_mxid)
-        self.log.debug(matrix_joined_rooms)
         if not matrix_joined_rooms:
             return
 
