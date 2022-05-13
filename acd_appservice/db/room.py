@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, List
+from typing import TYPE_CHECKING, ClassVar, Dict, List
 
 import asyncpg
 from attr import dataclass
@@ -204,15 +204,15 @@ class Room:
         return [cls._from_row(room) for room in rows]
 
     @classmethod
-    async def get_puppet_rooms(cls, fk_puppet: int) -> List[Room] | None:
-        """It returns a list of rooms
+    async def get_puppet_rooms(cls, fk_puppet: int) -> Dict[Room] | None:
+        """It returns a dict of rooms
 
         Parameters
         ----------
 
         Returns
         -------
-            A list of Room objects
+            A dict of Room objects
 
         """
         q = "SELECT id, room_id, selected_option, fk_puppet FROM room where fk_puppet=$1"
@@ -220,7 +220,7 @@ class Room:
         if not rows:
             return None
 
-        return [cls._from_row(room) for room in rows]
+        return {cls._from_row(room).room_id: None for room in rows}
 
     @classmethod
     async def remove_pending_room(cls, room_id: RoomID) -> None:

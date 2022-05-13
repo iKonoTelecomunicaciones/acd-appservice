@@ -760,9 +760,15 @@ class RoomManager:
 
     @classmethod
     async def update_room_in_db(
-        cls, room_id: RoomID, selected_option: str, puppet_mxid: UserID
+        cls,
+        room_id: RoomID,
+        selected_option: str,
+        puppet_mxid: UserID,
+        change_selected_option: bool = False,
     ) -> bool:
         """Updates a room in the database.
+
+        If you want change `selected_option`, you must put `change_selected_option` in `True`.
 
         Parameters
         ----------
@@ -770,6 +776,8 @@ class RoomManager:
             Room to save data.
         selected_option: RoomID
             Room selected by the customer.
+        change_selected_option : bool
+            Flag to change selected_option
 
         Returns
         -------
@@ -779,14 +787,11 @@ class RoomManager:
         try:
             room = await Room.get_room_by_room_id(room_id)
             if room:
-                room_id = room_id if room_id != room.room_id else room.room_id
-                selected_option = (
-                    selected_option
-                    if selected_option != room.selected_option
-                    else room.selected_option
-                )
+                if not change_selected_option:
+                    selected_option = room.selected_option
+
                 puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
-                fk_puppet = puppet.pk if puppet.pk != room.fk_puppet else room.fk_puppet
+                fk_puppet = room.fk_puppet if puppet.pk == room.fk_puppet else puppet.pk
                 await Room.update_room_by_room_id(room_id, selected_option, fk_puppet)
             else:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
@@ -842,9 +847,9 @@ class RoomManager:
             cls.log.error(f"Error get_puppet_rooms : {e}")
             return
         if not rooms:
-            return []
+            return {}
 
-        return [room.room_id for room in rooms]
+        return rooms
 
     @classmethod
     async def get_campaign_of_pending_room(cls, room_id: RoomID) -> RoomID:
