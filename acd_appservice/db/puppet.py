@@ -62,10 +62,10 @@ class Puppet:
 
     async def update(self) -> None:
         q = (
-            "UPDATE puppet SET name=$2, username=$3, photo_id=$4, photo_mxc=$5, name_set=$6,"
-            "                  avatar_set=$7, is_registered=$8, access_token=$9,"
-            "                  next_batch=$10, base_url=$11, control_room_id=$12 "
-            "WHERE custom_mxid=$1"
+            "UPDATE puppet SET email=$1, name=$2, username=$3, photo_id=$4, photo_mxc=$5, name_set=$6,"
+            "                  avatar_set=$7, is_registered=$8, custom_mxid=$9, access_token=$10,"
+            "                  next_batch=$11, base_url=$12, control_room_id=$13 "
+            "WHERE email=$1"
         )
         await self.db.execute(q, *self._values)
 

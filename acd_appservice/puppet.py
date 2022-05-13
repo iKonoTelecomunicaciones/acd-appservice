@@ -213,7 +213,7 @@ class Puppet(DBPuppet, BasePuppet):
     @classmethod
     @async_getter_lock
     async def get_puppet_by_mxid(
-        cls, customer_mxid: UserID, *, create: bool = True, email: str = None
+        cls, customer_mxid: UserID, email: str, *, create: bool = True,
     ) -> Puppet | None:
         try:
             return cls.by_custom_mxid[customer_mxid]
@@ -226,7 +226,7 @@ class Puppet(DBPuppet, BasePuppet):
             return puppet
 
         if create:
-            puppet = cls(custom_mxid=customer_mxid, ema)
+            puppet = cls(custom_mxid=customer_mxid, email=email)
             await puppet.insert()
             puppet._add_to_cache()
             return puppet
