@@ -1,6 +1,5 @@
 import asyncio
 
-import ptvsd
 from mautrix.types import UserID
 
 from acd_appservice.agent_manager import AgentManager
@@ -13,8 +12,6 @@ from .matrix_handler import MatrixHandler
 from .puppet import Puppet
 from .room_manager import RoomManager
 from .web.provisioning_api import ProvisioningAPI
-
-ptvsd.enable_attach(address=("0.0.0.0", 5678))
 
 
 class ACDAppService(ACD):
@@ -49,6 +46,9 @@ class ACDAppService(ACD):
     async def start(self) -> None:
         # Se cargan las acciones iniciales que deberán ser ejecutadas
         self.add_startup_actions(Puppet.init_cls(self))
+        # Se sincronizan las salas donde este los puppets en matrix
+        # creando las salas en nuestra bd
+        self.add_startup_actions(Puppet.init_joined_rooms())
         # Definimos la ruta por la que se podrá acceder a la API
         api_route = self.config["bridge.provisioning.prefix"]
         # Creamos la instancia de ProvisioningAPI para luego crear una subapp
@@ -71,6 +71,11 @@ class ACDAppService(ACD):
             intent=self.az.intent,
             control_room_id=self.config["acd.control_room_id"],
         )
+        # Registramos el bot principal en la tabla de puppet
+        # y registramos también la sala de control
+        puppet = await Puppet.get_puppet_by_mxid(self.az.bot_mxid)
+        puppet.control_room_id = self.config["acd.control_room_id"]
+        await puppet.save()
         # Creamos la tarea que va revisar si las salas pendintes ya tienen a un agente para asignar
         asyncio.create_task(self.matrix.agent_manager.process_pending_rooms())
 

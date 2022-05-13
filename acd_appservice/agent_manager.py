@@ -415,8 +415,11 @@ class AgentManager:
             self.log.debug(f"NEW CURRENT_AGENT : [{self.CURRENT_AGENT}]")
             self.log.debug(f"======> [{customer_room_id}] selected [{campaign_room_id}]")
             # self.bot.store.set_user_selected_menu(customer_room_id, campaign_room_id)
-            await RoomManager.set_user_selected_menu(
-                room_id=customer_room_id, selected_option=campaign_room_id
+            # Setting the selected menu option for the customer.
+            await RoomManager.save_room(
+                room_id=customer_room_id,
+                selected_option=campaign_room_id,
+                puppet_mxid=self.intent.mxid,
             )
 
             self.log.debug(f"Removing room [{customer_room_id}] from pending list")
@@ -500,12 +503,12 @@ class AgentManager:
         """
         data = {"user_id": agent_id}
         try:
-            response = await self.intent.api.request(
+            api = self.intent.bot.api if self.intent.bot else self.intent.api
+            await api.request(
                 method=Method.POST,
                 path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
                 content=data,
             )
-            self.log.debug(response)
         except IntentError as e:
             self.log.error(e)
 

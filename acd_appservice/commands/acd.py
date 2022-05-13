@@ -32,8 +32,8 @@ async def acd(evt: CommandEvent) -> str:
 
     # Si el usuario es un puppet entonces ejecutamos el proceso de distribución con el
     # Sino entonces con el bot del appservice
-    if evt.sender_user_id != evt.acd_appservice.az.bot_mxid:
-        puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.sender_user_id)
+    if evt.sender != evt.acd_appservice.az.bot_mxid:
+        puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.sender)
         agent_manager: AgentManager = AgentManager(
             acd_appservice=evt.acd_appservice,
             intent=puppet.intent,

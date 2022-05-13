@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, List
+from typing import TYPE_CHECKING, ClassVar, Dict, List
 
 import asyncpg
 from attr import dataclass
@@ -18,7 +18,8 @@ class Room:
 
     id: int | None
     room_id: RoomID
-    selected_option: str
+    selected_option: str | None
+    fk_puppet: int | None = None
 
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> Room:
@@ -37,7 +38,7 @@ class Room:
         return cls(**row)
 
     @classmethod
-    async def insert_room(cls, room_id: RoomID, selected_option: str) -> None:
+    async def insert_room(cls, room_id: RoomID, selected_option: str, fk_puppet: int) -> None:
         """It inserts a new row into the room table
 
         Parameters
@@ -46,10 +47,12 @@ class Room:
             RoomID
         selected_option : str
             The option that the user has selected.
+        fk_puppet : int
+            The puppet foregin key.
 
         """
-        q = "INSERT INTO room (room_id, selected_option) VALUES ($1, $2)"
-        await cls.db.execute(q, *(room_id, selected_option))
+        q = "INSERT INTO room (room_id, selected_option, fk_puppet) VALUES ($1, $2, $3)"
+        await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
 
     @classmethod
     async def insert_pending_room(cls, room_id: RoomID, selected_option: RoomID) -> None:
@@ -67,7 +70,9 @@ class Room:
         await cls.db.execute(q, *(room_id, selected_option))
 
     @classmethod
-    async def update_room_by_room_id(cls, room_id: RoomID, selected_option: str) -> None:
+    async def update_room_by_room_id(
+        cls, room_id: RoomID, selected_option: str, fk_puppet: int
+    ) -> None:
         """Update the selected_option column of the room table with the given room_id
 
         Parameters
@@ -76,10 +81,12 @@ class Room:
             RoomID
         selected_option : str
             str
+        fk_puppet : int
+            The puppet foregin key.
 
         """
-        q = "UPDATE room SET selected_option=$2 WHERE room_id=$1"
-        await cls.db.execute(q, *(room_id, selected_option))
+        q = "UPDATE room SET selected_option=$2, fk_puppet=$3 WHERE room_id=$1"
+        await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
 
     @classmethod
     async def update_pending_room_by_room_id(cls, room_id: RoomID, selected_option: str) -> None:
@@ -111,7 +118,7 @@ class Room:
             A Room object
 
         """
-        q = "SELECT id, room_id, selected_option FROM room WHERE room_id=$1"
+        q = "SELECT id, room_id, selected_option, fk_puppet FROM room WHERE room_id=$1"
         row = await cls.db.fetchrow(q, room_id)
         if not row:
             return None
@@ -195,6 +202,25 @@ class Room:
             return None
 
         return [cls._from_row(room) for room in rows]
+
+    @classmethod
+    async def get_puppet_rooms(cls, fk_puppet: int) -> Dict[Room] | None:
+        """It returns a dict of rooms
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            A dict of Room objects
+
+        """
+        q = "SELECT id, room_id, selected_option, fk_puppet FROM room where fk_puppet=$1"
+        rows = await cls.db.fetch(q, fk_puppet)
+        if not rows:
+            return None
+
+        return {cls._from_row(room).room_id: None for room in rows}
 
     @classmethod
     async def remove_pending_room(cls, room_id: RoomID) -> None:

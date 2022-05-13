@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from asyncio import create_task
 from typing import TYPE_CHECKING, AsyncGenerator, AsyncIterable, Awaitable, cast
 
 from mautrix.appservice import IntentAPI
@@ -8,8 +9,11 @@ from mautrix.types import ContentURI, RoomID, SyncToken, UserID
 from mautrix.util.simple_template import SimpleTemplate
 from yarl import URL
 
+from acd_appservice import room_manager as room_m
+
 from .config import Config
 from .db import Puppet as DBPuppet
+from .db.room import Room
 
 if TYPE_CHECKING:
     from .__main__ import ACDAppService
@@ -88,6 +92,41 @@ class Puppet(DBPuppet, BasePuppet):
         cls.login_device_name = "ACDAppService"
         # Sincroniza cada marioneta con su cuenta en el Synapse
         return (puppet.try_start() async for puppet in cls.all_with_custom_mxid())
+
+    @classmethod
+    def init_joined_rooms(cls) -> AsyncIterable[Awaitable[None]]:
+        """It returns an async iterator that yields an awaitable that will sync the joined rooms of each puppet
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            An async iterator of awaitables.
+
+        """
+        return (puppet.sync_joined_rooms_in_db() async for puppet in cls.all_with_custom_mxid())
+
+    async def sync_joined_rooms_in_db(self) -> None:
+        """If a room is in the matrix, but not in the database, add it in the database.
+
+        Returns
+        -------
+            A list of rooms that the puppet is in.
+
+        """
+        db_joined_rooms = await room_m.RoomManager.get_puppet_rooms(fk_puppet=self.pk)
+        matrix_joined_rooms = await self.intent.get_joined_rooms()
+
+        if not matrix_joined_rooms:
+            return
+
+        # Checking if the mx_joined_room is in a db_joined_rooms, if it is not, it adds it to the database.
+        for mx_joined_room in matrix_joined_rooms:
+            if not mx_joined_room in db_joined_rooms:
+                await room_m.RoomManager.save_room(
+                    room_id=mx_joined_room, selected_option=None, puppet_mxid=self.custom_mxid
+                )
 
     def _add_to_cache(self) -> None:
         # Mete a cada marioneta en un dict que permite acceder de manera más rápida a las instancias
@@ -171,6 +210,35 @@ class Puppet(DBPuppet, BasePuppet):
             return puppet
 
         return None
+
+    @classmethod
+    async def get_customer_room_puppet(cls, room_id: RoomID):
+        """Get the puppet from a customer room
+
+        Parameters
+        ----------
+        room_id : RoomID
+            Customer room_id
+
+        Returns
+        -------
+            A puppet
+
+        """
+
+        puppet: Puppet = None
+
+        try:
+            room = await Room.get_room_by_room_id(room_id)
+            if not (room and room.fk_puppet):
+                return
+
+            puppet = await Puppet.get_by_pk(room.fk_puppet)
+        except Exception as e:
+            cls.log.error(f"Error get_customer_room_puppet: {e}")
+            return
+
+        return puppet
 
     @classmethod
     async def all_with_custom_mxid(cls) -> AsyncGenerator[Puppet, None]:

@@ -18,6 +18,8 @@ from mautrix.types import (
 )
 from mautrix.util.logging import TraceLogger
 
+from acd_appservice.puppet import Puppet
+
 from .config import Config
 from .db import Room
 
@@ -26,6 +28,7 @@ class RoomManager:
     config: Config
     log: TraceLogger = logging.getLogger("mau.room_manager")
     ROOMS: dict[RoomID, Dict] = {}
+    CONTROL_ROOMS: List[RoomID] = []
     # list of room_ids to know if distribution process is taking place
     LOCKED_ROOMS = set()
 
@@ -381,7 +384,8 @@ class RoomManager:
         """Get devices where agent have sessions"""
         response: Dict[str, List[Dict]] = None
         try:
-            response = await intent.api.request(
+            api = intent.bot.api if intent.bot else intent.api
+            response = await api.request(
                 method=Method.GET, path=f"/_synapse/admin/v2/users/{user_id}/devices"
             )
 
@@ -575,7 +579,8 @@ class RoomManager:
             room_info if successful, None otherwise.
         """
         try:
-            room_info = await intent.api.request(
+            api = intent.bot.api if intent.bot else intent.api
+            room_info = await api.request(
                 method=Method.GET, path=f"/_synapse/admin/v1/rooms/{room_id}"
             )
             self.ROOMS[room_id] = room_info
@@ -584,28 +589,6 @@ class RoomManager:
             return
 
         return room_info
-
-    @classmethod
-    async def set_user_selected_menu(cls, room_id: RoomID, selected_option: str) -> bool:
-        """Sets the customer's menu selection (Table room).
-
-        Parameters
-        ----------
-        room_id: RoomID
-            Room to save data.
-        selected_option: RoomID
-            Room selected by the customer
-
-        Returns
-        -------
-        bool
-            True if successful, False otherwise.
-        """
-        room = await Room.get_room_by_room_id(room_id)
-        if room:
-            return await cls.update_room_in_db(room_id=room_id, selected_option=selected_option)
-        else:
-            return await cls.insert_room_in_db(room_id=room_id, selected_option=selected_option)
 
     @classmethod
     async def save_pending_room(cls, room_id: RoomID, selected_option: str = None) -> bool:
@@ -634,6 +617,32 @@ class RoomManager:
             )
 
     @classmethod
+    async def save_room(cls, room_id: RoomID, selected_option: str, puppet_mxid: str) -> bool:
+        """Save or update a room.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to save data.
+        selected_option: RoomID
+            Room selected by the customer
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        room = await Room.get_room_by_room_id(room_id)
+        if room:
+            return await cls.update_room_in_db(
+                room_id=room_id, selected_option=selected_option, puppet_mxid=puppet_mxid
+            )
+        else:
+            return await cls.insert_room_in_db(
+                room_id=room_id, selected_option=selected_option, puppet_mxid=puppet_mxid
+            )
+
+    @classmethod
     async def remove_pending_room(cls, room_id: RoomID) -> bool:
         """Delete the pending room.
 
@@ -658,7 +667,9 @@ class RoomManager:
             return False
 
     @classmethod
-    async def insert_room_in_db(cls, room_id: RoomID, selected_option: str) -> bool:
+    async def insert_room_in_db(
+        cls, room_id: RoomID, selected_option: str, puppet_mxid: UserID
+    ) -> bool:
         """Inserts a room in the database.
 
         Parameters
@@ -678,9 +689,10 @@ class RoomManager:
             if room:
                 return False
             else:
-                await Room.insert_room(room_id, selected_option)
+                puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
+                await Room.insert_room(room_id, selected_option, puppet.pk)
         except Exception as e:
-            cls.log.error(e)
+            cls.log.error(f"Error insert_room_in_db : {e}")
             return False
 
         return True
@@ -708,7 +720,7 @@ class RoomManager:
             else:
                 await Room.insert_pending_room(room_id, selected_option)
         except Exception as e:
-            cls.log.error(e)
+            cls.log.error(f"Error insert_pending_room_in_db : {e}")
             return False
 
         return True
@@ -739,15 +751,24 @@ class RoomManager:
                 )
             else:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
+                return False
         except Exception as e:
-            cls.log.error(e)
+            cls.log.error(f"Error update_pending_room_in_db : {e}")
             return False
 
         return True
 
     @classmethod
-    async def update_room_in_db(cls, room_id: RoomID, selected_option: str) -> bool:
+    async def update_room_in_db(
+        cls,
+        room_id: RoomID,
+        selected_option: str,
+        puppet_mxid: UserID,
+        change_selected_option: bool = False,
+    ) -> bool:
         """Updates a room in the database.
+
+        If you want change `selected_option`, you must put `change_selected_option` in `True`.
 
         Parameters
         ----------
@@ -755,6 +776,8 @@ class RoomManager:
             Room to save data.
         selected_option: RoomID
             Room selected by the customer.
+        change_selected_option : bool
+            Flag to change selected_option
 
         Returns
         -------
@@ -764,11 +787,17 @@ class RoomManager:
         try:
             room = await Room.get_room_by_room_id(room_id)
             if room:
-                await Room.update_room_by_room_id(room_id, selected_option)
+                if not change_selected_option:
+                    selected_option = room.selected_option
+
+                puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
+                fk_puppet = room.fk_puppet if puppet.pk == room.fk_puppet else puppet.pk
+                await Room.update_room_by_room_id(room_id, selected_option, fk_puppet)
             else:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
+                return False
         except Exception as e:
-            cls.log.error(e)
+            cls.log.error(f"Error update_room_in_db : {e}")
             return False
 
         return True
@@ -790,13 +819,37 @@ class RoomManager:
         try:
             rooms = await Room.get_pending_rooms()
         except Exception as e:
-            cls.log.error(e)
+            cls.log.error(f"Error get_pending_rooms : {e}")
             return
 
         if not rooms:
             return []
 
         return [room.room_id for room in rooms]
+
+    @classmethod
+    async def get_puppet_rooms(cls, fk_puppet: int) -> Dict[RoomID]:
+        """Get a pending rooms in the database.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to query.
+
+        Returns
+        -------
+        Dict[RoomID]
+            Dict[RoomID] if successful, None otherwise.
+        """
+        try:
+            rooms = await Room.get_puppet_rooms(fk_puppet)
+        except Exception as e:
+            cls.log.error(f"Error get_puppet_rooms : {e}")
+            return
+        if not rooms:
+            return {}
+
+        return rooms
 
     @classmethod
     async def get_campaign_of_pending_room(cls, room_id: RoomID) -> RoomID:
@@ -814,7 +867,7 @@ class RoomManager:
         try:
             return await Room.get_campaign_of_pending_room(room_id=room_id)
         except Exception as e:
-            cls.log.error(e)
+            cls.log.error(f"Error get_campaign_of_pending_room : {e}")
 
     @classmethod
     async def get_campaign_of_room(cls, room_id: RoomID) -> RoomID:
@@ -832,4 +885,52 @@ class RoomManager:
         try:
             return await Room.get_user_selected_menu(room_id=room_id)
         except Exception as e:
-            cls.log.error(e)
+            cls.log.error(f"Error get_campaign_of_room : {e}")
+
+    @classmethod
+    async def is_a_control_room(cls, room_id: RoomID) -> bool:
+        """If the room ID is in the list of control rooms,
+        or if the room ID is in the list of control room IDs,
+        then the room is a control room
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to check.
+
+        Returns
+        -------
+            A list of room IDs.
+
+        """
+        if room_id in cls.CONTROL_ROOMS:
+            return True
+
+        if room_id in await cls.get_control_room_ids():
+            return True
+
+        return False
+
+    @classmethod
+    async def get_control_room_ids(cls) -> List[RoomID]:
+        """This function is used to get the list of control rooms from the Puppet
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            A list of room ids
+
+        """
+        try:
+            control_room_ids = await Puppet.get_control_room_ids()
+        except Exception as e:
+            cls.log.error(f"Error get_control_room_ids: {e}")
+            return []
+
+        if not control_room_ids:
+            return []
+
+        cls.CONTROL_ROOMS = control_room_ids
+        return control_room_ids

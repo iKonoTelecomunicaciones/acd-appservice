@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, List
 
 import asyncpg
 from attr import dataclass
@@ -17,7 +17,7 @@ class Puppet:
 
     db: ClassVar[Database] = fake_db
 
-    pk: int
+    pk: int | None
     name: str | None
     username: str | None
     photo_id: str | None
@@ -54,16 +54,16 @@ class Puppet:
         q = (
             "INSERT INTO puppet (custom_mxid, name, username, photo_id, photo_mxc, name_set, avatar_set,"
             "                    is_registered, access_token, next_batch, base_url, control_room_id) "
-            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12. $13)"
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
         )
         await self.db.execute(q, *self._values)
 
     async def update(self) -> None:
         q = (
-            "UPDATE puppet SET custom_mxid=$2, name=$3, username=$4, photo_id=$5, photo_mxc=$6, name_set=$7,"
-            "                  avatar_set=$8, is_registered=$9, access_token=$10,"
-            "                  next_batch=$11, base_url=$12, control_room_id=$13 "
-            "WHERE pk=$1"
+            "UPDATE puppet SET name=$2, username=$3, photo_id=$4, photo_mxc=$5, name_set=$6,"
+            "                  avatar_set=$7, is_registered=$8, access_token=$9,"
+            "                  next_batch=$10, base_url=$11, control_room_id=$12 "
+            "WHERE custom_mxid=$1"
         )
         await self.db.execute(q, *self._values)
 
@@ -97,6 +97,15 @@ class Puppet:
         if not row:
             return None
         return cls._from_row(row)
+
+    @classmethod
+    async def get_control_room_ids(cls) -> list[RoomID]:
+        q = "SELECT control_room_id FROM puppet WHERE control_room_id IS NOT NULL"
+        rows: List[RoomID] = await cls.db.fetch(q)
+        if not rows:
+            return None
+        control_room_ids = [control_room_id.get("control_room_id") for control_room_id in rows]
+        return control_room_ids
 
     @classmethod
     async def all_with_custom_mxid(cls) -> list[Puppet]:
