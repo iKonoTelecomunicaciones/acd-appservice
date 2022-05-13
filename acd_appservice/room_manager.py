@@ -26,7 +26,7 @@ from .db import Room
 
 class RoomManager:
     config: Config
-    log: TraceLogger = logging.getLogger("mau.room_manager")
+    log: TraceLogger = logging.getLogger("acd.room_manager")
     ROOMS: dict[RoomID, Dict] = {}
     CONTROL_ROOMS: List[RoomID] = []
     # list of room_ids to know if distribution process is taking place

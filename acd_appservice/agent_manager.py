@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class AgentManager:
-    log: TraceLogger = logging.getLogger("mau.agent_manager")
+    log: TraceLogger = logging.getLogger("acd.agent_manager")
     intent: IntentAPI
     acd_appservice: ACDAppService
 

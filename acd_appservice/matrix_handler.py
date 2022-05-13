@@ -33,7 +33,7 @@ from .puppet import Puppet
 
 
 class MatrixHandler:
-    log: TraceLogger = logging.getLogger("mau.matrix")
+    log: TraceLogger = logging.getLogger("acd.matrix_handler")
     az: AppService
     config: config.BaseBridgeConfig
     acd_appservice: acd_pr.ACD
