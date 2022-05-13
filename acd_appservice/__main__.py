@@ -76,6 +76,7 @@ class ACDAppService(ACD):
         puppet = await Puppet.get_puppet_by_mxid(self.az.bot_mxid, self.config["appservice.email"])
         puppet.control_room_id = self.config["acd.control_room_id"]
         await puppet.save()
+        await puppet.sync_joined_rooms_in_db()
         # Creamos la tarea que va revisar si las salas pendintes ya tienen a un agente para asignar
         asyncio.create_task(self.matrix.agent_manager.process_pending_rooms())
 

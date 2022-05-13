@@ -156,7 +156,7 @@ class AgentManager:
                             try:
                                 await self.process_distribution(customer_room_id, campaign_room_id)
                             except Exception as e:
-                                self.log.error(f"### process_distribution Error: {e}")
+                                self.log.exception(e)
 
                         else:
                             self.log.debug("There's no online agents yet")
