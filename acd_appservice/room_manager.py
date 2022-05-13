@@ -26,7 +26,7 @@ from .db import Room
 
 class RoomManager:
     config: Config
-    log: TraceLogger = logging.getLogger("mau.room_manager")
+    log: TraceLogger = logging.getLogger("acd.room_manager")
     ROOMS: dict[RoomID, Dict] = {}
     CONTROL_ROOMS: List[RoomID] = []
     # list of room_ids to know if distribution process is taking place
@@ -926,7 +926,7 @@ class RoomManager:
         try:
             control_room_ids = await Puppet.get_control_room_ids()
         except Exception as e:
-            cls.log.error(f"Error get_control_room_ids: {e}")
+            cls.log.exception(f"Error get_control_room_ids: {e}")
             return []
 
         if not control_room_ids:

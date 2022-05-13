@@ -1,14 +1,11 @@
 import asyncio
 import logging
 import re
-from datetime import datetime
 
 from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from mautrix.types.event.message import MessageType
 from mautrix.util.logging import TraceLogger
-
-from acd_appservice import puppet
 
 from .. import VERSION
 from ..config import Config
@@ -37,7 +34,7 @@ MESSAGE_PENDING_PROMISES = {}
 class ProvisioningAPI:
     """Clase que tiene todos los endpoints de la API"""
 
-    log: TraceLogger = logging.getLogger("mau.web.provisioning")
+    log: TraceLogger = logging.getLogger("acd.provisioning")
     app: web.Application
     config: Config
 
@@ -126,7 +123,6 @@ class ProvisioningAPI:
 
         # Obtenemos el puppet de este emial si existe
         puppet = await Puppet.get_by_email(email)
-
         if not puppet:
             # Si no existe creamos un puppet para este email
 

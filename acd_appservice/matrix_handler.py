@@ -33,7 +33,7 @@ from .puppet import Puppet
 
 
 class MatrixHandler:
-    log: TraceLogger = logging.getLogger("mau.matrix")
+    log: TraceLogger = logging.getLogger("acd")
     az: AppService
     config: config.BaseBridgeConfig
     acd_appservice: acd_pr.ACD
@@ -327,7 +327,7 @@ class MatrixHandler:
 
         intent = await self.get_intent(room_id=room_id)
         if not intent:
-            self.log.debug(f"I can't get an intent for the room {room_id}")
+            self.log.warning(f"I can't get an intent for the room {room_id}")
             return
 
         # Ignore messages from whatsapp bots

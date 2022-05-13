@@ -69,13 +69,14 @@ class Puppet(DBPuppet, BasePuppet):
             base_url=base_url,
             control_room_id=control_room_id,
         )
-        self.log = self.log.getChild(str(pk))
+        self.log = self.log.getChild(str(email))
         # IMPORTANTE: A cada marioneta de le genera un intent para poder enviar eventos a nombre
         # de esas marionetas
         self.default_mxid = self.get_mxid_from_id(pk)
         self.default_mxid_intent = self.az.intent.user(self.default_mxid)
         # Refresca el intent de cada marioneta
         self.intent = self._fresh_intent()
+        self.intent = self.intent.bot if self.intent.bot else self.intent
 
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> AsyncIterable[Awaitable[None]]:
@@ -96,10 +97,6 @@ class Puppet(DBPuppet, BasePuppet):
         cls.login_device_name = "ACDAppService"
         # Sincroniza cada marioneta con su cuenta en el Synapse
         return (puppet.try_start() async for puppet in cls.all_with_custom_mxid())
-
-    @property
-    def acdpk(self) -> int:
-        return self.pk
 
     @classmethod
     def init_joined_rooms(cls) -> AsyncIterable[Awaitable[None]]:
@@ -125,7 +122,8 @@ class Puppet(DBPuppet, BasePuppet):
         """
         db_joined_rooms = await room_m.RoomManager.get_puppet_rooms(fk_puppet=self.pk)
         matrix_joined_rooms = await self.intent.get_joined_rooms()
-
+        self.log.debug(self.custom_mxid)
+        self.log.debug(matrix_joined_rooms)
         if not matrix_joined_rooms:
             return
 
@@ -191,7 +189,7 @@ class Puppet(DBPuppet, BasePuppet):
 
     @classmethod
     @async_getter_lock
-    async def get_by_pk(cls, pk: int, email: str, *, create: bool = True) -> Puppet | None:
+    async def get_by_pk(cls, pk: int, *, email: str = None,  create: bool = True) -> Puppet | None:
         try:
             return cls.by_pk[pk]
         except KeyError:
@@ -213,7 +211,11 @@ class Puppet(DBPuppet, BasePuppet):
     @classmethod
     @async_getter_lock
     async def get_puppet_by_mxid(
-        cls, customer_mxid: UserID, email: str, *, create: bool = True,
+        cls,
+        customer_mxid: UserID,
+        email: str,
+        *,
+        create: bool = True,
     ) -> Puppet | None:
         try:
             return cls.by_custom_mxid[customer_mxid]
@@ -267,15 +269,13 @@ class Puppet(DBPuppet, BasePuppet):
         try:
             # Obtenemos todos los UserIDs de los puppets que tengan custom_mxid
             all_puppets: list[UserID] = await cls.get_all_puppets()
-            if len(all_puppets) > 0:
+            if len(all_puppets) > 1:
                 # A cada UserID le sacamos el número en el que va
                 # luego ordenamos la lista de menor a mayor
                 all_puppets_sorted = list(
                     map(lambda x: int(re.match(cls.config["acd.acd_regex"], x)[1]), all_puppets)
                 )
                 all_puppets_sorted.sort()
-                cls.log.debug(all_puppets)
-                cls.log.debug(all_puppets_sorted)
 
                 for i in range(0, len(all_puppets_sorted)):
                     if i < len(all_puppets_sorted) - 1:
@@ -294,6 +294,7 @@ class Puppet(DBPuppet, BasePuppet):
 
         return next_puppet
 
+    @classmethod
     async def get_customer_room_puppet(cls, room_id: RoomID):
         """Get the puppet from a customer room
 

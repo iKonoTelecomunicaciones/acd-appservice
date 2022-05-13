@@ -165,6 +165,9 @@ utils:
 logging:
     version: 1
     formatters:
+        colored:
+            (): acd_appservice.util.ColorFormatter
+            format: "[%(asctime)s] [%(levelname)s@%(name)s] %(message)s"
         normal:
             format: '[%(asctime)s] [%(levelname)s@%(name)s] %(message)s'
     handlers:
@@ -176,15 +179,13 @@ logging:
             backupCount: 10
         console:
             class: logging.StreamHandler
-            formatter:
+            formatter: colored
     loggers:
         mau:
             level: DEBUG
-        message_handler:
+        acd:
             level: DEBUG
         aiohttp:
-            level: INFO
-        paho.mqtt:
             level: INFO
     root:
         level: DEBUG

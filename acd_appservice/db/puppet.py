@@ -18,7 +18,7 @@ class Puppet:
     db: ClassVar[Database] = fake_db
 
     pk: int | None
-    email: str
+    email: str | None
     name: str | None
     username: str | None
     photo_id: str | None
@@ -122,6 +122,7 @@ class Puppet:
 
         return [cls._from_row(row).custom_mxid for row in rows]
 
+    @classmethod
     async def get_control_room_ids(cls) -> list[RoomID]:
         q = "SELECT control_room_id FROM puppet WHERE control_room_id IS NOT NULL"
         rows: List[RoomID] = await cls.db.fetch(q)
