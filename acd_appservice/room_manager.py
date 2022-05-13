@@ -103,12 +103,12 @@ class RoomManager:
                     room_id=room_id, visibility=RoomDirectoryVisibility.PUBLIC
                 )
             except Exception as e:
-                self.log.error(e)
+                self.log.exception(e)
 
             try:
                 await intent.set_join_rule(room_id=room_id, join_rule=JoinRule.PUBLIC)
             except Exception as e:
-                self.log.error(e)
+                self.log.exception(e)
 
             try:
                 await intent.send_state_event(
@@ -117,7 +117,7 @@ class RoomManager:
                     content={"history_visibility": "world_readable"},
                 )
             except Exception as e:
-                self.log.error(e)
+                self.log.exception(e)
 
             await asyncio.sleep(1)
 
@@ -205,7 +205,7 @@ class RoomManager:
         try:
             await intent.send_text(room_id=room_id, text=cmd)
         except ValueError as e:
-            self.log.error(e)
+            self.log.exception(e)
 
         self.log.info(f"The command {cmd} has been sent to room {room_id}")
 
@@ -238,7 +238,7 @@ class RoomManager:
         try:
             await intent.send_text(room_id=room_id, text=cmd)
         except ValueError as e:
-            self.log.error(e)
+            self.log.exception(e)
 
         self.log.info(f"The command {cmd} has been sent to room {room_id}")
 
@@ -300,7 +300,7 @@ class RoomManager:
         try:
             room_name = await self.get_room_name(room_id=room_id, intent=intent)
         except Exception as e:
-            self.log.error(e)
+            self.log.exception(e)
 
         if room_name and room_name == "WhatsApp Status Broadcast":
             return True
@@ -366,7 +366,7 @@ class RoomManager:
         try:
             response = await intent.get_presence(user_id=user_id)
         except IntentError as e:
-            self.log.error(e)
+            self.log.exception(e)
 
         return response
 
@@ -390,7 +390,7 @@ class RoomManager:
             )
 
         except IntentError as e:
-            self.log.error(e)
+            self.log.exception(e)
 
         return response
 
@@ -421,7 +421,7 @@ class RoomManager:
             room_info = await self.get_room_info(room_id=room_id, intent=intent)
             creator = room_info.get("creator")
         except Exception as e:
-            self.log.error(e)
+            self.log.exception(e)
 
         return creator
 
@@ -436,7 +436,7 @@ class RoomManager:
             try:
                 await intent.kick_user(room_id=room_id, user_id=menubot_id, reason=reason)
             except IntentError as e:
-                self.log.error(e)
+                self.log.exception(e)
 
             self.log.debug(f"User [{menubot_id}] KICKED from room [{room_id}]")
 
@@ -558,7 +558,7 @@ class RoomManager:
             room_name = room_info.get("name")
             self.ROOMS[room_id]["name"] = room_name
         except Exception as e:
-            self.log.error(e)
+            self.log.exception(e)
             return
 
         return room_name
@@ -585,7 +585,7 @@ class RoomManager:
             )
             self.ROOMS[room_id] = room_info
         except Exception as e:
-            self.log.error(e)
+            self.log.exception(e)
             return
 
         return room_info
@@ -663,7 +663,7 @@ class RoomManager:
 
             return await Room.remove_pending_room(room_id)
         except Exception as e:
-            cls.log.error(e)
+            cls.log.exception(e)
             return False
 
     @classmethod
@@ -692,7 +692,7 @@ class RoomManager:
                 puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
                 await Room.insert_room(room_id, selected_option, puppet.pk)
         except Exception as e:
-            cls.log.error(f"Error insert_room_in_db : {e}")
+            cls.log.exception(e)
             return False
 
         return True
@@ -720,7 +720,7 @@ class RoomManager:
             else:
                 await Room.insert_pending_room(room_id, selected_option)
         except Exception as e:
-            cls.log.error(f"Error insert_pending_room_in_db : {e}")
+            cls.log.exception(e)
             return False
 
         return True
@@ -753,7 +753,7 @@ class RoomManager:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
                 return False
         except Exception as e:
-            cls.log.error(f"Error update_pending_room_in_db : {e}")
+            cls.log.exception(e)
             return False
 
         return True
@@ -797,7 +797,7 @@ class RoomManager:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
                 return False
         except Exception as e:
-            cls.log.error(f"Error update_room_in_db : {e}")
+            cls.log.exception(e)
             return False
 
         return True
@@ -819,7 +819,7 @@ class RoomManager:
         try:
             rooms = await Room.get_pending_rooms()
         except Exception as e:
-            cls.log.error(f"Error get_pending_rooms : {e}")
+            cls.log.exception(e)
             return
 
         if not rooms:
@@ -844,7 +844,7 @@ class RoomManager:
         try:
             rooms = await Room.get_puppet_rooms(fk_puppet)
         except Exception as e:
-            cls.log.error(f"Error get_puppet_rooms : {e}")
+            cls.log.exception(e)
             return
         if not rooms:
             return {}
@@ -867,7 +867,7 @@ class RoomManager:
         try:
             return await Room.get_campaign_of_pending_room(room_id=room_id)
         except Exception as e:
-            cls.log.error(f"Error get_campaign_of_pending_room : {e}")
+            cls.log.exception(e)
 
     @classmethod
     async def get_campaign_of_room(cls, room_id: RoomID) -> RoomID:
@@ -885,7 +885,7 @@ class RoomManager:
         try:
             return await Room.get_user_selected_menu(room_id=room_id)
         except Exception as e:
-            cls.log.error(f"Error get_campaign_of_room : {e}")
+            cls.log.exception(e)
 
     @classmethod
     async def is_a_control_room(cls, room_id: RoomID) -> bool:
@@ -926,7 +926,7 @@ class RoomManager:
         try:
             control_room_ids = await Puppet.get_control_room_ids()
         except Exception as e:
-            cls.log.error(f"Error get_control_room_ids: {e}")
+            cls.log.exception(e)
             return []
 
         if not control_room_ids:
