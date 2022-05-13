@@ -1,7 +1,7 @@
 from mautrix.util.logging.color import MXID_COLOR, PREFIX, RESET
 from mautrix.util.logging.color import ColorFormatter as BaseColorFormatter
 
-ACD_COLOR = PREFIX + "32m"  # magenta
+ACD_COLOR = PREFIX + "32m"  # green
 
 
 class ColorFormatter(BaseColorFormatter):
