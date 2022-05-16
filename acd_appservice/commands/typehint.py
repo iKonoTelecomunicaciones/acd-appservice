@@ -47,6 +47,9 @@ class CommandEvent:
             The text to send.
 
         """
+        if not text:
+            return
+
         try:
             await self.intent.send_notice(room_id=self.room_id, text=text, html=text)
         except Exception as e:

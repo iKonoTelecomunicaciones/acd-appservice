@@ -69,14 +69,13 @@ class Puppet(DBPuppet, BasePuppet):
             base_url=base_url,
             control_room_id=control_room_id,
         )
-        self.log = self.log.getChild(str(email))
+        self.log = self.log.getChild(email)
         # IMPORTANTE: A cada marioneta de le genera un intent para poder enviar eventos a nombre
         # de esas marionetas
         self.default_mxid = self.get_mxid_from_id(pk)
         self.default_mxid_intent = self.az.intent.user(self.default_mxid)
         # Refresca el intent de cada marioneta
         self.intent = self._fresh_intent()
-        self.intent = self.intent.bot if self.intent.bot else self.intent
 
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> AsyncIterable[Awaitable[None]]:
@@ -187,7 +186,7 @@ class Puppet(DBPuppet, BasePuppet):
 
     @classmethod
     @async_getter_lock
-    async def get_by_pk(cls, pk: int, *, email: str = None,  create: bool = True) -> Puppet | None:
+    async def get_by_pk(cls, pk: int, *, email: str = None, create: bool = True) -> Puppet | None:
         try:
             return cls.by_pk[pk]
         except KeyError:
@@ -211,7 +210,7 @@ class Puppet(DBPuppet, BasePuppet):
     async def get_puppet_by_mxid(
         cls,
         customer_mxid: UserID,
-        email: str,
+        email: str = None,
         *,
         create: bool = True,
     ) -> Puppet | None:
@@ -267,7 +266,7 @@ class Puppet(DBPuppet, BasePuppet):
         try:
             # Obtenemos todos los UserIDs de los puppets que tengan custom_mxid
             all_puppets: list[UserID] = await cls.get_all_puppets()
-            if len(all_puppets) > 1:
+            if len(all_puppets) > 0:
                 # A cada UserID le sacamos el número en el que va
                 # luego ordenamos la lista de menor a mayor
                 all_puppets_sorted = list(
@@ -288,7 +287,7 @@ class Puppet(DBPuppet, BasePuppet):
                 next_puppet = 1
 
         except Exception as e:
-            cls.log.error(f"### Error in get_next_puppet: {e}")
+            cls.log.exception(e)
 
         return next_puppet
 

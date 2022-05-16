@@ -7,3 +7,4 @@ pytest-mock==3.7.0
 nest-asyncio==1.4.1
 watchdog==2.1.6
 ptvsd==4.3.2
+pytest-aiohttp

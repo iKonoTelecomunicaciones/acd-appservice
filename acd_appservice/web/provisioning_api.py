@@ -121,31 +121,48 @@ class ProvisioningAPI:
         if not re.match(self.config["utils.regex_email"], email):
             return web.json_response(**INVALID_EMAIL)
 
-        # Obtenemos el puppet de este emial si existe
+        # Obtenemos el puppet de este email si existe
         puppet = await Puppet.get_by_email(email)
-        if not puppet:
+
+        # Si el correo es el del bot principal, entonces decimos que ya existe registrado
+        if email != self.config["appservice.email"] and not puppet:
             # Si no existe creamos un puppet para este email
 
-            # Primero obtenemos el sieguiente puppet
+            # Primero obtenemos el siguiente puppet
             next_puppet = await Puppet.get_next_puppet()
             if next_puppet is None:
                 return web.json_response(**SERVER_ERROR)
             try:
                 # Creamos el puppet con el siguiente pk
-                puppet: Puppet = await Puppet.get_by_pk(int(next_puppet), email)
+                puppet: Puppet = await Puppet.get_by_pk(pk=next_puppet, email=email)
                 puppet.email = email
-
                 # Obtenemos el mxid correspondiente para este puppet @acd*:localhost
                 puppet.custom_mxid = Puppet.get_mxid_from_id(puppet.pk)
                 await puppet.save()
+                # Inicializamos el intent de este puppet
+                puppet.intent = puppet._fresh_intent()
+                # Guardamos el puppet para poder utilizarlo en otras partes del código
+                # Sincronizamos las salas del puppet, si es que ya existía en Matrix
+                # sin que nosotros nos diéramos cuenta
+                await puppet.sync_joined_rooms_in_db()
+                # NOTA: primero debe estar registrado el puppet en la db antes de crear la sala,
+                # ya que cuando para crear una sala se necesita la pk del puppet
+                control_room_id = await puppet.intent.create_room(
+                    invitees=[self.config["bridges.mautrix.mxid"]]
+                )
+                puppet.control_room_id = control_room_id
+                # Ahora si guardamos la sala de control en el puppet.control_room_id
+                await puppet.save()
             except Exception as e:
-                self.log.error(f"create_user Error: {e}")
+                self.log.exception(e)
                 return web.json_response(**SERVER_ERROR)
         else:
             return web.json_response(**USER_ALREADY_EXISTS)
 
         response = {
-            "message": "User has been created",
+            "user_id": puppet.custom_mxid,
+            "control_room_id": puppet.control_room_id,
+            "email": puppet.email,
         }
 
         return web.json_response(response, status=201)
