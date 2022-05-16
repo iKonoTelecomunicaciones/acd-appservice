@@ -410,6 +410,8 @@ class MatrixHandler:
             Puppet's intent
 
         """
+        # Coloco el intent del bot principal siempre para que cuando no pueda obtener uno
+        # dado un user o un room_id, entonces regrese al acd principal
         intent: IntentAPI = self.az.intent
         if user_id:
             # Checking if the user_id is not the bot_mxid and if the user_id is a puppet.

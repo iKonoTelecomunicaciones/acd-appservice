@@ -69,6 +69,8 @@ class Puppet(DBPuppet, BasePuppet):
             base_url=base_url,
             control_room_id=control_room_id,
         )
+        # Aquí colocamos, a nombre de que puppet mostraremos los logs,
+        # ya sea usando el mxid o el email
         self.log = self.log.getChild(custom_mxid if custom_mxid else email)
         # IMPORTANTE: A cada marioneta de le genera un intent para poder enviar eventos a nombre
         # de esas marionetas
