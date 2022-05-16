@@ -26,7 +26,7 @@ from .db import Room
 
 class RoomManager:
     config: Config
-    log: TraceLogger = logging.getLogger("mau.room_manager")
+    log: TraceLogger = logging.getLogger("acd.room_manager")
     ROOMS: dict[RoomID, Dict] = {}
     CONTROL_ROOMS: List[RoomID] = []
     # list of room_ids to know if distribution process is taking place
@@ -142,7 +142,7 @@ class RoomManager:
         """
         new_room_name = None
         if await self.is_customer_room(room_id=room_id, intent=intent):
-            if self.config["acd.keep_room_name"] or self.config["acd.keep_room_name"] is None:
+            if self.config["acd.keep_room_name"]:
 
                 new_room_name = old_name
             else:
@@ -179,7 +179,7 @@ class RoomManager:
 
             customer_displayname = await intent.get_displayname(user_id)
             if customer_displayname:
-                room_name = f"{customer_displayname.strip()}({phone_match[0].strip()})"
+                room_name = f"{customer_displayname.strip()} ({phone_match[0].strip()})"
             else:
                 room_name = f"({phone_match[0].strip()})"
             return room_name
@@ -205,7 +205,7 @@ class RoomManager:
         try:
             await intent.send_text(room_id=room_id, text=cmd)
         except ValueError as e:
-            self.log.error(e)
+            self.log.exception(e)
 
         self.log.info(f"The command {cmd} has been sent to room {room_id}")
 
@@ -238,7 +238,7 @@ class RoomManager:
         try:
             await intent.send_text(room_id=room_id, text=cmd)
         except ValueError as e:
-            self.log.error(e)
+            self.log.exception(e)
 
         self.log.info(f"The command {cmd} has been sent to room {room_id}")
 
@@ -300,7 +300,7 @@ class RoomManager:
         try:
             room_name = await self.get_room_name(room_id=room_id, intent=intent)
         except Exception as e:
-            self.log.error(e)
+            self.log.exception(e)
 
         if room_name and room_name == "WhatsApp Status Broadcast":
             return True
@@ -354,7 +354,7 @@ class RoomManager:
                 new_room_name = await self.create_room_name(user_id=creator, intent=intent)
                 if new_room_name:
                     postfix_template = self.config[f"bridges.{bridge}.postfix_template"]
-                    new_room_name = new_room_name.replace(postfix_template, "")
+                    new_room_name = new_room_name.replace(f" {postfix_template}", "")
                 break
 
         return new_room_name
@@ -366,7 +366,7 @@ class RoomManager:
         try:
             response = await intent.get_presence(user_id=user_id)
         except IntentError as e:
-            self.log.error(e)
+            self.log.exception(e)
 
         return response
 
@@ -384,17 +384,13 @@ class RoomManager:
         """Get devices where agent have sessions"""
         response: Dict[str, List[Dict]] = None
         try:
-            if intent.bot:
-                response = await intent.bot.api.request(
-                    method=Method.GET, path=f"/_synapse/admin/v2/users/{user_id}/devices"
-                )
-            else:
-                response = await intent.api.request(
-                    method=Method.GET, path=f"/_synapse/admin/v2/users/{user_id}/devices"
-                )
+            api = intent.bot.api if intent.bot else intent.api
+            response = await api.request(
+                method=Method.GET, path=f"/_synapse/admin/v2/users/{user_id}/devices"
+            )
 
         except IntentError as e:
-            self.log.error(e)
+            self.log.exception(e)
 
         return response
 
@@ -425,7 +421,7 @@ class RoomManager:
             room_info = await self.get_room_info(room_id=room_id, intent=intent)
             creator = room_info.get("creator")
         except Exception as e:
-            self.log.error(e)
+            self.log.exception(e)
 
         return creator
 
@@ -440,7 +436,7 @@ class RoomManager:
             try:
                 await intent.kick_user(room_id=room_id, user_id=menubot_id, reason=reason)
             except IntentError as e:
-                self.log.error(e)
+                self.log.exception(e)
 
             self.log.debug(f"User [{menubot_id}] KICKED from room [{room_id}]")
 
@@ -546,19 +542,23 @@ class RoomManager:
         str
             Name if successful, None otherwise.
         """
+
+        room_name = None
+
         try:
             room = self.ROOMS[room_id]
             room_name = room.get("name")
+            if room_name:
+                return room_name
         except KeyError:
             pass
 
-        room_name = None
         try:
             room_info = await self.get_room_info(room_id=room_id, intent=intent)
             room_name = room_info.get("name")
             self.ROOMS[room_id]["name"] = room_name
         except Exception as e:
-            self.log.error(e)
+            self.log.exception(e)
             return
 
         return room_name
@@ -579,17 +579,13 @@ class RoomManager:
             room_info if successful, None otherwise.
         """
         try:
-            if intent.bot:
-                room_info = await intent.bot.api.request(
-                    method=Method.GET, path=f"/_synapse/admin/v1/rooms/{room_id}"
-                )
-            else:
-                room_info = await intent.api.request(
-                    method=Method.GET, path=f"/_synapse/admin/v1/rooms/{room_id}"
-                )
+            api = intent.bot.api if intent.bot else intent.api
+            room_info = await api.request(
+                method=Method.GET, path=f"/_synapse/admin/v1/rooms/{room_id}"
+            )
             self.ROOMS[room_id] = room_info
         except Exception as e:
-            self.log.error(e)
+            self.log.exception(e)
             return
 
         return room_info
@@ -667,7 +663,7 @@ class RoomManager:
 
             return await Room.remove_pending_room(room_id)
         except Exception as e:
-            cls.log.error(e)
+            cls.log.exception(e)
             return False
 
     @classmethod
@@ -696,7 +692,7 @@ class RoomManager:
                 puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
                 await Room.insert_room(room_id, selected_option, puppet.pk)
         except Exception as e:
-            cls.log.error(f"Error insert_room_in_db : {e}")
+            cls.log.exception(e)
             return False
 
         return True
@@ -724,7 +720,7 @@ class RoomManager:
             else:
                 await Room.insert_pending_room(room_id, selected_option)
         except Exception as e:
-            cls.log.error(f"Error insert_pending_room_in_db : {e}")
+            cls.log.exception(e)
             return False
 
         return True
@@ -757,16 +753,22 @@ class RoomManager:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
                 return False
         except Exception as e:
-            cls.log.error(f"Error update_pending_room_in_db : {e}")
+            cls.log.exception(e)
             return False
 
         return True
 
     @classmethod
     async def update_room_in_db(
-        cls, room_id: RoomID, selected_option: str, puppet_mxid: UserID
+        cls,
+        room_id: RoomID,
+        selected_option: str,
+        puppet_mxid: UserID,
+        change_selected_option: bool = False,
     ) -> bool:
         """Updates a room in the database.
+
+        If you want change `selected_option`, you must put `change_selected_option` in `True`.
 
         Parameters
         ----------
@@ -774,6 +776,8 @@ class RoomManager:
             Room to save data.
         selected_option: RoomID
             Room selected by the customer.
+        change_selected_option : bool
+            Flag to change selected_option
 
         Returns
         -------
@@ -783,20 +787,17 @@ class RoomManager:
         try:
             room = await Room.get_room_by_room_id(room_id)
             if room:
-                room_id = room_id if room_id != room.room_id else room.room_id
-                selected_option = (
-                    selected_option
-                    if selected_option != room.selected_option
-                    else room.selected_option
-                )
+                if not change_selected_option:
+                    selected_option = room.selected_option
+
                 puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
-                fk_puppet = puppet.pk if puppet.pk != room.fk_puppet else room.fk_puppet
+                fk_puppet = room.fk_puppet if puppet.pk == room.fk_puppet else puppet.pk
                 await Room.update_room_by_room_id(room_id, selected_option, fk_puppet)
             else:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
                 return False
         except Exception as e:
-            cls.log.error(f"Error update_room_in_db : {e}")
+            cls.log.exception(e)
             return False
 
         return True
@@ -818,13 +819,37 @@ class RoomManager:
         try:
             rooms = await Room.get_pending_rooms()
         except Exception as e:
-            cls.log.error(f"Error get_pending_rooms : {e}")
+            cls.log.exception(e)
             return
 
         if not rooms:
             return []
 
         return [room.room_id for room in rooms]
+
+    @classmethod
+    async def get_puppet_rooms(cls, fk_puppet: int) -> Dict[RoomID]:
+        """Get a pending rooms in the database.
+
+        Parameters
+        ----------
+        room_id: RoomID
+            Room to query.
+
+        Returns
+        -------
+        Dict[RoomID]
+            Dict[RoomID] if successful, None otherwise.
+        """
+        try:
+            rooms = await Room.get_puppet_rooms(fk_puppet)
+        except Exception as e:
+            cls.log.exception(e)
+            return
+        if not rooms:
+            return {}
+
+        return rooms
 
     @classmethod
     async def get_campaign_of_pending_room(cls, room_id: RoomID) -> RoomID:
@@ -842,7 +867,7 @@ class RoomManager:
         try:
             return await Room.get_campaign_of_pending_room(room_id=room_id)
         except Exception as e:
-            cls.log.error(f"Error get_campaign_of_pending_room : {e}")
+            cls.log.exception(e)
 
     @classmethod
     async def get_campaign_of_room(cls, room_id: RoomID) -> RoomID:
@@ -860,7 +885,7 @@ class RoomManager:
         try:
             return await Room.get_user_selected_menu(room_id=room_id)
         except Exception as e:
-            cls.log.error(f"Error get_campaign_of_room : {e}")
+            cls.log.exception(e)
 
     @classmethod
     async def is_a_control_room(cls, room_id: RoomID) -> bool:
@@ -901,7 +926,7 @@ class RoomManager:
         try:
             control_room_ids = await Puppet.get_control_room_ids()
         except Exception as e:
-            cls.log.error(f"Error get_control_room_ids: {e}")
+            cls.log.exception(e)
             return []
 
         if not control_room_ids:

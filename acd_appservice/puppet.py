@@ -9,6 +9,8 @@ from mautrix.types import ContentURI, RoomID, SyncToken, UserID
 from mautrix.util.simple_template import SimpleTemplate
 from yarl import URL
 
+from acd_appservice import room_manager as room_m
+
 from .config import Config
 from .db import Puppet as DBPuppet
 from .db.room import Room
@@ -67,7 +69,9 @@ class Puppet(DBPuppet, BasePuppet):
             base_url=base_url,
             control_room_id=control_room_id,
         )
-        self.log = self.log.getChild(str(pk))
+        # Aquí colocamos, a nombre de que puppet mostraremos los logs,
+        # ya sea usando el mxid o el email
+        self.log = self.log.getChild(custom_mxid if custom_mxid else email)
         # IMPORTANTE: A cada marioneta de le genera un intent para poder enviar eventos a nombre
         # de esas marionetas
         self.default_mxid = self.get_mxid_from_id(pk)
@@ -95,9 +99,39 @@ class Puppet(DBPuppet, BasePuppet):
         # Sincroniza cada marioneta con su cuenta en el Synapse
         return (puppet.try_start() async for puppet in cls.all_with_custom_mxid())
 
-    @property
-    def acdpk(self) -> int:
-        return self.pk
+    @classmethod
+    def init_joined_rooms(cls) -> AsyncIterable[Awaitable[None]]:
+        """It returns an async iterator that yields an awaitable that will sync the joined rooms of each puppet
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            An async iterator of awaitables.
+
+        """
+        return (puppet.sync_joined_rooms_in_db() async for puppet in cls.all_with_custom_mxid())
+
+    async def sync_joined_rooms_in_db(self) -> None:
+        """If a room is in the matrix, but not in the database, add it in the database.
+
+        Returns
+        -------
+            A list of rooms that the puppet is in.
+
+        """
+        db_joined_rooms = await room_m.RoomManager.get_puppet_rooms(fk_puppet=self.pk)
+        matrix_joined_rooms = await self.intent.get_joined_rooms()
+        if not matrix_joined_rooms:
+            return
+
+        # Checking if the mx_joined_room is in a db_joined_rooms, if it is not, it adds it to the database.
+        for mx_joined_room in matrix_joined_rooms:
+            if not mx_joined_room in db_joined_rooms:
+                await room_m.RoomManager.save_room(
+                    room_id=mx_joined_room, selected_option=None, puppet_mxid=self.custom_mxid
+                )
 
     def _add_to_cache(self) -> None:
         self.by_pk[self.pk] = self
@@ -164,7 +198,7 @@ class Puppet(DBPuppet, BasePuppet):
 
     @classmethod
     @async_getter_lock
-    async def get_by_pk(cls, pk: int, email: str, *, create: bool = True) -> Puppet | None:
+    async def get_by_pk(cls, pk: int, *, email: str = None, create: bool = True) -> Puppet | None:
         try:
             return cls.by_pk[pk]
         except KeyError:
@@ -186,7 +220,11 @@ class Puppet(DBPuppet, BasePuppet):
     @classmethod
     @async_getter_lock
     async def get_puppet_by_mxid(
-        cls, customer_mxid: UserID, *, create: bool = True
+        cls,
+        customer_mxid: UserID,
+        email: str = None,
+        *,
+        create: bool = True,
     ) -> Puppet | None:
         try:
             return cls.by_custom_mxid[customer_mxid]
@@ -199,7 +237,7 @@ class Puppet(DBPuppet, BasePuppet):
             return puppet
 
         if create:
-            puppet = cls(custom_mxid=customer_mxid)
+            puppet = cls(custom_mxid=customer_mxid, email=email)
             await puppet.insert()
             puppet._add_to_cache()
             return puppet
@@ -247,8 +285,6 @@ class Puppet(DBPuppet, BasePuppet):
                     map(lambda x: int(re.match(cls.config["acd.acd_regex"], x)[1]), all_puppets)
                 )
                 all_puppets_sorted.sort()
-                cls.log.debug(all_puppets)
-                cls.log.debug(all_puppets_sorted)
 
                 for i in range(0, len(all_puppets_sorted)):
                     if i < len(all_puppets_sorted) - 1:
@@ -263,11 +299,12 @@ class Puppet(DBPuppet, BasePuppet):
                 next_puppet = 1
 
         except Exception as e:
-            cls.log.error(f"### Error in get_next_puppet: {e}")
+            cls.log.exception(e)
 
         return next_puppet
 
-    async def get_puppet_from_a_customer_room(cls, room_id: RoomID):
+    @classmethod
+    async def get_customer_room_puppet(cls, room_id: RoomID):
         """Get the puppet from a customer room
 
         Parameters
@@ -290,7 +327,7 @@ class Puppet(DBPuppet, BasePuppet):
 
             puppet = await Puppet.get_by_pk(room.fk_puppet)
         except Exception as e:
-            cls.log.error(f"Error get_puppet_from_a_customer_room: {e}")
+            cls.log.exception(e)
             return
 
         return puppet

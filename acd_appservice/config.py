@@ -16,6 +16,7 @@ class Config(BaseBridgeConfig):
         copy("bridge.username_template")
         copy("utils.wait_promise_time")
         copy("bridge.command_prefix")
+        copy("appservice.email")
         copy_dict("bridges")
         copy("bridges.mautrix.mxid")
         copy("bridge.provisioning.prefix")

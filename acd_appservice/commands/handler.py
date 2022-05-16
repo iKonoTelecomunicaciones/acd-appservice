@@ -71,7 +71,7 @@ async def command_processor(cmd_evt: CommandEvent):
     Parameters
     ----------
     cmd_evt : CommandEvent
-        The CommandEvent object. This contains the following properties:
+        The CommandEvent object.
 
     """
     cmd_evt.args = cmd_evt.text.split()

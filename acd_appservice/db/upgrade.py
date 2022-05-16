@@ -11,7 +11,7 @@ async def upgrade_v1(conn: Connection) -> None:
     await conn.execute(
         """CREATE TABLE puppet (
         pk              SERIAL PRIMARY KEY,
-        email           TEXT NOT NULL,
+        email           TEXT,
         name            TEXT,
         username        TEXT,
         photo_id        TEXT,
@@ -31,7 +31,7 @@ async def upgrade_v1(conn: Connection) -> None:
         id                  SERIAL PRIMARY KEY,
         room_id             TEXT NOT NULL,
         selected_option     TEXT,
-        fk_puppet           BIGINT NOT NULL,
+        fk_puppet           INT NOT NULL,
         UNIQUE (room_id)
         )"""
     )

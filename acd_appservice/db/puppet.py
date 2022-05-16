@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, List
 
 import asyncpg
 from attr import dataclass
@@ -17,8 +17,8 @@ class Puppet:
 
     db: ClassVar[Database] = fake_db
 
-    pk: int
-    email: str
+    pk: int | None
+    email: str | None
     name: str | None
     username: str | None
     photo_id: str | None
@@ -37,7 +37,6 @@ class Puppet:
     @property
     def _values(self):
         return (
-            self.pk,
             self.email,
             self.name,
             self.username,
@@ -55,18 +54,18 @@ class Puppet:
 
     async def insert(self) -> None:
         q = (
-            "INSERT INTO puppet (pk, email, name, username, photo_id, photo_mxc, name_set, avatar_set,"
+            "INSERT INTO puppet (email, name, username, photo_id, photo_mxc, name_set, avatar_set,"
             "                    is_registered, custom_mxid, access_token, next_batch, base_url, control_room_id) "
-            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
         )
         await self.db.execute(q, *self._values)
 
     async def update(self) -> None:
         q = (
-            "UPDATE puppet SET email=$2, name=$3, username=$4, photo_id=$5, photo_mxc=$6, name_set=$7,"
-            "                  avatar_set=$8, is_registered=$9, custom_mxid=$10, access_token=$11,"
-            "                  next_batch=$12, base_url=$13, control_room_id=$14 "
-            "WHERE pk=$1"
+            "UPDATE puppet SET email=$1, name=$2, username=$3, photo_id=$4, photo_mxc=$5, name_set=$6,"
+            "                  avatar_set=$7, is_registered=$8, custom_mxid=$9, access_token=$10,"
+            "                  next_batch=$11, base_url=$12, control_room_id=$13 "
+            "WHERE email=$1"
         )
         await self.db.execute(q, *self._values)
 
@@ -123,16 +122,14 @@ class Puppet:
 
         return [cls._from_row(row).custom_mxid for row in rows]
 
+    @classmethod
     async def get_control_room_ids(cls) -> list[RoomID]:
-        q = (
-            "SELECT pk, name, username, photo_id, photo_mxc, name_set, avatar_set, is_registered,"
-            "       custom_mxid, access_token, next_batch, base_url, control_room_id "
-            "FROM puppet WHERE control_room_id IS NOT NULL"
-        )
-        rows = await cls.db.fetch(q)
+        q = "SELECT control_room_id FROM puppet WHERE control_room_id IS NOT NULL"
+        rows: List[RoomID] = await cls.db.fetch(q)
         if not rows:
             return None
-        return [cls._from_row(row).control_room_id for row in rows]
+        control_room_ids = [control_room_id.get("control_room_id") for control_room_id in rows]
+        return control_room_ids
 
     @classmethod
     async def all_with_custom_mxid(cls) -> list[Puppet]:

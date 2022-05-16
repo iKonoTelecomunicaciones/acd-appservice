@@ -45,6 +45,8 @@ appservice:
     hs_token: "This value is generated when generating the registration"
     # Primary user of the appservice
     bot_username: acd
+    # Email to be able to use the main bot
+    email: "soporte@ikono.com.co"
 
 # Bridge config
 bridge:
@@ -174,6 +176,9 @@ utils:
 logging:
     version: 1
     formatters:
+        colored:
+            (): acd_appservice.util.ColorFormatter
+            format: "[%(asctime)s] [%(levelname)s@%(name)s] %(message)s"
         normal:
             format: '[%(asctime)s] [%(levelname)s@%(name)s] %(message)s'
     handlers:
@@ -185,15 +190,13 @@ logging:
             backupCount: 10
         console:
             class: logging.StreamHandler
-            formatter:
+            formatter: colored
     loggers:
         mau:
             level: DEBUG
-        message_handler:
+        acd:
             level: DEBUG
         aiohttp:
-            level: INFO
-        paho.mqtt:
             level: INFO
     root:
         level: DEBUG

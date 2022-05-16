@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class AgentManager:
-    log: TraceLogger = logging.getLogger("mau.agent_manager")
+    log: TraceLogger = logging.getLogger("acd.agent_manager")
     intent: IntentAPI
     acd_appservice: ACDAppService
 
@@ -156,7 +156,7 @@ class AgentManager:
                             try:
                                 await self.process_distribution(customer_room_id, campaign_room_id)
                             except Exception as e:
-                                self.log.error(f"### process_distribution Error: {e}")
+                                self.log.exception(e)
 
                         else:
                             self.log.debug("There's no online agents yet")
@@ -411,7 +411,7 @@ class AgentManager:
         self.log.debug(f"futures left: {self.PENDING_INVITES}")
         if agent_joined:
             self.CURRENT_AGENT[campaign_room_id] = agent_id
-            self.log.debug(f"[[{agent_id}]] ACCEPTED the invite. CHAT ASSIGNED.")
+            self.log.debug(f"[{agent_id}] ACCEPTED the invite. CHAT ASSIGNED.")
             self.log.debug(f"NEW CURRENT_AGENT : [{self.CURRENT_AGENT}]")
             self.log.debug(f"======> [{customer_room_id}] selected [{campaign_room_id}]")
             # self.bot.store.set_user_selected_menu(customer_room_id, campaign_room_id)
@@ -503,18 +503,12 @@ class AgentManager:
         """
         data = {"user_id": agent_id}
         try:
-            if self.intent.bot:
-                await self.intent.bot.api.request(
-                    method=Method.POST,
-                    path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
-                    content=data,
-                )
-            else:
-                await self.intent.api.request(
-                    method=Method.POST,
-                    path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
-                    content=data,
-                )
+            api = self.intent.bot.api if self.intent.bot else self.intent.api
+            await api.request(
+                method=Method.POST,
+                path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
+                content=data,
+            )
         except IntentError as e:
             self.log.error(e)
 

@@ -35,7 +35,7 @@ from .web.provisioning_api import LOGIN_PENDING_PROMISES, LOGOUT_PENDING_PROMISE
 
 
 class MatrixHandler:
-    log: TraceLogger = logging.getLogger("mau.matrix")
+    log: TraceLogger = logging.getLogger("acd.matrix_handler")
     az: AppService
     config: config.BaseBridgeConfig
     acd_appservice: acd_pr.ACD
@@ -192,6 +192,10 @@ class MatrixHandler:
                     room_id=evt.room_id, intent=self.az.intent, old_name=unsigned.prev_content.name
                 )
 
+            # Cuando el cliente cambia su perfil, ya sea que se quiera conservar el viejo
+            # nombre o no, este código, se encarga de actualizar el nombre
+            # en la caché de salas, si y solo si, la sala está cacheada en el
+            # diccionario RoomManager.ROOMS
             try:
                 content: RoomNameStateEventContent = evt.content
                 RoomManager.ROOMS[evt.room_id]["name"] = content.name
@@ -234,7 +238,7 @@ class MatrixHandler:
                 )
 
     async def handle_invite(self, evt: Event):
-        """If the user who was invited is a bot, then join the room
+        """If the user who was invited is a acd*, then join the room
 
         Parameters
         ----------
@@ -247,12 +251,19 @@ class MatrixHandler:
         """
 
         self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
+
+        # Verificamos que el usuario que se va a unir sea un acd*
+        # para hacerle un auto-join
+        if not Puppet.get_id_from_mxid(mxid=evt.state_key):
+            return
+
+        # Obtenemos el intent del puppet
         intent = await self.get_intent(user_id=UserID(evt.state_key))
 
         if not intent:
             return None
 
-        self.log.debug(f"The guest user {evt.state_key} is a bot")
+        self.log.debug(f"The user {intent.mxid} is trying join in the room {evt.room_id}")
         await intent.join_room(evt.room_id)
 
     async def handle_disinvite(
@@ -294,6 +305,7 @@ class MatrixHandler:
             self.log.debug(f"Resolving to True the promise [{future_key}]")
             AgentManager.PENDING_INVITES[future_key].set_result(True)
 
+        # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
         if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
             await RoomManager.save_room(room_id=room_id, selected_option=None, puppet_mxid=user_id)
 
@@ -391,17 +403,19 @@ class MatrixHandler:
 
         intent = await self.get_intent(room_id=room_id)
         if not intent:
-            self.log.debug(f"I can't get an intent for the room {room_id}")
+            self.log.warning(f"I can't get an intent for the room {room_id}")
             return
 
         # Ignore messages from whatsapp bots
-        if sender in self.config["bridges.mautrix.mxid"]:
+        if sender == self.config["bridges.mautrix.mxid"]:
             return
 
         # Checking if the message is a command, and if it is,
         # it is sending the command to the command processor.
         is_command, text = self.is_command(message=message)
-        if is_command:
+        if is_command and not await self.room_manager.is_customer_room(
+            room_id=room_id, intent=intent
+        ):
             command_event = CommandEvent(
                 acd_appservice=self.acd_appservice,
                 sender=sender,
@@ -410,6 +424,7 @@ class MatrixHandler:
                 intent=intent,
             )
             await command_processor(cmd_evt=command_event)
+            return
 
         # Checking if the room is a control room.
         if (
@@ -464,7 +479,9 @@ class MatrixHandler:
             Puppet's intent
 
         """
-        intent: IntentAPI = None
+        # Coloco el intent del bot principal siempre para que cuando no pueda obtener uno
+        # dado un user o un room_id, entonces regrese al acd principal
+        intent: IntentAPI = self.az.intent
         if user_id:
             # Checking if the user_id is not the bot_mxid and if the user_id is a puppet.
             if user_id != self.az.bot_mxid and Puppet.get_id_from_mxid(user_id):
@@ -477,7 +494,7 @@ class MatrixHandler:
                 intent = self.az.intent
         elif room_id:
             # Getting the puppet from a customer room.
-            puppet = await Puppet.get_puppet_from_a_customer_room(room_id=room_id)
+            puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
             if puppet:
                 intent = puppet.intent
 
