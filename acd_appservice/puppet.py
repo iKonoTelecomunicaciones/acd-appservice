@@ -69,7 +69,7 @@ class Puppet(DBPuppet, BasePuppet):
             base_url=base_url,
             control_room_id=control_room_id,
         )
-        self.log = self.log.getChild(email)
+        self.log = self.log.getChild(custom_mxid if custom_mxid else email)
         # IMPORTANTE: A cada marioneta de le genera un intent para poder enviar eventos a nombre
         # de esas marionetas
         self.default_mxid = self.get_mxid_from_id(pk)
