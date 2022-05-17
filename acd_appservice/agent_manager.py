@@ -411,7 +411,7 @@ class AgentManager:
         self.log.debug(f"futures left: {self.PENDING_INVITES}")
         if agent_joined:
             self.CURRENT_AGENT[campaign_room_id] = agent_id
-            self.log.debug(f"[[{agent_id}]] ACCEPTED the invite. CHAT ASSIGNED.")
+            self.log.debug(f"[{agent_id}] ACCEPTED the invite. CHAT ASSIGNED.")
             self.log.debug(f"NEW CURRENT_AGENT : [{self.CURRENT_AGENT}]")
             self.log.debug(f"======> [{customer_room_id}] selected [{campaign_room_id}]")
             # self.bot.store.set_user_selected_menu(customer_room_id, campaign_room_id)

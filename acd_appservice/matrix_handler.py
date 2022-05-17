@@ -210,7 +210,7 @@ class MatrixHandler:
         #         await self.handle_event(evt)
 
     async def handle_invite(self, evt: Event):
-        """If the user who was invited is a bot, then join the room
+        """If the user who was invited is a acd*, then join the room
 
         Parameters
         ----------
@@ -223,12 +223,19 @@ class MatrixHandler:
         """
 
         self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
+
+        # Verificamos que el usuario que se va a unir sea un acd*
+        # para hacerle un auto-join
+        if not Puppet.get_id_from_mxid(mxid=evt.state_key):
+            return
+
+        # Obtenemos el intent del puppet
         intent = await self.get_intent(user_id=UserID(evt.state_key))
 
         if not intent:
             return None
 
-        self.log.debug(f"The guest user {evt.state_key} is a bot")
+        self.log.debug(f"The user {intent.mxid} is trying join in the room {evt.room_id}")
         await intent.join_room(evt.room_id)
 
     async def handle_disinvite(
@@ -327,7 +334,7 @@ class MatrixHandler:
 
         intent = await self.get_intent(room_id=room_id)
         if not intent:
-            self.log.debug(f"I can't get an intent for the room {room_id}")
+            self.log.warning(f"I can't get an intent for the room {room_id}")
             return
 
         # Ignore messages from whatsapp bots
@@ -403,7 +410,9 @@ class MatrixHandler:
             Puppet's intent
 
         """
-        intent: IntentAPI = None
+        # Coloco el intent del bot principal siempre para que cuando no pueda obtener uno
+        # dado un user o un room_id, entonces regrese al acd principal
+        intent: IntentAPI = self.az.intent
         if user_id:
             # Checking if the user_id is not the bot_mxid and if the user_id is a puppet.
             if user_id != self.az.bot_mxid and Puppet.get_id_from_mxid(user_id):

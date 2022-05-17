@@ -45,6 +45,8 @@ appservice:
     hs_token: "This value is generated when generating the registration"
     # Primary user of the appservice
     bot_username: acd
+    # Email to be able to use the main bot
+    email: "soporte@ikono.com.co"
 
 # Bridge config
 bridge:
@@ -67,13 +69,15 @@ bridge:
         # Whether or not the provisioning API should be enabled.
         enabled: true
         # The prefix to use in the provisioning API endpoints.
-        prefix: /v1
+        prefix: /
         # The shared secret to authorize users of the API.
         # Set to "generate" to generate and save a new token.
         shared_secret: generate
 
 
 acd:
+    # Regex for get the puppet ID
+    acd_regex: "^@[a-zA-Z-_]+(?P<userid>[0-9]+):.+$"
     # Feature for naming customer rooms
     keep_room_name: false
     # Prefix for identification of agent user

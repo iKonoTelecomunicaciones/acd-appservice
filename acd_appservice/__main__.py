@@ -28,7 +28,7 @@ class ACDAppService(ACD):
     matrix = MatrixHandler
 
     room_manager = RoomManager
-    # provisioning_api: ProvisioningAPI
+    provisioning_api: ProvisioningAPI
 
     upgrade_table = upgrade_table
 
@@ -71,11 +71,6 @@ class ACDAppService(ACD):
             intent=self.az.intent,
             control_room_id=self.config["acd.control_room_id"],
         )
-        # Registramos el bot principal en la tabla de puppet
-        # y registramos también la sala de control
-        puppet = await Puppet.get_puppet_by_mxid(self.az.bot_mxid)
-        puppet.control_room_id = self.config["acd.control_room_id"]
-        await puppet.save()
         # Creamos la tarea que va revisar si las salas pendintes ya tienen a un agente para asignar
         asyncio.create_task(self.matrix.agent_manager.process_pending_rooms())
 
