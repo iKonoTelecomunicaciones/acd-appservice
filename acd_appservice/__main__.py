@@ -9,6 +9,7 @@ from .acd_program import ACD
 from .config import Config
 from .db import init as init_db
 from .db import upgrade_table
+from .http_client import HTTPClient
 from .matrix_handler import MatrixHandler
 from .puppet import Puppet
 from .room_manager import RoomManager
@@ -56,6 +57,8 @@ class ACDAppService(ACD):
         self.provisioning_api = ProvisioningAPI()
         # Le damos acceso del archivo de configuración a la API
         self.provisioning_api.config = self.config
+        self.provisioning_api.client = HTTPClient(app=self.az.app)
+        await self.provisioning_api.client.init_session()
 
         # Usan la app de aiohttp, creamos una subaplicacion especifica para la API
         self.az.app.add_subapp(api_route, self.provisioning_api.app)
@@ -64,7 +67,7 @@ class ACDAppService(ACD):
 
         # Iniciamos la aplicación
         await super().start()
-
+        
         # El manejador de agentes debe ir despues del start para poder utilizar los intents
         # Los intents de los puppets y el bot se inicializan en el start
         self.matrix.agent_manager = AgentManager(
@@ -73,6 +76,7 @@ class ACDAppService(ACD):
             control_room_id=self.config["acd.control_room_id"],
         )
         # Creamos la tarea que va revisar si las salas pendintes ya tienen a un agente para asignar
+        self.add_shutdown_actions(self.provisioning_api.client.session.close())
         asyncio.create_task(self.matrix.agent_manager.process_pending_rooms())
 
     def prepare_stop(self) -> None:

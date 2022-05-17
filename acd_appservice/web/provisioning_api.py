@@ -1,14 +1,16 @@
 import asyncio
 import logging
 import re
+from email import header
 
-from aiohttp import web
+from aiohttp import ClientSession, WSMsgType, web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from mautrix.types.event.message import MessageType
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
 from ..config import Config
+from ..http_client import HTTPClient
 from ..puppet import Puppet
 from . import SUPPORTED_MESSAGE_TYPES
 from .error_responses import (
@@ -37,6 +39,7 @@ class ProvisioningAPI:
     log: TraceLogger = logging.getLogger("acd.provisioning")
     app: web.Application
     config: Config
+    client: HTTPClient
 
     def __init__(self) -> None:
         self.app = web.Application()
@@ -222,43 +225,11 @@ class ProvisioningAPI:
         if not puppet:
             return web.json_response(**USER_DOESNOT_EXIST)
 
-        if puppet.control_room_id in LOGIN_PENDING_PROMISES:
-            return web.json_response(**REQUEST_ALREADY_EXISTS)
+        await self.client.new_websocket_connection(user_id=puppet.custom_mxid)
 
-        login_command = self.config["bridges.mautrix.login"]
-        if not await puppet.send_command(login_command):
-            return web.json_response(**SERVER_ERROR)
-
-        pending_promise = self.loop.create_future()
-        LOGIN_PENDING_PROMISES[puppet.control_room_id] = pending_promise
-
-        promise_response = await asyncio.create_task(
-            self.check_promise(puppet.control_room_id, pending_promise)
+        return web.json_response(
+            data=await self.client.CONECTIONS_WS[puppet.custom_mxid], status=200
         )
-
-        if promise_response.get("msgtype") == "qr_code":
-            response = {
-                "data": {
-                    "qr": promise_response.get("response"),
-                    "message": "QR has been generated",
-                },
-                "status": 201,
-            }
-        elif promise_response.get("msgtype") == "logged_in":
-            response = {
-                "data": {
-                    "error": promise_response.get("response"),
-                },
-                "status": 422,
-            }
-        elif promise_response.get("msgtype") == "error":
-            # When an error occurred the 'promise_response.get("response")' has data and status
-            # look out this error template in 'error_responses.py'
-            response = promise_response.get("response")
-
-        del LOGIN_PENDING_PROMISES[puppet.control_room_id]
-
-        return web.json_response(**response)
 
     # async def unlink_phone(self, request: web.Request) -> web.Response:
     #     """
