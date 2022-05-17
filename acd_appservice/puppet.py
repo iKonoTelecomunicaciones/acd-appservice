@@ -126,7 +126,8 @@ class Puppet(DBPuppet, BasePuppet):
         if not matrix_joined_rooms:
             return
 
-        # Checking if the mx_joined_room is in a db_joined_rooms, if it is not, it adds it to the database.
+        # Checking if the mx_joined_room is in a db_joined_rooms, if it is not,
+        # it adds it to the database.
         for mx_joined_room in matrix_joined_rooms:
             if not mx_joined_room in db_joined_rooms:
                 await room_m.RoomManager.save_room(
@@ -134,6 +135,8 @@ class Puppet(DBPuppet, BasePuppet):
                 )
 
     def _add_to_cache(self) -> None:
+        # Mete a cada marioneta en un dict que permite acceder de manera más rápida a las
+        # instancias de cada marioneta
         self.by_pk[self.pk] = self
         if self.custom_mxid:
             self.by_custom_mxid[self.custom_mxid] = self

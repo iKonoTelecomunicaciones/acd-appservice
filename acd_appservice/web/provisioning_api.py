@@ -128,7 +128,6 @@ class ProvisioningAPI:
         # Obtenemos el puppet de este email si existe
         puppet = await Puppet.get_by_email(email)
 
-        # Si el correo es el del bot principal, entonces decimos que ya existe registrado
         if email != self.config["appservice.email"] and not puppet:
             # Si no existe creamos un puppet para este email
 
@@ -154,7 +153,7 @@ class ProvisioningAPI:
                 # sin que nosotros nos diéramos cuenta
                 await puppet.sync_joined_rooms_in_db()
                 # NOTA: primero debe estar registrado el puppet en la db antes de crear la sala,
-                # ya que cuando para crear una sala se necesita la pk del puppet
+                # ya que para crear una sala se necesita la pk del puppet (para usarla como fk)
                 control_room_id = await puppet.intent.create_room(
                     invitees=[self.config["bridges.mautrix.mxid"]]
                 )
@@ -165,6 +164,7 @@ class ProvisioningAPI:
                 self.log.exception(e)
                 return web.json_response(**SERVER_ERROR)
         else:
+            # Si el correo pertenece bot principal, entonces decimos que ya existe registrado
             return web.json_response(**USER_ALREADY_EXISTS)
 
         response = {

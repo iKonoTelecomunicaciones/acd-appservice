@@ -77,12 +77,17 @@ class Puppet:
         return cls(base_url=base_url, **data)
 
     @classmethod
-    async def get_by_pk(cls, pk: int) -> Puppet | None:
-        q = (
-            "SELECT pk, email, name, username, photo_id, photo_mxc, name_set, avatar_set, is_registered,"
-            "       custom_mxid, access_token, next_batch, base_url, control_room_id "
-            "FROM puppet WHERE pk=$1"
+    @property
+    def query(cls) -> str:
+        return (
+            "SELECT pk, email, name, username, photo_id, photo_mxc, name_set, avatar_set,"
+            "is_registered, custom_mxid, access_token, next_batch, base_url, control_room_id "
+            "FROM puppet WHERE"
         )
+
+    @classmethod
+    async def get_by_pk(cls, pk: int) -> Puppet | None:
+        q = f"{cls.query} pk=$1"
         row = await cls.db.fetchrow(q, pk)
         if not row:
             return None
@@ -90,11 +95,7 @@ class Puppet:
 
     @classmethod
     async def get_by_custom_mxid(cls, mxid: UserID) -> Puppet | None:
-        q = (
-            "SELECT pk, email, name, username, photo_id, photo_mxc, name_set, avatar_set, is_registered,"
-            "       custom_mxid, access_token, next_batch, base_url, control_room_id "
-            "FROM puppet WHERE custom_mxid=$1"
-        )
+        q = f"{cls.query} custom_mxid=$1"
         row = await cls.db.fetchrow(q, mxid)
         if not row:
             return None
@@ -102,11 +103,7 @@ class Puppet:
 
     @classmethod
     async def get_by_email(cls, email: str) -> Puppet | None:
-        q = (
-            "SELECT pk, email, name, username, photo_id, photo_mxc, name_set, avatar_set, is_registered,"
-            "       custom_mxid, access_token, next_batch, base_url, control_room_id "
-            "FROM puppet WHERE email=$1"
-        )
+        q = f"{cls.query} email=$1"
         row = await cls.db.fetchrow(q, email)
         if not row:
             return None
@@ -133,10 +130,6 @@ class Puppet:
 
     @classmethod
     async def all_with_custom_mxid(cls) -> list[Puppet]:
-        q = (
-            "SELECT pk, email, name, username, photo_id, photo_mxc, name_set, avatar_set, is_registered,"
-            "       custom_mxid, access_token, next_batch, base_url, control_room_id "
-            "FROM puppet WHERE custom_mxid IS NOT NULL"
-        )
+        q = f"{cls.query} custom_mxid IS NOT NULL"
         rows = await cls.db.fetch(q)
         return [cls._from_row(row) for row in rows]
