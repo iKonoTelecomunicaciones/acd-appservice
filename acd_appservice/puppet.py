@@ -144,16 +144,6 @@ class Puppet(DBPuppet, BasePuppet):
     async def save(self) -> None:
         await self.update()
 
-    async def send_command(self, commad: str) -> bool:
-        cmd = f"{self.config['bridges.mautrix.prefix']} {commad}"
-        try:
-            await self.intent.send_text(room_id=self.control_room_id, text=cmd)
-        except Exception as e:
-            self.log.error(f"Error Puppet {self} sending command {cmd} : {e}")
-            return False
-
-        return True
-
     @classmethod
     async def get_by_mxid(cls, mxid: UserID, create: bool = True) -> Puppet | None:
         pk = cls.get_id_from_mxid(mxid)

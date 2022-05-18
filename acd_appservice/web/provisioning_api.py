@@ -10,7 +10,7 @@ from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
 from ..config import Config
-from ..http_client import HTTPClient, ProvisionBridgeWebSocket
+from ..http_client import HTTPClient, ProvisionBridge
 from ..puppet import Puppet
 from . import SUPPORTED_MESSAGE_TYPES
 from .error_responses import (
@@ -141,10 +141,6 @@ class ProvisioningAPI:
                 puppet.email = email
                 # Obtenemos el mxid correspondiente para este puppet @acd*:localhost
                 puppet.custom_mxid = Puppet.get_mxid_from_id(puppet.pk)
-                control_room_id = await puppet.intent.create_room(
-                    invitees=[self.config["bridges.mautrix.mxid"]]
-                )
-                puppet.control_room_id = control_room_id
                 await puppet.save()
                 # Inicializamos el intent de este puppet
                 puppet.intent = puppet._fresh_intent()
@@ -226,9 +222,10 @@ class ProvisioningAPI:
         if not puppet:
             return web.json_response(**USER_DOESNOT_EXIST)
 
-        web_sock = ProvisionBridgeWebSocket(session=self.client.session, config=self.config)
-
-        await web_sock.connect(user_id=puppet.custom_mxid, custom_ws=ws)
+        # Creamos una conector con el bridge
+        bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
+        # Creamos un WebSocket para conectarnos con el bridge
+        await bridge_connector.ws_connect(user_id=puppet.custom_mxid, ws_customer=ws)
 
         return ws
 
@@ -459,45 +456,3 @@ class ProvisioningAPI:
     #     del LOGOUT_PENDING_PROMISES[user.room_id]
 
     #     return web.json_response(**response)
-
-    async def check_promise(self, key_promise: str, pending_response) -> tuple:
-        """Verify that QR code was generated.
-
-        Parameters
-        ----------
-        key_promise
-            key for the promise in the respective dictionary of promises
-        pendig_response
-            promise response request
-
-        Returns
-        -------
-        tuple
-            (response, status)
-        """
-
-        end_time = self.loop.time() + float(self.config["utils.wait_promise_time"])
-
-        # In this cycle we wait for the response of message_handler to obtain QR code
-        while True:
-            self.log.debug(f"[{datetime.now()}] - [{key_promise}] - [{pending_response.done()}]")
-
-            if pending_response.done():
-                # when a message event is received, the Future object is resolved
-                self.log.info(f"FUTURE {key_promise} IS DONE")
-                future_response = pending_response.result()
-                break
-            if (self.loop.time() + 1.0) >= end_time:
-                self.log.info(f"TIMEOUT COMPLETED FOR THE PROMISE {key_promise}")
-                pending_response.set_result(
-                    {
-                        "msgtype": "error",
-                        "response": TIMEOUT_ERROR,
-                    }
-                )
-                future_response = pending_response.result()
-                break
-
-            await asyncio.sleep(1)
-
-        return future_response
