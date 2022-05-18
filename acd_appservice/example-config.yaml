@@ -69,7 +69,7 @@ bridge:
         # Whether or not the provisioning API should be enabled.
         enabled: true
         # The prefix to use in the provisioning API endpoints.
-        prefix: /
+        prefix: /provision
         # The shared secret to authorize users of the API.
         # Set to "generate" to generate and save a new token.
         shared_secret: generate

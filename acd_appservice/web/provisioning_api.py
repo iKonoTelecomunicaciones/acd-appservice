@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import re
-from email import header
+from typing import Dict
 
-from aiohttp import ClientSession, WSMsgType, web
+from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
-from mautrix.types.event.message import MessageType
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
@@ -74,13 +75,11 @@ class ProvisioningAPI:
                 layout="BaseLayout",
             ),
         )
-        swagger.add_routes(
-            [
-                # Región de autenticación
-                web.post("/create_user", self.create_user),
-                web.get("/link_phone", self.link_phone),
-            ]
-        )
+
+        swagger.add_post(path="/v1/create_user", handler=self.create_user)
+        swagger.add_get(path="/v1/link_phone", handler=self.link_phone, allow_head=False)
+        swagger.add_get(path="/v1/ws_link_phone", handler=self.ws_link_phone, allow_head=False)
+
         self.loop = asyncio.get_running_loop()
 
     async def create_user(self, request: web.Request) -> web.Response:
@@ -118,12 +117,12 @@ class ProvisioningAPI:
 
         data = await request.json()
 
-        if not data.get("user_email"):
-            return web.json_response(**NOT_EMAIL)
+        result = await self.validate_email(user_email=data.get("user_email"))
+
+        if result:
+            return web.json_response(**result)
 
         email = data.get("user_email").lower()
-        if not re.match(self.config["utils.regex_email"], email):
-            return web.json_response(**INVALID_EMAIL)
 
         # Obtenemos el puppet de este email si existe
         puppet = await Puppet.get_by_email(email)
@@ -171,63 +170,124 @@ class ProvisioningAPI:
 
         return web.json_response(response, status=201)
 
-    async def link_phone(self, request: web.Request) -> web.Response:
+    async def ws_link_phone(self, request: web.Request) -> web.Response:
         """
-        Given a user_email send a `!wa login` bridge command to stablish Whatsapp communication
+        Given a user_email WhasApp is asked for a qrcode to login
         ---
-        summary: Generates a QR code for an existing user in order to create a QR image and link the WhatsApp number by scanning the QR code with the cell phone.
+        summary:        Generates a QR code for an existing user in order to create a QR image and
+                        link the WhatsApp number by scanning the QR code with the cell phone.
+        description:    This creates a `WebSocket` to which you must connect, you will be sent the
+                        `qrcode` that you must scan to make a successful connection to `WhatsApp`, if
+                        you do not login in time, the connection will be terminated by `timeout`.
         tags:
             - users
 
-        # requestBody:
-        #   required: true
-        #   description: A json with `user_email`
-        #   content:
-        #     application/json:
-        #       schema:
-        #         type: object
-        #         properties:
-        #           user_email:
-        #             type: string
-        #         example:
-        #             user_email: nobody@somewhere.com
+        parameters:
+        - in: query
+          name: user_email
+          schema:
+            type: string
+          required: true
+          description: user_email address previously created
 
         responses:
-            '201':
+            '200':
                 $ref: '#/components/responses/QrGenerated'
             '400':
                 $ref: '#/components/responses/BadRequest'
             '404':
                 $ref: '#/components/responses/NotExist'
             '422':
-                $ref: '#/components/responses/ErrorData'
-            '429':
-                $ref: '#/components/responses/TooManyRequests'
+                $ref: '#/components/responses/QrNoGenerated'
         """
 
-        ws = web.WebSocketResponse()
+        ws_customer = web.WebSocketResponse()
 
-        await ws.prepare(request)
+        await ws_customer.prepare(request)
 
         user_email = request.rel_url.query.get("user_email")
 
-        if not user_email:
-            return web.json_response(**NOT_EMAIL)
+        result = await self.validate_email(user_email=user_email)
 
-        email = user_email.lower()
-        if not re.match(self.config["utils.regex_email"], email):
-            return web.json_response(**INVALID_EMAIL)
+        if result:
+            return web.json_response(**result)
 
-        puppet: Puppet = await Puppet.get_by_email(email)
+        puppet: Puppet = await Puppet.get_by_email(user_email)
         if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
+            return USER_DOESNOT_EXIST
 
         # Creamos una conector con el bridge
         bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
         # Creamos un WebSocket para conectarnos con el bridge
-        await bridge_connector.ws_connect(user_id=puppet.custom_mxid, ws_customer=ws)
+        await bridge_connector.ws_connect(user_id=puppet.custom_mxid, ws_customer=ws_customer)
 
-        return ws
+        return ws_customer
+
+    async def link_phone(self, request: web.Request) -> web.Response:
+        """
+        Given a user_email WhasApp is asked for a qrcode to login
+        ---
+        summary:        Generates a QR code for an existing user in order to create a QR image and
+                        link the WhatsApp number by scanning the QR code with the cell phone.
+        tags:
+            - users
+
+        parameters:
+        - in: query
+          name: user_email
+          schema:
+            type: string
+          required: true
+          description: user_email address previously created
+
+        responses:
+            '200':
+                $ref: '#/components/responses/QrGenerated'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+            '422':
+                $ref: '#/components/responses/QrNoGenerated'
+        """
+
+        user_email = request.rel_url.query.get("user_email")
+
+        result = await self.validate_email(user_email=user_email)
+
+        if result:
+            return web.json_response(**result)
+
+        puppet: Puppet = await Puppet.get_by_email(user_email)
+        if not puppet:
+            return USER_DOESNOT_EXIST
+
+        # Creamos una conector con el bridge
+        bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
+        # Creamos un WebSocket para conectarnos con el bridge
+        return web.json_response(
+            **await bridge_connector.ws_connect(user_id=puppet.custom_mxid, easy_mode=True)
+        )
+
+    async def validate_email(self, user_email: str) -> Dict:
+        """It checks if the email is valid
+
+        Parameters
+        ----------
+        user_email : str
+            The email address to validate.
+
+        Returns
+        -------
+            A dictionary with a key of "error" "
+
+        """
+        if not user_email:
+            return NOT_EMAIL
+
+        email = user_email.lower()
+        if not re.match(self.config["utils.regex_email"], email):
+            return INVALID_EMAIL
 
     # async def unlink_phone(self, request: web.Request) -> web.Response:
     #     """

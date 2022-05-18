@@ -174,7 +174,7 @@ class MatrixHandler:
                 #     )
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
             evt: MessageEvent = evt
-            if evt.type != EventType.ROOM_MESSAGE:
+            if evt.type == EventType.ROOM_MESSAGE:
                 evt.content.msgtype = MessageType(str(evt.type))
                 await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
         elif evt.type == EventType.ROOM_NAME:
@@ -331,6 +331,7 @@ class MatrixHandler:
         -------
 
         """
+
         intent = await self.get_intent(room_id=room_id)
         if not intent:
             self.log.warning(f"I can't get an intent for the room {room_id}")

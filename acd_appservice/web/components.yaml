@@ -12,14 +12,50 @@ components:
       properties:
         message:
           type: string
-
-    QrCode:
+    QrOk:
       type: object
       properties:
-        qr:
+        code:
           type: string
-        message:
+        timeout:
+          type: integer
+
+    QrFail:
+      type: object
+      properties:
+        success:
+          type: boolean
+        error:
           type: string
+        errorcode:
+          type: string
+
+    QrDataOk:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/QrOk'
+        status:
+          type: integer
+      example:
+          data:
+            code: "2@Y0SYKO62z8tZXp9KDf4w8D/4qLioopgFtT3Bc2aSdt6Jdmg4DZlM1..."
+            timeout: 60
+          status: 200
+
+    QrDataFail:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/QrFail'
+        status:
+          type: integer
+      example:
+          data:
+            success: false
+            error: "QR code scan timed out. Please try again."
+            errcode: "login timed out"
+          status: 422
 
   # Respuestas de la API
   responses:
@@ -35,7 +71,14 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/QrCode'
+            $ref: '#/components/schemas/QrDataOk'
+
+    QrNoGenerated:
+      description: QR has not been generated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/QrDataFail'
 
     OK:
       description: The request was successful..
