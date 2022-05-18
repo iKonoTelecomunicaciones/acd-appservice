@@ -147,6 +147,11 @@ bridges:
       # When a chat already exists
       existing_portal: "^You already have a private chat portal with \\+(?P<phone_number>[0-9]+) at .+(?P<room_id>!\\w+:[\\w.-]+).+$"
 
+    # Settings for provisioning API
+    provisioning:
+        url_base: "http://172.17.0.1:29665/_matrix/provision"
+        shared_secret: "gZv0kzqrZ4PFHb614IusrTuhPTDhUalJWq9xXL1K9OKBIs2bsxGD6SUOkgyN4OWP"
+        
   instagram:
     # Prefix to be listened by bridge
     prefix: "!ig"

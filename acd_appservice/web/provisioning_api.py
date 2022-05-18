@@ -10,7 +10,7 @@ from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
 from ..config import Config
-from ..http_client import HTTPClient
+from ..http_client import HTTPClient, ProvisionBridgeWebSocket
 from ..puppet import Puppet
 from . import SUPPORTED_MESSAGE_TYPES
 from .error_responses import (
@@ -78,7 +78,7 @@ class ProvisioningAPI:
             [
                 # Región de autenticación
                 web.post("/create_user", self.create_user),
-                web.post("/link_phone", self.link_phone),
+                web.get("/link_phone", self.link_phone),
             ]
         )
         self.loop = asyncio.get_running_loop()
@@ -183,18 +183,18 @@ class ProvisioningAPI:
         tags:
             - users
 
-        requestBody:
-          required: true
-          description: A json with `user_email`
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  user_email:
-                    type: string
-                example:
-                    user_email: nobody@somewhere.com
+        # requestBody:
+        #   required: true
+        #   description: A json with `user_email`
+        #   content:
+        #     application/json:
+        #       schema:
+        #         type: object
+        #         properties:
+        #           user_email:
+        #             type: string
+        #         example:
+        #             user_email: nobody@somewhere.com
 
         responses:
             '201':
@@ -209,15 +209,16 @@ class ProvisioningAPI:
                 $ref: '#/components/responses/TooManyRequests'
         """
 
-        if not request.body_exists:
-            return web.json_response(**NOT_DATA)
+        ws = web.WebSocketResponse()
 
-        data = await request.json()
+        await ws.prepare(request)
 
-        if not data.get("user_email"):
+        user_email = request.rel_url.query.get("user_email")
+
+        if not user_email:
             return web.json_response(**NOT_EMAIL)
 
-        email = data.get("user_email").lower()
+        email = user_email.lower()
         if not re.match(self.config["utils.regex_email"], email):
             return web.json_response(**INVALID_EMAIL)
 
@@ -225,11 +226,11 @@ class ProvisioningAPI:
         if not puppet:
             return web.json_response(**USER_DOESNOT_EXIST)
 
-        await self.client.new_websocket_connection(user_id=puppet.custom_mxid)
+        web_sock = ProvisionBridgeWebSocket(session=self.client.session, config=self.config)
 
-        return web.json_response(
-            data=await self.client.CONECTIONS_WS[puppet.custom_mxid], status=200
-        )
+        await web_sock.connect(user_id=puppet.custom_mxid, custom_ws=ws)
+
+        return ws
 
     # async def unlink_phone(self, request: web.Request) -> web.Response:
     #     """

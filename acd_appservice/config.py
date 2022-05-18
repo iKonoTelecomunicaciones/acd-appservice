@@ -19,6 +19,8 @@ class Config(BaseBridgeConfig):
         copy("appservice.email")
         copy_dict("bridges")
         copy("bridges.mautrix.mxid")
+        copy("bridges.mautrix.provisioning.url_base")
+        copy("bridges.mautrix.provisioning.shared_secret")
         copy("bridge.provisioning.prefix")
         copy("acd.keep_room_name")
         copy("acd.control_room_id")
