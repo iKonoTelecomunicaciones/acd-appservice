@@ -19,7 +19,6 @@ class BaseClass:
 
 
 class HTTPClient(BaseClass):
-
     def __init__(self, app: web.Application()):
         self.app = app
 
@@ -31,7 +30,6 @@ class HTTPClient(BaseClass):
 
 
 class ProvisionBridge(BaseClass):
-
     def __init__(self, session, config):
         self.session = session
         self.config = config
