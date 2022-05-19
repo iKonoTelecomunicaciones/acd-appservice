@@ -173,10 +173,10 @@ class MatrixHandler:
                 #         evt.room_id, UserID(evt.state_key), evt.content, prev_content, evt.event_id
                 #     )
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
-            evt: MessageEvent
-            if evt.type != EventType.ROOM_MESSAGE:
+            evt: MessageEvent = evt
+            if evt.type == EventType.ROOM_MESSAGE:
                 evt.content.msgtype = MessageType(str(evt.type))
-            await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
+                await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
         elif evt.type == EventType.ROOM_NAME:
             # Setting the room name to the customer's name.
             if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
