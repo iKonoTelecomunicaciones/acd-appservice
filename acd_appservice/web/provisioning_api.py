@@ -172,7 +172,7 @@ class ProvisioningAPI:
 
     async def ws_link_phone(self, request: web.Request) -> web.Response:
         """
-        Given a user_email WhasApp is asked for a qrcode to login
+        A QR code is requested to WhatsApp in order to login an email account with a phone number.
         ---
         summary:        Generates a QR code for an existing user in order to create a QR image and
                         link the WhatsApp number by scanning the QR code with the cell phone.
@@ -193,6 +193,8 @@ class ProvisioningAPI:
         responses:
             '200':
                 $ref: '#/components/responses/QrGenerated'
+            '201':
+                $ref: '#/components/responses/LoginSuccessful'
             '400':
                 $ref: '#/components/responses/BadRequest'
             '404':
@@ -225,7 +227,7 @@ class ProvisioningAPI:
 
     async def link_phone(self, request: web.Request) -> web.Response:
         """
-        Given a user_email WhasApp is asked for a qrcode to login
+        A QR code is requested to WhatsApp in order to login an email account with a phone number.
         ---
         summary:        Generates a QR code for an existing user in order to create a QR image and
                         link the WhatsApp number by scanning the QR code with the cell phone.

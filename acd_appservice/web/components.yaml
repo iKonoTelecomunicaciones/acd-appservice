@@ -20,6 +20,16 @@ components:
         timeout:
           type: integer
 
+    LoginOk:
+      type: object
+      properties:
+        jid:
+          type: string
+        phone:
+          type: string
+        success:
+          type: boolean
+
     QrFail:
       type: object
       properties:
@@ -29,6 +39,20 @@ components:
           type: string
         errorcode:
           type: string
+
+    LoginDataOk:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/LoginOk'
+        status:
+          type: integer
+      example:
+          data:
+            jid: "573123456789.0:65@s.whatsapp.net"
+            phone: "+573123456789"
+            success: true
+          status: 201
 
     QrDataOk:
       type: object
@@ -72,6 +96,13 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/QrDataOk'
+
+    LoginSuccessful:
+      description: QR has been generated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/LoginDataOk'
 
     QrNoGenerated:
       description: QR has not been generated.

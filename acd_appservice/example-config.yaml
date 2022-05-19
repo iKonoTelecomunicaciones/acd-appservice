@@ -131,7 +131,6 @@ bridges:
     postfix_template: "(WA)"
     set_relay: "set-relay"
     set_permissions: "set-pl {mxid} {power_level}"
-    notice_messages:
     # Settings for provisioning API
     provisioning:
         url_base: "http://172.17.0.1:29665/_matrix/provision"
