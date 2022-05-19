@@ -44,27 +44,6 @@ class ProvisioningAPI:
 
     def __init__(self) -> None:
         self.app = web.Application()
-
-        # swagger = SwaggerDocs(
-        #     self.app,
-        #     title="WAPI documentation",
-        #     version=VERSION,
-        #     components=f"acd_appservice/web/components.yaml",
-        #     swagger_ui_settings=SwaggerUiSettings(
-        #         path="/docs",
-        #         layout="BaseLayout",
-        #     ),
-        # )
-        # swagger.add_routes(
-        #     [
-        #         # Región de autenticación
-        #         web.post("/create_user", self.create_user),
-        #         web.post("/link_phone", self.link_phone),
-        #         web.post("/unlink_phone", self.unlink_phone),
-        #         # Región de mensajería
-        #         web.post("/send_message", self.send_message),
-        #     ]
-        # )
         swagger = SwaggerDocs(
             self.app,
             title="ACD AppService documentation",
@@ -77,6 +56,7 @@ class ProvisioningAPI:
         )
 
         swagger.add_post(path="/v1/create_user", handler=self.create_user)
+        swagger.add_post(path="/v1/pm", handler=self.pm)
         swagger.add_get(path="/v1/link_phone", handler=self.link_phone, allow_head=False)
         swagger.add_get(path="/v1/ws_link_phone", handler=self.ws_link_phone, allow_head=False)
 
@@ -270,6 +250,9 @@ class ProvisioningAPI:
         return web.json_response(
             **await bridge_connector.ws_connect(user_id=puppet.custom_mxid, easy_mode=True)
         )
+
+    async def pm(self, request: web.Request) -> web.Response:
+        pass
 
     async def validate_email(self, user_email: str) -> Dict:
         """It checks if the email is valid
