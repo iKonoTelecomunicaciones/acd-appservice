@@ -74,9 +74,7 @@ async def pm(evt: CommandEvent) -> str:
             ] = "The agent <agent_displayname> is already in room with [number]"
         else:
             if agent_id == evt.sender:
-                return_params[
-                    "reply"
-                ] = "You are already in room with [number], message was sent."
+                return_params["reply"] = "You are already in room with [number], message was sent."
             agent_displayname = await evt.intent.get_displayname(user_id=evt.sender)
             await evt.agent_manager.force_join_agent(
                 room_id=data.get("room_id"), agent_id=evt.sender
