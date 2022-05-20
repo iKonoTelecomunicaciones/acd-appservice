@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from asyncio import Future, create_task, get_running_loop, sleep
 from datetime import datetime
-from typing import TYPE_CHECKING, List
+from typing import List
 
 from mautrix.api import Method
 from mautrix.appservice import IntentAPI
@@ -11,17 +11,15 @@ from mautrix.errors.base import IntentError
 from mautrix.types import Member, PresenceState, RoomAlias, RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
-from .room_manager import RoomManager
+from acd_appservice.puppet import Puppet
 
-if TYPE_CHECKING:
-    from .__main__ import ACDAppService
+from .room_manager import RoomManager
 
 
 class AgentManager:
     log: TraceLogger = logging.getLogger("acd.agent_manager")
     intent: IntentAPI
-    acd_appservice: ACDAppService
-
+    room_manager: RoomManager
     # last invited agent per control room (i.e. campaigns)
     CURRENT_AGENT = {}
 
@@ -31,16 +29,13 @@ class AgentManager:
     control_room_id: RoomID | None = None
 
     def __init__(
-        self,
-        acd_appservice: ACDAppService,
-        intent: IntentAPI,
-        control_room_id: RoomID,
+        self, intent: IntentAPI, control_room_id: RoomID, room_manager: RoomManager
     ) -> None:
         self.intent = intent
-        self.acd_appservice = acd_appservice
-        self.config = acd_appservice.config
-        self.room_manager = acd_appservice.matrix.room_manager
+        self.config = room_manager.config
+        self.room_manager = room_manager
         self.control_room_id = control_room_id
+        self.room_manager = room_manager
 
     async def process_distribution(
         self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
@@ -119,6 +114,12 @@ class AgentManager:
                 online_agent = None
 
                 for customer_room_id in customer_room_ids:
+                    # Se actualiza el puppet dada la sala que se tenga en pending_rooms :)
+                    # que bug tan maluco le digo
+                    puppet: Puppet = await Puppet.get_customer_room_puppet(
+                        room_id=customer_room_id
+                    )
+                    self.intent = puppet.intent
                     result = await self.get_room_agent(room_id=customer_room_id)
                     if result:
                         self.log.debug(

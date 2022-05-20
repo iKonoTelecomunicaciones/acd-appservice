@@ -18,7 +18,7 @@ from mautrix.types import (
 )
 from mautrix.util.logging import TraceLogger
 
-from acd_appservice.puppet import Puppet
+from acd_appservice import puppet as pu
 
 from .config import Config
 from .db import Room
@@ -689,7 +689,7 @@ class RoomManager:
             if room:
                 return False
             else:
-                puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
+                puppet: pu.Puppet = await pu.Puppet.get_by_custom_mxid(puppet_mxid)
                 await Room.insert_room(room_id, selected_option, puppet.pk)
         except Exception as e:
             cls.log.exception(e)
@@ -790,7 +790,7 @@ class RoomManager:
                 if not change_selected_option:
                     selected_option = room.selected_option
 
-                puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
+                puppet: pu.Puppet = await pu.Puppet.get_by_custom_mxid(puppet_mxid)
                 fk_puppet = room.fk_puppet if puppet.pk == room.fk_puppet else puppet.pk
                 await Room.update_room_by_room_id(room_id, selected_option, fk_puppet)
             else:
@@ -913,7 +913,7 @@ class RoomManager:
 
     @classmethod
     async def get_control_room_ids(cls) -> List[RoomID]:
-        """This function is used to get the list of control rooms from the Puppet
+        """This function is used to get the list of control rooms from the pu.Puppet
 
         Parameters
         ----------
@@ -924,7 +924,7 @@ class RoomManager:
 
         """
         try:
-            control_room_ids = await Puppet.get_control_room_ids()
+            control_room_ids = await pu.Puppet.get_control_room_ids()
         except Exception as e:
             cls.log.exception(e)
             return []

@@ -30,29 +30,18 @@ async def acd(evt: CommandEvent) -> str:
     room_params = f"acd {customer_room_id} {campaign_room_id}"
     joined_message = (evt.args[len(room_params) :]).strip() if len(evt.args) > 3 else None
 
-    # Si el usuario es un puppet entonces ejecutamos el proceso de distribución con el
-    # Sino entonces con el bot del appservice
-    if evt.sender != evt.acd_appservice.az.bot_mxid:
-        puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.sender)
-        agent_manager: AgentManager = AgentManager(
-            acd_appservice=evt.acd_appservice,
-            intent=puppet.intent,
-            control_room_id=puppet.control_room_id,
+    # Se crea el proceso de distribución dado el puppet que esté en la sala del cliente
+    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+    agent_manager: AgentManager = AgentManager(
+        room_manager=evt.agent_manager.room_manager,
+        intent=puppet.intent,
+        control_room_id=puppet.control_room_id,
+    )
+    try:
+        await agent_manager.process_distribution(
+            customer_room_id=customer_room_id,
+            campaign_room_id=campaign_room_id,
+            joined_message=joined_message,
         )
-        try:
-            await agent_manager.process_distribution(
-                customer_room_id=customer_room_id,
-                campaign_room_id=campaign_room_id,
-                joined_message=joined_message,
-            )
-        except Exception as e:
-            evt.log.exception(e)
-    else:
-        try:
-            await evt.acd_appservice.matrix.agent_manager.process_distribution(
-                customer_room_id=customer_room_id,
-                campaign_room_id=campaign_room_id,
-                joined_message=joined_message,
-            )
-        except Exception as e:
-            evt.log.exception(e)
+    except Exception as e:
+        evt.log.exception(e)
