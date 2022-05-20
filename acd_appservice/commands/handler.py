@@ -74,13 +74,10 @@ async def command_processor(cmd_evt: CommandEvent):
         The CommandEvent object.
 
     """
-    cmd_evt.log.info(f"Incoming command is :: {cmd_evt.cmd}")
-
-    if cmd_evt.cmd == "help":
-        await cmd_evt.reply(
-            make_help_text(command_prefix=cmd_evt.command_prefix)
-        )
-    elif cmd_evt.cmd == "version":
+    cmd_evt.args = cmd_evt.text.split()
+    if cmd_evt.args[0] == "help":
+        await cmd_evt.reply(make_help_text(command_prefix=cmd_evt.config["bridge.command_prefix"]))
+    elif cmd_evt.args[0] == "version":
         await cmd_evt.reply(text=f"ACD AS :: v{VERSION}")
     elif cmd_evt.cmd in command_handlers:
         await cmd_evt.reply(await command_handlers[cmd_evt.cmd]._handler(cmd_evt))
