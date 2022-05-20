@@ -18,12 +18,11 @@ async def acd(evt: CommandEvent) -> str:
     optionally a campaign room and a joining message can be given.
     """
 
-    evt.log.debug(f"Incoming command is :: {evt.args}")
 
     if len(evt.args) < 2:
         detail = "acd command incomplete arguments"
         evt.log.error(detail)
-        return detail
+        evt.reply(text=detail)
 
     customer_room_id = evt.args[1]
     campaign_room_id = evt.args[2] if len(evt.args) >= 3 else None

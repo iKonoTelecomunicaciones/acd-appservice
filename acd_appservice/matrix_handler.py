@@ -25,6 +25,7 @@ from mautrix.util.logging import TraceLogger
 
 from acd_appservice.agent_manager import AgentManager
 from acd_appservice.room_manager import RoomManager
+from acd_appservice.web.provisioning_api import ProvisioningAPI
 
 from . import acd_program as acd_pr
 from .commands.handler import command_processor
@@ -40,6 +41,7 @@ class MatrixHandler:
 
     agent_manager: AgentManager
     room_manager: RoomManager
+    provisioning_api: ProvisioningAPI
 
     def __init__(
         self,
@@ -347,8 +349,11 @@ class MatrixHandler:
         if is_command and not await self.room_manager.is_customer_room(
             room_id=room_id, intent=intent
         ):
+            args = text.split()
             command_event = CommandEvent(
-                acd_appservice=self.acd_appservice,
+                matrix=self,
+                cmd=args[0],
+                args=args,
                 sender=sender,
                 room_id=room_id,
                 text=text,
@@ -412,7 +417,7 @@ class MatrixHandler:
         """
         # Coloco el intent del bot principal siempre para que cuando no pueda obtener uno
         # dado un user o un room_id, entonces regrese al acd principal
-        intent: IntentAPI = self.az.intent
+        intent: IntentAPI = None
         if user_id:
             # Checking if the user_id is not the bot_mxid and if the user_id is a puppet.
             if user_id != self.az.bot_mxid and Puppet.get_id_from_mxid(user_id):
