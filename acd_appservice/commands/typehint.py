@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List
+from typing import List
 
+from mautrix.appservice import IntentAPI
 from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
-if TYPE_CHECKING:
-    from ..__main__ import ACDAppService
-
-from mautrix.appservice import IntentAPI
+from acd_appservice.agent_manager import AgentManager
 
 
 class CommandEvent:
-    acd_appservice: "ACDAppService"
+    agent_manager: AgentManager
     log: TraceLogger
     intent: IntentAPI
     sender: UserID
@@ -22,16 +20,16 @@ class CommandEvent:
 
     def __init__(
         self,
-        acd_appservice: ACDAppService,
+        agent_manager: AgentManager,
         sender: UserID,
         room_id: RoomID,
         text: str,
         intent: IntentAPI,
         args: List[str] = None,
     ):
-        self.acd_appservice = acd_appservice
-        self.log = acd_appservice.log
-
+        self.agent_manager = agent_manager
+        self.log = agent_manager.log
+        self.config = agent_manager.config
         self.sender = sender
         self.room_id = room_id
         self.text = text

@@ -23,10 +23,10 @@ from mautrix.types import (
 )
 from mautrix.util.logging import TraceLogger
 
+from acd_appservice import acd_program
 from acd_appservice.agent_manager import AgentManager
 from acd_appservice.room_manager import RoomManager
 
-from . import acd_program as acd_pr
 from .commands.handler import command_processor
 from .commands.typehint import CommandEvent
 from .puppet import Puppet
@@ -36,18 +36,18 @@ class MatrixHandler:
     log: TraceLogger = logging.getLogger("acd.matrix_handler")
     az: AppService
     config: config.BaseBridgeConfig
-    acd_appservice: acd_pr.ACD
+    acd_appservice: acd_program.ACD
 
     agent_manager: AgentManager
     room_manager: RoomManager
 
     def __init__(
         self,
-        acd_appservice: acd_pr.ACD | None = None,
+        acd_appservice: acd_program.ACD | None = None,
     ) -> None:
-        self.az = acd_appservice.az
         self.acd_appservice = acd_appservice
-        self.config = acd_appservice.config
+        self.az = self.acd_appservice.az
+        self.config = self.acd_appservice.config
         self.az.matrix_event_handler(self.int_handle_event)
 
     async def wait_for_connection(self) -> None:
@@ -348,7 +348,7 @@ class MatrixHandler:
             room_id=room_id, intent=intent
         ):
             command_event = CommandEvent(
-                acd_appservice=self.acd_appservice,
+                agent_manager=self.agent_manager,
                 sender=sender,
                 room_id=room_id,
                 text=text,
@@ -412,7 +412,7 @@ class MatrixHandler:
         """
         # Coloco el intent del bot principal siempre para que cuando no pueda obtener uno
         # dado un user o un room_id, entonces regrese al acd principal
-        intent: IntentAPI = self.az.intent
+        intent: IntentAPI = None
         if user_id:
             # Checking if the user_id is not the bot_mxid and if the user_id is a puppet.
             if user_id != self.az.bot_mxid and Puppet.get_id_from_mxid(user_id):
