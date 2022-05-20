@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 from typing import Dict
@@ -8,6 +9,10 @@ from typing import Dict
 from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from mautrix.util.logging import TraceLogger
+
+from acd_appservice.agent_manager import AgentManager
+from acd_appservice.commands.handler import command_processor
+from acd_appservice.commands.typehint import CommandEvent
 
 from .. import VERSION
 from ..config import Config
@@ -41,6 +46,7 @@ class ProvisioningAPI:
     app: web.Application
     config: Config
     client: HTTPClient
+    agent_manager: AgentManager
 
     def __init__(self) -> None:
         self.app = web.Application()
@@ -196,7 +202,7 @@ class ProvisioningAPI:
 
         puppet: Puppet = await Puppet.get_by_email(user_email)
         if not puppet:
-            return USER_DOESNOT_EXIST
+            return web.json_response(**USER_DOESNOT_EXIST)
 
         # Creamos una conector con el bridge
         bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
@@ -242,7 +248,7 @@ class ProvisioningAPI:
 
         puppet: Puppet = await Puppet.get_by_email(user_email)
         if not puppet:
-            return USER_DOESNOT_EXIST
+            return web.json_response(**USER_DOESNOT_EXIST)
 
         # Creamos una conector con el bridge
         bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
@@ -252,7 +258,41 @@ class ProvisioningAPI:
         )
 
     async def pm(self, request: web.Request) -> web.Response:
-        pass
+
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data = await request.json()
+
+        result = await self.validate_email(user_email=data.get("user_email"))
+
+        if result:
+            return web.json_response(**result)
+
+        email = data.get("user_email").lower()
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_by_email(email)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        incoming_params = {
+            "phone_number": data.get("phone_number"),
+            "template_message": data.get("template_message"),
+            "template_name": data.get("template_name"),
+        }
+
+        fake_command = f"pm {json.dumps(incoming_params)}"
+        cmd_evt = CommandEvent(
+            cmd="pm",
+            agent_manager=self.agent_manager,
+            sender=data.get("agent_id"),
+            room_id=None,
+            text=fake_command,
+        )
+        cmd_evt.intent = puppet.intent
+        result = await command_processor(cmd_evt=cmd_evt)
+        return web.json_response(data=result, status=200)
 
     async def validate_email(self, user_email: str) -> Dict:
         """It checks if the email is valid

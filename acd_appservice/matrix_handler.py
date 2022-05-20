@@ -26,7 +26,6 @@ from mautrix.util.logging import TraceLogger
 from acd_appservice import acd_program
 from acd_appservice.agent_manager import AgentManager
 from acd_appservice.room_manager import RoomManager
-from acd_appservice.web.provisioning_api import ProvisioningAPI
 
 from .commands.handler import command_processor
 from .commands.typehint import CommandEvent
@@ -41,7 +40,6 @@ class MatrixHandler:
 
     agent_manager: AgentManager
     room_manager: RoomManager
-    provisioning_api: ProvisioningAPI
 
     def __init__(
         self,
@@ -339,6 +337,9 @@ class MatrixHandler:
             self.log.warning(f"I can't get an intent for the room {room_id}")
             return
 
+        # Actualizamos el intent del agent_manager, dado el nuevo intent encontrado
+        self.agent_manager.intent = intent
+
         # Ignore messages from whatsapp bots
         if sender == self.config["bridges.mautrix.mxid"]:
             return
@@ -352,7 +353,6 @@ class MatrixHandler:
             args = text.split()
             command_event = CommandEvent(
                 agent_manager=self.agent_manager,
-                intent=intent,
                 cmd=args[0],
                 args=args,
                 sender=sender,

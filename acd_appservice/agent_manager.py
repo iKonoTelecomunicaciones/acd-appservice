@@ -13,12 +13,14 @@ from mautrix.util.logging import TraceLogger
 
 from acd_appservice.puppet import Puppet
 
+from .http_client import HTTPClient
 from .room_manager import RoomManager
 
 
 class AgentManager:
     log: TraceLogger = logging.getLogger("acd.agent_manager")
     intent: IntentAPI
+    client: HTTPClient
     room_manager: RoomManager
     # last invited agent per control room (i.e. campaigns)
     CURRENT_AGENT = {}
@@ -503,15 +505,19 @@ class AgentManager:
 
         """
         data = {"user_id": agent_id}
-        try:
-            api = self.intent.bot.api if self.intent.bot else self.intent.api
-            await api.request(
-                method=Method.POST,
-                path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
-                content=data,
+        api = self.intent.bot.api if self.intent.bot else self.intent.api
+        for attempt in range(0, 10):
+            self.log.debug(
+                f"Attempt # {attempt} trying the force join room: {room_id} :: agent: {agent_id}"
             )
-        except IntentError as e:
-            self.log.error(e)
+            try:
+                await api.request(
+                    method=Method.POST,
+                    path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
+                    content=data,
+                )
+            except Exception as e:
+                self.log.warning(e)
 
     async def show_no_agents_message(self, customer_room_id, campaign_room_id) -> None:
         """It asks the menubot to show a message to the customer saying that there are no agents available

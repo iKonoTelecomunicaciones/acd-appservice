@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-import logging
 from typing import Type
-
-from markdown import markdown
-from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
 from ..commands.typehint import CommandEvent
@@ -80,7 +76,9 @@ async def command_processor(cmd_evt: CommandEvent):
     elif cmd_evt.args[0] == "version":
         await cmd_evt.reply(text=f"ACD AS :: v{VERSION}")
     elif cmd_evt.cmd in command_handlers:
-        await cmd_evt.reply(await command_handlers[cmd_evt.cmd]._handler(cmd_evt))
+        result = await command_handlers[cmd_evt.cmd]._handler(cmd_evt)
+        if result:
+            return result
     else:
         await cmd_evt.reply("Unrecognized command")
 
@@ -106,4 +104,4 @@ def make_help_text(command_prefix: str) -> str:
     for cmd in command_handlers:
         text = f"{text} * **{command_prefix}** {command_handlers[cmd].help} \n"
 
-    return markdown(text)
+    return text

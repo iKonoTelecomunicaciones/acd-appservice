@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import logging
 from typing import List
 
-from mautrix.appservice import IntentAPI
-from mautrix.types import RoomID, UserID
+from markdown import markdown
+from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent, UserID
 from mautrix.util.logging import TraceLogger
 
 from acd_appservice.agent_manager import AgentManager
@@ -11,10 +12,9 @@ from acd_appservice.agent_manager import AgentManager
 
 class CommandEvent:
     agent_manager: AgentManager
-    log: TraceLogger
-    intent: IntentAPI
+    log: TraceLogger = logging.getLogger("acd.cmd")
     sender: UserID
-    room_id: RoomID
+    room_id: RoomID | None
     text: str
     command_prefix: str
     cmd: str
@@ -22,24 +22,23 @@ class CommandEvent:
 
     def __init__(
         self,
-        cmd,
+        cmd: str,
         agent_manager: AgentManager,
         sender: UserID,
         room_id: RoomID,
         text: str,
-        intent: IntentAPI,
         args: List[str] = None,
     ):
         self.cmd = cmd
         self.log = self.log.getChild(self.cmd)
         self.agent_manager = agent_manager
         self.config = agent_manager.config
+        self.intent = agent_manager.intent
         self.command_prefix = self.config["bridge.command_prefix"]
         self.sender = sender
         self.room_id = room_id
         self.text = text
         self.args = args
-        self.intent = intent
 
     async def reply(self, text: str) -> None:
         """It sends a message to the room that the event was received from
@@ -50,10 +49,18 @@ class CommandEvent:
             The text to send.
 
         """
-        if not text:
+        if not text or not self.room_id:
             return
 
         try:
-            await self.intent.send_notice(room_id=self.room_id, text=text, html=text)
+            html = markdown(text)
+            content = TextMessageEventContent(
+                msgtype=MessageType.NOTICE, body=text, format=Format.HTML, formatted_body=html
+            )
+
+            await self.intent.send_message(
+                room_id=self.room_id,
+                content=content,
+            )
         except Exception as e:
             self.log.exception(e)
