@@ -53,6 +53,7 @@ class CommandEvent:
             return
 
         try:
+            # Sending a message to the room that the event was received from.
             html = markdown(text)
             content = TextMessageEventContent(
                 msgtype=MessageType.NOTICE, body=text, format=Format.HTML, formatted_body=html

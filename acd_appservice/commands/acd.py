@@ -13,9 +13,14 @@ from .typehint import CommandEvent
     help_args="<_customer_room_id_> <_campaign_room_id_> <_joined_message_>",
 )
 async def acd(evt: CommandEvent) -> str:
-    """
-    Command that allows to distribute the chat of a client,
-    optionally a campaign room and a joining message can be given.
+    """It allows to distribute the chat of a client,
+    optionally a campaign room and a joining message can be given
+
+    Parameters
+    ----------
+    evt : CommandEvent
+        Incoming CommandEvent
+
     """
 
     if len(evt.args) < 2:

@@ -492,7 +492,8 @@ class AgentManager:
     async def force_join_agent(
         self, room_id: RoomID, agent_id: UserID, room_alias: RoomAlias = None
     ) -> None:
-        """It takes a room ID, an agent ID, and a room alias (optional) and forces the agent to join the room
+        """It takes a room ID, an agent ID, and a room alias (optional) and
+        forces the agent to join the room
 
         Parameters
         ----------
@@ -504,8 +505,8 @@ class AgentManager:
             The alias of the room to join.
 
         """
-        data = {"user_id": agent_id}
         api = self.intent.bot.api if self.intent.bot else self.intent.api
+        # Trying to join a room.
         for attempt in range(0, 10):
             self.log.debug(
                 f"Attempt # {attempt} trying the force join room: {room_id} :: agent: {agent_id}"
@@ -514,7 +515,7 @@ class AgentManager:
                 await api.request(
                     method=Method.POST,
                     path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
-                    content=data,
+                    content={"user_id": agent_id},
                 )
             except Exception as e:
                 self.log.warning(e)

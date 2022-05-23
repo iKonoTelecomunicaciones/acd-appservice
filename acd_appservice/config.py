@@ -28,3 +28,4 @@ class Config(BaseBridgeConfig):
         copy("acd.force_join")
         copy("acd.agent_invite_timeout")
         copy("acd.search_pending_rooms_interval")
+        copy("acd.frontend_command_prefix")

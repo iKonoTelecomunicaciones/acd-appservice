@@ -10,11 +10,10 @@ from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from mautrix.util.logging import TraceLogger
 
-from acd_appservice.agent_manager import AgentManager
-from acd_appservice.commands.handler import command_processor
-from acd_appservice.commands.typehint import CommandEvent
-
 from .. import VERSION
+from ..agent_manager import AgentManager
+from ..commands.handler import command_processor
+from ..commands.typehint import CommandEvent
 from ..config import Config
 from ..http_client import HTTPClient, ProvisionBridge
 from ..puppet import Puppet
@@ -262,7 +261,10 @@ class ProvisioningAPI:
         if not request.body_exists:
             return web.json_response(**NOT_DATA)
 
-        data = await request.json()
+        data: Dict = await request.json()
+
+        if data.get("phone_number") and data.get("template_message") and data.get("template_name"):
+            return web.json_response(**NOT_DATA)
 
         result = await self.validate_email(user_email=data.get("user_email"))
 
@@ -282,6 +284,7 @@ class ProvisioningAPI:
             "template_name": data.get("template_name"),
         }
 
+        # Creating a fake command event and passing it to the command processor.
         fake_command = f"pm {json.dumps(incoming_params)}"
         cmd_evt = CommandEvent(
             cmd="pm",
@@ -292,7 +295,7 @@ class ProvisioningAPI:
         )
         cmd_evt.intent = puppet.intent
         result = await command_processor(cmd_evt=cmd_evt)
-        return web.json_response(data=result, status=200)
+        return web.json_response(**result)
 
     async def validate_email(self, user_email: str) -> Dict:
         """It checks if the email is valid

@@ -1,4 +1,4 @@
-mautrix>=0.16.3
+mautrix==0.16.3
 ruamel.yaml>=0.15.35,<0.18
 aiohttp>=3,<4
 shortuuid==1.0.8
