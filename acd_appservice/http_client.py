@@ -132,7 +132,6 @@ class ProvisionBridge(BaseClass):
             A tuple of the status code and the data.
 
         """
-
         response = await self.session.post(
             url=f"{self.url_base}/v1/pm/{phone}", headers=self.headers, params={"user_id": user_id}
         )

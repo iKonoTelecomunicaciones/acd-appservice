@@ -225,8 +225,16 @@ class MatrixHandler:
         self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
 
         # Verificamos que el usuario que se va a unir sea un acd*
+        # y que no haya otro puppet en la sala
         # para hacerle un auto-join
-        if not Puppet.get_id_from_mxid(mxid=evt.state_key):
+        puppet_inside = await Puppet.get_customer_room_puppet(room_id=evt.room_id)
+        if not Puppet.get_id_from_mxid(mxid=evt.state_key) or puppet_inside:
+            detail = (
+                f"There is already a puppet {puppet_inside.custom_mxid} in the room {evt.room_id}"
+                if puppet_inside
+                else f"{evt.state_key} is not a puppet"
+            )
+            self.log.warning(detail)
             return
 
         # Obtenemos el intent del puppet

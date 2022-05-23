@@ -257,13 +257,60 @@ class ProvisioningAPI:
         )
 
     async def pm(self, request: web.Request) -> web.Response:
+        """
+        Command that allows send a message to a customer.
+        ---
+        summary:    It takes a phone number and a message,
+                    and sends the message to the phone number.
+        tags:
+            - users
 
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_email:
+                    type: string
+                  phone_number:
+                    type: string
+                  template_message:
+                    type: string
+                  template_name:
+                    type: string
+                  agent_id:
+                    type: string
+                example:
+                    user_email: "nobody@somewhere.com"
+                    phone_number: "573123456789"
+                    template_message: "Hola iKono!!"
+                    template_name: "text"
+                    agent_id: "@agente1:somewhere.com"
+
+        responses:
+            '200':
+                $ref: '#/components/responses/PmSuccessful'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+            '422':
+                $ref: '#/components/responses/NotSendMessage'
+        """
         if not request.body_exists:
             return web.json_response(**NOT_DATA)
 
         data: Dict = await request.json()
 
-        if data.get("phone_number") and data.get("template_message") and data.get("template_name"):
+        if not (
+            data.get("phone_number")
+            and data.get("template_message")
+            and data.get("template_name")
+            and data.get("agent_id")
+        ):
             return web.json_response(**NOT_DATA)
 
         result = await self.validate_email(user_email=data.get("user_email"))
@@ -293,6 +340,7 @@ class ProvisioningAPI:
             room_id=None,
             text=fake_command,
         )
+        cmd_evt.agent_manager.intent = puppet.intent
         cmd_evt.intent = puppet.intent
         result = await command_processor(cmd_evt=cmd_evt)
         return web.json_response(**result)

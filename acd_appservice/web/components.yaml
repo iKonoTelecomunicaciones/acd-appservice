@@ -30,6 +30,22 @@ components:
         success:
           type: boolean
 
+    Pm:
+      type: object
+      properties:
+        sender_id:
+          type: string
+        phone_number:
+          type: string
+        room_id:
+          type: string
+        agent_displayname:
+          type: string
+        reply:
+          type: string
+        status:
+          type: integer
+
     QrFail:
       type: object
       properties:
@@ -81,6 +97,36 @@ components:
             errcode: "login timed out"
           status: 422
 
+    PmOk:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Pm'
+        status:
+          type: integer
+      example:
+          sender_id: "@agente1:darknet"
+          phone_number: "+573058790290"
+          room_id: "!jIqZOpixKgUIplraWg:darknet"
+          agent_displayname: "agente1"
+          reply: "You are already in room with [number], message was sent."
+          status: 200
+
+    PmFail:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Pm'
+        status:
+          type: integer
+      example:
+          sender_id: "@agente1:darknet"
+          phone_number: "+57305879"
+          room_id: null
+          agent_displayname: null
+          reply: "The server said [number] is not on WhatsApp"
+          status: 422
+
   # Respuestas de la API
   responses:
     UserCreated:
@@ -89,6 +135,13 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Success'
+
+    PmSuccessful:
+      description: Pm successful.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PmOk'
 
     QrGenerated:
       description: QR has been generated.
@@ -138,6 +191,13 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+
+    NotSendMessage:
+      description: Not send message.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PmFail'
 
     TooManyRequests:
       description: You already have a pending request.

@@ -73,7 +73,7 @@ async def pm(evt: CommandEvent) -> str:
             f"{evt.config['acd.frontend_command_prefix']} pm {json.dumps(return_params)}"
         )
         await evt.reply(text=cmd_front_msg)
-        return {"data": return_params, "status": 500}
+        return {"data": return_params, "status": 422}
 
     # Sending a message to the customer.
     session: ClientSession = evt.agent_manager.client.session
@@ -101,12 +101,12 @@ async def pm(evt: CommandEvent) -> str:
             # If the agent is already in the room, it returns a message to the frontend.
             if agent_id == evt.sender:
                 return_params["reply"] = "You are already in room with [number], message was sent."
-
+            else:
+                await evt.agent_manager.force_join_agent(
+                    room_id=data.get("room_id"), agent_id=evt.sender
+                )
             # Joining the agent to the room.
             agent_displayname = await evt.intent.get_displayname(user_id=evt.sender)
-            await evt.agent_manager.force_join_agent(
-                room_id=data.get("room_id"), agent_id=evt.sender
-            )
 
             await evt.intent.send_text(
                 room_id=data.get("room_id"), text=template_message, html=markdown(template_message)
