@@ -117,7 +117,7 @@ class ProvisionBridge(BaseClass):
                         await ws_customer.close()
                     break
 
-    async def pm(self, user_id: UserID, phone: str) -> tuple:
+    async def pm(self, user_id: UserID, phone: str) -> tuple[int, Dict]:
         """It sends a private message to a user.
 
         Parameters

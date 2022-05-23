@@ -8,6 +8,7 @@ from typing import Dict
 
 from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
+from mautrix.types import Format, MediaMessageEventContent, MessageType, TextMessageEventContent
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
@@ -46,6 +47,7 @@ class ProvisioningAPI:
     config: Config
     client: HTTPClient
     agent_manager: AgentManager
+    bridge_connector: ProvisionBridge
 
     def __init__(self) -> None:
         self.app = web.Application()
@@ -253,10 +255,9 @@ class ProvisioningAPI:
             return web.json_response(**USER_DOESNOT_EXIST)
 
         # Creamos una conector con el bridge
-        bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
         # Creamos un WebSocket para conectarnos con el bridge
         return web.json_response(
-            **await bridge_connector.ws_connect(user_id=puppet.custom_mxid, easy_mode=True)
+            **await self.bridge_connector.ws_connect(user_id=puppet.custom_mxid, easy_mode=True)
         )
 
     async def pm(self, request: web.Request) -> web.Response:
@@ -349,7 +350,6 @@ class ProvisioningAPI:
         result = await command_processor(cmd_evt=cmd_evt)
         return web.json_response(**result)
 
-
     async def send_message(self, request: web.Request) -> web.Response:
         """
         Send a message to the given whatsapp number (create a room or send to the existing room)
@@ -399,9 +399,8 @@ class ProvisioningAPI:
 
         data: Dict = await request.json()
 
-
         data = await request.json()
-        if not(
+        if not (
             data.get("phone")
             and data.get("message")
             and data.get("msg_type")
@@ -417,7 +416,7 @@ class ProvisioningAPI:
         if not data.get("msg_type") in SUPPORTED_MESSAGE_TYPES:
             return web.json_response(**MESSAGE_TYPE_NOT_SUPPORTED)
 
-
+        email = data.get("user_email").lower()
 
         result = await self.validate_email(user_email=email)
 
@@ -428,74 +427,44 @@ class ProvisioningAPI:
         if not (phone.isdigit() and 5 <= len(phone) <= 15):
             return web.json_response(**INVALID_PHONE)
 
-        # Fin región de validación
-
         msg_type = data.get("msg_type")
         message = data.get("message")
         phone = phone if phone.startswith("+") else f"+{phone}"
-        user = await User.get_by_email(email)
 
-        pending_promise = self.loop.create_future()
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_by_email(email)
+        status, response = await self.bridge_connector.pm(user_id=puppet.custom_mxid, phone=phone)
+        if response.get("error"):
+            return web.json_response(data=response, status=status)
 
-        # cargamos el diccionario con los datos necesarios para procesar las solicitudes
-        # de envió de mensaje
-        MESSAGE_PENDING_PROMISES[phone] = {
-            "user": user,
-            "message": message,
-            "msg_type": None,
-            "pending_promise": pending_promise,
-        }
-
-        # Se agrega la promesa en este diccionario para poder hacer seguimiento
-        # al usuario en cuestión y saber si esta logueado
-        LOGOUT_PENDING_PROMISES[user.room_id] = pending_promise
+        customer_room_id = response.get("room_id")
 
         if msg_type == "text":
-            MESSAGE_PENDING_PROMISES[phone]["msg_type"] = MessageType.TEXT
-        # TODO agregar los diferentes tipos de mensaje en las siguientes lineas
-        # if msg_type == "audio":
-        #     MESSAGE_PENDING_PROMISES[phone]["msg_type"] = MessageType.AUDIO
-        # if msg_type == "image":
-        #     MESSAGE_PENDING_PROMISES[phone]["msg_type"] = MessageType.IMAGE
+            content = TextMessageEventContent(
+                msgtype=MessageType.TEXT,
+                body=message,
+                format=Format.HTML,
+                formatted_body=message,
+            )
+        if msg_type == "PDF":
+            content = MediaMessageEventContent(
+                msgtype=MessageType.FILE,
+                body="text",
+            )
+        try:
+            event_id = await puppet.intent.send_message(room_id=customer_room_id, content=content)
+        except Exception as e:
+            self.log.exception(e)
+            return web.json_response(**SERVER_ERROR)
 
-        # Creamos el comando que será enviado a la sala del user para
-        pm_command = f"{self.config['bridge.commands.create_room']} {phone}"
-        await user.send_command(pm_command)
-
-        # Se crea la tarea que va a supervisar los notices generados por el bridge
-        promise_response = await asyncio.create_task(self.check_promise(phone, pending_promise))
-
-        # Cuando el promise_response este lleno, podrá tener diferentes datos
-        # promise_response = {
-        #     "state": True, # Si llega true es porque todo salió bien, falso trae algún error
-        #     "message": "Any message", # Los mensajes capturados cuando se resuelve la promesa
-        # }
-        if promise_response.get("state"):
-            response = {
-                "data": {"message": promise_response.get("message")},
-                "status": 200,
-            }
-        elif promise_response.get("msgtype") == "not_logged_in":
-            response = {
-                "data": {
-                    "message": promise_response.get("response"),
-                },
-                "status": 422,
-            }
-        else:
-            response = {
-                "data": {
-                    "message": promise_response.get("message")
-                    if promise_response.get("message")
-                    else "WhatsApp server has not responded"
-                },
-                "status": 422,
-            }
-
-        del MESSAGE_PENDING_PROMISES[phone]
-        del LOGOUT_PENDING_PROMISES[user.room_id]
-
-        return web.json_response(**response)
+        return web.json_response(
+            data={
+                "detail": "The message has been sent (probably)",
+                "event_id": event_id,
+                "room_id": customer_room_id,
+            },
+            status=201,
+        )
 
     async def validate_email(self, user_email: str) -> Dict:
         """It checks if the email is valid
@@ -607,4 +576,3 @@ class ProvisioningAPI:
     #     del LOGOUT_PENDING_PROMISES[user.room_id]
 
     #     return web.json_response(**response)
-
