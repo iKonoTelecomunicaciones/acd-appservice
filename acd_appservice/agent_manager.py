@@ -517,8 +517,11 @@ class AgentManager:
                     path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
                     content={"user_id": agent_id},
                 )
+                break
             except Exception as e:
-                self.log.warning(e)
+                self.log.exception(e)
+
+            await sleep(1)
 
     async def show_no_agents_message(self, customer_room_id, campaign_room_id) -> None:
         """It asks the menubot to show a message to the customer saying that there are no agents available

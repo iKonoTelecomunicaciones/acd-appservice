@@ -314,12 +314,12 @@ class ProvisioningAPI:
         ):
             return web.json_response(**REQUIRED_VARIABLES)
 
-        result = await self.validate_email(user_email=data.get("user_email"))
-
-        if result:
-            return web.json_response(**result)
-
         email = data.get("user_email").lower()
+        error_result = await self.validate_email(user_email=email)
+
+        if error_result:
+            return web.json_response(**error_result)
+
 
         # Obtenemos el puppet de este email si existe
         puppet: Puppet = await Puppet.get_by_email(email)
