@@ -83,7 +83,6 @@ async def pm(evt: CommandEvent) -> str:
     if not status in [200, 201]:
         evt.log.error(data)
 
-
     # Checking if the room_id is set,
     # if it is, it gets the agent_id from the room_id,
     # if the agent_id is set and it is not the sender,
