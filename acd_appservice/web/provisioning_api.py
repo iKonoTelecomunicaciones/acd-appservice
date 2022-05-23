@@ -61,9 +61,12 @@ class ProvisioningAPI:
         )
 
         swagger.add_post(path="/v1/create_user", handler=self.create_user)
-        swagger.add_post(path="/v1/pm", handler=self.pm)
+        swagger.add_post(path="/v1/send_message", handler=self.send_message)
         swagger.add_get(path="/v1/link_phone", handler=self.link_phone, allow_head=False)
         swagger.add_get(path="/v1/ws_link_phone", handler=self.ws_link_phone, allow_head=False)
+
+        # Commads enpoint
+        swagger.add_post(path="/v1/pm", handler=self.pm)
 
         self.loop = asyncio.get_running_loop()
 
@@ -309,9 +312,10 @@ class ProvisioningAPI:
             data.get("phone_number")
             and data.get("template_message")
             and data.get("template_name")
+            and data.get("user_email")
             and data.get("agent_id")
         ):
-            return web.json_response(**NOT_DATA)
+            return web.json_response(**REQUIRED_VARIABLES)
 
         result = await self.validate_email(user_email=data.get("user_email"))
 
@@ -344,6 +348,154 @@ class ProvisioningAPI:
         cmd_evt.intent = puppet.intent
         result = await command_processor(cmd_evt=cmd_evt)
         return web.json_response(**result)
+
+
+    async def send_message(self, request: web.Request) -> web.Response:
+        """
+        Send a message to the given whatsapp number (create a room or send to the existing room)
+        ---
+        summary: Send a message from the user account to a WhatsApp phone number.
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `phone`, `message`, `msg_type` (only supports [`text`]), `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  phone:
+                    type: string
+                  message:
+                    type: string
+                  msg_type:
+                    type: string
+                  user_email:
+                    type: string
+                example:
+                    phone: "573123456789"
+                    message: Hello World!
+                    msg_type: text
+                    user_email: nobody@somewhere.com
+
+        responses:
+            '200':
+                $ref: '#/components/responses/OK'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+            '422':
+                $ref: '#/components/responses/ErrorData'
+            '429':
+                $ref: '#/components/responses/TooManyRequests'
+        """
+
+        # Región para validar que la información enviada sea completa y correcta
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+
+        data = await request.json()
+        if not(
+            data.get("phone")
+            and data.get("message")
+            and data.get("msg_type")
+            and data.get("user_email")
+        ):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        result = await self.validate_email(user_email=data.get("user_email"))
+
+        if result:
+            return web.json_response(**result)
+
+        if not data.get("msg_type") in SUPPORTED_MESSAGE_TYPES:
+            return web.json_response(**MESSAGE_TYPE_NOT_SUPPORTED)
+
+
+
+        result = await self.validate_email(user_email=email)
+
+        if result:
+            return web.json_response(**result)
+
+        phone = str(data.get("phone"))
+        if not (phone.isdigit() and 5 <= len(phone) <= 15):
+            return web.json_response(**INVALID_PHONE)
+
+        # Fin región de validación
+
+        msg_type = data.get("msg_type")
+        message = data.get("message")
+        phone = phone if phone.startswith("+") else f"+{phone}"
+        user = await User.get_by_email(email)
+
+        pending_promise = self.loop.create_future()
+
+        # cargamos el diccionario con los datos necesarios para procesar las solicitudes
+        # de envió de mensaje
+        MESSAGE_PENDING_PROMISES[phone] = {
+            "user": user,
+            "message": message,
+            "msg_type": None,
+            "pending_promise": pending_promise,
+        }
+
+        # Se agrega la promesa en este diccionario para poder hacer seguimiento
+        # al usuario en cuestión y saber si esta logueado
+        LOGOUT_PENDING_PROMISES[user.room_id] = pending_promise
+
+        if msg_type == "text":
+            MESSAGE_PENDING_PROMISES[phone]["msg_type"] = MessageType.TEXT
+        # TODO agregar los diferentes tipos de mensaje en las siguientes lineas
+        # if msg_type == "audio":
+        #     MESSAGE_PENDING_PROMISES[phone]["msg_type"] = MessageType.AUDIO
+        # if msg_type == "image":
+        #     MESSAGE_PENDING_PROMISES[phone]["msg_type"] = MessageType.IMAGE
+
+        # Creamos el comando que será enviado a la sala del user para
+        pm_command = f"{self.config['bridge.commands.create_room']} {phone}"
+        await user.send_command(pm_command)
+
+        # Se crea la tarea que va a supervisar los notices generados por el bridge
+        promise_response = await asyncio.create_task(self.check_promise(phone, pending_promise))
+
+        # Cuando el promise_response este lleno, podrá tener diferentes datos
+        # promise_response = {
+        #     "state": True, # Si llega true es porque todo salió bien, falso trae algún error
+        #     "message": "Any message", # Los mensajes capturados cuando se resuelve la promesa
+        # }
+        if promise_response.get("state"):
+            response = {
+                "data": {"message": promise_response.get("message")},
+                "status": 200,
+            }
+        elif promise_response.get("msgtype") == "not_logged_in":
+            response = {
+                "data": {
+                    "message": promise_response.get("response"),
+                },
+                "status": 422,
+            }
+        else:
+            response = {
+                "data": {
+                    "message": promise_response.get("message")
+                    if promise_response.get("message")
+                    else "WhatsApp server has not responded"
+                },
+                "status": 422,
+            }
+
+        del MESSAGE_PENDING_PROMISES[phone]
+        del LOGOUT_PENDING_PROMISES[user.room_id]
+
+        return web.json_response(**response)
 
     async def validate_email(self, user_email: str) -> Dict:
         """It checks if the email is valid
@@ -456,139 +608,3 @@ class ProvisioningAPI:
 
     #     return web.json_response(**response)
 
-    # async def send_message(self, request: web.Request) -> web.Response:
-    #     """
-    #     Send a message to the given whatsapp number (create a room or send to the existing room)
-    #     ---
-    #     summary: Send a message from the user account to a WhatsApp phone number.
-    #     tags:
-    #         - users
-
-    #     requestBody:
-    #       required: true
-    #       description: A json with `phone`, `message`, `msg_type` (only supports [`text`]), `user_email`
-    #       content:
-    #         application/json:
-    #           schema:
-    #             type: object
-    #             properties:
-    #               phone:
-    #                 type: string
-    #               message:
-    #                 type: string
-    #               msg_type:
-    #                 type: string
-    #               user_email:
-    #                 type: string
-    #             example:
-    #                 phone: "573123456789"
-    #                 message: Hello World!
-    #                 msg_type: text
-    #                 user_email: nobody@somewhere.com
-
-    #     responses:
-    #         '200':
-    #             $ref: '#/components/responses/OK'
-    #         '400':
-    #             $ref: '#/components/responses/BadRequest'
-    #         '404':
-    #             $ref: '#/components/responses/NotExist'
-    #         '422':
-    #             $ref: '#/components/responses/ErrorData'
-    #         '429':
-    #             $ref: '#/components/responses/TooManyRequests'
-    #     """
-
-    #     # Región para validar que la información enviada sea completa y correcta
-    #     if not request.body_exists:
-    #         return web.json_response(**NOT_DATA)
-
-    #     data = await request.json()
-    #     if (
-    #         not data.get("phone")
-    #         or not data.get("message")
-    #         or not data.get("user_email")
-    #         or not data.get("msg_type")
-    #     ):
-    #         return web.json_response(**REQUIRED_VARIABLES)
-    #     if not data.get("msg_type") in SUPPORTED_MESSAGE_TYPES:
-    #         return web.json_response(**MESSAGE_TYPE_NOT_SUPPORTED)
-
-    #     email = data.get("user_email").lower()
-    #     if not re.match(self.config["utils.regex_email"], email):
-    #         return web.json_response(**INVALID_EMAIL)
-    #     if not await User.user_exists(email):
-    #         return web.json_response(**USER_DOESNOT_EXIST)
-
-    #     phone = str(data.get("phone"))
-    #     if not (phone.isdigit() and 5 <= len(phone) <= 15):
-    #         return web.json_response(**INVALID_PHONE)
-
-    #     # Fin región de validación
-
-    #     msg_type = data.get("msg_type")
-    #     message = data.get("message")
-    #     phone = phone if phone.startswith("+") else f"+{phone}"
-    #     user = await User.get_by_email(email)
-
-    #     pending_promise = self.loop.create_future()
-
-    #     # cargamos el diccionario con los datos necesarios para procesar las solicitudes
-    #     # de envió de mensaje
-    #     MESSAGE_PENDING_PROMISES[phone] = {
-    #         "user": user,
-    #         "message": message,
-    #         "msg_type": None,
-    #         "pending_promise": pending_promise,
-    #     }
-
-    #     # Se agrega la promesa en este diccionario para poder hacer seguimiento
-    #     # al usuario en cuestión y saber si esta logueado
-    #     LOGOUT_PENDING_PROMISES[user.room_id] = pending_promise
-
-    #     if msg_type == "text":
-    #         MESSAGE_PENDING_PROMISES[phone]["msg_type"] = MessageType.TEXT
-    #     # TODO agregar los diferentes tipos de mensaje en las siguientes lineas
-    #     # if msg_type == "audio":
-    #     #     MESSAGE_PENDING_PROMISES[phone]["msg_type"] = MessageType.AUDIO
-    #     # if msg_type == "image":
-    #     #     MESSAGE_PENDING_PROMISES[phone]["msg_type"] = MessageType.IMAGE
-
-    #     # Creamos el comando que será enviado a la sala del user para
-    #     pm_command = f"{self.config['bridge.commands.create_room']} {phone}"
-    #     await user.send_command(pm_command)
-
-    #     # Se crea la tarea que va a supervisar los notices generados por el bridge
-    #     promise_response = await asyncio.create_task(self.check_promise(phone, pending_promise))
-
-    #     # Cuando el promise_response este lleno, podrá tener diferentes datos
-    #     # promise_response = {
-    #     #     "state": True, # Si llega true es porque todo salió bien, falso trae algún error
-    #     #     "message": "Any message", # Los mensajes capturados cuando se resuelve la promesa
-    #     # }
-    #     if promise_response.get("state"):
-    #         response = {
-    #             "data": {"message": promise_response.get("message")},
-    #             "status": 200,
-    #         }
-    #     elif promise_response.get("msgtype") == "not_logged_in":
-    #         response = {
-    #             "data": {
-    #                 "message": promise_response.get("response"),
-    #             },
-    #             "status": 422,
-    #         }
-    #     else:
-    #         response = {
-    #             "data": {
-    #                 "message": promise_response.get("message")
-    #                 if promise_response.get("message")
-    #                 else "WhatsApp server has not responded"
-    #             },
-    #             "status": 422,
-    #         }
-
-    #     del MESSAGE_PENDING_PROMISES[phone]
-    #     del LOGOUT_PENDING_PROMISES[user.room_id]
-
-    #     return web.json_response(**response)
