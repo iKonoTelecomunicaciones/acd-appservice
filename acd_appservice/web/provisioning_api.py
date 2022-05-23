@@ -309,9 +309,10 @@ class ProvisioningAPI:
             data.get("phone_number")
             and data.get("template_message")
             and data.get("template_name")
+            and data.get("user_email")
             and data.get("agent_id")
         ):
-            return web.json_response(**NOT_DATA)
+            return web.json_response(**REQUIRED_VARIABLES)
 
         result = await self.validate_email(user_email=data.get("user_email"))
 
