@@ -27,6 +27,7 @@ async def acd(evt: CommandEvent) -> str:
         detail = "acd command incomplete arguments"
         evt.log.error(detail)
         evt.reply(text=detail)
+        return
 
     customer_room_id = evt.args[1]
     campaign_room_id = evt.args[2] if len(evt.args) >= 3 else None

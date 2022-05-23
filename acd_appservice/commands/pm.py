@@ -36,6 +36,7 @@ async def pm(evt: CommandEvent) -> str:
         detail = "pm command incomplete arguments"
         evt.log.error(detail)
         evt.reply(text=detail)
+        return
 
     # Getting the arguments of the command.
     incoming_params = (evt.text[len(evt.cmd) :]).strip()
@@ -55,6 +56,7 @@ async def pm(evt: CommandEvent) -> str:
         "reply": None,
     }
 
+    # Es el comando que se le enviara al front.
     cmd_front_msg = None
     agent_displayname = None
 
@@ -70,7 +72,7 @@ async def pm(evt: CommandEvent) -> str:
     # Sending a message to the frontend.
     if return_params.get("reply"):
         cmd_front_msg = (
-            f"{evt.config['acd.frontend_command_prefix']} pm {json.dumps(return_params)}"
+            f"{evt.config['acd.frontend_command_prefix']} {evt.cmd} {json.dumps(return_params)}"
         )
         await evt.reply(text=cmd_front_msg)
         return {"data": return_params, "status": 422}
@@ -106,10 +108,11 @@ async def pm(evt: CommandEvent) -> str:
             if agent_id == evt.sender:
                 return_params["reply"] = "You are already in room with [number], message was sent."
             else:
+                # Joining the agent to the room.
                 await evt.agent_manager.force_join_agent(
                     room_id=data.get("room_id"), agent_id=evt.sender
                 )
-            # Joining the agent to the room.
+
             agent_displayname = await evt.intent.get_displayname(user_id=evt.sender)
 
             await evt.intent.send_text(
@@ -143,7 +146,7 @@ async def pm(evt: CommandEvent) -> str:
         return_params["reply"] = "Now you are joined in room with [number], message was sent."
 
     # Sending a message to the frontend.
-    cmd_front_msg = f"{evt.config['acd.frontend_command_prefix']} pm {json.dumps(return_params)}"
+    cmd_front_msg = f"{evt.config['acd.frontend_command_prefix']} {evt.cmd} {json.dumps(return_params)}"
     await evt.reply(text=cmd_front_msg)
 
     # Returning a dict with two keys:

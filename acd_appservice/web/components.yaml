@@ -106,7 +106,7 @@ components:
           type: integer
       example:
           sender_id: "@agente1:darknet"
-          phone_number: "+573058790290"
+          phone_number: "+573123456789"
           room_id: "!jIqZOpixKgUIplraWg:darknet"
           agent_displayname: "agente1"
           reply: "You are already in room with [number], message was sent."
