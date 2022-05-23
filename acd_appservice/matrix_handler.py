@@ -227,6 +227,9 @@ class MatrixHandler:
         # Verificamos que el usuario que se va a unir sea un acd*
         # y que no haya otro puppet en la sala
         # para hacerle un auto-join
+        # NOTA: Si hay otro puppet en la sala, entonces tendremos problemas
+        # ya que no pueden haber dos usuarios acd*  en una misma sala, esto afectaría
+        # el rendimiento del software
         puppet_inside = await Puppet.get_customer_room_puppet(room_id=evt.room_id)
         if not Puppet.get_id_from_mxid(mxid=evt.state_key) or puppet_inside:
             detail = (

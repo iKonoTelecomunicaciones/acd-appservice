@@ -83,10 +83,15 @@ async def pm(evt: CommandEvent) -> str:
     if not status in [200, 201]:
         evt.log.error(data)
 
-    # Checking if the room_id is already in the database,
-    # if it is, it checks if the agent is already in the room,
-    # if it is, it returns a message to the frontend, if not,
-    # it joins the agent to the room and sends the message.
+
+    # Checking if the room_id is set,
+    # if it is, it gets the agent_id from the room_id,
+    # if the agent_id is set and it is not the sender,
+    # it returns a message to the frontend,
+    # if the agent_id is set and it is the sender,
+    # it returns a message to the frontend,
+    # if the agent_id is not set,
+    # it joins the agent to the room and sends a message to the room.
     customer_room_id = data.get("room_id")
     if customer_room_id:
         agent_id = await evt.agent_manager.get_room_agent(room_id=customer_room_id)
