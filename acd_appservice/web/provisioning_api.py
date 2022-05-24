@@ -443,7 +443,7 @@ class ProvisioningAPI:
 
         # Aqui se pueden tener los demas tipos de mensaje cuando se piensen implementar
         # if msg_type == "image":
-        #     content = TextMessageEventContent(
+        #     content = MediaMessageEventContent(
         #         msgtype=MessageType.IMAGE,
         #         body=message,
         #         format=Format.HTML,
