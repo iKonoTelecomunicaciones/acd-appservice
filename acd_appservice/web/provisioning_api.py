@@ -9,13 +9,7 @@ from typing import Dict
 from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from markdown import markdown
-from mautrix.types import (
-    ContentURI,
-    Format,
-    MediaMessageEventContent,
-    MessageType,
-    TextMessageEventContent,
-)
+from mautrix.types import Format, MessageType, TextMessageEventContent
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
@@ -29,14 +23,11 @@ from . import SUPPORTED_MESSAGE_TYPES
 from .error_responses import (
     INVALID_EMAIL,
     INVALID_PHONE,
-    MESSAGE_NOT_SENT,
     MESSAGE_TYPE_NOT_SUPPORTED,
     NOT_DATA,
     NOT_EMAIL,
-    REQUEST_ALREADY_EXISTS,
     REQUIRED_VARIABLES,
     SERVER_ERROR,
-    TIMEOUT_ERROR,
     USER_ALREADY_EXISTS,
     USER_DOESNOT_EXIST,
 )
@@ -114,10 +105,10 @@ class ProvisioningAPI:
 
         data = await request.json()
 
-        result = await self.validate_email(user_email=data.get("user_email"))
+        error_result = await self.validate_email(user_email=data.get("user_email"))
 
-        if result:
-            return web.json_response(**result)
+        if error_result:
+            return web.json_response(**error_result)
 
         email = data.get("user_email").lower()
 
@@ -206,10 +197,10 @@ class ProvisioningAPI:
 
         user_email = request.rel_url.query.get("user_email")
 
-        result = await self.validate_email(user_email=user_email)
+        error_result = await self.validate_email(user_email=user_email)
 
-        if result:
-            return web.json_response(**result)
+        if error_result:
+            return web.json_response(**error_result)
 
         puppet: Puppet = await Puppet.get_by_email(user_email)
         if not puppet:
@@ -252,10 +243,10 @@ class ProvisioningAPI:
 
         user_email = request.rel_url.query.get("user_email")
 
-        result = await self.validate_email(user_email=user_email)
+        error_result = await self.validate_email(user_email=user_email)
 
-        if result:
-            return web.json_response(**result)
+        if error_result:
+            return web.json_response(**error_result)
 
         puppet: Puppet = await Puppet.get_by_email(user_email)
         if not puppet:
@@ -331,7 +322,6 @@ class ProvisioningAPI:
         if error_result:
             return web.json_response(**error_result)
 
-
         # Obtenemos el puppet de este email si existe
         puppet: Puppet = await Puppet.get_by_email(email)
         if not puppet:
@@ -388,8 +378,8 @@ class ProvisioningAPI:
                     user_email: nobody@somewhere.com
 
         responses:
-            '200':
-                $ref: '#/components/responses/OK'
+            '201':
+                $ref: '#/components/responses/SendMessage'
             '400':
                 $ref: '#/components/responses/BadRequest'
             '404':
@@ -414,20 +404,15 @@ class ProvisioningAPI:
         ):
             return web.json_response(**REQUIRED_VARIABLES)
 
-        result = await self.validate_email(user_email=data.get("user_email"))
-
-        if result:
-            return web.json_response(**result)
-
         if not data.get("msg_type") in SUPPORTED_MESSAGE_TYPES:
             return web.json_response(**MESSAGE_TYPE_NOT_SUPPORTED)
 
         email = data.get("user_email").lower()
 
-        result = await self.validate_email(user_email=email)
+        error_result = await self.validate_email(user_email=email)
 
-        if result:
-            return web.json_response(**result)
+        if error_result:
+            return web.json_response(**error_result)
 
         # Obtenemos el puppet de este email si existe
         puppet: Puppet = await Puppet.get_by_email(email)
