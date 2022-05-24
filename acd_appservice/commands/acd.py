@@ -13,17 +13,21 @@ from .typehint import CommandEvent
     help_args="<_customer_room_id_> <_campaign_room_id_> <_joined_message_>",
 )
 async def acd(evt: CommandEvent) -> str:
-    """
-    Command that allows to distribute the chat of a client,
-    optionally a campaign room and a joining message can be given.
-    """
+    """It allows to distribute the chat of a client,
+    optionally a campaign room and a joining message can be given
 
-    evt.log.debug(f"Incoming command is :: {evt.args}")
+    Parameters
+    ----------
+    evt : CommandEvent
+        Incoming CommandEvent
+
+    """
 
     if len(evt.args) < 2:
         detail = "acd command incomplete arguments"
         evt.log.error(detail)
-        return detail
+        evt.reply(text=detail)
+        return
 
     customer_room_id = evt.args[1]
     campaign_room_id = evt.args[2] if len(evt.args) >= 3 else None

@@ -103,12 +103,12 @@ class RoomManager:
                     room_id=room_id, visibility=RoomDirectoryVisibility.PUBLIC
                 )
             except Exception as e:
-                self.log.error(e)
+                self.log.warning(e)
 
             try:
                 await intent.set_join_rule(room_id=room_id, join_rule=JoinRule.PUBLIC)
             except Exception as e:
-                self.log.error(e)
+                self.log.warning(e)
 
             try:
                 await intent.send_state_event(
@@ -117,7 +117,7 @@ class RoomManager:
                     content={"history_visibility": "world_readable"},
                 )
             except Exception as e:
-                self.log.error(e)
+                self.log.warning(e)
 
             await asyncio.sleep(1)
 

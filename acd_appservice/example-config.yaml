@@ -108,6 +108,8 @@ acd:
     agent_invite_timeout: 15
     # Interval for automatic search pending rooms (3 minutes by default | 180s)
     search_pending_rooms_interval: 180
+    # The prefix to special messages that are going to be processed in frontend.
+    frontend_command_prefix: '!element'
 
 # ACD will send below commands to interact with any WA bridge
 bridges:
@@ -131,6 +133,9 @@ bridges:
     postfix_template: "(WA)"
     set_relay: "set-relay"
     set_permissions: "set-pl {mxid} {power_level}"
+    notice_messages:
+      # When I can't create a chat with WhatsApp
+      phone_is_not_on_whatsapp: "^The server said \\+(?P<phone_number>[0-9]+) is not on WhatsApp$"
     # Settings for provisioning API
     provisioning:
         url_base: "http://172.17.0.1:29665/_matrix/provision"

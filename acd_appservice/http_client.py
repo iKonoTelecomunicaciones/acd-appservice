@@ -116,3 +116,27 @@ class ProvisionBridge(BaseClass):
                     if ws_customer:
                         await ws_customer.close()
                     break
+
+    async def pm(self, user_id: UserID, phone: str) -> tuple:
+        """It sends a private message to a user.
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user_id of the user you want to send the message to.
+        phone : str
+            The phone number to send the message to.
+
+        Returns
+        -------
+            A tuple of the status code and the data.
+
+        """
+        response = await self.session.post(
+            url=f"{self.url_base}/v1/pm/{phone}", headers=self.headers, params={"user_id": user_id}
+        )
+        data = await response.json()
+        if not response.status in [200, 201]:
+            self.log.error(data)
+
+        return response.status, data

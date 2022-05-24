@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 from typing import Dict
@@ -10,6 +11,9 @@ from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
+from ..agent_manager import AgentManager
+from ..commands.handler import command_processor
+from ..commands.typehint import CommandEvent
 from ..config import Config
 from ..http_client import HTTPClient, ProvisionBridge
 from ..puppet import Puppet
@@ -41,30 +45,10 @@ class ProvisioningAPI:
     app: web.Application
     config: Config
     client: HTTPClient
+    agent_manager: AgentManager
 
     def __init__(self) -> None:
         self.app = web.Application()
-
-        # swagger = SwaggerDocs(
-        #     self.app,
-        #     title="WAPI documentation",
-        #     version=VERSION,
-        #     components=f"acd_appservice/web/components.yaml",
-        #     swagger_ui_settings=SwaggerUiSettings(
-        #         path="/docs",
-        #         layout="BaseLayout",
-        #     ),
-        # )
-        # swagger.add_routes(
-        #     [
-        #         # Región de autenticación
-        #         web.post("/create_user", self.create_user),
-        #         web.post("/link_phone", self.link_phone),
-        #         web.post("/unlink_phone", self.unlink_phone),
-        #         # Región de mensajería
-        #         web.post("/send_message", self.send_message),
-        #     ]
-        # )
         swagger = SwaggerDocs(
             self.app,
             title="ACD AppService documentation",
@@ -77,6 +61,7 @@ class ProvisioningAPI:
         )
 
         swagger.add_post(path="/v1/create_user", handler=self.create_user)
+        swagger.add_post(path="/v1/pm", handler=self.pm)
         swagger.add_get(path="/v1/link_phone", handler=self.link_phone, allow_head=False)
         swagger.add_get(path="/v1/ws_link_phone", handler=self.ws_link_phone, allow_head=False)
 
@@ -216,7 +201,7 @@ class ProvisioningAPI:
 
         puppet: Puppet = await Puppet.get_by_email(user_email)
         if not puppet:
-            return USER_DOESNOT_EXIST
+            return web.json_response(**USER_DOESNOT_EXIST)
 
         # Creamos una conector con el bridge
         bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
@@ -262,7 +247,7 @@ class ProvisioningAPI:
 
         puppet: Puppet = await Puppet.get_by_email(user_email)
         if not puppet:
-            return USER_DOESNOT_EXIST
+            return web.json_response(**USER_DOESNOT_EXIST)
 
         # Creamos una conector con el bridge
         bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
@@ -270,6 +255,95 @@ class ProvisioningAPI:
         return web.json_response(
             **await bridge_connector.ws_connect(user_id=puppet.custom_mxid, easy_mode=True)
         )
+
+    async def pm(self, request: web.Request) -> web.Response:
+        """
+        Command that allows send a message to a customer.
+        ---
+        summary:    It takes a phone number and a message,
+                    and sends the message to the phone number.
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_email:
+                    type: string
+                  phone_number:
+                    type: string
+                  template_message:
+                    type: string
+                  template_name:
+                    type: string
+                  agent_id:
+                    type: string
+                example:
+                    user_email: "nobody@somewhere.com"
+                    phone_number: "573123456789"
+                    template_message: "Hola iKono!!"
+                    template_name: "text"
+                    agent_id: "@agente1:somewhere.com"
+
+        responses:
+            '200':
+                $ref: '#/components/responses/PmSuccessful'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+            '422':
+                $ref: '#/components/responses/NotSendMessage'
+        """
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+        if not (
+            data.get("phone_number")
+            and data.get("template_message")
+            and data.get("template_name")
+            and data.get("user_email")
+            and data.get("agent_id")
+        ):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        email = data.get("user_email").lower()
+        error_result = await self.validate_email(user_email=email)
+
+        if error_result:
+            return web.json_response(**error_result)
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_by_email(email)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        incoming_params = {
+            "phone_number": data.get("phone_number"),
+            "template_message": data.get("template_message"),
+            "template_name": data.get("template_name"),
+        }
+
+        # Creating a fake command event and passing it to the command processor.
+        fake_command = f"pm {json.dumps(incoming_params)}"
+        cmd_evt = CommandEvent(
+            cmd="pm",
+            agent_manager=self.agent_manager,
+            sender=data.get("agent_id"),
+            room_id=None,
+            text=fake_command,
+        )
+        cmd_evt.agent_manager.intent = puppet.intent
+        cmd_evt.intent = puppet.intent
+        result = await command_processor(cmd_evt=cmd_evt)
+        return web.json_response(**result)
 
     async def validate_email(self, user_email: str) -> Dict:
         """It checks if the email is valid
