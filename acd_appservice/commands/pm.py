@@ -146,7 +146,9 @@ async def pm(evt: CommandEvent) -> str:
         return_params["reply"] = "Now you are joined in room with [number], message was sent."
 
     # Sending a message to the frontend.
-    cmd_front_msg = f"{evt.config['acd.frontend_command_prefix']} {evt.cmd} {json.dumps(return_params)}"
+    cmd_front_msg = (
+        f"{evt.config['acd.frontend_command_prefix']} {evt.cmd} {json.dumps(return_params)}"
+    )
     await evt.reply(text=cmd_front_msg)
 
     # Returning a dict with two keys:

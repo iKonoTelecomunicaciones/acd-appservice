@@ -320,7 +320,6 @@ class ProvisioningAPI:
         if error_result:
             return web.json_response(**error_result)
 
-
         # Obtenemos el puppet de este email si existe
         puppet: Puppet = await Puppet.get_by_email(email)
         if not puppet:
