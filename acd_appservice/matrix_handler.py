@@ -278,7 +278,13 @@ class MatrixHandler:
         """
         self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
 
+        # Generamos llaves para buscar en PENDING_INVITES (acd, transfer)
         future_key = RoomManager.get_future_key(room_id=room_id, agent_id=user_id)
+        transfer_future_key = RoomManager.get_future_key(
+            room_id=room_id, agent_id=user_id, transfer="ok"
+        )
+
+        # Buscamos promesas pendientes relacionadas con el comando acd
         if (
             future_key in AgentManager.PENDING_INVITES
             and not AgentManager.PENDING_INVITES[future_key].done()
@@ -287,6 +293,15 @@ class MatrixHandler:
             # timer stops
             self.log.debug(f"Resolving to True the promise [{future_key}]")
             AgentManager.PENDING_INVITES[future_key].set_result(True)
+
+        # Buscamos promesas pendientes relacionadas con las transferencia
+        if (
+            transfer_future_key in AgentManager.PENDING_INVITES
+            and not AgentManager.PENDING_INVITES[transfer_future_key].done()
+        ):
+            # when the agent accepts the invite, the Future is resolved and the waiting
+            # timer stops
+            AgentManager.PENDING_INVITES[transfer_future_key].set_result(True)
 
         # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
         if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):

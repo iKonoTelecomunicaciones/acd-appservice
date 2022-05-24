@@ -24,14 +24,14 @@ async def acd(evt: CommandEvent) -> str:
     """
 
     if len(evt.args) < 2:
-        detail = "acd command incomplete arguments"
+        detail = f"{evt.cmd} command incomplete arguments"
         evt.log.error(detail)
         evt.reply(text=detail)
         return
 
     customer_room_id = evt.args[1]
     campaign_room_id = evt.args[2] if len(evt.args) >= 3 else None
-    room_params = f"acd {customer_room_id} {campaign_room_id}"
+    room_params = f"{evt.cmd} {customer_room_id} {campaign_room_id}"
     joined_message = (evt.args[len(room_params) :]).strip() if len(evt.args) > 3 else None
 
     # Se crea el proceso de distribución dado el puppet que esté en la sala del cliente

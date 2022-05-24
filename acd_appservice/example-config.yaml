@@ -110,6 +110,8 @@ acd:
     search_pending_rooms_interval: 180
     # The prefix to special messages that are going to be processed in frontend.
     frontend_command_prefix: '!element'
+    #This is a message that reaches the client when it is transferred
+    transfer_message: "Has sido transferido a {agentname}."
 
 # ACD will send below commands to interact with any WA bridge
 bridges:
