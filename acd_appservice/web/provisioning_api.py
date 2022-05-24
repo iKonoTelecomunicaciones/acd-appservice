@@ -4,7 +4,6 @@ import asyncio
 import json
 import logging
 import re
-from io import BytesIO
 from typing import Dict
 
 from aiohttp import web
@@ -430,6 +429,11 @@ class ProvisioningAPI:
         if result:
             return web.json_response(**result)
 
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_by_email(email)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
         phone = str(data.get("phone"))
         if not (phone.isdigit() and 5 <= len(phone) <= 15):
             return web.json_response(**INVALID_PHONE)
@@ -438,8 +442,6 @@ class ProvisioningAPI:
         message = data.get("message")
         phone = phone if phone.startswith("+") else f"+{phone}"
 
-        # Obtenemos el puppet de este email si existe
-        puppet: Puppet = await Puppet.get_by_email(email)
         status, response = await self.bridge_connector.pm(user_id=puppet.custom_mxid, phone=phone)
         if response.get("error"):
             return web.json_response(data=response, status=status)
