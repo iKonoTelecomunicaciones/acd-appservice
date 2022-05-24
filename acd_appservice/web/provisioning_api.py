@@ -65,7 +65,7 @@ class ProvisioningAPI:
         swagger.add_get(path="/v1/link_phone", handler=self.link_phone, allow_head=False)
         swagger.add_get(path="/v1/ws_link_phone", handler=self.ws_link_phone, allow_head=False)
 
-        # Commads enpoint
+        # Commads endpoint
         swagger.add_post(path="/v1/pm", handler=self.pm)
 
         self.loop = asyncio.get_running_loop()
