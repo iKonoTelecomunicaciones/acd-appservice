@@ -4,11 +4,19 @@ import asyncio
 import json
 import logging
 import re
+from io import BytesIO
 from typing import Dict
 
 from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
-from mautrix.types import Format, MediaMessageEventContent, MessageType, TextMessageEventContent
+from markdown import markdown
+from mautrix.types import (
+    ContentURI,
+    Format,
+    MediaMessageEventContent,
+    MessageType,
+    TextMessageEventContent,
+)
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
@@ -393,7 +401,6 @@ class ProvisioningAPI:
                 $ref: '#/components/responses/TooManyRequests'
         """
 
-        # Región para validar que la información enviada sea completa y correcta
         if not request.body_exists:
             return web.json_response(**NOT_DATA)
 
@@ -444,13 +451,18 @@ class ProvisioningAPI:
                 msgtype=MessageType.TEXT,
                 body=message,
                 format=Format.HTML,
-                formatted_body=message,
+                formatted_body=markdown(message),
             )
-        if msg_type == "PDF":
-            content = MediaMessageEventContent(
-                msgtype=MessageType.FILE,
-                body="text",
-            )
+
+        # Aqui se pueden tener los demas tipos de mensaje cuando se piensen implementar
+        # if msg_type == "image":
+        #     content = TextMessageEventContent(
+        #         msgtype=MessageType.IMAGE,
+        #         body=message,
+        #         format=Format.HTML,
+        #         formatted_body=message,
+        #     )
+
         try:
             event_id = await puppet.intent.send_message(room_id=customer_room_id, content=content)
         except Exception as e:
