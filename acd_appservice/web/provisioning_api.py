@@ -8,6 +8,8 @@ from typing import Dict
 
 from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
+from markdown import markdown
+from mautrix.types import Format, MessageType, TextMessageEventContent
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
@@ -21,14 +23,11 @@ from . import SUPPORTED_MESSAGE_TYPES
 from .error_responses import (
     INVALID_EMAIL,
     INVALID_PHONE,
-    MESSAGE_NOT_SENT,
     MESSAGE_TYPE_NOT_SUPPORTED,
     NOT_DATA,
     NOT_EMAIL,
-    REQUEST_ALREADY_EXISTS,
     REQUIRED_VARIABLES,
     SERVER_ERROR,
-    TIMEOUT_ERROR,
     USER_ALREADY_EXISTS,
     USER_DOESNOT_EXIST,
 )
@@ -46,6 +45,7 @@ class ProvisioningAPI:
     config: Config
     client: HTTPClient
     agent_manager: AgentManager
+    bridge_connector: ProvisionBridge
 
     def __init__(self) -> None:
         self.app = web.Application()
@@ -61,9 +61,12 @@ class ProvisioningAPI:
         )
 
         swagger.add_post(path="/v1/create_user", handler=self.create_user)
-        swagger.add_post(path="/v1/pm", handler=self.pm)
+        swagger.add_post(path="/v1/send_message", handler=self.send_message)
         swagger.add_get(path="/v1/link_phone", handler=self.link_phone, allow_head=False)
         swagger.add_get(path="/v1/ws_link_phone", handler=self.ws_link_phone, allow_head=False)
+
+        # Commads endpoint
+        swagger.add_post(path="/v1/pm", handler=self.pm)
 
         self.loop = asyncio.get_running_loop()
 
@@ -102,10 +105,10 @@ class ProvisioningAPI:
 
         data = await request.json()
 
-        result = await self.validate_email(user_email=data.get("user_email"))
+        error_result = await self.validate_email(user_email=data.get("user_email"))
 
-        if result:
-            return web.json_response(**result)
+        if error_result:
+            return web.json_response(**error_result)
 
         email = data.get("user_email").lower()
 
@@ -194,10 +197,10 @@ class ProvisioningAPI:
 
         user_email = request.rel_url.query.get("user_email")
 
-        result = await self.validate_email(user_email=user_email)
+        error_result = await self.validate_email(user_email=user_email)
 
-        if result:
-            return web.json_response(**result)
+        if error_result:
+            return web.json_response(**error_result)
 
         puppet: Puppet = await Puppet.get_by_email(user_email)
         if not puppet:
@@ -240,20 +243,19 @@ class ProvisioningAPI:
 
         user_email = request.rel_url.query.get("user_email")
 
-        result = await self.validate_email(user_email=user_email)
+        error_result = await self.validate_email(user_email=user_email)
 
-        if result:
-            return web.json_response(**result)
+        if error_result:
+            return web.json_response(**error_result)
 
         puppet: Puppet = await Puppet.get_by_email(user_email)
         if not puppet:
             return web.json_response(**USER_DOESNOT_EXIST)
 
         # Creamos una conector con el bridge
-        bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
         # Creamos un WebSocket para conectarnos con el bridge
         return web.json_response(
-            **await bridge_connector.ws_connect(user_id=puppet.custom_mxid, easy_mode=True)
+            **await self.bridge_connector.ws_connect(user_id=puppet.custom_mxid, easy_mode=True)
         )
 
     async def pm(self, request: web.Request) -> web.Response:
@@ -344,6 +346,124 @@ class ProvisioningAPI:
         cmd_evt.intent = puppet.intent
         result = await command_processor(cmd_evt=cmd_evt)
         return web.json_response(**result)
+
+    async def send_message(self, request: web.Request) -> web.Response:
+        """
+        Send a message to the given whatsapp number (create a room or send to the existing room)
+        ---
+        summary: Send a message from the user account to a WhatsApp phone number.
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `phone`, `message`, `msg_type` (only supports [`text`]), `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  phone:
+                    type: string
+                  message:
+                    type: string
+                  msg_type:
+                    type: string
+                  user_email:
+                    type: string
+                example:
+                    phone: "573123456789"
+                    message: Hello World!
+                    msg_type: text
+                    user_email: nobody@somewhere.com
+
+        responses:
+            '201':
+                $ref: '#/components/responses/SendMessage'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+            '422':
+                $ref: '#/components/responses/ErrorData'
+            '429':
+                $ref: '#/components/responses/TooManyRequests'
+        """
+
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+        data = await request.json()
+        if not (
+            data.get("phone")
+            and data.get("message")
+            and data.get("msg_type")
+            and data.get("user_email")
+        ):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        if not data.get("msg_type") in SUPPORTED_MESSAGE_TYPES:
+            return web.json_response(**MESSAGE_TYPE_NOT_SUPPORTED)
+
+        email = data.get("user_email").lower()
+
+        error_result = await self.validate_email(user_email=email)
+
+        if error_result:
+            return web.json_response(**error_result)
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_by_email(email)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        phone = str(data.get("phone"))
+        if not (phone.isdigit() and 5 <= len(phone) <= 15):
+            return web.json_response(**INVALID_PHONE)
+
+        msg_type = data.get("msg_type")
+        message = data.get("message")
+        phone = phone if phone.startswith("+") else f"+{phone}"
+
+        status, response = await self.bridge_connector.pm(user_id=puppet.custom_mxid, phone=phone)
+        if response.get("error"):
+            return web.json_response(data=response, status=status)
+
+        customer_room_id = response.get("room_id")
+
+        if msg_type == "text":
+            content = TextMessageEventContent(
+                msgtype=MessageType.TEXT,
+                body=message,
+                format=Format.HTML,
+                formatted_body=markdown(message),
+            )
+
+        # Aqui se pueden tener los demas tipos de mensaje cuando se piensen implementar
+        # if msg_type == "image":
+        #     content = MediaMessageEventContent(
+        #         msgtype=MessageType.IMAGE,
+        #         body=message,
+        #         format=Format.HTML,
+        #         formatted_body=message,
+        #     )
+
+        try:
+            event_id = await puppet.intent.send_message(room_id=customer_room_id, content=content)
+        except Exception as e:
+            self.log.exception(e)
+            return web.json_response(**SERVER_ERROR)
+
+        return web.json_response(
+            data={
+                "detail": "The message has been sent (probably)",
+                "event_id": event_id,
+                "room_id": customer_room_id,
+            },
+            status=201,
+        )
 
     async def validate_email(self, user_email: str) -> Dict:
         """It checks if the email is valid
@@ -452,143 +572,6 @@ class ProvisioningAPI:
     #         # look out this error template in 'error_responses.py'
     #         response = promise_response.get("response")
 
-    #     del LOGOUT_PENDING_PROMISES[user.room_id]
-
-    #     return web.json_response(**response)
-
-    # async def send_message(self, request: web.Request) -> web.Response:
-    #     """
-    #     Send a message to the given whatsapp number (create a room or send to the existing room)
-    #     ---
-    #     summary: Send a message from the user account to a WhatsApp phone number.
-    #     tags:
-    #         - users
-
-    #     requestBody:
-    #       required: true
-    #       description: A json with `phone`, `message`, `msg_type` (only supports [`text`]), `user_email`
-    #       content:
-    #         application/json:
-    #           schema:
-    #             type: object
-    #             properties:
-    #               phone:
-    #                 type: string
-    #               message:
-    #                 type: string
-    #               msg_type:
-    #                 type: string
-    #               user_email:
-    #                 type: string
-    #             example:
-    #                 phone: "573123456789"
-    #                 message: Hello World!
-    #                 msg_type: text
-    #                 user_email: nobody@somewhere.com
-
-    #     responses:
-    #         '200':
-    #             $ref: '#/components/responses/OK'
-    #         '400':
-    #             $ref: '#/components/responses/BadRequest'
-    #         '404':
-    #             $ref: '#/components/responses/NotExist'
-    #         '422':
-    #             $ref: '#/components/responses/ErrorData'
-    #         '429':
-    #             $ref: '#/components/responses/TooManyRequests'
-    #     """
-
-    #     # Región para validar que la información enviada sea completa y correcta
-    #     if not request.body_exists:
-    #         return web.json_response(**NOT_DATA)
-
-    #     data = await request.json()
-    #     if (
-    #         not data.get("phone")
-    #         or not data.get("message")
-    #         or not data.get("user_email")
-    #         or not data.get("msg_type")
-    #     ):
-    #         return web.json_response(**REQUIRED_VARIABLES)
-    #     if not data.get("msg_type") in SUPPORTED_MESSAGE_TYPES:
-    #         return web.json_response(**MESSAGE_TYPE_NOT_SUPPORTED)
-
-    #     email = data.get("user_email").lower()
-    #     if not re.match(self.config["utils.regex_email"], email):
-    #         return web.json_response(**INVALID_EMAIL)
-    #     if not await User.user_exists(email):
-    #         return web.json_response(**USER_DOESNOT_EXIST)
-
-    #     phone = str(data.get("phone"))
-    #     if not (phone.isdigit() and 5 <= len(phone) <= 15):
-    #         return web.json_response(**INVALID_PHONE)
-
-    #     # Fin región de validación
-
-    #     msg_type = data.get("msg_type")
-    #     message = data.get("message")
-    #     phone = phone if phone.startswith("+") else f"+{phone}"
-    #     user = await User.get_by_email(email)
-
-    #     pending_promise = self.loop.create_future()
-
-    #     # cargamos el diccionario con los datos necesarios para procesar las solicitudes
-    #     # de envió de mensaje
-    #     MESSAGE_PENDING_PROMISES[phone] = {
-    #         "user": user,
-    #         "message": message,
-    #         "msg_type": None,
-    #         "pending_promise": pending_promise,
-    #     }
-
-    #     # Se agrega la promesa en este diccionario para poder hacer seguimiento
-    #     # al usuario en cuestión y saber si esta logueado
-    #     LOGOUT_PENDING_PROMISES[user.room_id] = pending_promise
-
-    #     if msg_type == "text":
-    #         MESSAGE_PENDING_PROMISES[phone]["msg_type"] = MessageType.TEXT
-    #     # TODO agregar los diferentes tipos de mensaje en las siguientes lineas
-    #     # if msg_type == "audio":
-    #     #     MESSAGE_PENDING_PROMISES[phone]["msg_type"] = MessageType.AUDIO
-    #     # if msg_type == "image":
-    #     #     MESSAGE_PENDING_PROMISES[phone]["msg_type"] = MessageType.IMAGE
-
-    #     # Creamos el comando que será enviado a la sala del user para
-    #     pm_command = f"{self.config['bridge.commands.create_room']} {phone}"
-    #     await user.send_command(pm_command)
-
-    #     # Se crea la tarea que va a supervisar los notices generados por el bridge
-    #     promise_response = await asyncio.create_task(self.check_promise(phone, pending_promise))
-
-    #     # Cuando el promise_response este lleno, podrá tener diferentes datos
-    #     # promise_response = {
-    #     #     "state": True, # Si llega true es porque todo salió bien, falso trae algún error
-    #     #     "message": "Any message", # Los mensajes capturados cuando se resuelve la promesa
-    #     # }
-    #     if promise_response.get("state"):
-    #         response = {
-    #             "data": {"message": promise_response.get("message")},
-    #             "status": 200,
-    #         }
-    #     elif promise_response.get("msgtype") == "not_logged_in":
-    #         response = {
-    #             "data": {
-    #                 "message": promise_response.get("response"),
-    #             },
-    #             "status": 422,
-    #         }
-    #     else:
-    #         response = {
-    #             "data": {
-    #                 "message": promise_response.get("message")
-    #                 if promise_response.get("message")
-    #                 else "WhatsApp server has not responded"
-    #             },
-    #             "status": 422,
-    #         }
-
-    #     del MESSAGE_PENDING_PROMISES[phone]
     #     del LOGOUT_PENDING_PROMISES[user.room_id]
 
     #     return web.json_response(**response)

@@ -127,6 +127,20 @@ components:
           reply: "The server said [number] is not on WhatsApp"
           status: 422
 
+    SendMessageSuccessful:
+      type: object
+      properties:
+        detail:
+          type: string
+        event_id:
+          type: string
+        room_id:
+          type: string
+      example:
+        detail: "The message has been sent (probably)"
+        event_id: "$PHtug6AByEXtMcJR-TvZ9lR6DgixA9nvyPNroyppSV8"
+        room_id: "!CzCDxtfIpIshzruJBR:darknet"
+
   # Respuestas de la API
   responses:
     UserCreated:
@@ -170,6 +184,13 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Success'
+
+    SendMessage:
+      description: The message has been sent
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SendMessageSuccessful'
 
     BadRequest:
       description: Could not interpret the request due to invalid syntax.
