@@ -311,7 +311,7 @@ class RoomManager:
     def lock_room(cls, room_id: RoomID, transfer: str = None) -> None:
         """Lock the room."""
         if transfer:
-            cls.log.debug(f"Transfer LOCKING ROOM {room_id}...")
+            cls.log.debug(f"[TRANSFER] - LOCKING ROOM {room_id}...")
             room_id = cls.get_room_transfer_key(room_id=room_id)
         else:
             cls.log.debug(f"LOCKING ROOM {room_id}...")
@@ -321,9 +321,10 @@ class RoomManager:
     def unlock_room(cls, room_id: RoomID, transfer: str = None) -> None:
         """Unlock the room."""
         if transfer:
+            cls.log.debug(f"[TRANSFER] - UNLOCKING ROOM {room_id}...")
             room_id = cls.get_room_transfer_key(room_id=room_id)
         else:
-            cls.log.debug(f"LOCKING ROOM {room_id}...")
+            cls.log.debug(f"UNLOCKING ROOM {room_id}...")
         cls.LOCKED_ROOMS.discard(room_id)
 
     @classmethod

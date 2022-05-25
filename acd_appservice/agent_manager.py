@@ -177,7 +177,7 @@ class AgentManager:
         customer_room_id: RoomID,
         campaign_room_id: RoomID,
         agent_id: UserID,
-        joined_message: str | None,
+        joined_message: str | None = None,
         transfer_author: Optional[UserID] = None,
     ) -> None:
         """It loops through a list of agents and tries to invite them to a room
@@ -191,7 +191,9 @@ class AgentManager:
         agent_id : UserID
             The ID of the agent to start the loop with.
         joined_message : str
-            str
+            Agent join message to be displayed in the room
+        transfer_author: UserID
+            if it is a transfer, then it will be the author of this
         """
         total_agents = await self.get_agent_count(room_id=campaign_room_id)
         online_agents = 0
@@ -210,7 +212,7 @@ class AgentManager:
 
                 if transfer_author:
                     msg = f"La sala destino no tiene agentes."
-                    self.intent.send_text(room_id=customer_room_id, text=msg)
+                    await self.intent.send_notice(room_id=customer_room_id, text=msg)
                 else:
                     await self.show_no_agents_message(
                         customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
@@ -247,7 +249,11 @@ class AgentManager:
                     online_agents += 1
 
                     await self.force_invite_agent(
-                        customer_room_id, agent_id, campaign_room_id, joined_message
+                        room_id=customer_room_id,
+                        agent_id=agent_id,
+                        campaign_room_id=campaign_room_id,
+                        joined_message=joined_message,
+                        transfer_author=transfer_author,
                     )
                     break
 
@@ -263,7 +269,7 @@ class AgentManager:
 
                 if transfer_author:
                     msg = "No hay agentes disponibles para la transferencia."
-                    self.intent.send_text(room_id=customer_room_id, text=msg)
+                    await self.intent.send_notice(room_id=customer_room_id, text=msg)
                 else:
                     await self.show_no_agents_message(
                         customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
@@ -329,8 +335,9 @@ class AgentManager:
         self,
         room_id: RoomID,
         agent_id: UserID,
-        campaign_room_id: RoomID,
+        campaign_room_id: RoomID = None,
         joined_message: str = None,
+        transfer_author: UserID = None,
     ) -> None:
         """It creates a new Future object, adds it to a dictionary, and then spawns a task that waits for the Future to be set
 
@@ -343,7 +350,9 @@ class AgentManager:
         campaign_room_id : RoomID
             RoomID
         joined_message : str
-            str = None,
+            Agent join message to be displayed in the room
+        transfer_author: UserID
+            if it is a transfer, then it will be the author of this
 
         """
         # get the current event loop
@@ -351,26 +360,33 @@ class AgentManager:
 
         # create a new Future object.
         pending_invite = loop.create_future()
-        future_key = RoomManager.get_future_key(room_id, agent_id)
+
+        future_key = RoomManager.get_future_key(
+            room_id=room_id, agent_id=agent_id, transfer=transfer_author
+        )
         # mantain an array of futures for every invite to get notification of joins
         self.PENDING_INVITES[future_key] = pending_invite
         self.log.debug(f"Futures are... [{self.PENDING_INVITES}]")
 
-        await self.force_join_agent(room_id, agent_id)
-
-        # spawn a task that does not block the asyncio loop
         create_task(
             self.check_agent_joined(
-                room_id, pending_invite, agent_id, campaign_room_id, joined_message
+                customer_room_id=room_id,
+                pending_invite=pending_invite,
+                agent_id=agent_id,
+                campaign_room_id=campaign_room_id,
+                joined_message=joined_message,
+                transfer_author=transfer_author,
             )
         )
+
+        await self.force_join_agent(room_id, agent_id)
 
     async def check_agent_joined(
         self,
         customer_room_id: RoomID,
         pending_invite: Future,
         agent_id: UserID,
-        campaign_room_id: RoomID,
+        campaign_room_id: RoomID = None,
         joined_message: str = None,
         transfer_author: Optional[UserID] = None,
     ) -> None:
@@ -415,33 +431,35 @@ class AgentManager:
         if future_key in self.PENDING_INVITES:
             del self.PENDING_INVITES[future_key]
         self.log.debug(f"futures left: {self.PENDING_INVITES}")
+
         if agent_joined:
-            self.CURRENT_AGENT[campaign_room_id] = agent_id
-            self.log.debug(f"[{agent_id}] ACCEPTED the invite. CHAT ASSIGNED.")
-            self.log.debug(f"NEW CURRENT_AGENT : [{self.CURRENT_AGENT}]")
-            self.log.debug(f"======> [{customer_room_id}] selected [{campaign_room_id}]")
+            if campaign_room_id:
+                self.CURRENT_AGENT[campaign_room_id] = agent_id
+                self.log.debug(f"[{agent_id}] ACCEPTED the invite. CHAT ASSIGNED.")
+                self.log.debug(f"NEW CURRENT_AGENT : [{self.CURRENT_AGENT}]")
+                self.log.debug(f"======> [{customer_room_id}] selected [{campaign_room_id}]")
             # self.bot.store.set_user_selected_menu(customer_room_id, campaign_room_id)
             # Setting the selected menu option for the customer.
-            await RoomManager.save_room(
-                room_id=customer_room_id,
-                selected_option=campaign_room_id,
-                puppet_mxid=self.intent.mxid,
-                change_selected_option=True if campaign_room_id else False,
-            )
-
-            self.log.debug(f"Removing room [{customer_room_id}] from pending list")
-            # self.bot.store.remove_pending_room(customer_room_id) # TODO BASE DE DATOS
-            await RoomManager.remove_pending_room(
-                room_id=customer_room_id,
-            )
+            if not transfer_author:
+                await RoomManager.save_room(
+                    room_id=customer_room_id,
+                    selected_option=campaign_room_id,
+                    puppet_mxid=self.intent.mxid,
+                    change_selected_option=True if campaign_room_id else False,
+                )
+                self.log.debug(f"Removing room [{customer_room_id}] from pending list")
+                # self.bot.store.remove_pending_room(customer_room_id) # TODO BASE DE DATOS
+                await RoomManager.remove_pending_room(
+                    room_id=customer_room_id,
+                )
 
             agent_displayname = await self.intent.get_displayname(user_id=agent_id)
             msg = ""
             if transfer_author:
                 detail = f"acd transferred {customer_room_id} to {agent_id}"
                 msg = self.config["acd.transfer_message"].format(agentname=agent_displayname)
-            # transfer_author can be None when acd transfers an open chat to some agent
 
+            # transfer_author can be None when acd transfers an open chat to some agent
             if transfer_author is not None:
                 await self.intent.kick_user(
                     room_id=customer_room_id,
@@ -509,7 +527,7 @@ class AgentManager:
             else:
                 # if it is a direct transfer, unlock the room
                 msg = f"{agent_displayname} no aceptó la transferencia."
-                await self.intent.send_text(room_id=customer_room_id, text=msg)
+                await self.intent.send_notice(room_id=customer_room_id, text=msg)
                 RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer_author)
 
     async def force_join_agent(
