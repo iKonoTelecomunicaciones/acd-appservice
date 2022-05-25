@@ -95,7 +95,7 @@ class AgentManager:
                 )
             )
         else:
-            self.log.debug(f"This room [{customer_room_id}] doesn't have online agents")
+            self.log.debug(f"This room [{customer_room_id}] have online agents")
             RoomManager.unlock_room(room_id=customer_room_id)
 
     async def process_pending_rooms(self) -> None:
