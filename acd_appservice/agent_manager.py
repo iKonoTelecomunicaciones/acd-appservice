@@ -485,9 +485,10 @@ class AgentManager:
                 if joined_message:
                     msg = joined_message.format(agentname=agent_displayname)
 
-
                 if not msg:
-                    msg = self.config["acd.joined_agent_message"].format(agentname=agent_displayname)
+                    msg = self.config["acd.joined_agent_message"].format(
+                        agentname=agent_displayname
+                    )
 
                 if msg:
                     await self.intent.send_text(room_id=customer_room_id, text=msg)
