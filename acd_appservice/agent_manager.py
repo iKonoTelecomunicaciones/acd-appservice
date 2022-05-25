@@ -11,6 +11,7 @@ from mautrix.errors.base import IntentError
 from mautrix.types import Member, PresenceState, RoomAlias, RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
+from acd_appservice import puppet
 from acd_appservice.puppet import Puppet
 
 from .http_client import HTTPClient
@@ -441,6 +442,7 @@ class AgentManager:
             # self.bot.store.set_user_selected_menu(customer_room_id, campaign_room_id)
             # Setting the selected menu option for the customer.
             if not transfer_author:
+                self.log.debug(f"Saving room [{customer_room_id}]")
                 await RoomManager.save_room(
                     room_id=customer_room_id,
                     selected_option=campaign_room_id,
@@ -452,7 +454,6 @@ class AgentManager:
                 await RoomManager.remove_pending_room(
                     room_id=customer_room_id,
                 )
-
             agent_displayname = await self.intent.get_displayname(user_id=agent_id)
             msg = ""
             if transfer_author:
@@ -460,6 +461,7 @@ class AgentManager:
                 msg = self.config["acd.transfer_message"].format(agentname=agent_displayname)
 
             # transfer_author can be None when acd transfers an open chat to some agent
+            detail = ""
             if transfer_author is not None:
                 await self.intent.kick_user(
                     room_id=customer_room_id,
@@ -468,20 +470,29 @@ class AgentManager:
                 )
             else:
                 # kick menu bot
-                await self.room_manager.kick_menubot(
-                    room_id=customer_room_id,
-                    reason=detail if detail else f"agent [{agent_id}] accepted invite",
-                    intent=self.intent,
-                )
+                self.log.debug(f"Kicking the menubot out of the room {customer_room_id}")
+                try:
+                    puppet: Puppet = await Puppet.get_customer_room_puppet(customer_room_id)
+                    await self.room_manager.kick_menubot(
+                        room_id=customer_room_id,
+                        reason=detail if detail else f"agent [{agent_id}] accepted invite",
+                        intent=self.intent,
+                        control_room_id=puppet.control_room_id,
+                    )
+                except Exception as e:
+                    self.log.exception(e)
+            try:
+                if joined_message:
+                    msg = joined_message.format(agentname=agent_displayname)
 
-            if joined_message:
-                msg = joined_message.format(agentname=agent_displayname)
 
-            if not msg:
-                msg = self.config.get("joined_agent_message").format(agentname=agent_displayname)
+                if not msg:
+                    msg = self.config["acd.joined_agent_message"].format(agentname=agent_displayname)
 
-            if msg:
-                await self.intent.send_text(room_id=customer_room_id, text=msg)
+                if msg:
+                    await self.intent.send_text(room_id=customer_room_id, text=msg)
+            except Exception as e:
+                self.log.exception(e)
 
             # signaling = Signaling(self.bot)
 

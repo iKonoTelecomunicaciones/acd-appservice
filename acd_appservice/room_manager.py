@@ -318,6 +318,7 @@ class RoomManager:
             room_id = cls.get_room_transfer_key(room_id=room_id)
         else:
             cls.log.debug(f"UNLOCKING ROOM {room_id}...")
+
         cls.LOCKED_ROOMS.discard(room_id)
 
     @classmethod
@@ -434,18 +435,22 @@ class RoomManager:
 
         return creator
 
-    async def kick_menubot(self, room_id: RoomID, reason: str, intent: IntentAPI) -> None:
+    async def kick_menubot(
+        self, room_id: RoomID, reason: str, intent: IntentAPI, control_room_id: RoomID
+    ) -> None:
         """Kick menubot from some room."""
-        menubot_id = await self.get_menubot_id(room_id=room_id)
+        menubot_id = await self.get_menubot_id(intent=intent, room_id=room_id)
         if menubot_id:
-            self.log.debug("Kicking the menubot [{menubot_id}]")
             await self.send_menubot_command(
-                menubot_id=menubot_id, command="cancel_task", args=(room_id)
+                menubot_id, "cancel_task", control_room_id, intent, room_id
             )
             try:
+                self.log.debug("Kicking the menubot [{menubot_id}]")
                 await intent.kick_user(room_id=room_id, user_id=menubot_id, reason=reason)
-            except IntentError as e:
-                self.log.exception(e)
+            except Exception as e:
+                self.log.warning(
+                    str(e) + f":: the user who was going to be kicked out: {menubot_id}"
+                )
 
             self.log.debug(f"User [{menubot_id}] KICKED from room [{room_id}]")
 
