@@ -102,20 +102,13 @@ class RoomManager:
                 await intent.set_room_directory_visibility(
                     room_id=room_id, visibility=RoomDirectoryVisibility.PUBLIC
                 )
-            except Exception as e:
-                self.log.warning(e)
-
-            try:
                 await intent.set_join_rule(room_id=room_id, join_rule=JoinRule.PUBLIC)
-            except Exception as e:
-                self.log.warning(e)
-
-            try:
                 await intent.send_state_event(
                     room_id=room_id,
                     event_type=EventType.ROOM_HISTORY_VISIBILITY,
                     content={"history_visibility": "world_readable"},
                 )
+                break
             except Exception as e:
                 self.log.warning(e)
 
