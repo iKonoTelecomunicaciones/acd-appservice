@@ -83,9 +83,7 @@ async def command_processor(cmd_evt: CommandEvent):
         if result:
             return result
     else:
-        await cmd_evt.reply(
-            f"Unrecognized command"
-        )
+        await cmd_evt.reply(f"Unrecognized command")
 
 
 def make_help_text(command_prefix: str) -> str:
