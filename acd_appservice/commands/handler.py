@@ -84,7 +84,7 @@ async def command_processor(cmd_evt: CommandEvent):
             return result
     else:
         await cmd_evt.reply(
-            f"Unrecognized command - Use **`{cmd_evt.command_prefix} help`** for more information"
+            f"Unrecognized command"
         )
 
 
