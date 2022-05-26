@@ -81,6 +81,7 @@ class ACDAppService(ACD):
         self.provisioning_api.agent_manager = self.matrix.agent_manager
         # Creamos la tarea que va revisar si las salas pendintes ya tienen a un agente para asignar
         self.add_shutdown_actions(self.provisioning_api.client.session.close())
+        asyncio.create_task(self.checking_whatsapp_connection())
         asyncio.create_task(self.matrix.agent_manager.process_pending_rooms())
 
     def prepare_stop(self) -> None:
@@ -93,6 +94,38 @@ class ACDAppService(ACD):
 
     async def get_double_puppet(self, user_id: UserID):
         return await Puppet.get_by_custom_mxid(user_id)
+
+    async def checking_whatsapp_connection(self):
+        while True:
+            try:
+                all_puppets = await Puppet.get_all_puppetss()
+                for puppet_id in all_puppets:
+                    puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_id)
+                    response = await self.provisioning_api.bridge_connector.ping(user_id=puppet_id)
+                    if not response.get("error") and response.get("whatsapp").get("conn").get(
+                        "is_connected"
+                    ):
+                        self.log.info(
+                            f"The user [{puppet_id}] :: [{puppet.email}] is correctly connected to WhatsApp ✅"
+                        )
+                        await puppet.intent.send_notice(
+                            room_id=puppet.control_room_id,
+                            text="✅ I am connected to WhastApp ✅",
+                        )
+
+                    else:
+                        self.log.warning(
+                            f"The user [{puppet_id}] :: [{puppet.email}] is not correctly connected to WhatsApp 🚫"
+                        )
+                        await puppet.intent.send_notice(
+                            room_id=puppet.control_room_id,
+                            text="🚫 I am not connected to WhastApp 🚫",
+                        )
+
+            except Exception as e:
+                self.log.exception(e)
+
+            await asyncio.sleep(780)
 
 
 # Se corre la aplicación
