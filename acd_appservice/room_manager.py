@@ -558,7 +558,9 @@ class RoomManager:
         self.log.debug(f"This room {room_id} not is a group room, return False")
         return False
 
-    async def invite_menu_bot(self, intent: IntentAPI, room_id: RoomID, menubot_id: UserID)->None:
+    async def invite_menu_bot(
+        self, intent: IntentAPI, room_id: RoomID, menubot_id: UserID
+    ) -> None:
         for attempt in range(10):
             self.log.debug(f"Inviting menubot {menubot_id} to {room_id}...")
             try:
@@ -566,13 +568,9 @@ class RoomManager:
                 self.log.debug("Menubot invite OK")
                 break
             except Exception as e:
-                self.log.warning(
-                        f"Failed to invite menubot attempt {attempt}: {e}"
-                    )
+                self.log.warning(f"Failed to invite menubot attempt {attempt}: {e}")
 
             await asyncio.sleep(2)
-
-
 
     async def get_room_bridge(self, room_id: RoomID, intent: IntentAPI) -> str:
         """Given a room, get its bridge.
