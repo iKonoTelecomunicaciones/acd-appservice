@@ -16,6 +16,4 @@ if [ ! -f registration.yaml ]; then
 	exit
 fi
 
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
 exec python3 -m acd_appservice -c config.yaml
