@@ -25,6 +25,7 @@ class Config(BaseBridgeConfig):
         copy("acd.control_room_id")
         copy_dict("acd.menubot")
         copy_dict("acd.menubots")
+        copy_dict("acd.supervisors_to_invite")
         copy("acd.force_join")
         copy("acd.agent_invite_timeout")
         copy("acd.search_pending_rooms_interval")

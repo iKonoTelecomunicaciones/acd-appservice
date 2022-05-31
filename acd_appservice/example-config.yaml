@@ -112,8 +112,11 @@ acd:
     frontend_command_prefix: '!element'
     # Supervisors to invite
     supervisors_to_invite:
-        "@supervisor:example.com":
-            power_level: 99
+        # If active is true, then invite users to invitees
+        invite: false
+        invitees:
+            "@supervisor:example.com":
+                power_level: 99
 
 # ACD will send below commands to interact with any WA bridge
 bridges:

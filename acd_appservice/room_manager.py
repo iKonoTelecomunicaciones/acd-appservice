@@ -599,8 +599,8 @@ class RoomManager:
         if not bridge:
             self.log.warning(f"Failed to invite supervisor")
             return
-
-        for user_id in self.config["acd.supervisors_to_invite"]:
+        invitees = self.config["acd.supervisors_to_invite.invitees"]
+        for user_id in invitees:
             for attempt in range(10):
                 self.log.debug(f"Inviting supervisor {user_id} to {room_id}...")
                 try:
@@ -611,9 +611,7 @@ class RoomManager:
                         intent=intent,
                         bridge=bridge,
                         user_id=user_id,
-                        power_level=self.config[
-                            f"acd.supervisors_to_invite.{user_id}.power_level"
-                        ],
+                        power_level=invitees[f"{user_id}.power_level"],
                     )
                     break
                 except Exception as e:
