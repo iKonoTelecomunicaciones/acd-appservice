@@ -147,3 +147,35 @@ class ProvisionBridge(BaseClass):
             self.log.error(data)
 
         return response.status, data
+
+    async def ping(self, user_id: UserID) -> Dict:
+        """It sends a private message to a user.
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user_id of the user you want to send the message to.
+        phone : str
+            The phone number to send the message to.
+
+        Returns
+        -------
+            A tuple of the status code and the data.
+
+        """
+        try:
+            response = await self.session.get(
+                url=f"{self.url_base}/v1/ping",
+                headers=self.headers,
+                params={"user_id": user_id},
+            )
+        except Exception as e:
+            self.log.error(e)
+            return {"error": str(e)}
+
+        data = await response.json()
+        if not response.status in [200, 201]:
+            self.log.error(data)
+            return
+
+        return data
