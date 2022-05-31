@@ -6,4 +6,3 @@ asyncpg==0.23.0
 commonmark==0.9.1
 aiohttp-swagger3==0.7.1
 Markdown==3.3.6
-watchdog==2.1.6
