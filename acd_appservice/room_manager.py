@@ -806,9 +806,7 @@ class RoomManager:
         return True
 
     @classmethod
-    async def update_pending_room_in_db(
-        cls, room_id: RoomID, selected_option: str, is_pending_room: bool = False
-    ) -> bool:
+    async def update_pending_room_in_db(cls, room_id: RoomID, selected_option: str) -> bool:
         """Updates a pending_room in the database.
 
         Parameters
@@ -826,9 +824,7 @@ class RoomManager:
         try:
             room = await Room.get_pending_room_by_room_id(room_id)
             if room:
-                await Room.update_pending_room_by_room_id(
-                    room_id, selected_option, is_pending_room
-                )
+                await Room.update_pending_room_by_room_id(room_id, selected_option)
             else:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
                 return False
