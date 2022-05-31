@@ -155,12 +155,10 @@ class ProvisionBridge(BaseClass):
         ----------
         user_id : UserID
             The user_id of the user you want to send the message to.
-        phone : str
-            The phone number to send the message to.
 
         Returns
         -------
-            A tuple of the status code and the data.
+            A dic of the data.
 
         """
         try:

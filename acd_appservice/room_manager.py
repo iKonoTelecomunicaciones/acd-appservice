@@ -584,6 +584,43 @@ class RoomManager:
 
             await asyncio.sleep(2)
 
+    async def invite_supervisors(self, intent: IntentAPI, room_id: RoomID) -> None:
+        """It tries to invite the menubot to the room, and if it fails, it waits a couple of seconds and tries again
+
+        Parameters
+        ----------
+        intent : IntentAPI
+            IntentAPI
+        room_id : RoomID
+            The room ID of the room you want to invite the menubot to.
+
+        """
+        bridge = await self.get_room_bridge(room_id=room_id, intent=intent)
+        if not bridge:
+            self.log.warning(f"Failed to invite supervisor")
+            return
+
+        for user_id in self.config["acd.supervisors_to_invite"]:
+            for attempt in range(10):
+                self.log.debug(f"Inviting supervisor {user_id} to {room_id}...")
+                try:
+                    await intent.invite_user(room_id=room_id, user_id=user_id)
+                    self.log.debug("Supervisor invite OK")
+                    await self.send_cmd_set_pl(
+                        room_id=room_id,
+                        intent=intent,
+                        bridge=bridge,
+                        user_id=user_id,
+                        power_level=self.config[
+                            f"acd.supervisors_to_invite.{user_id}.power_level"
+                        ],
+                    )
+                    break
+                except Exception as e:
+                    self.log.warning(f"Failed to invite supervisor attempt {attempt}: {e}")
+
+                await asyncio.sleep(2)
+
     async def get_room_bridge(self, room_id: RoomID, intent: IntentAPI) -> str:
         """Given a room, get its bridge.
 

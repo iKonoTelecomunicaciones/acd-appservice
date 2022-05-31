@@ -424,7 +424,7 @@ class MatrixHandler:
 
             if not self.room_manager.is_room_locked(room_id=room_id):
 
-                # TODO INVITAR A LOS SUPERVISORES
+                await self.room_manager.invite_supervisors(intent=intent, room_id=room_id)
                 menubot_id = await self.room_manager.get_menubot_id(intent=intent, user_id=sender)
                 if menubot_id:
                     asyncio.create_task(
