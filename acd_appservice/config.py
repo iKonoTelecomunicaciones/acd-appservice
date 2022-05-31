@@ -14,7 +14,7 @@ class Config(BaseBridgeConfig):
         copy("bridge.prefix")
         copy("bridge.invitees_to_rooms")
         copy("bridge.username_template")
-        copy("utils.wait_promise_time")
+        copy("utils.wait_ping_time")
         copy("bridge.command_prefix")
         copy("appservice.email")
         copy_dict("bridges")

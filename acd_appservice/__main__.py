@@ -125,7 +125,7 @@ class ACDAppService(ACD):
             except Exception as e:
                 self.log.exception(e)
 
-            await asyncio.sleep(780)
+            await asyncio.sleep(self.config["utils.wait_ping_time"])
 
 
 # Se corre la aplicación

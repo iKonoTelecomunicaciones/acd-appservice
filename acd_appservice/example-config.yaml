@@ -159,8 +159,8 @@ bridges:
 
 
 utils:
-    # QR response timeout
-    wait_promise_time: 10
+    # Whatsapp connection timeout (seconds)
+    wait_ping_time: 7200
     # regex to email match
     regex_email: "^[(a-z0-9\\_\\-\\.)]+@[(a-z0-9\\_\\-\\.)]+\\.[(a-z)]{2,15}$"
     # Regex to extract user phone number from matrix user ID
