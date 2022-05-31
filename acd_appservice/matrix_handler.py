@@ -410,18 +410,21 @@ class MatrixHandler:
                     await intent.set_room_name(room_id=room_id, name=new_room_name)
                     self.log.info(f"User {room_id} has changed the name of the room {intent.mxid}")
 
-            if await self.room_manager.has_menubot(room_id=room_id, intent=intent):
-                self.log.debug(f"Menu bot is here...")
+            if intent.mxid == sender:
+                self.log.debug(f"Ignoring {sender} messages, is acd*")
                 return
 
-            if await self.room_manager.is_group_room(room_id=room_id):
+            if await self.room_manager.has_menubot(room_id=room_id, intent=intent):
+                self.log.debug("Menu bot is here...")
+                return
+
+            if await self.room_manager.is_group_room(room_id=room_id, intent=intent):
                 self.log.debug(f"{room_id} is a group room, ignoring message")
                 return
 
             if not self.room_manager.is_room_locked(room_id=room_id):
 
                 # TODO INVITAR A LOS SUPERVISORES
-
                 menubot_id = await self.room_manager.get_menubot_id(intent=intent, user_id=sender)
                 if menubot_id:
                     asyncio.create_task(

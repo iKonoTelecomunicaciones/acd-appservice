@@ -564,7 +564,7 @@ class RoomManager:
         for attempt in range(10):
             self.log.debug(f"Inviting menubot {menubot_id} to {room_id}...")
             try:
-                intent.invite_user(room_id=room_id, user_id=menubot_id)
+                await intent.invite_user(room_id=room_id, user_id=menubot_id)
                 self.log.debug("Menubot invite OK")
                 break
             except Exception as e:
