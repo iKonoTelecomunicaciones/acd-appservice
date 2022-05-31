@@ -11,7 +11,9 @@ if [ ! -f /data/config.yaml ]; then
 	exit
 fi
 
-if [ ! -f registration.yaml ]; then
+if [ ! -f /data/registration.yaml ]; then
+	# Si este log no se muestra, usted esta embalado \_(o-o)_/
+	echo "Cargando archivo /data/registration.yaml"
 	python3 -m acd_appservice -g -c /data/config.yaml -r /data/registration.yaml
 	exit
 fi

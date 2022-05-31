@@ -102,14 +102,14 @@ class ACDAppService(ACD):
                 for puppet_id in all_puppets:
                     puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_id)
                     response = await self.provisioning_api.bridge_connector.ping(user_id=puppet_id)
-                    self.log.debug(response)
                     if (
                         not response.get("error")
                         and response.get("whatsapp").get("conn")
                         and response.get("whatsapp").get("conn").get("is_connected")
                     ):
                         self.log.info(
-                            f"The user [{puppet_id}] :: [{puppet.email}] is correctly connected to WhatsApp ✅"
+                            f"The user [{puppet_id}] :: [{puppet.email}]"
+                            f" is correctly connected to WhatsApp ✅"
                         )
                         await puppet.intent.send_notice(
                             room_id=puppet.control_room_id,
@@ -118,11 +118,13 @@ class ACDAppService(ACD):
 
                     else:
                         self.log.warning(
-                            f"The user [{puppet_id}] :: [{puppet.email}] is not correctly connected to WhatsApp 🚫"
+                            f"The user [{puppet_id}] :: [{puppet.email}]"
+                            f" is not correctly connected to WhatsApp 🚫"
                         )
                         await puppet.intent.send_notice(
                             room_id=puppet.control_room_id,
-                            text="🚫 I am not connected to WhastApp 🚫",
+                            text=f"🚫 I am not connected to WhastApp 🚫 ::"
+                            f" Error {response.get('error')}",
                         )
 
             except Exception as e:
