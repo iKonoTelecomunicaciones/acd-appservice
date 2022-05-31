@@ -325,7 +325,18 @@ class Puppet(DBPuppet, BasePuppet):
         return puppet
 
     @classmethod
-    async def get_all_puppetss(cls) -> List[Puppet]:
+    async def get_puppets(cls) -> List[Puppet]:
+        """Get all puppets from the database
+
+        Parameters
+        ----------
+
+
+        Returns
+        -------
+            A list of all the puppets.
+
+        """
 
         all_puppets = []
 

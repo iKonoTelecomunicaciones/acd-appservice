@@ -561,6 +561,18 @@ class RoomManager:
     async def invite_menu_bot(
         self, intent: IntentAPI, room_id: RoomID, menubot_id: UserID
     ) -> None:
+        """It tries to invite the menubot to the room, and if it fails, it waits a couple of seconds and tries again
+
+        Parameters
+        ----------
+        intent : IntentAPI
+            IntentAPI
+        room_id : RoomID
+            The room ID of the room you want to invite the menubot to.
+        menubot_id : UserID
+            The user ID of the menubot.
+
+        """
         for attempt in range(10):
             self.log.debug(f"Inviting menubot {menubot_id} to {room_id}...")
             try:

@@ -98,7 +98,7 @@ class ACDAppService(ACD):
     async def checking_whatsapp_connection(self):
         while True:
             try:
-                all_puppets = await Puppet.get_all_puppetss()
+                all_puppets = await Puppet.get_puppets()
                 for puppet_id in all_puppets:
                     puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_id)
                     response = await self.provisioning_api.bridge_connector.ping(user_id=puppet_id)
