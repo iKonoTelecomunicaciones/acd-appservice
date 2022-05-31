@@ -8,8 +8,4 @@ __pycache__
 *.db
 *.json
 *schemas*
-/data/
-*data/
-./data
 data
-data/
