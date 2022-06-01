@@ -120,7 +120,7 @@ async def transfer_user(evt: CommandEvent) -> str:
         )
         evt.log.debug(
             f"PRESENCE RESPONSE: "
-            f"[{agent_id}] -> [{presence_response.presence if presence_response else None}]"
+            f"[{target_agent_id}] -> [{presence_response.presence if presence_response else None}]"
         )
         if presence_response and presence_response.presence == PresenceState.ONLINE:
             await evt.agent_manager.force_invite_agent(
