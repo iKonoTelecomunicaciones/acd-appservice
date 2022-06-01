@@ -12,5 +12,4 @@ synapse
 .vscode
 .pytest_cache
 schemas-acd_az
-data
 menubot
