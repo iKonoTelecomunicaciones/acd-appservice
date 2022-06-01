@@ -114,6 +114,12 @@ acd:
     transfer_message: "Has sido transferido a {agentname}."
     # Message to show when a chat is asigned an agent
     joined_agent_message: "{agentname} se ha unido al chat."
+    # Supervisors to invite
+    supervisors_to_invite:
+        # If active is true, then invite users to invitees
+        invite: false
+        invitees:
+            - "@supervisor:example.com"
 
 # ACD will send below commands to interact with any WA bridge
 bridges:
@@ -163,8 +169,8 @@ bridges:
 
 
 utils:
-    # QR response timeout
-    wait_promise_time: 10
+    # Whatsapp connection timeout (seconds)
+    wait_ping_time: 7200
     # regex to email match
     regex_email: "^[(a-z0-9\\_\\-\\.)]+@[(a-z0-9\\_\\-\\.)]+\\.[(a-z)]{2,15}$"
     # Regex to extract user phone number from matrix user ID
