@@ -3,7 +3,6 @@ from mautrix.util.config import ConfigUpdateHelper
 
 
 class Config(BaseBridgeConfig):
-
     def do_update(self, helper: ConfigUpdateHelper) -> None:
         super().do_update(helper)
         copy, copy_dict = helper.copy, helper.copy_dict
