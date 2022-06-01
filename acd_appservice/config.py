@@ -3,11 +3,8 @@ from mautrix.util.config import ConfigUpdateHelper
 
 
 class Config(BaseBridgeConfig):
-    """Esta en una instancia del archivo config.yaml (uso el patrón singleton, para no tener muchas instancias)"""
 
     def do_update(self, helper: ConfigUpdateHelper) -> None:
-        # Se deben poner los campos que no deben cambiar
-        # esto hace que cuando actualicemos en config.yaml
         super().do_update(helper)
         copy, copy_dict = helper.copy, helper.copy_dict
         copy("bridge.bot_user_id")
@@ -25,10 +22,11 @@ class Config(BaseBridgeConfig):
         copy("acd.control_room_id")
         copy_dict("acd.menubot")
         copy_dict("acd.menubots")
-        copy_dict("acd.supervisors_to_invite")
         copy("acd.force_join")
         copy("acd.agent_invite_timeout")
         copy("acd.search_pending_rooms_interval")
         copy("acd.frontend_command_prefix")
-        copy("acd.joined_agent_message")
         copy("acd.transfer_message")
+        copy("acd.joined_agent_message")
+        copy("acd.supervisors_to_invite.invite")
+        copy("acd.supervisors_to_invite.invitees")
