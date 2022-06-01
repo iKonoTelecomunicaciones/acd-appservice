@@ -149,18 +149,19 @@ class ProvisionBridge(BaseClass):
         return response.status, data
 
     async def ping(self, user_id: UserID) -> Dict:
-        """It sends a private message to a user.
+        """It sends a ping to the user with the given user_id.
 
         Parameters
         ----------
         user_id : UserID
-            The user_id of the user you want to send the message to.
+            The user ID of the user you want to ping.
 
         Returns
         -------
-            A dic of the data.
+            A dictionary with the key "error" and the value of the error message.
 
         """
+
         try:
             response = await self.session.get(
                 url=f"{self.url_base}/v1/ping",

@@ -296,7 +296,7 @@ class MatrixHandler:
         # then send set-pl in the room
         if user_id.startswith(self.config["acd.supervisor_prefix"]):
             intent = await self.get_intent(room_id=room_id)
-            if intent and not await self.room_manager.is_customer_room(
+            if not intent and not await self.room_manager.is_customer_room(
                 room_id=room_id, intent=intent
             ):
                 return
