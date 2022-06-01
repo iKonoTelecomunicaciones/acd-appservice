@@ -31,3 +31,4 @@ class Config(BaseBridgeConfig):
         copy("acd.frontend_command_prefix")
         copy("acd.supervisors_to_invite.invite")
         copy("acd.supervisors_to_invite.invitees")
+        copy("acd.supervisors_to_invite.power_level")

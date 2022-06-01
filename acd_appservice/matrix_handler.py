@@ -175,9 +175,8 @@ class MatrixHandler:
                 #     )
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
             evt: MessageEvent = evt
-            if evt.type == EventType.ROOM_MESSAGE:
-                evt.content.msgtype = MessageType(str(evt.type))
-                await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
+            evt.content.msgtype = MessageType(str(evt.type))
+            await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
         elif evt.type == EventType.ROOM_NAME:
             # Setting the room name to the customer's name.
             if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
@@ -297,14 +296,18 @@ class MatrixHandler:
         # then send set-pl in the room
         if user_id.startswith(self.config["acd.supervisor_prefix"]):
             intent = await self.get_intent(room_id=room_id)
-            if not intent and not await self.room_manager.is_customer_room(
+            if not intent or not await self.room_manager.is_customer_room(
                 room_id=room_id, intent=intent
             ):
                 return
 
             bridge = await self.room_manager.get_room_bridge(room_id=room_id, intent=intent)
             await self.room_manager.send_cmd_set_pl(
-                room_id=room_id, intent=intent, bridge=bridge, user_id=user_id, power_level=99
+                room_id=room_id,
+                intent=intent,
+                bridge=bridge,
+                user_id=user_id,
+                power_level=self.config["acd.supervisors_to_invite.power_level"],
             )
 
         intent = await self.get_intent(user_id=user_id)

@@ -112,6 +112,7 @@ acd:
     frontend_command_prefix: '!element'
     # Supervisors to invite
     supervisors_to_invite:
+        power_level: 99
         # If active is true, then invite users to invitees
         invite: false
         invitees:
