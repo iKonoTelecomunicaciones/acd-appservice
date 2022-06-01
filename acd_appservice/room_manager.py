@@ -601,7 +601,6 @@ class RoomManager:
             return
         invitees = self.config["acd.supervisors_to_invite.invitees"]
         for user_id in invitees:
-            self.log.debug(user_id)
             for attempt in range(10):
                 self.log.debug(f"Inviting supervisor {user_id} to {room_id}...")
                 try:

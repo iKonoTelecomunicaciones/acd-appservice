@@ -115,8 +115,7 @@ acd:
         # If active is true, then invite users to invitees
         invite: false
         invitees:
-            "@supervisor:example.com":
-                power_level: 99
+            - "@supervisor:example.com"
 
 # ACD will send below commands to interact with any WA bridge
 bridges:
