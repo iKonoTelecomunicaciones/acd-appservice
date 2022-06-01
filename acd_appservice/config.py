@@ -29,3 +29,4 @@ class Config(BaseBridgeConfig):
         copy("acd.joined_agent_message")
         copy("acd.supervisors_to_invite.invite")
         copy("acd.supervisors_to_invite.invitees")
+        copy("acd.supervisors_to_invite.power_level")

@@ -577,6 +577,7 @@ class RoomManager:
                 return True
 
         self.log.debug(f"This room {room_id} not is a group room, return False")
+        self.ROOMS[room_id]["is_group_room"] = False
         return False
 
     async def invite_menu_bot(

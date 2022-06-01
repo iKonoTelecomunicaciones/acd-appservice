@@ -331,11 +331,9 @@ class Puppet(DBPuppet, BasePuppet):
         Parameters
         ----------
 
-
         Returns
         -------
             A list of all the puppets.
-
         """
 
         all_puppets = []

@@ -116,6 +116,7 @@ acd:
     joined_agent_message: "{agentname} se ha unido al chat."
     # Supervisors to invite
     supervisors_to_invite:
+        power_level: 99
         # If active is true, then invite users to invitees
         invite: false
         invitees:
