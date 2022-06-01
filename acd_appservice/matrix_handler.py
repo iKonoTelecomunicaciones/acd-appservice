@@ -15,6 +15,7 @@ from mautrix.types import (
     MessageEvent,
     MessageEventContent,
     MessageType,
+    PresenceEventContent,
     RoomID,
     RoomNameStateEventContent,
     StateEvent,
@@ -408,6 +409,29 @@ class MatrixHandler:
         # Ignorar la sala de status broadcast
         if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):
             self.log.debug(f"Ignoring the room {room_id} because it is whatsapp_status_broadcast")
+            return
+
+        is_agent = self.agent_manager.is_agent(agent_id=sender)
+
+        # Ignore messages from ourselves or agents if not a command
+        if is_agent:
+            # await self.signaling.set_chat_status(
+            #     room_id=room.room_id, status=Signaling.FOLLOWUP, agent=event.sender
+            # )
+            return
+
+        room_agent = await self.agent_manager.get_room_agent(room_id=room_id)
+        if room_agent:
+            # # if message is not from agents, bots or ourselves, it is from the customer
+            # await self.signaling.set_chat_status(
+            #     room_id=room.room_id, status=Signaling.PENDING, agent=room_agent
+            # )
+            presence = await self.room_manager.get_user_presence(user_id=sender, intent=intent)
+            if presence.presence == PresenceEventContent.presence.ONLINE:
+                # await self.process_offline_agent(
+                #     room.room_id, room_agent, presence_response.last_active_ago
+                # )
+                pass
             return
 
         # The below code is checking if the room is a customer room, if it is,
