@@ -601,18 +601,12 @@ class RoomManager:
             return
         invitees = self.config["acd.supervisors_to_invite.invitees"]
         for user_id in invitees:
+            self.log.debug(user_id)
             for attempt in range(10):
                 self.log.debug(f"Inviting supervisor {user_id} to {room_id}...")
                 try:
                     await intent.invite_user(room_id=room_id, user_id=user_id)
                     self.log.debug("Supervisor invite OK")
-                    await self.send_cmd_set_pl(
-                        room_id=room_id,
-                        intent=intent,
-                        bridge=bridge,
-                        user_id=user_id,
-                        power_level=invitees[f"{user_id}.power_level"],
-                    )
                     break
                 except Exception as e:
                     self.log.warning(f"Failed to invite supervisor attempt {attempt}: {e}")

@@ -292,6 +292,20 @@ class MatrixHandler:
         if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
             await RoomManager.save_room(room_id=room_id, selected_option=None, puppet_mxid=user_id)
 
+        # If the joined user is a supervisor and the room is a customer room,
+        # then send set-pl in the room
+        if user_id.startswith(self.config["acd.supervisor_prefix"]):
+            intent = await self.get_intent(room_id=room_id)
+            if intent and not await self.room_manager.is_customer_room(
+                room_id=room_id, intent=intent
+            ):
+                return
+
+            bridge = await self.room_manager.get_room_bridge(room_id=room_id, intent=intent)
+            await self.room_manager.send_cmd_set_pl(
+                room_id=room_id, intent=intent, bridge=bridge, user_id=user_id, power_level=99
+            )
+
         intent = await self.get_intent(user_id=user_id)
         if not intent:
             self.log.debug(f"The user who has joined is neither a puppet nor the appservice_bot")
@@ -424,7 +438,9 @@ class MatrixHandler:
 
             if not self.room_manager.is_room_locked(room_id=room_id):
                 if self.config["acd.supervisors_to_invite.invite"]:
-                    await self.room_manager.invite_supervisors(intent=intent, room_id=room_id)
+                    asyncio.create_task(
+                        self.room_manager.invite_supervisors(intent=intent, room_id=room_id)
+                    )
                 menubot_id = await self.room_manager.get_menubot_id(intent=intent, user_id=sender)
                 if menubot_id:
                     asyncio.create_task(
