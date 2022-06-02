@@ -403,7 +403,7 @@ class MatrixHandler:
                 agent_manager=self.agent_manager,
                 sender=room_agent,
                 room_id=room_id,
-                text=f"{self.config['bridge.command_prefix']} {user_selected_campaign}",
+                text=f"{self.config['bridge.command_prefix']} {room_id} {user_selected_campaign}",
             )
             await command_processor(cmd_evt=cmd_evt)
 
@@ -487,7 +487,7 @@ class MatrixHandler:
                     agent_manager=self.agent_manager,
                     sender=room_agent,
                     room_id=room_id,
-                    text=f"{self.config['bridge.command_prefix']} {user_selected_campaign}",
+                    text=f"{self.config['bridge.command_prefix']} {room_id} {user_selected_campaign}",
                 )
                 await command_processor(cmd_evt=cmd_evt)
             elif action == "menu":
