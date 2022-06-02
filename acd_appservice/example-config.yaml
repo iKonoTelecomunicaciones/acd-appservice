@@ -121,6 +121,10 @@ acd:
         invite: false
         invitees:
             - "@supervisor:example.com"
+    voice_call:
+        call_message: "Incoming call"
+        no_voice_call: "Hola! Te informamos que no atendemos llamadas de WhatsApp. Por favor envíanos un mensaje para comunicarte con nosotros."
+
 
 # ACD will send below commands to interact with any WA bridge
 bridges:

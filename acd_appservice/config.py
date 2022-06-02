@@ -30,3 +30,5 @@ class Config(BaseBridgeConfig):
         copy("acd.supervisors_to_invite.invite")
         copy("acd.supervisors_to_invite.invitees")
         copy("acd.supervisors_to_invite.power_level")
+        copy("acd.voice_call.call_message")
+        copy("acd.voice_call.no_voice_call")

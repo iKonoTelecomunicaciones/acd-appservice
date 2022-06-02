@@ -376,6 +376,11 @@ class MatrixHandler:
 
         """
 
+        # Discard reply blocks
+        if message.body.startswith(" * "):
+            # This is likely an edit, ignore
+            return
+
         intent = await self.get_intent(room_id=room_id)
         if not intent:
             self.log.warning(f"I can't get an intent for the room {room_id}")
@@ -423,6 +428,13 @@ class MatrixHandler:
         # ignore messages other than commands from supervisor
         if sender.startswith(self.config["acd.supervisor_prefix"]):
             return
+
+        # if it is a voice call, let the customer know that the company doesn't receive calls
+        if self.config["acd.voice_call"]:
+            if message.body == self.config["acd.voice_call.call_message"]:
+                no_call_message = self.config["acd.voice_call.no_voice_call"]
+                await intent.send_text(room_id=room_id, text=no_call_message)
+                return
 
         # Ignorar la sala de status broadcast
         if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):
