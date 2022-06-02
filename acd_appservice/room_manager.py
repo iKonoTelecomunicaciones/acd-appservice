@@ -394,6 +394,7 @@ class RoomManager:
         response = None
         try:
             response = await intent.get_presence(user_id=user_id)
+            self.log.debug(f"Presence for....... [{user_id}] is [{response.presence}]")
         except IntentError as e:
             self.log.exception(e)
 

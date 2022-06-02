@@ -498,7 +498,7 @@ class MatrixHandler:
                     f"<b>1.</b> Para ser atendido por otra persona de la misma área.<br>"
                     f"<b>2.</b> Para ver el menú.<br>"
                 )
-                await intent.send_text(room_id=room_id, text=menu)
+                await intent.send_text(room_id=room_id, html=menu)
 
     async def handle_message(
         self, room_id: RoomID, sender: UserID, message: MessageEventContent, event_id: EventID
@@ -595,31 +595,6 @@ class MatrixHandler:
             # )
             return
 
-        # the user entered the offline agent menu and selected some option
-        if self.room_manager.in_offline_menu(room_id):
-            self.room_manager.pull_from_offline_menu(room_id)
-            valid_option = await self.process_offline_selection(
-                room_id=room_id, msg=message.body, intent=intent
-            )
-            if valid_option:
-                return
-
-        room_agent = await self.agent_manager.get_room_agent(room_id=room_id)
-        if room_agent:
-            # # if message is not from agents, bots or ourselves, it is from the customer
-            # await self.signaling.set_chat_status(
-            #     room_id=room.room_id, status=Signaling.PENDING, agent=room_agent
-            # )
-            presence = await self.room_manager.get_user_presence(user_id=sender, intent=intent)
-            if presence and presence.presence == PresenceState.ONLINE:
-                await self.process_offline_agent(
-                    room_id=room_id,
-                    room_agent=room_agent,
-                    last_active_ago=presence.last_active_ago,
-                    intent=intent,
-                )
-            return
-
         # The below code is checking if the room is a customer room, if it is,
         # it is getting the room name, and the creator of the room.
         # If the room name is empty, it is setting the room name to the new room name.
@@ -636,6 +611,33 @@ class MatrixHandler:
 
             if intent.mxid == sender:
                 self.log.debug(f"Ignoring {sender} messages, is acd*")
+                return
+
+            # the user entered the offline agent menu and selected some option
+            if self.room_manager.in_offline_menu(room_id):
+                self.room_manager.pull_from_offline_menu(room_id)
+                valid_option = await self.process_offline_selection(
+                    room_id=room_id, msg=message.body, intent=intent
+                )
+                if valid_option:
+                    return
+
+            room_agent = await self.agent_manager.get_room_agent(room_id=room_id)
+            if room_agent:
+                # # if message is not from agents, bots or ourselves, it is from the customer
+                # await self.signaling.set_chat_status(
+                #     room_id=room.room_id, status=Signaling.PENDING, agent=room_agent
+                # )
+                presence = await self.room_manager.get_user_presence(
+                    user_id=room_agent, intent=intent
+                )
+                if presence and presence.presence != PresenceState.ONLINE:
+                    await self.process_offline_agent(
+                        room_id=room_id,
+                        room_agent=room_agent,
+                        last_active_ago=presence.last_active_ago,
+                        intent=intent,
+                    )
                 return
 
             if await self.room_manager.has_menubot(room_id=room_id, intent=intent):
