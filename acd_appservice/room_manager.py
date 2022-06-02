@@ -29,8 +29,12 @@ class RoomManager:
     log: TraceLogger = logging.getLogger("acd.room_manager")
     ROOMS: dict[RoomID, Dict] = {}
     CONTROL_ROOMS: List[RoomID] = []
+
     # list of room_ids to know if distribution process is taking place
     LOCKED_ROOMS = set()
+
+    # rooms that are in offline agent menu
+    offline_menu = set()
 
     def __init__(self, config: Config) -> None:
         self.config = config
@@ -338,6 +342,21 @@ class RoomManager:
         """Return the key for the dict of futures for a specific agent."""
 
         return f"trasnfer-{room_id}-{agent_id}" if transfer else f"{room_id}-{agent_id}"
+
+    @classmethod
+    def put_in_offline_menu(cls, room_id):
+        """Put the room in offline menu state."""
+        cls.offline_menu.add(room_id)
+
+    @classmethod
+    def pull_from_offline_menu(cls, room_id):
+        """Remove the room from offline menu state."""
+        cls.offline_menu.discard(room_id)
+
+    @classmethod
+    def in_offline_menu(cls, room_id):
+        """Check if room is in offline menu state."""
+        return room_id in cls.offline_menu
 
     async def get_update_name(self, creator: UserID, intent: IntentAPI) -> str:
         """Given a customer's mxid, pull the phone number and concatenate it to the name
