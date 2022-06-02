@@ -8,3 +8,5 @@ __pycache__
 *.db
 *.json
 *schemas*
+data
+menubot

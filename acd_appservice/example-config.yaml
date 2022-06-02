@@ -110,6 +110,17 @@ acd:
     search_pending_rooms_interval: 180
     # The prefix to special messages that are going to be processed in frontend.
     frontend_command_prefix: '!element'
+    # Supervisors to invite
+    supervisors_to_invite:
+        power_level: 99
+        # If active is true, then invite users to invitees
+        invite: false
+        invitees:
+            - "@supervisor:example.com"
+    voice_call:
+        call_message: "Incoming call"
+        no_voice_call: "Hola! Te informamos que no atendemos llamadas de WhatsApp. Por favor envíanos un mensaje para comunicarte con nosotros."
+
 
 # ACD will send below commands to interact with any WA bridge
 bridges:
@@ -159,8 +170,8 @@ bridges:
 
 
 utils:
-    # QR response timeout
-    wait_promise_time: 10
+    # Whatsapp connection timeout (seconds)
+    wait_ping_time: 7200
     # regex to email match
     regex_email: "^[(a-z0-9\\_\\-\\.)]+@[(a-z0-9\\_\\-\\.)]+\\.[(a-z)]{2,15}$"
     # Regex to extract user phone number from matrix user ID

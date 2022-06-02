@@ -147,3 +147,34 @@ class ProvisionBridge(BaseClass):
             self.log.error(data)
 
         return response.status, data
+
+    async def ping(self, user_id: UserID) -> Dict:
+        """It sends a ping to the user with the given user_id.
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user you want to ping.
+
+        Returns
+        -------
+            A dictionary with the key "error" and the value of the error message.
+
+        """
+
+        try:
+            response = await self.session.get(
+                url=f"{self.url_base}/v1/ping",
+                headers=self.headers,
+                params={"user_id": user_id},
+            )
+        except Exception as e:
+            self.log.error(e)
+            return {"error": str(e)}
+
+        data = await response.json()
+        if not response.status in [200, 201]:
+            self.log.error(data)
+            return
+
+        return data

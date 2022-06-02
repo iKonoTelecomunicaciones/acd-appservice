@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, AsyncGenerator, AsyncIterable, Awaitable, cast
+from typing import TYPE_CHECKING, AsyncGenerator, AsyncIterable, Awaitable, List, cast
 
 from mautrix.appservice import IntentAPI
 from mautrix.bridge import BasePuppet, async_getter_lock
@@ -9,8 +9,7 @@ from mautrix.types import ContentURI, RoomID, SyncToken, UserID
 from mautrix.util.simple_template import SimpleTemplate
 from yarl import URL
 
-from acd_appservice import room_manager as room_m
-
+from . import room_manager as room_m
 from .config import Config
 from .db import Puppet as DBPuppet
 from .db.room import Room
@@ -324,6 +323,28 @@ class Puppet(DBPuppet, BasePuppet):
             return
 
         return puppet
+
+    @classmethod
+    async def get_puppets(cls) -> List[Puppet]:
+        """Get all puppets from the database
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            A list of all the puppets.
+        """
+
+        all_puppets = []
+
+        try:
+            all_puppets = await cls.get_all_puppets()
+        except Exception as e:
+            cls.log.exception(e)
+            return
+
+        return all_puppets
 
     @classmethod
     async def all_with_custom_mxid(cls) -> AsyncGenerator[Puppet, None]:

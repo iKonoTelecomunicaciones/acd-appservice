@@ -485,6 +485,134 @@ class RoomManager:
 
         return menubot_id
 
+    async def has_menubot(self, room_id: RoomID, intent: IntentAPI) -> bool:
+        """If the room has a menubot, return True. Otherwise, return False
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to check.
+        intent : IntentAPI
+            IntentAPI
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+        members = await intent.get_joined_members(room_id=room_id)
+
+        if not members:
+            return False
+
+        for member in members:
+            if self.config["acd.menubot"]:
+                if member == self.config["acd.menubot.user_id"]:
+                    return True
+
+            if self.config["acd.menubots"]:
+                if member in self.config["acd.menubots"]:
+                    return True
+
+        return False
+
+    async def is_group_room(self, room_id: RoomID, intent: IntentAPI) -> bool:
+        """It checks if a room has more than one user in it, and if it does, it returns True
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to check.
+        intent : IntentAPI
+            IntentAPI
+
+        Returns
+        -------
+            True if is_group_room, False otherwise.
+
+        """
+        try:
+            room = self.ROOMS[room_id]
+            return room.get("is_group_room")
+        except KeyError:
+            pass
+
+        members = await intent.get_joined_members(room_id=room_id)
+
+        if not members:
+            return False
+
+        clients = 0
+
+        for member in members:
+            self.log.debug(f"One of the members of this room {room_id} is {member}")
+            customer_user_match = re.search(self.config["utils.username_regex"], member)
+            if customer_user_match:
+                clients += 1
+
+            if clients >= 2:
+                self.ROOMS[room_id]["is_group_room"] = True
+                self.log.debug(f"This room {room_id} is a group room, return True")
+                return True
+
+        self.log.debug(f"This room {room_id} not is a group room, return False")
+        self.ROOMS[room_id]["is_group_room"] = False
+        return False
+
+    async def invite_menu_bot(
+        self, intent: IntentAPI, room_id: RoomID, menubot_id: UserID
+    ) -> None:
+        """It tries to invite the menubot to the room, and if it fails, it waits a couple of seconds and tries again
+
+        Parameters
+        ----------
+        intent : IntentAPI
+            IntentAPI
+        room_id : RoomID
+            The room ID of the room you want to invite the menubot to.
+        menubot_id : UserID
+            The user ID of the menubot.
+
+        """
+        for attempt in range(10):
+            self.log.debug(f"Inviting menubot {menubot_id} to {room_id}...")
+            try:
+                await intent.invite_user(room_id=room_id, user_id=menubot_id)
+                self.log.debug("Menubot invite OK")
+                break
+            except Exception as e:
+                self.log.warning(f"Failed to invite menubot attempt {attempt}: {e}")
+
+            await asyncio.sleep(2)
+
+    async def invite_supervisors(self, intent: IntentAPI, room_id: RoomID) -> None:
+        """It tries to invite the menubot to the room, and if it fails, it waits a couple of seconds and tries again
+
+        Parameters
+        ----------
+        intent : IntentAPI
+            IntentAPI
+        room_id : RoomID
+            The room ID of the room you want to invite the menubot to.
+
+        """
+        bridge = await self.get_room_bridge(room_id=room_id, intent=intent)
+        if not bridge:
+            self.log.warning(f"Failed to invite supervisor")
+            return
+        invitees = self.config["acd.supervisors_to_invite.invitees"]
+        for user_id in invitees:
+            for attempt in range(10):
+                self.log.debug(f"Inviting supervisor {user_id} to {room_id}...")
+                try:
+                    await intent.invite_user(room_id=room_id, user_id=user_id)
+                    self.log.debug("Supervisor invite OK")
+                    break
+                except Exception as e:
+                    self.log.warning(f"Failed to invite supervisor attempt {attempt}: {e}")
+
+                await asyncio.sleep(2)
+
     async def get_room_bridge(self, room_id: RoomID, intent: IntentAPI) -> str:
         """Given a room, get its bridge.
 
@@ -719,9 +847,7 @@ class RoomManager:
         return True
 
     @classmethod
-    async def update_pending_room_in_db(
-        cls, room_id: RoomID, selected_option: str, is_pending_room: bool = False
-    ) -> bool:
+    async def update_pending_room_in_db(cls, room_id: RoomID, selected_option: str) -> bool:
         """Updates a pending_room in the database.
 
         Parameters
@@ -739,9 +865,7 @@ class RoomManager:
         try:
             room = await Room.get_pending_room_by_room_id(room_id)
             if room:
-                await Room.update_pending_room_by_room_id(
-                    room_id, selected_option, is_pending_room
-                )
+                await Room.update_pending_room_by_room_id(room_id, selected_option)
             else:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
                 return False

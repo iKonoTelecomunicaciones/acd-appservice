@@ -15,6 +15,7 @@ from mautrix.types import (
     MessageEvent,
     MessageEventContent,
     MessageType,
+    PresenceState,
     RoomID,
     RoomNameStateEventContent,
     StateEvent,
@@ -174,9 +175,8 @@ class MatrixHandler:
                 #     )
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
             evt: MessageEvent = evt
-            if evt.type == EventType.ROOM_MESSAGE:
-                evt.content.msgtype = MessageType(str(evt.type))
-                await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
+            evt.content.msgtype = MessageType(str(evt.type))
+            await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
         elif evt.type == EventType.ROOM_NAME:
             # Setting the room name to the customer's name.
             if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
@@ -292,6 +292,24 @@ class MatrixHandler:
         if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
             await RoomManager.save_room(room_id=room_id, selected_option=None, puppet_mxid=user_id)
 
+        # If the joined user is a supervisor and the room is a customer room,
+        # then send set-pl in the room
+        if user_id.startswith(self.config["acd.supervisor_prefix"]):
+            intent = await self.get_intent(room_id=room_id)
+            if not intent or not await self.room_manager.is_customer_room(
+                room_id=room_id, intent=intent
+            ):
+                return
+
+            bridge = await self.room_manager.get_room_bridge(room_id=room_id, intent=intent)
+            await self.room_manager.send_cmd_set_pl(
+                room_id=room_id,
+                intent=intent,
+                bridge=bridge,
+                user_id=user_id,
+                power_level=self.config["acd.supervisors_to_invite.power_level"],
+            )
+
         intent = await self.get_intent(user_id=user_id)
         if not intent:
             self.log.debug(f"The user who has joined is neither a puppet nor the appservice_bot")
@@ -343,6 +361,11 @@ class MatrixHandler:
 
         """
 
+        # Discard reply blocks
+        if message.body.startswith(" * "):
+            # This is likely an edit, ignore
+            return
+
         intent = await self.get_intent(room_id=room_id)
         if not intent:
             self.log.warning(f"I can't get an intent for the room {room_id}")
@@ -391,9 +414,39 @@ class MatrixHandler:
         if sender.startswith(self.config["acd.supervisor_prefix"]):
             return
 
+        # if it is a voice call, let the customer know that the company doesn't receive calls
+        if self.config["acd.voice_call"]:
+            if message.body == self.config["acd.voice_call.call_message"]:
+                no_call_message = self.config["acd.voice_call.no_voice_call"]
+                await intent.send_text(room_id=room_id, text=no_call_message)
+                return
+
         # Ignorar la sala de status broadcast
         if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):
             self.log.debug(f"Ignoring the room {room_id} because it is whatsapp_status_broadcast")
+            return
+
+        is_agent = self.agent_manager.is_agent(agent_id=sender)
+
+        # Ignore messages from ourselves or agents if not a command
+        if is_agent:
+            # await self.signaling.set_chat_status(
+            #     room_id=room.room_id, status=Signaling.FOLLOWUP, agent=event.sender
+            # )
+            return
+
+        room_agent = await self.agent_manager.get_room_agent(room_id=room_id)
+        if room_agent:
+            # # if message is not from agents, bots or ourselves, it is from the customer
+            # await self.signaling.set_chat_status(
+            #     room_id=room.room_id, status=Signaling.PENDING, agent=room_agent
+            # )
+            presence = await self.room_manager.get_user_presence(user_id=sender, intent=intent)
+            if presence and presence.presence != PresenceState.ONLINE:
+                # await self.process_offline_agent(
+                #     room.room_id, room_agent, presence_response.last_active_ago
+                # )
+                pass
             return
 
         # The below code is checking if the room is a customer room, if it is,
@@ -409,6 +462,31 @@ class MatrixHandler:
                 if new_room_name:
                     await intent.set_room_name(room_id=room_id, name=new_room_name)
                     self.log.info(f"User {room_id} has changed the name of the room {intent.mxid}")
+
+            if intent.mxid == sender:
+                self.log.debug(f"Ignoring {sender} messages, is acd*")
+                return
+
+            if await self.room_manager.has_menubot(room_id=room_id, intent=intent):
+                self.log.debug("Menu bot is here...")
+                return
+
+            if await self.room_manager.is_group_room(room_id=room_id, intent=intent):
+                self.log.debug(f"{room_id} is a group room, ignoring message")
+                return
+
+            if not self.room_manager.is_room_locked(room_id=room_id):
+                if self.config["acd.supervisors_to_invite.invite"]:
+                    asyncio.create_task(
+                        self.room_manager.invite_supervisors(intent=intent, room_id=room_id)
+                    )
+                menubot_id = await self.room_manager.get_menubot_id(intent=intent, user_id=sender)
+                if menubot_id:
+                    asyncio.create_task(
+                        self.room_manager.invite_menu_bot(
+                            intent=intent, room_id=room_id, menubot_id=menubot_id
+                        )
+                    )
 
     async def get_intent(self, user_id: UserID = None, room_id: RoomID = None) -> IntentAPI:
         """If the user_id is not the bot's mxid, and the user_id is a custom mxid,

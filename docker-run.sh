@@ -2,18 +2,20 @@
 cd /opt/acd-appservice
 
 
-if [ ! -f config.yaml ]; then
-	cp example-config.yaml config.yaml
+if [ ! -f /data/config.yaml ]; then
+	cp example-config.yaml /data/config.yaml
 	echo "Didn't find a config file."
-	echo "Copied default config file to config.yaml"
+	echo "Copied default config file to /data/config.yaml"
 	echo "Modify that config file to your liking."
 	echo "Start the container again after that to generate the registration file."
 	exit
 fi
 
-if [ ! -f registration.yaml ]; then
-	python3 -m acd_appservice -g -c config.yaml -r registration.yaml
+if [ ! -f /data/registration.yaml ]; then
+	# Si este log no se muestra, usted esta embalado \_(o-o)_/
+	echo "Cargando archivo /data/registration.yaml"
+	python3 -m acd_appservice -g -c /data/config.yaml -r /data/registration.yaml
 	exit
 fi
 
-exec python3 -m acd_appservice -c config.yaml
+exec python3 -m acd_appservice -c /data/config.yaml
