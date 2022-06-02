@@ -398,12 +398,15 @@ class MatrixHandler:
                 return True
 
             self.log.debug(f"Transferring to {user_selected_campaign}")
+            fake_command = f"transfer {room_id} {user_selected_campaign}"
+            args = fake_command.split()
             cmd_evt = CommandEvent(
-                cmd="transfer",
+                cmd=args[0],
+                args=args,
                 agent_manager=self.agent_manager,
                 sender=room_agent,
                 room_id=room_id,
-                text=f"{self.config['bridge.command_prefix']} {room_id} {user_selected_campaign}",
+                text=fake_command,
             )
             await command_processor(cmd_evt=cmd_evt)
 
@@ -482,14 +485,18 @@ class MatrixHandler:
                     # this can happen if the database is deleted
                     user_selected_campaign = self.config.get("control_room_id")
                 self.log.debug(f"Transferring to {user_selected_campaign}")
+                fake_command = f"transfer {room_id} {user_selected_campaign}"
+                args = fake_command.split()
                 cmd_evt = CommandEvent(
-                    cmd="transfer_user",
+                    cmd=args[0],
+                    args=args,
                     agent_manager=self.agent_manager,
                     sender=room_agent,
                     room_id=room_id,
-                    text=f"{self.config['bridge.command_prefix']} {room_id} {user_selected_campaign}",
+                    text=fake_command,
                 )
                 await command_processor(cmd_evt=cmd_evt)
+
             elif action == "menu":
                 self.room_manager.put_in_offline_menu(room_id)
                 menu = (
