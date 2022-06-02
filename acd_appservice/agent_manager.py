@@ -11,7 +11,6 @@ from mautrix.errors.base import IntentError
 from mautrix.types import Member, PresenceState, RoomAlias, RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
-from acd_appservice import puppet
 from acd_appservice.puppet import Puppet
 
 from .http_client import HTTPClient
