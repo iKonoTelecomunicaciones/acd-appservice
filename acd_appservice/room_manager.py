@@ -29,8 +29,12 @@ class RoomManager:
     log: TraceLogger = logging.getLogger("acd.room_manager")
     ROOMS: dict[RoomID, Dict] = {}
     CONTROL_ROOMS: List[RoomID] = []
+
     # list of room_ids to know if distribution process is taking place
     LOCKED_ROOMS = set()
+
+    # rooms that are in offline agent menu
+    offline_menu = set()
 
     def __init__(self, config: Config) -> None:
         self.config = config
@@ -301,26 +305,58 @@ class RoomManager:
         return False
 
     @classmethod
-    def lock_room(cls, room_id: RoomID) -> None:
+    def lock_room(cls, room_id: RoomID, transfer: str = None) -> None:
         """Lock the room."""
-        cls.log.debug(f"LOCKING ROOM {room_id}...")
+        if transfer:
+            cls.log.debug(f"[TRANSFER] - LOCKING ROOM {room_id}...")
+            room_id = cls.get_room_transfer_key(room_id=room_id)
+        else:
+            cls.log.debug(f"LOCKING ROOM {room_id}...")
         cls.LOCKED_ROOMS.add(room_id)
 
     @classmethod
-    def unlock_room(cls, room_id: RoomID) -> None:
+    def unlock_room(cls, room_id: RoomID, transfer: str = None) -> None:
         """Unlock the room."""
-        cls.log.debug(f"UNLOCKING ROOM {room_id}...")
+        if transfer:
+            cls.log.debug(f"[TRANSFER] - UNLOCKING ROOM {room_id}...")
+            room_id = cls.get_room_transfer_key(room_id=room_id)
+        else:
+            cls.log.debug(f"UNLOCKING ROOM {room_id}...")
+
         cls.LOCKED_ROOMS.discard(room_id)
 
     @classmethod
-    def is_room_locked(cls, room_id: RoomID) -> bool:
+    def is_room_locked(cls, room_id: RoomID, transfer: str = None) -> bool:
         """Check if room is locked."""
+        if transfer:
+            room_id = cls.get_room_transfer_key(room_id=room_id)
         return room_id in cls.LOCKED_ROOMS
 
     @classmethod
-    def get_future_key(cls, room_id: RoomID, agent_id: UserID) -> str:
+    def get_room_transfer_key(cls, room_id: RoomID):
+        """returns a string that is the key for the transfer for a given room"""
+        return f"transfer-{room_id}"
+
+    @classmethod
+    def get_future_key(cls, room_id: RoomID, agent_id: UserID, transfer: str = None) -> str:
         """Return the key for the dict of futures for a specific agent."""
-        return f"{room_id}-{agent_id}"
+
+        return f"trasnfer-{room_id}-{agent_id}" if transfer else f"{room_id}-{agent_id}"
+
+    @classmethod
+    def put_in_offline_menu(cls, room_id):
+        """Put the room in offline menu state."""
+        cls.offline_menu.add(room_id)
+
+    @classmethod
+    def pull_from_offline_menu(cls, room_id):
+        """Remove the room from offline menu state."""
+        cls.offline_menu.discard(room_id)
+
+    @classmethod
+    def in_offline_menu(cls, room_id):
+        """Check if room is in offline menu state."""
+        return room_id in cls.offline_menu
 
     async def get_update_name(self, creator: UserID, intent: IntentAPI) -> str:
         """Given a customer's mxid, pull the phone number and concatenate it to the name
@@ -358,6 +394,7 @@ class RoomManager:
         response = None
         try:
             response = await intent.get_presence(user_id=user_id)
+            self.log.debug(f"Presence for....... [{user_id}] is [{response.presence}]")
         except IntentError as e:
             self.log.exception(e)
 
@@ -418,18 +455,22 @@ class RoomManager:
 
         return creator
 
-    async def kick_menubot(self, room_id: RoomID, reason: str, intent: IntentAPI) -> None:
+    async def kick_menubot(
+        self, room_id: RoomID, reason: str, intent: IntentAPI, control_room_id: RoomID
+    ) -> None:
         """Kick menubot from some room."""
-        menubot_id = await self.get_menubot_id(room_id=room_id)
+        menubot_id = await self.get_menubot_id(intent=intent, room_id=room_id)
         if menubot_id:
-            self.log.debug("Kicking the menubot [{menubot_id}]")
             await self.send_menubot_command(
-                menubot_id=menubot_id, command="cancel_task", args=(room_id)
+                menubot_id, "cancel_task", control_room_id, intent, room_id
             )
             try:
+                self.log.debug("Kicking the menubot [{menubot_id}]")
                 await intent.kick_user(room_id=room_id, user_id=menubot_id, reason=reason)
-            except IntentError as e:
-                self.log.exception(e)
+            except Exception as e:
+                self.log.warning(
+                    str(e) + f":: the user who was going to be kicked out: {menubot_id}"
+                )
 
             self.log.debug(f"User [{menubot_id}] KICKED from room [{room_id}]")
 
@@ -738,7 +779,13 @@ class RoomManager:
             )
 
     @classmethod
-    async def save_room(cls, room_id: RoomID, selected_option: str, puppet_mxid: str) -> bool:
+    async def save_room(
+        cls,
+        room_id: RoomID,
+        selected_option: str,
+        puppet_mxid: str,
+        change_selected_option: bool = False,
+    ) -> bool:
         """Save or update a room.
 
         Parameters
@@ -756,7 +803,10 @@ class RoomManager:
         room = await Room.get_room_by_room_id(room_id)
         if room:
             return await cls.update_room_in_db(
-                room_id=room_id, selected_option=selected_option, puppet_mxid=puppet_mxid
+                room_id=room_id,
+                selected_option=selected_option,
+                puppet_mxid=puppet_mxid,
+                change_selected_option=change_selected_option,
             )
         else:
             return await cls.insert_room_in_db(

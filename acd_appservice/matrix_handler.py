@@ -279,7 +279,13 @@ class MatrixHandler:
         """
         self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
 
+        # Generamos llaves para buscar en PENDING_INVITES (acd, transfer)
         future_key = RoomManager.get_future_key(room_id=room_id, agent_id=user_id)
+        transfer_future_key = RoomManager.get_future_key(
+            room_id=room_id, agent_id=user_id, transfer="ok"
+        )
+
+        # Buscamos promesas pendientes relacionadas con el comando acd
         if (
             future_key in AgentManager.PENDING_INVITES
             and not AgentManager.PENDING_INVITES[future_key].done()
@@ -288,6 +294,15 @@ class MatrixHandler:
             # timer stops
             self.log.debug(f"Resolving to True the promise [{future_key}]")
             AgentManager.PENDING_INVITES[future_key].set_result(True)
+
+        # Buscamos promesas pendientes relacionadas con las transferencia
+        if (
+            transfer_future_key in AgentManager.PENDING_INVITES
+            and not AgentManager.PENDING_INVITES[transfer_future_key].done()
+        ):
+            # when the agent accepts the invite, the Future is resolved and the waiting
+            # timer stops
+            AgentManager.PENDING_INVITES[transfer_future_key].set_result(True)
 
         # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
         if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
@@ -340,6 +355,160 @@ class MatrixHandler:
         if is_command:
             text = text[len(prefix) + 1 :].lstrip()
         return is_command, text
+
+    async def process_offline_selection(self, room_id: RoomID, msg: str, intent: IntentAPI):
+        """If the user selects option 1, the bot will transfer the user to another agent
+        in the same campaign. If the user selects option 2,
+        the bot will kick the current offline agent and show the main menu
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room where the user is.
+        msg : str
+            The message that the user sent.
+        intent : IntentAPI
+            IntentAPI
+
+        Returns
+        -------
+            The return value is a boolean.
+        """
+
+        offline_menu_option = msg.split()[0]
+        room_agent = await self.agent_manager.get_room_agent(room_id=room_id)
+        if offline_menu_option == "1":
+            # user selected transfer to another agent in same campaign
+
+            # first, check if that campaign has online agents
+            user_selected_campaign = await self.room_manager.get_campaign_of_room(room_id=room_id)
+
+            puppet: Puppet = await Puppet.get_by_custom_mxid(intent.mxid)
+
+            if not user_selected_campaign:
+                # this can happen if the database is deleted
+                user_selected_campaign = puppet.control_room_id
+
+            campaign_has_online_agent = await self.agent_manager.get_online_agent_in_room(
+                room_id=user_selected_campaign
+            )
+            if not campaign_has_online_agent:
+                msg = self.config["acd.no_agents_for_transfer"]
+                if msg:
+                    await intent.send_text(room_id=room_id, text=msg)
+                return True
+
+            self.log.debug(f"Transferring to {user_selected_campaign}")
+            fake_command = f"transfer {room_id} {user_selected_campaign}"
+            args = fake_command.split()
+            cmd_evt = CommandEvent(
+                cmd=args[0],
+                args=args,
+                agent_manager=self.agent_manager,
+                sender=room_agent,
+                room_id=room_id,
+                text=fake_command,
+            )
+            await command_processor(cmd_evt=cmd_evt)
+
+        elif offline_menu_option == "2":
+            # user selected kick current offline agent and see the main menu
+            await intent.kick_user(
+                room_id=room_id, user_id=room_agent, reason="Usuario seleccionó ver el menú."
+            )
+            await self.agent_manager.signaling.set_chat_status(room_id, Signaling.OPEN)
+            # clear campaign in the ik.chat.campaign_selection state event
+            await self.agent_manager.signaling.set_selected_campaign(
+                room_id=room_id, campaign_room_id=None
+            )
+            if self.config["acd.menubot"]:
+                menubot_id = self.config["acd.menubot.user_id"]
+                await self.room_manager.invite_menu_bot(
+                    intent=intent, room_id=room_id, menubot_id=menubot_id
+                )
+            else:
+                user_id = await self.room_manager.get_room_creator(room_id=room_id)
+                if user_id:
+                    menubot_id = await self.room_manager.get_menubot_id(user_id=user_id)
+                    if menubot_id:
+                        await self.room_manager.invite_menu_bot(
+                            room_id=room_id, menubot_id=menubot_id
+                        )
+        else:
+            # if user enters an invalid option, shows offline menu again
+            return False
+
+        return True
+
+    async def process_offline_agent(
+        self, room_id: RoomID, room_agent: UserID, last_active_ago: int, intent: IntentAPI
+    ):
+        """If the agent is offline, the bot will send a message to the user and then either
+        transfer the user to another agent in the same campaign or put the user in the offline menu
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room where the agent is offline.
+        room_agent : UserID
+            The user ID of the agent who is offline
+        last_active_ago : int
+            The time in milliseconds since the agent was last active in the room.
+        intent : IntentAPI
+            IntentAPI
+
+        Returns
+        -------
+            The return value of the function is the return value of the last expression
+            evaluated in the function.
+
+        """
+        action = self.config["acd.offline_agent_action"]
+        self.log.debug(f"Agent {room_agent} OFFLINE in {room_id} --> {action}")
+        offline_agent_timeout = self.config["acd.offline_agent_timeout"]
+        self.log.debug(
+            f"last_active_ago: {last_active_ago} / 1000 -- "
+            f"offline_agent_timeout: {offline_agent_timeout}"
+        )
+
+        if not last_active_ago or last_active_ago / 1000 >= offline_agent_timeout:
+            agent_displayname = await intent.get_displayname(user_id=room_agent)
+            msg = self.config["acd.offline_agent_message"].format(agentname=agent_displayname)
+            if msg:
+                await intent.send_text(room_id=room_id, text=msg)
+
+            if action == "keep":
+                return
+            elif action == "transfer":
+                # transfer to another agent in same campaign
+                user_selected_campaign = await self.room_manager.get_campaign_of_room(
+                    room_id=room_id
+                )
+                if not user_selected_campaign:
+                    # this can happen if the database is deleted
+                    user_selected_campaign = self.config.get("control_room_id")
+                self.log.debug(f"Transferring to {user_selected_campaign}")
+                fake_command = f"transfer {room_id} {user_selected_campaign}"
+                args = fake_command.split()
+                cmd_evt = CommandEvent(
+                    cmd=args[0],
+                    args=args,
+                    agent_manager=self.agent_manager,
+                    sender=room_agent,
+                    room_id=room_id,
+                    text=fake_command,
+                )
+                await command_processor(cmd_evt=cmd_evt)
+
+            elif action == "menu":
+                self.room_manager.put_in_offline_menu(room_id)
+                menu = (
+                    f"Puedes esperar hasta que {agent_displayname} "
+                    f"esté disponible o enviar:<br><br>"
+                    f"<b>1.</b> Para ser atendido por otra persona de la misma área.<br>"
+                    f"<b>2.</b> Para ver el menú.<br>"
+                )
+                await intent.send_text(room_id=room_id, html=menu)
 
     async def handle_message(
         self, room_id: RoomID, sender: UserID, message: MessageEventContent, event_id: EventID
@@ -436,20 +605,6 @@ class MatrixHandler:
             )
             return
 
-        room_agent = await self.agent_manager.get_room_agent(room_id=room_id)
-        if room_agent:
-            # # if message is not from agents, bots or ourselves, it is from the customer
-            await self.agent_manager.signaling.set_chat_status(
-                room_id=room_id, status=Signaling.PENDING, agent=room_agent
-            )
-            presence = await self.room_manager.get_user_presence(user_id=sender, intent=intent)
-            if presence and presence.presence != PresenceState.ONLINE:
-                # await self.process_offline_agent(
-                #     room.room_id, room_agent, presence_response.last_active_ago
-                # )
-                pass
-            return
-
         # The below code is checking if the room is a customer room, if it is,
         # it is getting the room name, and the creator of the room.
         # If the room name is empty, it is setting the room name to the new room name.
@@ -469,6 +624,33 @@ class MatrixHandler:
                 self.log.debug(f"Ignoring {sender} messages, is acd*")
                 return
 
+            # the user entered the offline agent menu and selected some option
+            if self.room_manager.in_offline_menu(room_id):
+                self.room_manager.pull_from_offline_menu(room_id)
+                valid_option = await self.process_offline_selection(
+                    room_id=room_id, msg=message.body, intent=intent
+                )
+                if valid_option:
+                    return
+
+            room_agent = await self.agent_manager.get_room_agent(room_id=room_id)
+            if room_agent:
+                # if message is not from agents, bots or ourselves, it is from the customer
+                await self.agent_manager.signaling.set_chat_status(
+                    room_id=room_id, status=Signaling.PENDING, agent=room_agent
+                )
+                presence = await self.room_manager.get_user_presence(
+                    user_id=room_agent, intent=intent
+                )
+                if presence and presence.presence != PresenceState.ONLINE:
+                    await self.process_offline_agent(
+                        room_id=room_id,
+                        room_agent=room_agent,
+                        last_active_ago=presence.last_active_ago,
+                        intent=intent,
+                    )
+                return
+
             if await self.room_manager.has_menubot(room_id=room_id, intent=intent):
                 self.log.debug("Menu bot is here...")
                 return
@@ -484,7 +666,9 @@ class MatrixHandler:
                     )
 
                 # clear campaign in the ik.chat.campaign_selection state event
-                await self.agent_manager.signaling.set_selected_campaign(room_id=room.room_id, campaign_room_id=None)
+                await self.agent_manager.signaling.set_selected_campaign(
+                    room_id=room.room_id, campaign_room_id=None
+                )
 
                 # invite menubot to show menu
                 # this is done with create_task because with no official API set-pl can take

@@ -1,11 +1,12 @@
 import json
 import re
+from typing import Dict
 
 from aiohttp import ClientSession
 from markdown import markdown
 
-from acd_appservice.http_client import ProvisionBridge
-
+from ..http_client import ProvisionBridge
+from ..signaling import Signaling
 from .handler import command_handler
 from .typehint import CommandEvent
 
@@ -15,7 +16,7 @@ from .typehint import CommandEvent
     help_text=("Command that allows send a message to a customer"),
     help_args="<_dict_>",
 )
-async def pm(evt: CommandEvent) -> str:
+async def pm(evt: CommandEvent) -> Dict:
     """It takes a phone number and a message, and sends the message to the phone number
 
     Parameters
@@ -105,6 +106,9 @@ async def pm(evt: CommandEvent) -> str:
             ] = "The agent <agent_displayname> is already in room with [number]"
         else:
             # If the agent is already in the room, it returns a message to the frontend.
+            await evt.agent_manager.signaling.set_chat_status(
+                                room_id=customer_room_id, status=Signaling.FOLLOWUP, agent=evt.sender
+                            )
             if agent_id == evt.sender:
                 return_params["reply"] = "You are already in room with [number], message was sent."
             else:
@@ -143,6 +147,19 @@ async def pm(evt: CommandEvent) -> str:
 
     # If the reply is not set, it sets the reply to the default message.
     if not return_params.get("reply"):
+        # the room is marked as followup and campaign from previous room state
+        # is not kept
+        await evt.agent_manager.signaling.set_chat_status(
+            room_id=customer_room_id,
+            status=Signaling.FOLLOWUP,
+            agent=evt.sender,
+            campaign_room_id=None,
+            keep_campaign=False,
+        )
+        # clear campaign in the ik.chat.campaign_selection state event
+        await evt.agent_manager.signaling.set_selected_campaign(
+            room_id=customer_room_id, campaign_room_id=None
+        )
         return_params["reply"] = "Now you are joined in room with [number], message was sent."
 
     # Sending a message to the frontend.

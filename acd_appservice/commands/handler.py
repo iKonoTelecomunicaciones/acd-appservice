@@ -47,7 +47,7 @@ def command_handler(
     """Decorator to create CommandHandlers"""
 
     def decorator(func: function) -> CommandHandler:
-        actual_name = name or func.__name__.replace("_", "-")
+        actual_name = name or func.__name__
         handler = _handler_class(
             func,
             name=actual_name,

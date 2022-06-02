@@ -110,6 +110,10 @@ acd:
     search_pending_rooms_interval: 180
     # The prefix to special messages that are going to be processed in frontend.
     frontend_command_prefix: '!element'
+    #This is a message that reaches the client when it is transferred
+    transfer_message: "Has sido transferido a {agentname}."
+    # Message to show when a chat is asigned an agent
+    joined_agent_message: "{agentname} se ha unido al chat."
     # Supervisors to invite
     supervisors_to_invite:
         power_level: 99
@@ -120,6 +124,18 @@ acd:
     voice_call:
         call_message: "Incoming call"
         no_voice_call: "Hola! Te informamos que no atendemos llamadas de WhatsApp. Por favor envíanos un mensaje para comunicarte con nosotros."
+    # Action to take when user sends message and assigned agent is offline
+    # - keep: no action, keep agent in room and no message is shown
+    # - transfer: if agent is offline more than x secs, it is kicked out and someone new is invited
+    # - menu: if agent is offline more than x secs, the customer is presented a menu of options
+    offline_agent_action: menu
+    # agent offline time in seconds to take an action if the customer sends a message
+    offline_agent_timeout: 0
+    # message to show when agent is offline longer than offline_agent_timeout
+    offline_agent_message: "{agentname} no está disponible en este momento."
+    # message to show to the user if 'menu' action is active, and the user selects to be transferred
+    # to another agent, but no sagent is available
+    no_agents_for_transfer: "No hay agentes disponibles para la transferencia."
 
 
 # ACD will send below commands to interact with any WA bridge
