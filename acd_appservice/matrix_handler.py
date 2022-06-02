@@ -31,6 +31,7 @@ from acd_appservice.room_manager import RoomManager
 from .commands.handler import command_processor
 from .commands.typehint import CommandEvent
 from .puppet import Puppet
+from .signaling import Signaling
 
 
 class MatrixHandler:
@@ -430,17 +431,17 @@ class MatrixHandler:
 
         # Ignore messages from ourselves or agents if not a command
         if is_agent:
-            # await self.signaling.set_chat_status(
-            #     room_id=room.room_id, status=Signaling.FOLLOWUP, agent=event.sender
-            # )
+            await self.agent_manager.signaling.set_chat_status(
+                room_id=room_id, status=Signaling.FOLLOWUP, agent=sender
+            )
             return
 
         room_agent = await self.agent_manager.get_room_agent(room_id=room_id)
         if room_agent:
             # # if message is not from agents, bots or ourselves, it is from the customer
-            # await self.signaling.set_chat_status(
-            #     room_id=room.room_id, status=Signaling.PENDING, agent=room_agent
-            # )
+            await self.agent_manager.signaling.set_chat_status(
+                room_id=room_id, status=Signaling.PENDING, agent=room_agent
+            )
             presence = await self.room_manager.get_user_presence(user_id=sender, intent=intent)
             if presence and presence.presence != PresenceState.ONLINE:
                 # await self.process_offline_agent(
@@ -453,6 +454,7 @@ class MatrixHandler:
         # it is getting the room name, and the creator of the room.
         # If the room name is empty, it is setting the room name to the new room name.
         if await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
+            await self.agent_manager.signaling.set_chat_status(room_id, Signaling.OPEN)
             room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
             if not room_name:
                 creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
@@ -480,6 +482,13 @@ class MatrixHandler:
                     asyncio.create_task(
                         self.room_manager.invite_supervisors(intent=intent, room_id=room_id)
                     )
+
+                # clear campaign in the ik.chat.campaign_selection state event
+                await self.agent_manager.signaling.set_selected_campaign(room_id=room.room_id, campaign_room_id=None)
+
+                # invite menubot to show menu
+                # this is done with create_task because with no official API set-pl can take
+                # a while so several invite attempts are made without blocking
                 menubot_id = await self.room_manager.get_menubot_id(intent=intent, user_id=sender)
                 if menubot_id:
                     asyncio.create_task(

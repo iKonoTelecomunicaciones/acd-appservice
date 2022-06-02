@@ -15,6 +15,7 @@ from acd_appservice.puppet import Puppet
 
 from .http_client import HTTPClient
 from .room_manager import RoomManager
+from .signaling import Signaling
 
 
 class AgentManager:
@@ -38,6 +39,7 @@ class AgentManager:
         self.room_manager = room_manager
         self.control_room_id = control_room_id
         self.room_manager = room_manager
+        self.signaling = Signaling(intent=self.intent, config=self.config)
 
     async def process_distribution(
         self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
