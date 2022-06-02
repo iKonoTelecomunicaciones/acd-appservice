@@ -442,7 +442,7 @@ class MatrixHandler:
             #     room_id=room.room_id, status=Signaling.PENDING, agent=room_agent
             # )
             presence = await self.room_manager.get_user_presence(user_id=sender, intent=intent)
-            if presence and presence.presence == PresenceState.ONLINE:
+            if presence and presence.presence != PresenceState.ONLINE:
                 # await self.process_offline_agent(
                 #     room.room_id, room_agent, presence_response.last_active_ago
                 # )
