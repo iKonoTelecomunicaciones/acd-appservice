@@ -1,11 +1,11 @@
 import json
 import re
+from typing import Dict
 
 from aiohttp import ClientSession
 from markdown import markdown
 
-from acd_appservice.http_client import ProvisionBridge
-
+from ..http_client import ProvisionBridge
 from .handler import command_handler
 from .typehint import CommandEvent
 
@@ -15,7 +15,7 @@ from .typehint import CommandEvent
     help_text=("Command that allows send a message to a customer"),
     help_args="<_dict_>",
 )
-async def pm(evt: CommandEvent) -> str:
+async def pm(evt: CommandEvent) -> Dict:
     """It takes a phone number and a message, and sends the message to the phone number
 
     Parameters

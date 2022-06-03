@@ -29,6 +29,8 @@ class Config(BaseBridgeConfig):
         copy("acd.agent_invite_timeout")
         copy("acd.search_pending_rooms_interval")
         copy("acd.frontend_command_prefix")
+        copy("acd.transfer_message")
+        copy("acd.joined_agent_message")
         copy("acd.supervisors_to_invite.invite")
         copy("acd.supervisors_to_invite.invitees")
         copy("acd.supervisors_to_invite.power_level")

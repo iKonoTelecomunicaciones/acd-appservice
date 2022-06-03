@@ -110,6 +110,10 @@ acd:
     search_pending_rooms_interval: 180
     # The prefix to special messages that are going to be processed in frontend.
     frontend_command_prefix: '!element'
+    #This is a message that reaches the client when it is transferred
+    transfer_message: "Has sido transferido a {agentname}."
+    # Message to show when a chat is asigned an agent
+    joined_agent_message: "{agentname} se ha unido al chat."
     # Supervisors to invite
     supervisors_to_invite:
         power_level: 99
