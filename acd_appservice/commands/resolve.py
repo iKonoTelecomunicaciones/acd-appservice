@@ -78,6 +78,12 @@ async def resolve(evt: CommandEvent) -> Dict:
                 room_id=room_id,
                 text=fake_command,
             )
+            cmd_evt.args.append("template")
+            cmd_evt.args.append(resolve_chat_params["message"])
+            cmd_evt.args.append(resolve_chat_params["template_name"])
+            cmd_evt.args.append(resolve_chat_params["template_data"])
+            cmd_evt.args.append(resolve_chat_params["language"])
+            cmd_evt.args.append(bridge)
             await command_processor(cmd_evt=cmd_evt)
 
         await evt.intent.send_notice(room_id=room_id, text=resolve_chat_params["notice"])
