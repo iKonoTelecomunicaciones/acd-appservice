@@ -9,7 +9,7 @@ from .typehint import CommandEvent
 @command_handler(
     name="template",
     help_text=("This command is used to send templates"),
-    help_args="<_room_id_> <_user_id_> <_send_message_> <_bridge_>",
+    help_args="<_room_id_> <_template_name_> <_template_message_> <_bridge_>",
 )
 async def template(evt: CommandEvent) -> Dict:
     # Checking if the command has arguments.

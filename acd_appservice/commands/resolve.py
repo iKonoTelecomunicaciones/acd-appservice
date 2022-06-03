@@ -5,7 +5,7 @@ from markdown import markdown
 
 from ..puppet import Puppet
 from ..signaling import Signaling
-from .handler import command_handler
+from .handler import command_handler, command_processor
 from .typehint import CommandEvent
 
 
@@ -62,16 +62,19 @@ async def resolve(evt: CommandEvent) -> Dict:
     if send_message is not None:
         resolve_chat_params = evt.config["acd.resolve_chat"]
         if send_message and bridge is not None:
-            data = {
-                "room_id": room_id,
-                "template_message": resolve_chat_params["message"],
-                "template_name": resolve_chat_params["template_name"],
-                "template_data": resolve_chat_params["template_data"],
-                "language": resolve_chat_params["language"],
-                "bridge": bridge,
-            }
-            # template_data = json.dumps(data)
-            # template = Template(self.bot)
-            # await template.process_template_message(template_data)
+            fake_command = (
+                f"template {room_id} {resolve_chat_params['message']} "
+                f"{resolve_chat_params['template_name']} "
+                f"{resolve_chat_params['template_data']} "
+                f"{resolve_chat_params['language']} {bridge}"
+            )
+            cmd_evt = CommandEvent(
+                cmd="template",
+                agent_manager=evt.agent_manager,
+                sender=evt.sender,
+                room_id=room_id,
+                text=fake_command,
+            )
+            await command_processor(cmd_evt=cmd_evt)
 
         await evt.intent.send_notice(room_id=room_id, text=resolve_chat_params["notice"])
