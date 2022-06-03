@@ -39,3 +39,4 @@ class Config(BaseBridgeConfig):
         copy("acd.offline_agent_timeout")
         copy("acd.offline_agent_message")
         copy("acd.no_agents_for_transfer")
+        copy_dict("acd.resolve_chat")

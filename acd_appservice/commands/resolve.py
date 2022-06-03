@@ -52,3 +52,23 @@ async def resolve(evt: CommandEvent) -> Dict:
     await evt.agent_manager.signaling.set_chat_status(
         room_id=room_id, status=Signaling.RESOLVED, agent=user_id
     )
+
+    # clear campaign in the ik.chat.campaign_selection state event
+    await evt.agent_manager.signaling.set_selected_campaign(room_id=room_id, campaign_room_id=None)
+
+    if send_message is not None:
+        resolve_chat_params = evt.config["acd.resolve_chat"]
+        if send_message and bridge is not None:
+            data = {
+                "room_id": room_id,
+                "template_message": resolve_chat_params["message"],
+                "template_name": resolve_chat_params["template_name"],
+                "template_data": resolve_chat_params["template_data"],
+                "language": resolve_chat_params["language"],
+                "bridge": bridge,
+            }
+            # template_data = json.dumps(data)
+            # template = Template(self.bot)
+            # await template.process_template_message(template_data)
+
+        await evt.intent.send_notice(room_id=room_id, text=resolve_chat_params["notice"])

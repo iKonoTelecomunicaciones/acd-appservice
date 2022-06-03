@@ -136,6 +136,13 @@ acd:
     # message to show to the user if 'menu' action is active, and the user selects to be transferred
     # to another agent, but no sagent is available
     no_agents_for_transfer: "No hay agentes disponibles para la transferencia."
+    # Parameters to send resolve chat template
+    resolve_chat:
+        notice: "Chat resuelto"
+        message: "La conversación ha finalizado. Gracias por comunicarte con nosotros."
+        template_name: "conversacion_finalizada"
+        template_data: []
+        language: "es"
 
 
 # ACD will send below commands to interact with any WA bridge
