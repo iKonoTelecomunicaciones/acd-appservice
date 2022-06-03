@@ -1,11 +1,9 @@
 import json
-import re
 from typing import Dict
 
-from aiohttp import ClientSession
 from markdown import markdown
 
-from ..http_client import ProvisionBridge
+from ..puppet import Puppet
 from ..signaling import Signaling
 from .handler import command_handler
 from .typehint import CommandEvent
@@ -44,9 +42,14 @@ async def resolve(evt: CommandEvent) -> Dict:
                 room_id=room_id, user_id=supervisor_id, reason="Chat resuelto"
             )
 
+    puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
+
     # When the supervisor resolves an open chat, menubot is still in the chat
     await evt.agent_manager.room_manager.kick_menubot(
-        room_id=room_id, reason="Chat resuelto", intent=evt.intent
+        room_id=room_id,
+        reason="Chat resuelto",
+        intent=evt.intent,
+        control_room_id=puppet.control_room_id,
     )
 
     await evt.agent_manager.signaling.set_chat_status(
