@@ -661,7 +661,9 @@ class MatrixHandler:
 
             if not self.room_manager.is_room_locked(room_id=room_id):
 
-                await self.agent_manager.signaling.set_chat_status(room_id= room_id, status=Signaling.OPEN)
+                await self.agent_manager.signaling.set_chat_status(
+                    room_id=room_id, status=Signaling.OPEN
+                )
 
                 if self.config["acd.supervisors_to_invite.invite"]:
                     asyncio.create_task(

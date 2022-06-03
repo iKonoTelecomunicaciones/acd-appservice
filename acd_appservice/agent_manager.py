@@ -503,12 +503,21 @@ class AgentManager:
                 self.log.exception(e)
 
             # set chat status to pending when the agent is asigned to the chat
-            await self.signaling.set_chat_status(
-                room_id=customer_room_id,
-                status=Signaling.PENDING,
-                campaign_room_id=campaign_room_id,
-                agent=agent_id,
-            )
+            if transfer_author:
+                await self.signaling.set_chat_status(
+                    room_id=customer_room_id,
+                    status=Signaling.PENDING,
+                    campaign_room_id=campaign_room_id,
+                    agent=agent_id,
+                    keep_agent=False,
+                )
+            else:
+                await self.signaling.set_chat_status(
+                    room_id=customer_room_id,
+                    status=Signaling.PENDING,
+                    campaign_room_id=campaign_room_id,
+                    agent=agent_id,
+                )
 
             # send campaign selection event
             await self.signaling.set_selected_campaign(
