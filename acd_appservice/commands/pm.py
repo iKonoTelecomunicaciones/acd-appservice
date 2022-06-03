@@ -1,3 +1,4 @@
+import asyncio
 import json
 import re
 from typing import Dict
@@ -160,6 +161,12 @@ async def pm(evt: CommandEvent) -> Dict:
         await evt.agent_manager.signaling.set_selected_campaign(
             room_id=customer_room_id, campaign_room_id=None
         )
+        if evt.config["acd.supervisors_to_invite.invite"]:
+            asyncio.create_task(
+                evt.agent_manager.room_manager.invite_supervisors(
+                    intent=evt.intent, room_id=customer_room_id
+                )
+            )
         return_params["reply"] = "Now you are joined in room with [number], message was sent."
 
     # Sending a message to the frontend.
