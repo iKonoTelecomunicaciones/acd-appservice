@@ -205,6 +205,8 @@ class AgentManager:
             f"New agent loop in [{campaign_room_id}] starting with [{agent_id if agent_id else '👻'}]"
         )
 
+        transfer = True if transfer_author else False
+
         while True:
             agent_id = await self.get_next_agent(agent_id, campaign_room_id)
             if not agent_id:
@@ -218,14 +220,14 @@ class AgentManager:
                         customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
                     )
 
-                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer_author)
+                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
                 break
 
             # Usar get_room_members porque regresa solo una lista de UserIDs
             joined_members = await self.intent.get_room_members(room_id=customer_room_id)
             if not joined_members:
                 self.log.debug(f"No joined members in the room [{customer_room_id}]")
-                RoomManager.unlock_room(customer_room_id, transfer=transfer_author)
+                RoomManager.unlock_room(customer_room_id, transfer=transfer)
                 break
 
             if len(joined_members) == 1 and joined_members[0] == self.intent.mxid:
@@ -234,7 +236,7 @@ class AgentManager:
                 await self.intent.leave_room(
                     room_id=customer_room_id, reason="NOBODY IN THIS ROOM, I'M LEAVING"
                 )
-                RoomManager.unlock_room(customer_room_id, transfer=transfer_author)
+                RoomManager.unlock_room(customer_room_id, transfer=transfer)
                 break
 
             if agent_id != transfer_author:
@@ -283,7 +285,7 @@ class AgentManager:
                         selected_option=campaign_room_id,
                     )
 
-                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer_author)
+                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
                 break
 
             self.log.debug(f"agent count: [{agent_count}] online_agents: [{online_agents}]")
@@ -361,8 +363,10 @@ class AgentManager:
         # create a new Future object.
         pending_invite = loop.create_future()
 
+        transfer = True if transfer_author else False
+
         future_key = RoomManager.get_future_key(
-            room_id=room_id, agent_id=agent_id, transfer=transfer_author
+            room_id=room_id, agent_id=agent_id, transfer=transfer
         )
         # mantain an array of futures for every invite to get notification of joins
         self.PENDING_INVITES[future_key] = pending_invite
@@ -413,6 +417,8 @@ class AgentManager:
         loop = get_running_loop()
         end_time = loop.time() + float(self.config["acd.agent_invite_timeout"])
 
+        transfer = True if transfer_author else False
+
         while True:
             self.log.debug(datetime.now())
             if pending_invite.done():
@@ -427,7 +433,7 @@ class AgentManager:
             await sleep(1)
 
         agent_joined = pending_invite.result()
-        future_key = RoomManager.get_future_key(customer_room_id, agent_id, transfer_author)
+        future_key = RoomManager.get_future_key(customer_room_id, agent_id, transfer)
         if future_key in self.PENDING_INVITES:
             del self.PENDING_INVITES[future_key]
         self.log.debug(f"futures left: {self.PENDING_INVITES}")
@@ -514,7 +520,7 @@ class AgentManager:
             #     room_id=room_id, agent=agent_id, source="auto", campaign_room_id=campaign_room_id
             # )
 
-            RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer_author)
+            RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
 
         elif await self.get_room_agent(room_id=customer_room_id) and transfer_author is None:
             RoomManager.unlock_room(room_id=customer_room_id)
@@ -539,7 +545,7 @@ class AgentManager:
                 # if it is a direct transfer, unlock the room
                 msg = f"{agent_displayname} no aceptó la transferencia."
                 await self.intent.send_notice(room_id=customer_room_id, text=msg)
-                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer_author)
+                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
 
     async def force_join_agent(
         self, room_id: RoomID, agent_id: UserID, room_alias: RoomAlias = None
