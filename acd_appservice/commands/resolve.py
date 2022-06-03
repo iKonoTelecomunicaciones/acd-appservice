@@ -32,15 +32,18 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     agent_id = await evt.agent_manager.get_room_agent(room_id=room_id)
 
-    if agent_id:
-        await evt.intent.kick_user(room_id=room_id, user_id=agent_id, reason="Chat resuelto")
+    try:
+        if agent_id:
+            await evt.intent.kick_user(room_id=room_id, user_id=agent_id, reason="Chat resuelto")
 
-    supervisors = evt.config["acd.supervisors_to_invite.invitees"]
-    if supervisors:
-        for supervisor_id in supervisors:
-            await evt.intent.kick_user(
-                room_id=room_id, user_id=supervisor_id, reason="Chat resuelto"
-            )
+        supervisors = evt.config["acd.supervisors_to_invite.invitees"]
+        if supervisors:
+            for supervisor_id in supervisors:
+                await evt.intent.kick_user(
+                    room_id=room_id, user_id=supervisor_id, reason="Chat resuelto"
+                )
+    except Exception as e:
+        evt.log.warning(e)
 
     puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
 
