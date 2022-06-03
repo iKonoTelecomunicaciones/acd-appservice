@@ -24,7 +24,7 @@ from mautrix.types import (
 )
 from mautrix.util.logging import TraceLogger
 
-from acd_appservice import acd_program
+from acd_appservice import acd_program, puppet
 from acd_appservice.agent_manager import AgentManager
 from acd_appservice.room_manager import RoomManager
 
@@ -486,7 +486,8 @@ class MatrixHandler:
                 )
                 if not user_selected_campaign:
                     # this can happen if the database is deleted
-                    user_selected_campaign = self.config.get("control_room_id")
+                    puppet: Puppet = await Puppet.get_by_custom_mxid(intent.mxid)
+                    user_selected_campaign = puppet.control_room_id
                 self.log.debug(f"Transferring to {user_selected_campaign}")
                 fake_command = f"transfer {room_id} {user_selected_campaign}"
                 args = fake_command.split()
