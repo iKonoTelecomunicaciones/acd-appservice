@@ -66,20 +66,20 @@ async def resolve(evt: CommandEvent) -> Dict:
         resolve_chat_params = evt.config["acd.resolve_chat"]
         if send_message and bridge is not None:
             data = {
-                    "room_id": room_id,
-                    "template_message": resolve_chat_params["message"],
-                    "template_name": resolve_chat_params["template_name"],
-                    "template_data": resolve_chat_params["template_data"],
-                    "language": resolve_chat_params["language"],
-                    "bridge": bridge,
-                }
+                "room_id": room_id,
+                "template_message": resolve_chat_params["message"],
+                "template_name": resolve_chat_params["template_name"],
+                "template_data": resolve_chat_params["template_data"],
+                "language": resolve_chat_params["language"],
+                "bridge": bridge,
+            }
             template_data = f"template {json.dumps(data)}"
             cmd_evt = CommandEvent(
                 cmd="template",
                 agent_manager=evt.agent_manager,
                 sender=evt.sender,
                 room_id=room_id,
-                text=template_data
+                text=template_data,
             )
             await command_processor(cmd_evt=cmd_evt)
 
