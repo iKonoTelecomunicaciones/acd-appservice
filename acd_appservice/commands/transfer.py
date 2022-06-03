@@ -34,14 +34,14 @@ async def transfer(evt: CommandEvent) -> str:
     campaign_room_id = evt.args[2]
 
     # Checking if the room is locked, if it is, it returns.
-    if evt.agent_manager.room_manager.is_room_locked(room_id=customer_room_id, transfer="ok"):
+    if evt.agent_manager.room_manager.is_room_locked(room_id=customer_room_id, transfer=True):
         evt.log.debug(f"Room: {customer_room_id} LOCKED by Transfer")
         return
 
     evt.log.debug(f"INIT TRANSFER to ROOM {campaign_room_id}")
 
     # Locking the room so that no other transfer can be made to the room.
-    evt.agent_manager.room_manager.lock_room(room_id=customer_room_id, transfer="ok")
+    evt.agent_manager.room_manager.lock_room(room_id=customer_room_id, transfer=True)
     is_agent = evt.agent_manager.is_agent(agent_id=evt.sender)
 
     # Checking if the sender is an agent, if not, it gets the agent id from the room.
@@ -93,14 +93,14 @@ async def transfer_user(evt: CommandEvent) -> str:
     target_agent_id = evt.args[2]
 
     # Checking if the room is locked, if it is, it returns.
-    if evt.agent_manager.room_manager.is_room_locked(room_id=customer_room_id, transfer="ok"):
+    if evt.agent_manager.room_manager.is_room_locked(room_id=customer_room_id, transfer=True):
         evt.log.debug(f"Room: {customer_room_id} LOCKED by Transfer")
         return
 
     evt.log.debug(f"INIT TRANSFER to AGENT {target_agent_id}")
 
     # Locking the room so that no other transfer can be made to the room.
-    evt.agent_manager.room_manager.lock_room(room_id=customer_room_id, transfer="ok")
+    evt.agent_manager.room_manager.lock_room(room_id=customer_room_id, transfer=True)
     is_agent = evt.agent_manager.is_agent(agent_id=evt.sender)
 
     # Checking if the sender is an agent, if not, it gets the agent id from the room.
@@ -130,4 +130,4 @@ async def transfer_user(evt: CommandEvent) -> str:
             msg = f"El agente {target_agent_id} no está disponible."
             await evt.intent.send_notice(room_id=customer_room_id, text=msg)
 
-    evt.agent_manager.room_manager.unlock_room(room_id=customer_room_id, transfer="ok")
+    evt.agent_manager.room_manager.unlock_room(room_id=customer_room_id, transfer=True)

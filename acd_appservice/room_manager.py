@@ -301,7 +301,7 @@ class RoomManager:
         return False
 
     @classmethod
-    def lock_room(cls, room_id: RoomID, transfer: str = None) -> None:
+    def lock_room(cls, room_id: RoomID, transfer: bool = False) -> None:
         """Lock the room."""
         if transfer:
             cls.log.debug(f"[TRANSFER] - LOCKING ROOM {room_id}...")
@@ -311,7 +311,7 @@ class RoomManager:
         cls.LOCKED_ROOMS.add(room_id)
 
     @classmethod
-    def unlock_room(cls, room_id: RoomID, transfer: str = None) -> None:
+    def unlock_room(cls, room_id: RoomID, transfer: bool = False) -> None:
         """Unlock the room."""
         if transfer:
             cls.log.debug(f"[TRANSFER] - UNLOCKING ROOM {room_id}...")
@@ -322,7 +322,7 @@ class RoomManager:
         cls.LOCKED_ROOMS.discard(room_id)
 
     @classmethod
-    def is_room_locked(cls, room_id: RoomID, transfer: str = None) -> bool:
+    def is_room_locked(cls, room_id: RoomID, transfer: bool = False) -> bool:
         """Check if room is locked."""
         if transfer:
             room_id = cls.get_room_transfer_key(room_id=room_id)
@@ -334,7 +334,7 @@ class RoomManager:
         return f"transfer-{room_id}"
 
     @classmethod
-    def get_future_key(cls, room_id: RoomID, agent_id: UserID, transfer: str = None) -> str:
+    def get_future_key(cls, room_id: RoomID, agent_id: UserID, transfer: bool = False) -> str:
         """Return the key for the dict of futures for a specific agent."""
 
         return f"trasnfer-{room_id}-{agent_id}" if transfer else f"{room_id}-{agent_id}"

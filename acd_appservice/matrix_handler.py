@@ -281,7 +281,7 @@ class MatrixHandler:
         # Generamos llaves para buscar en PENDING_INVITES (acd, transfer)
         future_key = RoomManager.get_future_key(room_id=room_id, agent_id=user_id)
         transfer_future_key = RoomManager.get_future_key(
-            room_id=room_id, agent_id=user_id, transfer="ok"
+            room_id=room_id, agent_id=user_id, transfer=True
         )
 
         # Buscamos promesas pendientes relacionadas con el comando acd
