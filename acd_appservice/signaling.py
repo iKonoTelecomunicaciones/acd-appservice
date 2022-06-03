@@ -18,13 +18,9 @@ class Signaling:
     config: Config
     log: TraceLogger = logging.getLogger("acd.signaling")
 
-    CHAT_STATUS_EVENT_TYPE = "ik.chat.status"
-    CAMPAIGN_EVENT_TYPE = "ik.chat.campaign.assigned"
-    POWER_LEVEL_EVENT_TYPE = "m.room.power_levels"
-    ROOM_NAME_EVENT_TYPE = "m.room.name"
-    JOIN_RULES = "m.room.join_rules"
-    HISTORY_VISIBILITY = "m.room.history_visibility"
-    CHAT_CONNECT = "ik.chat.connect"
+    CHAT_STATUS_EVENT_TYPE = EventType.find("ik.chat.status", EventType.Class.STATE)
+    CAMPAIGN_EVENT_TYPE = EventType.find("ik.chat.campaign.assigned", EventType.Class.STATE)
+    CHAT_CONNECT = EventType.find("ik.chat.connect", EventType.Class.STATE)
 
     # different chat statuses:
     OPEN = "OPEN"
