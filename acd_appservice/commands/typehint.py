@@ -15,10 +15,10 @@ class CommandEvent:
     log: TraceLogger = logging.getLogger("acd.cmd")
     sender: UserID
     room_id: RoomID | None
-    text: str
+    text: str | None = None
     command_prefix: str
     cmd: str
-    args: List[str] | None = None
+    args: List[str] | None = []
 
     def __init__(
         self,
@@ -26,7 +26,7 @@ class CommandEvent:
         agent_manager: AgentManager,
         sender: UserID,
         room_id: RoomID,
-        text: str,
+        text: str = None,
         args: List[str] = None,
     ):
         self.cmd = cmd

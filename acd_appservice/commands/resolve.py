@@ -65,25 +65,22 @@ async def resolve(evt: CommandEvent) -> Dict:
     if send_message is not None:
         resolve_chat_params = evt.config["acd.resolve_chat"]
         if send_message and bridge is not None:
-            fake_command = (
-                f"template {room_id} {resolve_chat_params['message']} "
-                f"{resolve_chat_params['template_name']} "
-                f"{resolve_chat_params['template_data']} "
-                f"{resolve_chat_params['language']} {bridge}"
-            )
+            data = {
+                    "room_id": room_id,
+                    "template_message": resolve_chat_params["message"],
+                    "template_name": resolve_chat_params["template_name"],
+                    "template_data": resolve_chat_params["template_data"],
+                    "language": resolve_chat_params["language"],
+                    "bridge": bridge,
+                }
+            template_data = f"template {json.dumps(data)}"
             cmd_evt = CommandEvent(
                 cmd="template",
                 agent_manager=evt.agent_manager,
                 sender=evt.sender,
                 room_id=room_id,
-                text=fake_command,
+                text=template_data
             )
-            cmd_evt.args.append("template")
-            cmd_evt.args.append(resolve_chat_params["message"])
-            cmd_evt.args.append(resolve_chat_params["template_name"])
-            cmd_evt.args.append(resolve_chat_params["template_data"])
-            cmd_evt.args.append(resolve_chat_params["language"])
-            cmd_evt.args.append(bridge)
             await command_processor(cmd_evt=cmd_evt)
 
         await evt.intent.send_notice(room_id=room_id, text=resolve_chat_params["notice"])
