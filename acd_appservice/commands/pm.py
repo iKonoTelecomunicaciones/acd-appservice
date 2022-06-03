@@ -7,6 +7,7 @@ from aiohttp import ClientSession
 from markdown import markdown
 
 from ..http_client import ProvisionBridge
+from ..puppet import Puppet
 from ..signaling import Signaling
 from .handler import command_handler
 from .typehint import CommandEvent
@@ -167,6 +168,20 @@ async def pm(evt: CommandEvent) -> Dict:
                     intent=evt.intent, room_id=customer_room_id
                 )
             )
+
+        # kick menu bot
+        evt.log.debug(f"Kicking the menubot out of the room {customer_room_id}")
+        try:
+            puppet: Puppet = await Puppet.get_customer_room_puppet(customer_room_id)
+            await evt.agent_manager.room_manager.kick_menubot(
+                room_id=customer_room_id,
+                reason=f"{evt.sender} pm existing room {customer_room_id}",
+                intent=evt.intent,
+                control_room_id=puppet.control_room_id,
+            )
+        except Exception as e:
+            evt.log.exception(e)
+
         return_params["reply"] = "Now you are joined in room with [number], message was sent."
 
     # Sending a message to the frontend.
