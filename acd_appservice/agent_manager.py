@@ -510,12 +510,21 @@ class AgentManager:
             )
 
             # send agent chat connect
-            await self.signaling.set_chat_connect_agent(
-                room_id=customer_room_id,
-                agent=agent_id,
-                source="auto",
-                campaign_room_id=campaign_room_id,
-            )
+            if transfer_author:
+                await self.signaling.set_chat_connect_agent(
+                    room_id=customer_room_id,
+                    agent=agent_id,
+                    source="transfer_user" if not campaign_room_id else "transfer_room",
+                    campaign_room_id=campaign_room_id,
+                    previous_agent=transfer_author,
+                )
+            else:
+                await self.signaling.set_chat_connect_agent(
+                    room_id=customer_room_id,
+                    agent=agent_id,
+                    source="auto",
+                    campaign_room_id=campaign_room_id,
+                )
 
             RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer_author)
 

@@ -107,8 +107,8 @@ async def pm(evt: CommandEvent) -> Dict:
         else:
             # If the agent is already in the room, it returns a message to the frontend.
             await evt.agent_manager.signaling.set_chat_status(
-                                room_id=customer_room_id, status=Signaling.FOLLOWUP, agent=evt.sender
-                            )
+                room_id=customer_room_id, status=Signaling.FOLLOWUP, agent=evt.sender
+            )
             if agent_id == evt.sender:
                 return_params["reply"] = "You are already in room with [number], message was sent."
             else:

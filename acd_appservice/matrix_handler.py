@@ -667,7 +667,7 @@ class MatrixHandler:
 
                 # clear campaign in the ik.chat.campaign_selection state event
                 await self.agent_manager.signaling.set_selected_campaign(
-                    room_id=room.room_id, campaign_room_id=None
+                    room_id=room_id, campaign_room_id=None
                 )
 
                 # invite menubot to show menu
