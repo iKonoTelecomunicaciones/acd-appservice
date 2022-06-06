@@ -13,6 +13,19 @@ from .typehint import CommandEvent
     help_args="<_room_id_> <_user_id_> <_send_message_> <_bridge_>",
 )
 async def resolve(evt: CommandEvent) -> Dict:
+    """It kicks the agent and menubot from the chat,
+    sets the chat status to resolved, and sends a notice to the user
+
+    Parameters
+    ----------
+    evt : CommandEvent
+        CommandEvent
+
+    Returns
+    -------
+        A dictionary with the following keys:
+
+    """
     # Checking if the command has arguments.
     if len(evt.args) < 3:
         detail = "Incomplete arguments for <code>resolve_chat</code> command"

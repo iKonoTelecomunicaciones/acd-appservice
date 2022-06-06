@@ -14,6 +14,18 @@ from .typehint import CommandEvent
     help_args="<_dict_>",
 )
 async def state_event(evt: CommandEvent) -> Dict:
+    """It receives a message from the client, parses it, and sends a state event to the room
+
+    Parameters
+    ----------
+    evt : CommandEvent
+        CommandEvent
+
+    Returns
+    -------
+        A dictionary
+
+    """
     if len(evt.args) <= 1:
         detail = "state_event command incomplete arguments"
         evt.log.error(detail)

@@ -10,6 +10,18 @@ from .typehint import CommandEvent
     help_args="<_bridge_command_>",
 )
 async def br_cmd(evt: CommandEvent) -> Dict:
+    """It takes the command arguments, joins them together, and sends them to the room
+
+    Parameters
+    ----------
+    evt : CommandEvent
+        CommandEvent
+
+    Returns
+    -------
+        A dictionary
+
+    """
     if len(evt.args) < 3:
         detail = f"{evt.cmd} command incomplete arguments"
         evt.log.error(detail)
