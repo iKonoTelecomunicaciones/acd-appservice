@@ -1,8 +1,6 @@
 import json
 from typing import Dict
 
-from markdown import markdown
-
 from ..puppet import Puppet
 from ..signaling import Signaling
 from .handler import command_handler, command_processor
