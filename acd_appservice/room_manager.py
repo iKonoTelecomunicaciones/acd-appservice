@@ -519,10 +519,19 @@ class RoomManager:
             username_regex = self.config["utils.username_regex"]
             user_prefix = re.search(username_regex, user_id).group("user_prefix")
             menubots: Dict[UserID, Dict] = self.config["acd.menubots"]
-            for menubot in menubots:
-                if user_prefix == self.config[f"acd.menubots{menubot}.user_prefix"]:
-                    menubot_id = menubot
-                    break
+            if user_prefix:
+                for menubot in menubots:
+                    if user_prefix == self.config[f"acd.menubots{menubot}.user_prefix"]:
+                        menubot_id = menubot
+                        break
+            else:
+                username_regex_guest = self.config[f"acd.username_regex_guest"]
+                user_prefix_guest = re.search(username_regex_guest, user_id)
+                if user_prefix_guest:
+                    for menubot in menubots:
+                        if self.config[f"acd.menubots{menubot}.is_guest"]:
+                            menubot_id = menubot
+                            break
 
         return menubot_id
 

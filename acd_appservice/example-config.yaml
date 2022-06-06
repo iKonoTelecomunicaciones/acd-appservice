@@ -78,6 +78,8 @@ bridge:
 acd:
     # Regex for get the puppet ID
     acd_regex: "^@[a-zA-Z-_]+(?P<userid>[0-9]+):.+$"
+    # Regex to extract user id guest from matrix user ID
+    username_regex_guest: "^@(?P<number>[0-9]{1,}):.+$"
     # Feature for naming customer rooms
     keep_room_name: false
     # Prefix for identification of agent user
@@ -96,6 +98,7 @@ acd:
     #   "@menubota:example.com":
     #     user_prefix: "gswA"
     #     command_prefix: "!menubotA"
+    #     is_guest: true
 
     #   "@menubotb:example.com":
     #     user_prefix: "gswB"
