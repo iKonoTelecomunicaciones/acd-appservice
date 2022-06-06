@@ -521,7 +521,7 @@ class RoomManager:
             menubots: Dict[UserID, Dict] = self.config["acd.menubots"]
             if user_prefix:
                 for menubot in menubots:
-                    if user_prefix == self.config[f"acd.menubots{menubot}.user_prefix"]:
+                    if user_prefix == self.config[f"acd.menubots.{menubot}.user_prefix"]:
                         menubot_id = menubot
                         break
             else:
@@ -529,7 +529,7 @@ class RoomManager:
                 user_prefix_guest = re.search(username_regex_guest, user_id)
                 if user_prefix_guest:
                     for menubot in menubots:
-                        if self.config[f"acd.menubots{menubot}.is_guest"]:
+                        if self.config[f"acd.menubots.{menubot}.is_guest"]:
                             menubot_id = menubot
                             break
 
