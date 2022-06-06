@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import sys
 import asyncio
+import sys
 from abc import abstractmethod
 from typing import Optional, Type
 
