@@ -183,7 +183,7 @@ class Signaling:
                 )
                 break
             except Exception as e:
-                self.log.warning(f"Failed to put state event attempt {attempt} to {room_id} : ")
+                self.log.warning(f"Failed to put state event attempt {attempt} to {room_id} : {e}")
                 await asyncio.sleep(2)
 
     async def get_chat_data(self, room_id: RoomID) -> StateEventContent:
