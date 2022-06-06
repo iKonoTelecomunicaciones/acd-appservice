@@ -71,9 +71,11 @@ async def command_processor(cmd_evt: CommandEvent):
 
     """
 
+    if not cmd_evt.args:
+        cmd_evt.args = cmd_evt.text.split()
+
     cmd_evt.log.debug(f"Incoming command is :: {cmd_evt.args}")
 
-    cmd_evt.args = cmd_evt.text.split()
     if cmd_evt.cmd == "help":
         await cmd_evt.reply(make_help_text(command_prefix=cmd_evt.config["bridge.command_prefix"]))
     elif cmd_evt.cmd == "version":

@@ -1,8 +1,9 @@
+import json
 from typing import Dict
 
 from ..puppet import Puppet
 from ..signaling import Signaling
-from .handler import command_handler
+from .handler import command_handler, command_processor
 from .typehint import CommandEvent
 
 
@@ -29,15 +30,18 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     agent_id = await evt.agent_manager.get_room_agent(room_id=room_id)
 
-    if agent_id:
-        await evt.intent.kick_user(room_id=room_id, user_id=agent_id, reason="Chat resuelto")
+    try:
+        if agent_id:
+            await evt.intent.kick_user(room_id=room_id, user_id=agent_id, reason="Chat resuelto")
 
-    supervisors = evt.config["acd.supervisors_to_invite.invitees"]
-    if supervisors:
-        for supervisor_id in supervisors:
-            await evt.intent.kick_user(
-                room_id=room_id, user_id=supervisor_id, reason="Chat resuelto"
-            )
+        supervisors = evt.config["acd.supervisors_to_invite.invitees"]
+        if supervisors:
+            for supervisor_id in supervisors:
+                await evt.intent.kick_user(
+                    room_id=room_id, user_id=supervisor_id, reason="Chat resuelto"
+                )
+    except Exception as e:
+        evt.log.warning(e)
 
     puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
 
@@ -67,8 +71,14 @@ async def resolve(evt: CommandEvent) -> Dict:
                 "language": resolve_chat_params["language"],
                 "bridge": bridge,
             }
-            # template_data = json.dumps(data)
-            # template = Template(self.bot)
-            # await template.process_template_message(template_data)
+            template_data = f"template {json.dumps(data)}"
+            cmd_evt = CommandEvent(
+                cmd="template",
+                agent_manager=evt.agent_manager,
+                sender=evt.sender,
+                room_id=room_id,
+                text=template_data,
+            )
+            await command_processor(cmd_evt=cmd_evt)
 
         await evt.intent.send_notice(room_id=room_id, text=resolve_chat_params["notice"])

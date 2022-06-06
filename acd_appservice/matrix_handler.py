@@ -610,7 +610,7 @@ class MatrixHandler:
         # it is getting the room name, and the creator of the room.
         # If the room name is empty, it is setting the room name to the new room name.
         if await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
-            await self.agent_manager.signaling.set_chat_status(room_id, Signaling.OPEN)
+
             room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
             if not room_name:
                 creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
