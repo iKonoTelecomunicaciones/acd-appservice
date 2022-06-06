@@ -10,7 +10,7 @@ from .typehint import CommandEvent
 
 @command_handler(
     name="state_event",
-    help_text=("Command that sends a status event to matrix"),
+    help_text=("Command that sends a state event to matrix"),
     help_args="<_dict_>",
 )
 async def state_event(evt: CommandEvent) -> Dict:
