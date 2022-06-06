@@ -6,6 +6,7 @@ from aiohttp import ClientSession
 from markdown import markdown
 
 from ..http_client import ProvisionBridge
+from ..signaling import Signaling
 from .handler import command_handler
 from .typehint import CommandEvent
 
@@ -105,6 +106,9 @@ async def pm(evt: CommandEvent) -> Dict:
             ] = "The agent <agent_displayname> is already in room with [number]"
         else:
             # If the agent is already in the room, it returns a message to the frontend.
+            await evt.agent_manager.signaling.set_chat_status(
+                room_id=customer_room_id, status=Signaling.FOLLOWUP, agent=evt.sender
+            )
             if agent_id == evt.sender:
                 return_params["reply"] = "You are already in room with [number], message was sent."
             else:
@@ -142,7 +146,23 @@ async def pm(evt: CommandEvent) -> Dict:
             return_params["reply"] = data.get("error")
 
     # If the reply is not set, it sets the reply to the default message.
+    # Si reply no tiene contenido, significa que no ha ocurrido ningún error
+    # y se puede concluir que el agente se puede unir a la sala y que
+    # el mensaje fue enviado.
     if not return_params.get("reply"):
+        # the room is marked as followup and campaign from previous room state
+        # is not kept
+        await evt.agent_manager.signaling.set_chat_status(
+            room_id=customer_room_id,
+            status=Signaling.FOLLOWUP,
+            agent=evt.sender,
+            campaign_room_id=None,
+            keep_campaign=False,
+        )
+        # clear campaign in the ik.chat.campaign_selection state event
+        await evt.agent_manager.signaling.set_selected_campaign(
+            room_id=customer_room_id, campaign_room_id=None
+        )
         return_params["reply"] = "Now you are joined in room with [number], message was sent."
 
     # Sending a message to the frontend.

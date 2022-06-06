@@ -15,6 +15,7 @@ from acd_appservice.puppet import Puppet
 
 from .http_client import HTTPClient
 from .room_manager import RoomManager
+from .signaling import Signaling
 
 
 class AgentManager:
@@ -38,6 +39,7 @@ class AgentManager:
         self.room_manager = room_manager
         self.control_room_id = control_room_id
         self.room_manager = room_manager
+        self.signaling = Signaling(intent=self.intent, config=self.config)
 
     async def process_distribution(
         self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
@@ -500,25 +502,44 @@ class AgentManager:
             except Exception as e:
                 self.log.exception(e)
 
-            # signaling = Signaling(self.bot)
-
             # set chat status to pending when the agent is asigned to the chat
-            # await signaling.set_chat_status(
-            #     room_id=room_id,
-            #     status=Signaling.PENDING,
-            #     campaign_room_id=campaign_room_id,
-            #     agent=agent_id,
-            # )
+            if transfer_author:
+                await self.signaling.set_chat_status(
+                    room_id=customer_room_id,
+                    status=Signaling.PENDING,
+                    campaign_room_id=campaign_room_id,
+                    agent=agent_id,
+                    keep_agent=False,
+                )
+            else:
+                await self.signaling.set_chat_status(
+                    room_id=customer_room_id,
+                    status=Signaling.PENDING,
+                    campaign_room_id=campaign_room_id,
+                    agent=agent_id,
+                )
 
             # send campaign selection event
-            # await signaling.set_selected_campaign(
-            #     room_id=room_id, campaign_room_id=campaign_room_id
-            # )
+            await self.signaling.set_selected_campaign(
+                room_id=customer_room_id, campaign_room_id=campaign_room_id
+            )
 
             # send agent chat connect
-            # await signaling.set_chat_connect_agent(
-            #     room_id=room_id, agent=agent_id, source="auto", campaign_room_id=campaign_room_id
-            # )
+            if transfer_author:
+                await self.signaling.set_chat_connect_agent(
+                    room_id=customer_room_id,
+                    agent=agent_id,
+                    source="transfer_user" if not campaign_room_id else "transfer_room",
+                    campaign_room_id=campaign_room_id,
+                    previous_agent=transfer_author,
+                )
+            else:
+                await self.signaling.set_chat_connect_agent(
+                    room_id=customer_room_id,
+                    agent=agent_id,
+                    source="auto",
+                    campaign_room_id=campaign_room_id,
+                )
 
             RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
 

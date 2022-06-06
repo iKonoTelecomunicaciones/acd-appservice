@@ -30,7 +30,7 @@ class HTTPClient(BaseClass):
 
 
 class ProvisionBridge(BaseClass):
-    def __init__(self, session, config):
+    def __init__(self, session: ClientSession, config: Config):
         self.session = session
         self.config = config
 
