@@ -1,3 +1,4 @@
+import json
 from typing import Dict
 
 from ..puppet import Puppet
