@@ -147,7 +147,7 @@ async def pm(evt: CommandEvent) -> Dict:
 
     # If the reply is not set, it sets the reply to the default message.
     # Si reply no tiene contenido, significa que no ha ocurrido ningún error
-    # y se puede concluir que el agente se puede unir a la sala y que 
+    # y se puede concluir que el agente se puede unir a la sala y que
     # el mensaje fue enviado.
     if not return_params.get("reply"):
         # the room is marked as followup and campaign from previous room state
