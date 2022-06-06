@@ -19,14 +19,14 @@ async def state_event(evt: CommandEvent) -> Dict:
         evt.reply(text=detail)
         return
 
-    prefix_and_command_length = len(f"{evt.command_prefix} {evt.cmd}")
+    prefix_and_command_length = len(f"{evt.cmd}")
 
     incoming_message = (evt.text[prefix_and_command_length:]).strip()
 
     try:
         incoming_params = json.loads(incoming_message)
     except Exception as e:
-        evt.log.error(f"Error processing incoming params, skipping message - {e}")
+        evt.log.exception(f"Error processing incoming params, skipping message - {e}")
         return
 
     room_id = incoming_params.get("room_id")
@@ -44,7 +44,7 @@ async def state_event(evt: CommandEvent) -> Dict:
         return
 
     if event_type == "ik.chat.tag":
-        event_type = EventType.find("ik.chat.status", EventType.Class.STATE)
+        event_type = EventType.find("ik.chat.tag", EventType.Class.STATE)
         content = {"tags": incoming_params.get("tags")}
 
     await evt.agent_manager.signaling.send_state_event(
