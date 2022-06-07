@@ -10,6 +10,7 @@ from mautrix.types import EventType, RoomID, StateEventContent, UserID
 from mautrix.util.logging import TraceLogger
 
 from .config import Config
+from .puppet import Puppet
 
 
 class Signaling:
@@ -153,6 +154,11 @@ class Signaling:
             The content of the event.
 
         """
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+
+        if puppet:
+            self.intent = puppet.intent
+
         asyncio.create_task(
             self.put_room_state(room_id=room_id, event_type=event_type, content=content)
         )

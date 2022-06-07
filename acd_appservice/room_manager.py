@@ -970,6 +970,10 @@ class RoomManager:
                     selected_option = room.selected_option
 
                 puppet: pu.Puppet = await pu.Puppet.get_by_custom_mxid(puppet_mxid)
+                if not puppet:
+                    cls.log.error(f"Puppet not found {puppet_mxid}")
+                    return False
+
                 fk_puppet = room.fk_puppet if puppet.pk == room.fk_puppet else puppet.pk
                 await Room.update_room_by_room_id(room_id, selected_option, fk_puppet)
             else:
