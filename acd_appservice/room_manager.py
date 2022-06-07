@@ -517,12 +517,24 @@ class RoomManager:
 
         if user_id:
             username_regex = self.config["utils.username_regex"]
-            user_prefix = re.search(username_regex, user_id).group("user_prefix")
+            user_prefix = re.search(username_regex, user_id)
             menubots: Dict[UserID, Dict] = self.config["acd.menubots"]
-            for menubot in menubots:
-                if user_prefix == self.config[f"acd.menubots{menubot}.user_prefix"]:
-                    menubot_id = menubot
-                    break
+            if user_prefix:
+                # Llega aquí si es un cliente
+                user_prefix = user_prefix.group("user_prefix")
+                for menubot in menubots:
+                    if user_prefix == self.config[f"acd.menubots.{menubot}.user_prefix"]:
+                        menubot_id = menubot
+                        break
+            else:
+                username_regex_guest = self.config[f"acd.username_regex_guest"]
+                user_prefix_guest = re.search(username_regex_guest, user_id)
+                if user_prefix_guest:
+                    # Solo llega aquí si es un usuario tipo guest
+                    for menubot in menubots:
+                        if self.config[f"acd.menubots.{menubot}.is_guest"]:
+                            menubot_id = menubot
+                            break
 
         return menubot_id
 
