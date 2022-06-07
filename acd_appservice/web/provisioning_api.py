@@ -347,6 +347,355 @@ class ProvisioningAPI:
         result = await command_processor(cmd_evt=cmd_evt)
         return web.json_response(**result)
 
+    async def resolve(self, request: web.Request) -> web.Response:
+        """
+        Command resolving a chat, ejecting the supervisor and the agent.
+        ---
+        summary:    It takes a phone number and a message,
+                    and sends the message to the phone number.
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_email:
+                    type: string
+                  phone_number:
+                    type: string
+                  template_message:
+                    type: string
+                  template_name:
+                    type: string
+                  agent_id:
+                    type: string
+                example:
+                    user_email: "nobody@somewhere.com"
+                    phone_number: "573123456789"
+                    template_message: "Hola iKono!!"
+                    template_name: "text"
+                    agent_id: "@agente1:somewhere.com"
+
+        responses:
+            '200':
+                $ref: '#/components/responses/PmSuccessful'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+            '422':
+                $ref: '#/components/responses/NotSendMessage'
+        """
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+        if not (data.get("room_id") and data.get("user_id")):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        email = data.get("user_email").lower()
+        error_result = await self.validate_email(user_email=email)
+
+        if error_result:
+            return web.json_response(**error_result)
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_by_email(email)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        room_id = data.get("room_id")
+        user_id = data.get("user_id")
+        send_message = data.get("send_message") if data.get("send_message") else None
+        bridge = data.get("bridge") if data.get("bridge") else None
+
+        args = ["resolve", room_id, user_id, send_message, bridge]
+
+        # Creating a fake command event and passing it to the command processor.
+        cmd_evt = CommandEvent(
+            cmd="resolve",
+            agent_manager=self.agent_manager,
+            sender=data.get("agent_id"),
+            room_id=room_id,
+        )
+        cmd_evt.agent_manager.intent = puppet.intent
+        cmd_evt.intent = puppet.intent
+        result = await command_processor(cmd_evt=cmd_evt)
+        return web.json_response(**result)
+
+    async def pm(self, request: web.Request) -> web.Response:
+        """
+        Command that allows send a message to a customer.
+        ---
+        summary:    It takes a phone number and a message,
+                    and sends the message to the phone number.
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_email:
+                    type: string
+                  phone_number:
+                    type: string
+                  template_message:
+                    type: string
+                  template_name:
+                    type: string
+                  agent_id:
+                    type: string
+                example:
+                    user_email: "nobody@somewhere.com"
+                    phone_number: "573123456789"
+                    template_message: "Hola iKono!!"
+                    template_name: "text"
+                    agent_id: "@agente1:somewhere.com"
+
+        responses:
+            '200':
+                $ref: '#/components/responses/PmSuccessful'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+            '422':
+                $ref: '#/components/responses/NotSendMessage'
+        """
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+        if not (
+            data.get("phone_number")
+            and data.get("template_message")
+            and data.get("template_name")
+            and data.get("user_email")
+            and data.get("agent_id")
+        ):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        email = data.get("user_email").lower()
+        error_result = await self.validate_email(user_email=email)
+
+        if error_result:
+            return web.json_response(**error_result)
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_by_email(email)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        incoming_params = {
+            "phone_number": data.get("phone_number"),
+            "template_message": data.get("template_message"),
+            "template_name": data.get("template_name"),
+        }
+
+        # Creating a fake command event and passing it to the command processor.
+        fake_command = f"pm {json.dumps(incoming_params)}"
+        cmd_evt = CommandEvent(
+            cmd="pm",
+            agent_manager=self.agent_manager,
+            sender=data.get("agent_id"),
+            room_id=None,
+            text=fake_command,
+        )
+        cmd_evt.agent_manager.intent = puppet.intent
+        cmd_evt.intent = puppet.intent
+        result = await command_processor(cmd_evt=cmd_evt)
+        return web.json_response(**result)
+
+    async def pm(self, request: web.Request) -> web.Response:
+        """
+        Command that allows send a message to a customer.
+        ---
+        summary:    It takes a phone number and a message,
+                    and sends the message to the phone number.
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_email:
+                    type: string
+                  phone_number:
+                    type: string
+                  template_message:
+                    type: string
+                  template_name:
+                    type: string
+                  agent_id:
+                    type: string
+                example:
+                    user_email: "nobody@somewhere.com"
+                    phone_number: "573123456789"
+                    template_message: "Hola iKono!!"
+                    template_name: "text"
+                    agent_id: "@agente1:somewhere.com"
+
+        responses:
+            '200':
+                $ref: '#/components/responses/PmSuccessful'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+            '422':
+                $ref: '#/components/responses/NotSendMessage'
+        """
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+        if not (
+            data.get("phone_number")
+            and data.get("template_message")
+            and data.get("template_name")
+            and data.get("user_email")
+            and data.get("agent_id")
+        ):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        email = data.get("user_email").lower()
+        error_result = await self.validate_email(user_email=email)
+
+        if error_result:
+            return web.json_response(**error_result)
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_by_email(email)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        incoming_params = {
+            "phone_number": data.get("phone_number"),
+            "template_message": data.get("template_message"),
+            "template_name": data.get("template_name"),
+        }
+
+        # Creating a fake command event and passing it to the command processor.
+        fake_command = f"pm {json.dumps(incoming_params)}"
+        cmd_evt = CommandEvent(
+            cmd="pm",
+            agent_manager=self.agent_manager,
+            sender=data.get("agent_id"),
+            room_id=None,
+            text=fake_command,
+        )
+        cmd_evt.agent_manager.intent = puppet.intent
+        cmd_evt.intent = puppet.intent
+        result = await command_processor(cmd_evt=cmd_evt)
+        return web.json_response(**result)
+
+    async def pm(self, request: web.Request) -> web.Response:
+        """
+        Command that allows send a message to a customer.
+        ---
+        summary:    It takes a phone number and a message,
+                    and sends the message to the phone number.
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_email:
+                    type: string
+                  phone_number:
+                    type: string
+                  template_message:
+                    type: string
+                  template_name:
+                    type: string
+                  agent_id:
+                    type: string
+                example:
+                    user_email: "nobody@somewhere.com"
+                    phone_number: "573123456789"
+                    template_message: "Hola iKono!!"
+                    template_name: "text"
+                    agent_id: "@agente1:somewhere.com"
+
+        responses:
+            '200':
+                $ref: '#/components/responses/PmSuccessful'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+            '422':
+                $ref: '#/components/responses/NotSendMessage'
+        """
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+        if not (
+            data.get("phone_number")
+            and data.get("template_message")
+            and data.get("template_name")
+            and data.get("user_email")
+            and data.get("agent_id")
+        ):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        email = data.get("user_email").lower()
+        error_result = await self.validate_email(user_email=email)
+
+        if error_result:
+            return web.json_response(**error_result)
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_by_email(email)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        incoming_params = {
+            "phone_number": data.get("phone_number"),
+            "template_message": data.get("template_message"),
+            "template_name": data.get("template_name"),
+        }
+
+        # Creating a fake command event and passing it to the command processor.
+        fake_command = f"pm {json.dumps(incoming_params)}"
+        cmd_evt = CommandEvent(
+            cmd="pm",
+            agent_manager=self.agent_manager,
+            sender=data.get("agent_id"),
+            room_id=None,
+            text=fake_command,
+        )
+        cmd_evt.agent_manager.intent = puppet.intent
+        cmd_evt.intent = puppet.intent
+        result = await command_processor(cmd_evt=cmd_evt)
+        return web.json_response(**result)
+
     async def send_message(self, request: web.Request) -> web.Response:
         """
         Send a message to the given whatsapp number (create a room or send to the existing room)
