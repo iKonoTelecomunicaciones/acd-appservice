@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 
 from mautrix.appservice import AppService, IntentAPI
 from mautrix.bridge import config
@@ -609,7 +610,11 @@ class MatrixHandler:
         # The below code is checking if the room is a customer room, if it is,
         # it is getting the room name, and the creator of the room.
         # If the room name is empty, it is setting the room name to the new room name.
-        if await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
+        user_prefix_guest = re.search(self.config[f"acd.username_regex_guest"], sender)
+        if (
+            await self.room_manager.is_customer_room(room_id=room_id, intent=intent)
+            or user_prefix_guest
+        ):
 
             room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
             if not room_name:
