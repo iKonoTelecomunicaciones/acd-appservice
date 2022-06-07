@@ -465,7 +465,7 @@ class RoomManager:
                 menubot_id, "cancel_task", control_room_id, intent, room_id
             )
             try:
-                self.log.debug("Kicking the menubot [{menubot_id}]")
+                self.log.debug(f"Kicking the menubot [{menubot_id}]")
                 await intent.kick_user(room_id=room_id, user_id=menubot_id, reason=reason)
             except Exception as e:
                 self.log.warning(
