@@ -503,11 +503,11 @@ class RoomManager:
 
         menubot_id: UserID = None
 
-        if self.config["acd.menubot"]:
+        if self.config["acd.menubot.active"]:
             menubot_id = self.config["acd.menubot.user_id"]
             return menubot_id
 
-        if room_id:
+        elif room_id:
             members = await intent.get_joined_members(room_id=room_id)
             if members:
                 for user_id in members:
@@ -515,7 +515,7 @@ class RoomManager:
                         menubot_id = user_id
                         break
 
-        if user_id:
+        elif user_id:
             username_regex = self.config["utils.username_regex"]
             user_prefix = re.search(username_regex, user_id)
             menubots: Dict[UserID, Dict] = self.config["acd.menubots"]

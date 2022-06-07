@@ -91,18 +91,20 @@ acd:
     # bot that manages the menu
     # If the menubot property is, then menubots cannot be.
     menubot:
+        active: true
         user_id: "@menubot:example.com"
         command_prefix: "!menubot"
 
-    # menubots:
-    #   "@menubota:example.com":
-    #     user_prefix: "gswA"
-    #     command_prefix: "!menubotA"
-    #     is_guest: true
+    menubots:
+      "@menubota:example.com":
+        user_prefix: "gswA"
+        command_prefix: "!menubotA"
+        is_guest: true
 
-    #   "@menubotb:example.com":
-    #     user_prefix: "gswB"
-    #     command_prefix: "!menubotB"
+      "@menubotb:example.com":
+        user_prefix: "gswB"
+        command_prefix: "!menubotB"
+
 
     # force join
     device_name_regex: "Element Android|Móvil|Mobile"
