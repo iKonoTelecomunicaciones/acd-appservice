@@ -12,6 +12,18 @@ from .typehint import CommandEvent
     help_args="<_room_id_> <_template_name_> <_template_message_> <_bridge_>",
 )
 async def template(evt: CommandEvent) -> Dict:
+    """It receives a JSON string, parses it, and sends a message to a room
+
+    Parameters
+    ----------
+    evt : CommandEvent
+        CommandEvent
+
+    Returns
+    -------
+        A dictionary with the following keys:
+
+    """
     # Checking if the command has arguments.
     if len(evt.args) <= 1:
         detail = "Incomplete arguments for <code>template</code> command"
