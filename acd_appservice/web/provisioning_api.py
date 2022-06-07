@@ -355,10 +355,8 @@ class ProvisioningAPI:
 
     async def resolve(self, request: web.Request) -> web.Response:
         """
-        Command resolving a chat, ejecting the supervisor and the agent.
         ---
-        summary:    It takes a phone number and a message,
-                    and sends the message to the phone number.
+        summary: Command resolving a chat, ejecting the supervisor and the agent.
         tags:
             - users
 
@@ -372,13 +370,11 @@ class ProvisioningAPI:
                 properties:
                   user_email:
                     type: string
-                  phone_number:
+                  room_id:
                     type: string
-                  template_message:
+                  user_id:
                     type: string
-                  template_name:
-                    type: string
-                  agent_id:
+                  send_message:
                     type: string
                 example:
                     user_email: "nobody@somewhere.com"
@@ -393,8 +389,6 @@ class ProvisioningAPI:
                 $ref: '#/components/responses/BadRequest'
             '404':
                 $ref: '#/components/responses/NotExist'
-            '422':
-                $ref: '#/components/responses/NotSendMessage'
         """
         if not request.body_exists:
             return web.json_response(**NOT_DATA)
@@ -438,10 +432,8 @@ class ProvisioningAPI:
 
     async def state_event(self, request: web.Request) -> web.Response:
         """
-        Command that allows send a message to a customer.
         ---
-        summary:    It takes a phone number and a message,
-                    and sends the message to the phone number.
+        summary: Command that sends a state event to matrix.
         tags:
             - users
 
@@ -455,14 +447,12 @@ class ProvisioningAPI:
                 properties:
                   user_email:
                     type: string
-                  phone_number:
+                  room_id:
                     type: string
-                  template_message:
+                  event_type:
                     type: string
-                  template_name:
-                    type: string
-                  agent_id:
-                    type: string
+                  tags:
+                    type: object
                 example:
                     user_email: "nobody@somewhere.com"
                     room_id: "!gKEsOPrixwrrMFCQCJ:darknet"
@@ -486,8 +476,6 @@ class ProvisioningAPI:
                 $ref: '#/components/responses/BadRequest'
             '404':
                 $ref: '#/components/responses/NotExist'
-            '422':
-                $ref: '#/components/responses/NotSendMessage'
         """
         if not request.body_exists:
             return web.json_response(**NOT_DATA)
@@ -535,10 +523,8 @@ class ProvisioningAPI:
 
     async def template(self, request: web.Request) -> web.Response:
         """
-        Command that allows send a message to a customer.
         ---
-        summary:    It takes a phone number and a message,
-                    and sends the message to the phone number.
+        summary: This command is used to send templates
         tags:
             - users
 
@@ -552,20 +538,20 @@ class ProvisioningAPI:
                 properties:
                   user_email:
                     type: string
-                  phone_number:
-                    type: string
-                  template_message:
+                  room_id:
                     type: string
                   template_name:
                     type: string
-                  agent_id:
+                  template_message:
+                    type: string
+                  bridge:
                     type: string
                 example:
                     user_email: "nobody@somewhere.com"
-                    phone_number: "573123456789"
+                    room_id: "!duOWDQQCshKjQvbyoh:darknet"
+                    template_name: "hola"
                     template_message: "Hola iKono!!"
-                    template_name: "text"
-                    agent_id: "@agente1:somewhere.com"
+                    bridge: "!wa"
 
         responses:
             '200':
@@ -574,8 +560,6 @@ class ProvisioningAPI:
                 $ref: '#/components/responses/BadRequest'
             '404':
                 $ref: '#/components/responses/NotExist'
-            '422':
-                $ref: '#/components/responses/NotSendMessage'
         """
         if not request.body_exists:
             return web.json_response(**NOT_DATA)
@@ -625,10 +609,8 @@ class ProvisioningAPI:
 
     async def transfer(self, request: web.Request) -> web.Response:
         """
-        Command that allows send a message to a customer.
         ---
-        summary:    It takes a phone number and a message,
-                    and sends the message to the phone number.
+        summary: Command that transfers a client to an campaign_room.
         tags:
             - users
 
@@ -642,20 +624,14 @@ class ProvisioningAPI:
                 properties:
                   user_email:
                     type: string
-                  phone_number:
+                  customer_room_id:
                     type: string
-                  template_message:
-                    type: string
-                  template_name:
-                    type: string
-                  agent_id:
+                  campaign_room_id:
                     type: string
                 example:
                     user_email: "nobody@somewhere.com"
-                    phone_number: "573123456789"
-                    template_message: "Hola iKono!!"
-                    template_name: "text"
-                    agent_id: "@agente1:somewhere.com"
+                    customer_room_id: "!duOWDQQCshKjQvbyoh:darknet"
+                    campaign_room_id: "!TXMsaIzbeURlKPeCxJ:darknet"
 
         responses:
             '200':
@@ -664,8 +640,6 @@ class ProvisioningAPI:
                 $ref: '#/components/responses/BadRequest'
             '404':
                 $ref: '#/components/responses/NotExist'
-            '422':
-                $ref: '#/components/responses/NotSendMessage'
         """
         if not request.body_exists:
             return web.json_response(**NOT_DATA)
@@ -710,10 +684,8 @@ class ProvisioningAPI:
 
     async def transfer_user(self, request: web.Request) -> web.Response:
         """
-        Command that allows send a message to a customer.
         ---
-        summary:    It takes a phone number and a message,
-                    and sends the message to the phone number.
+        summary: Command that transfers a client from one agent to another.
         tags:
             - users
 
@@ -727,20 +699,14 @@ class ProvisioningAPI:
                 properties:
                   user_email:
                     type: string
-                  phone_number:
+                  customer_room_id:
                     type: string
-                  template_message:
-                    type: string
-                  template_name:
-                    type: string
-                  agent_id:
+                  target_agent_id:
                     type: string
                 example:
                     user_email: "nobody@somewhere.com"
-                    phone_number: "573123456789"
-                    template_message: "Hola iKono!!"
-                    template_name: "text"
-                    agent_id: "@agente1:somewhere.com"
+                    customer_room_id: "!duOWDQQCshKjQvbyoh:darknet"
+                    target_agent_id: "@agente1:darknet"
 
         responses:
             '200':
@@ -749,8 +715,6 @@ class ProvisioningAPI:
                 $ref: '#/components/responses/BadRequest'
             '404':
                 $ref: '#/components/responses/NotExist'
-            '422':
-                $ref: '#/components/responses/NotSendMessage'
         """
         if not request.body_exists:
             return web.json_response(**NOT_DATA)
