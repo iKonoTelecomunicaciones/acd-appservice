@@ -440,6 +440,8 @@ class AgentManager:
             del self.PENDING_INVITES[future_key]
         self.log.debug(f"futures left: {self.PENDING_INVITES}")
 
+        puppet: Puppet = await Puppet.get_customer_room_puppet(customer_room_id)
+        self.signaling.intent = puppet.intent
         if agent_joined:
             if campaign_room_id:
                 self.CURRENT_AGENT[campaign_room_id] = agent_id
@@ -479,7 +481,6 @@ class AgentManager:
                 # kick menu bot
                 self.log.debug(f"Kicking the menubot out of the room {customer_room_id}")
                 try:
-                    puppet: Puppet = await Puppet.get_customer_room_puppet(customer_room_id)
                     await self.room_manager.kick_menubot(
                         room_id=customer_room_id,
                         reason=detail if detail else f"agent [{agent_id}] accepted invite",

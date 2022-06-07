@@ -32,9 +32,9 @@ async def state_event(evt: CommandEvent) -> Dict:
         evt.reply(text=detail)
         return
 
-    prefix_and_command_length = len(f"{evt.cmd}")
+    command_length = len(f"{evt.cmd}")
 
-    incoming_message = (evt.text[prefix_and_command_length:]).strip()
+    incoming_message = (evt.text[command_length:]).strip()
 
     try:
         incoming_params = json.loads(incoming_message)

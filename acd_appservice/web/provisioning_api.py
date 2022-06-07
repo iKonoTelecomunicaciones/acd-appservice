@@ -66,7 +66,13 @@ class ProvisioningAPI:
         swagger.add_get(path="/v1/ws_link_phone", handler=self.ws_link_phone, allow_head=False)
 
         # Commads endpoint
-        swagger.add_post(path="/v1/pm", handler=self.pm)
+        swagger.add_post(path="/v1/cmd/pm", handler=self.pm)
+        swagger.add_post(path="/v1/cmd/resolve", handler=self.resolve)
+        swagger.add_post(path="/v1/cmd/state_event", handler=self.state_event)
+        # cmd template sin pruebas
+        swagger.add_post(path="/v1/cmd/template", handler=self.template)
+        swagger.add_post(path="/v1/cmd/transfer", handler=self.transfer)
+        swagger.add_post(path="/v1/cmd/transfer_user", handler=self.transfer_user)
 
         self.loop = asyncio.get_running_loop()
 
@@ -376,10 +382,9 @@ class ProvisioningAPI:
                     type: string
                 example:
                     user_email: "nobody@somewhere.com"
-                    phone_number: "573123456789"
-                    template_message: "Hola iKono!!"
-                    template_name: "text"
-                    agent_id: "@agente1:somewhere.com"
+                    room_id: "!gKEsOPrixwrrMFCQCJ:darknet"
+                    user_id: "@acd_1:darknet"
+                    send_message: "yes"
 
         responses:
             '200':
@@ -396,7 +401,7 @@ class ProvisioningAPI:
 
         data: Dict = await request.json()
 
-        if not (data.get("room_id") and data.get("user_id")):
+        if not (data.get("user_email") and data.get("room_id") and data.get("user_id")):
             return web.json_response(**REQUIRED_VARIABLES)
 
         email = data.get("user_email").lower()
@@ -417,19 +422,118 @@ class ProvisioningAPI:
 
         args = ["resolve", room_id, user_id, send_message, bridge]
 
+        self.log.debug(args)
         # Creating a fake command event and passing it to the command processor.
         cmd_evt = CommandEvent(
             cmd="resolve",
             agent_manager=self.agent_manager,
-            sender=data.get("agent_id"),
+            sender=user_id,
             room_id=room_id,
+            args=args,
         )
         cmd_evt.agent_manager.intent = puppet.intent
         cmd_evt.intent = puppet.intent
-        result = await command_processor(cmd_evt=cmd_evt)
-        return web.json_response(**result)
+        await command_processor(cmd_evt=cmd_evt)
+        return web.json_response()
 
-    async def pm(self, request: web.Request) -> web.Response:
+    async def state_event(self, request: web.Request) -> web.Response:
+        """
+        Command that allows send a message to a customer.
+        ---
+        summary:    It takes a phone number and a message,
+                    and sends the message to the phone number.
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_email:
+                    type: string
+                  phone_number:
+                    type: string
+                  template_message:
+                    type: string
+                  template_name:
+                    type: string
+                  agent_id:
+                    type: string
+                example:
+                    user_email: "nobody@somewhere.com"
+                    room_id: "!gKEsOPrixwrrMFCQCJ:darknet"
+                    event_type: "ik.chat.tag"
+                    tags: [
+                            {
+                                "id":"hola",
+                                "text":"hola"
+                            },
+                            {
+                                "id":"holaaa",
+                                "text":"holaaa"
+                            }
+                        ]
+
+
+        responses:
+            '200':
+                $ref: '#/components/responses/PmSuccessful'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+            '422':
+                $ref: '#/components/responses/NotSendMessage'
+        """
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+        if not (
+            data.get("user_email")
+            and data.get("room_id")
+            and data.get("event_type")
+            and data.get("tags")
+        ):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        email = data.get("user_email").lower()
+        error_result = await self.validate_email(user_email=email)
+
+        if error_result:
+            return web.json_response(**error_result)
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_by_email(email)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        incoming_params = {
+            "room_id": data.get("room_id"),
+            "event_type": data.get("event_type"),
+            "tags": data.get("tags"),
+        }
+
+        # Creating a fake command event and passing it to the command processor.
+        fake_command = f"state_event {json.dumps(incoming_params)}"
+        cmd_evt = CommandEvent(
+            cmd="state_event",
+            agent_manager=self.agent_manager,
+            sender=puppet.custom_mxid,
+            room_id=None,
+            text=fake_command,
+        )
+        cmd_evt.agent_manager.intent = puppet.intent
+        cmd_evt.intent = puppet.intent
+        await command_processor(cmd_evt=cmd_evt)
+        return web.json_response()
+
+    async def template(self, request: web.Request) -> web.Response:
         """
         Command that allows send a message to a customer.
         ---
@@ -479,11 +583,11 @@ class ProvisioningAPI:
         data: Dict = await request.json()
 
         if not (
-            data.get("phone_number")
-            and data.get("template_message")
+            data.get("user_email")
+            and data.get("room_id")
             and data.get("template_name")
-            and data.get("user_email")
-            and data.get("agent_id")
+            and data.get("template_message")
+            and data.get("bridge")
         ):
             return web.json_response(**REQUIRED_VARIABLES)
 
@@ -499,26 +603,27 @@ class ProvisioningAPI:
             return web.json_response(**USER_DOESNOT_EXIST)
 
         incoming_params = {
-            "phone_number": data.get("phone_number"),
-            "template_message": data.get("template_message"),
+            "room_id": data.get("room_id"),
             "template_name": data.get("template_name"),
+            "template_message": data.get("template_message"),
+            "bridge": data.get("bridge"),
         }
 
         # Creating a fake command event and passing it to the command processor.
-        fake_command = f"pm {json.dumps(incoming_params)}"
+        fake_command = f"template {json.dumps(incoming_params)}"
         cmd_evt = CommandEvent(
-            cmd="pm",
+            cmd="template",
             agent_manager=self.agent_manager,
-            sender=data.get("agent_id"),
+            sender=puppet.custom_mxid,
             room_id=None,
             text=fake_command,
         )
         cmd_evt.agent_manager.intent = puppet.intent
         cmd_evt.intent = puppet.intent
-        result = await command_processor(cmd_evt=cmd_evt)
-        return web.json_response(**result)
+        await command_processor(cmd_evt=cmd_evt)
+        return web.json_response()
 
-    async def pm(self, request: web.Request) -> web.Response:
+    async def transfer(self, request: web.Request) -> web.Response:
         """
         Command that allows send a message to a customer.
         ---
@@ -568,11 +673,9 @@ class ProvisioningAPI:
         data: Dict = await request.json()
 
         if not (
-            data.get("phone_number")
-            and data.get("template_message")
-            and data.get("template_name")
-            and data.get("user_email")
-            and data.get("agent_id")
+            data.get("user_email")
+            and data.get("customer_room_id")
+            and data.get("campaign_room_id")
         ):
             return web.json_response(**REQUIRED_VARIABLES)
 
@@ -587,27 +690,25 @@ class ProvisioningAPI:
         if not puppet:
             return web.json_response(**USER_DOESNOT_EXIST)
 
-        incoming_params = {
-            "phone_number": data.get("phone_number"),
-            "template_message": data.get("template_message"),
-            "template_name": data.get("template_name"),
-        }
+        customer_room_id = data.get("customer_room_id")
+        campaign_room_id = data.get("campaign_room_id")
+
+        args = ["transfer", customer_room_id, campaign_room_id]
 
         # Creating a fake command event and passing it to the command processor.
-        fake_command = f"pm {json.dumps(incoming_params)}"
         cmd_evt = CommandEvent(
-            cmd="pm",
+            cmd="transfer",
             agent_manager=self.agent_manager,
-            sender=data.get("agent_id"),
+            sender=puppet.custom_mxid,
             room_id=None,
-            text=fake_command,
+            args=args,
         )
         cmd_evt.agent_manager.intent = puppet.intent
         cmd_evt.intent = puppet.intent
-        result = await command_processor(cmd_evt=cmd_evt)
-        return web.json_response(**result)
+        await command_processor(cmd_evt=cmd_evt)
+        return web.json_response()
 
-    async def pm(self, request: web.Request) -> web.Response:
+    async def transfer_user(self, request: web.Request) -> web.Response:
         """
         Command that allows send a message to a customer.
         ---
@@ -657,11 +758,7 @@ class ProvisioningAPI:
         data: Dict = await request.json()
 
         if not (
-            data.get("phone_number")
-            and data.get("template_message")
-            and data.get("template_name")
-            and data.get("user_email")
-            and data.get("agent_id")
+            data.get("user_email") and data.get("customer_room_id") and data.get("target_agent_id")
         ):
             return web.json_response(**REQUIRED_VARIABLES)
 
@@ -676,25 +773,23 @@ class ProvisioningAPI:
         if not puppet:
             return web.json_response(**USER_DOESNOT_EXIST)
 
-        incoming_params = {
-            "phone_number": data.get("phone_number"),
-            "template_message": data.get("template_message"),
-            "template_name": data.get("template_name"),
-        }
+        customer_room_id = data.get("customer_room_id")
+        target_agent_id = data.get("target_agent_id")
+
+        args = ["transfer_user", customer_room_id, target_agent_id]
 
         # Creating a fake command event and passing it to the command processor.
-        fake_command = f"pm {json.dumps(incoming_params)}"
         cmd_evt = CommandEvent(
-            cmd="pm",
+            cmd="transfer_user",
             agent_manager=self.agent_manager,
-            sender=data.get("agent_id"),
+            sender=puppet.custom_mxid,
             room_id=None,
-            text=fake_command,
+            args=args,
         )
         cmd_evt.agent_manager.intent = puppet.intent
         cmd_evt.intent = puppet.intent
-        result = await command_processor(cmd_evt=cmd_evt)
-        return web.json_response(**result)
+        await command_processor(cmd_evt=cmd_evt)
+        return web.json_response()
 
     async def send_message(self, request: web.Request) -> web.Response:
         """
