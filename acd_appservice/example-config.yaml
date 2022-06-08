@@ -195,7 +195,13 @@ bridges:
     user_prefix: "gsmx"
     create_portal_command: "pm"
     send_template_command: "template"
-
+  plugin:
+    # Prefix to be listened by bridge
+    prefix: "!plg"
+    # Prefix for users created
+    user_prefix: ""
+    create_portal_command: ""
+    send_template_command: ""
 
 utils:
     # Whatsapp connection timeout (seconds)

@@ -276,6 +276,48 @@ class RoomManager:
                 if creator.startswith(f"@{user_prefix}"):
                     self.ROOMS[room_id]["is_customer_room"] = True
                     return True
+
+        self.ROOMS[room_id]["is_customer_room"] = False
+        return False
+
+    async def is_guest_room(self, room_id: RoomID, intent: IntentAPI) -> bool:
+        """If the room is a customer room, return True.
+        If not,
+        check if any of the room members have a username that matches the regex in the config.
+        If so, return True. Otherwise, return False
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to check.
+        intent : IntentAPI
+            IntentAPI
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+
+        try:
+            room = self.ROOMS[room_id]
+            is_customer_room = room.get("is_guest_room")
+            if is_customer_room:
+                return is_customer_room
+        except KeyError:
+            pass
+
+        members = await intent.get_joined_members(room_id=room_id)
+
+        for member in members:
+            username_regex = self.config["acd.username_regex_guest"]
+            guest_prefix = re.search(username_regex, member)
+
+            if guest_prefix:
+                self.ROOMS[room_id]["is_guest_room"] = True
+                return True
+
+        self.ROOMS[room_id]["is_guest_room"] = False
         return False
 
     async def is_mx_whatsapp_status_broadcast(self, room_id: RoomID, intent: IntentAPI) -> bool:
