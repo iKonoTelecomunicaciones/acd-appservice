@@ -319,13 +319,14 @@ class MatrixHandler:
                 return
 
             bridge = await self.room_manager.get_room_bridge(room_id=room_id, intent=intent)
-            await self.room_manager.send_cmd_set_pl(
-                room_id=room_id,
-                intent=intent,
-                bridge=bridge,
-                user_id=user_id,
-                power_level=self.config["acd.supervisors_to_invite.power_level"],
-            )
+            if bridge in ["mautrix", "instagram"]:
+                await self.room_manager.send_cmd_set_pl(
+                    room_id=room_id,
+                    intent=intent,
+                    bridge=bridge,
+                    user_id=user_id,
+                    power_level=self.config["acd.supervisors_to_invite.power_level"],
+                )
 
         intent = await self.get_intent(user_id=user_id)
         if not intent:
