@@ -485,7 +485,8 @@ class ProvisioningAPI:
             "event_type": data.get("event_type"),
         }
 
-        if data.get("tags"):
+        # Si llega vacia la lista tags es porque se quieren limpiar los tags
+        if data.get("tags") is not None:
             incoming_params["tags"] = data.get("tags")
         if data.get("content"):
             incoming_params["content"] = data.get("content")

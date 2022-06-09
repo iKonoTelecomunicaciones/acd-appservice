@@ -56,7 +56,8 @@ async def state_event(evt: CommandEvent) -> Dict:
         )
         return
 
-    if event_type == "ik.chat.tag":
+    # Si llega vacia la lista tags es porque se quieren limpiar los tags
+    if event_type == "ik.chat.tag" and incoming_params.get("tags") is not None:
         event_type = EventType.find("ik.chat.tag", EventType.Class.STATE)
         content = {"tags": incoming_params.get("tags")}
 
