@@ -476,30 +476,19 @@ class ProvisioningAPI:
 
         data: Dict = await request.json()
 
-        if not (
-            data.get("user_email")
-            and data.get("room_id")
-            and data.get("event_type")
-            and data.get("tags")
-        ):
+        if not (data.get("room_id") and data.get("event_type") and data.get("tags")):
             return web.json_response(**REQUIRED_VARIABLES)
-
-        email = data.get("user_email").lower()
-        error_result = await self.validate_email(user_email=email)
-
-        if error_result:
-            return web.json_response(**error_result)
-
-        # Obtenemos el puppet de este email si existe
-        puppet: Puppet = await Puppet.get_by_email(email)
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
 
         incoming_params = {
             "room_id": data.get("room_id"),
             "event_type": data.get("event_type"),
             "tags": data.get("tags"),
         }
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=data.get("room_id"))
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
 
         # Creating a fake command event and passing it to the command processor.
         fake_command = f"state_event {json.dumps(incoming_params)}"
@@ -561,24 +550,12 @@ class ProvisioningAPI:
         data: Dict = await request.json()
 
         if not (
-            data.get("user_email")
-            and data.get("room_id")
+            data.get("room_id")
             and data.get("template_name")
             and data.get("template_message")
             and data.get("bridge")
         ):
             return web.json_response(**REQUIRED_VARIABLES)
-
-        email = data.get("user_email").lower()
-        error_result = await self.validate_email(user_email=email)
-
-        if error_result:
-            return web.json_response(**error_result)
-
-        # Obtenemos el puppet de este email si existe
-        puppet: Puppet = await Puppet.get_by_email(email)
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
 
         incoming_params = {
             "room_id": data.get("room_id"),
@@ -586,6 +563,11 @@ class ProvisioningAPI:
             "template_message": data.get("template_message"),
             "bridge": data.get("bridge"),
         }
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=data.get("room_id"))
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
 
         # Creating a fake command event and passing it to the command processor.
         fake_command = f"template {json.dumps(incoming_params)}"
@@ -640,26 +622,16 @@ class ProvisioningAPI:
 
         data: Dict = await request.json()
 
-        if not (
-            data.get("user_email")
-            and data.get("customer_room_id")
-            and data.get("campaign_room_id")
-        ):
+        if not (data.get("customer_room_id") and data.get("campaign_room_id")):
             return web.json_response(**REQUIRED_VARIABLES)
-
-        email = data.get("user_email").lower()
-        error_result = await self.validate_email(user_email=email)
-
-        if error_result:
-            return web.json_response(**error_result)
-
-        # Obtenemos el puppet de este email si existe
-        puppet: Puppet = await Puppet.get_by_email(email)
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
 
         customer_room_id = data.get("customer_room_id")
         campaign_room_id = data.get("campaign_room_id")
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
 
         args = ["transfer", customer_room_id, campaign_room_id]
 
@@ -715,24 +687,16 @@ class ProvisioningAPI:
 
         data: Dict = await request.json()
 
-        if not (
-            data.get("user_email") and data.get("customer_room_id") and data.get("target_agent_id")
-        ):
+        if not (data.get("customer_room_id") and data.get("target_agent_id")):
             return web.json_response(**REQUIRED_VARIABLES)
-
-        email = data.get("user_email").lower()
-        error_result = await self.validate_email(user_email=email)
-
-        if error_result:
-            return web.json_response(**error_result)
-
-        # Obtenemos el puppet de este email si existe
-        puppet: Puppet = await Puppet.get_by_email(email)
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
 
         customer_room_id = data.get("customer_room_id")
         target_agent_id = data.get("target_agent_id")
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
 
         args = ["transfer_user", customer_room_id, target_agent_id]
 
