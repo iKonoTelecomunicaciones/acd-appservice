@@ -440,15 +440,6 @@ class ProvisioningAPI:
                     type: string
                   event_type:
                     type: string
-                  tags:
-                    type: array
-                    items:
-                        type: object
-                        properties:
-                            id:
-                                type: string
-                            text:
-                                type: string
                 example:
                     room_id: "!gKEsOPrixwrrMFCQCJ:darknet"
                     event_type: "ik.chat.tag"
