@@ -56,7 +56,7 @@ async def state_event(evt: CommandEvent) -> Dict:
         )
         return
 
-    if event_type == "ik.chat.tag" and incoming_params.get("tags"):
+    if event_type == "ik.chat.tag":
         event_type = EventType.find("ik.chat.tag", EventType.Class.STATE)
         content = {"tags": incoming_params.get("tags")}
 
