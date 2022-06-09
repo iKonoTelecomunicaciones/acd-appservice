@@ -25,14 +25,13 @@ services:
     volumes:
       - .:/opt/acd-appservice
       - ./data:/data
-      # - /home/alejo/Documentos/ikono/python/mautrix:/usr/lib/python3.9/site-packages/mautrix
+      - /home/alejo/Documentos/ikono/python/mautrix:/usr/lib/python3.9/site-packages/mautrix
     depends_on:
       - acd-az-db
       - synapse
     entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="." /opt/acd-appservice/docker-run.sh
     ports:
       - 26666:26666
-      - 5678:5678
 
   menubot:
     # NOTA: Esa tal imagen de testing no sirve

@@ -132,6 +132,7 @@ class ACD(Program):
             log="acd.events",
             loop=self.loop,
             aiohttp_params={"client_max_size": self.config["appservice.max_body_size"] * mb},
+            ephemeral_events=self.config["appservice.ephemeral_events"],
         )
 
     def prepare_db(self) -> None:

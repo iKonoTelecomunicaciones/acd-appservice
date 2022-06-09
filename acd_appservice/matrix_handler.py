@@ -16,16 +16,19 @@ from mautrix.types import (
     MessageEvent,
     MessageEventContent,
     MessageType,
+    PresenceEvent,
     PresenceState,
+    ReceiptEvent,
     RoomID,
     RoomNameStateEventContent,
     StateEvent,
     StateUnsigned,
+    TypingEvent,
     UserID,
 )
 from mautrix.util.logging import TraceLogger
 
-from acd_appservice import acd_program, puppet
+from acd_appservice import acd_program
 from acd_appservice.agent_manager import AgentManager
 from acd_appservice.room_manager import RoomManager
 
@@ -114,8 +117,7 @@ class MatrixHandler:
             Event has arrived
 
         """
-
-        self.log.debug(f"Received event: {evt.event_id} - {evt.type} in the room {evt.room_id}")
+        self.log.debug(f"Received event: {evt}")
 
         if evt.type == EventType.ROOM_MEMBER:
             evt: StateEvent
@@ -201,15 +203,16 @@ class MatrixHandler:
         #     await self.handle_encrypted(evt)
         # elif evt.type == EventType.ROOM_ENCRYPTION:
         #     await self.handle_encryption(evt)
-        # else:
-        #     if evt.type.is_state and isinstance(evt, StateEvent):
-        #         await self.handle_state_event(evt)
-        #     elif evt.type.is_ephemeral and isinstance(
-        #         evt, (PresenceEvent, TypingEvent, ReceiptEvent)
-        #     ):
-        #         await self.handle_ephemeral_event(evt)
-        #     else:
-        #         await self.handle_event(evt)
+        else:
+            if evt.type.is_state and isinstance(evt, StateEvent):
+                await self.handle_state_event(evt)
+            elif evt.type.is_ephemeral and isinstance(
+                evt, (PresenceEvent, TypingEvent, ReceiptEvent)
+            ):
+                self.log.debug("##################")
+                # await self.handle_ephemeral_event(evt)
+            # else:
+            #     await self.handle_event(evt)
 
     async def handle_invite(self, evt: Event):
         """If the user who was invited is a acd*, then join the room
