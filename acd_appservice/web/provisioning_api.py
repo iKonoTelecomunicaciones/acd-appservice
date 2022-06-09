@@ -479,7 +479,7 @@ class ProvisioningAPI:
         # Si llega vacia la lista tags es porque se quieren limpiar los tags
         if data.get("tags") is not None:
             incoming_params["tags"] = data.get("tags")
-        if data.get("content"):
+        else:
             incoming_params["content"] = data.get("content")
 
         # Obtenemos el puppet de este email si existe
