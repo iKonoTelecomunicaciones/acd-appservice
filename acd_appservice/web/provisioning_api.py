@@ -446,7 +446,14 @@ class ProvisioningAPI:
                   event_type:
                     type: string
                   tags:
-                    type: object
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            id:
+                                type: string
+                            text:
+                                type: string
                 example:
                     user_email: "nobody@somewhere.com"
                     room_id: "!gKEsOPrixwrrMFCQCJ:darknet"
