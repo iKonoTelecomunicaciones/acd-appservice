@@ -16,14 +16,12 @@ from mautrix.types import (
     MessageEvent,
     MessageEventContent,
     MessageType,
-    PresenceEvent,
     PresenceState,
     ReceiptEvent,
     RoomID,
     RoomNameStateEventContent,
     StateEvent,
     StateUnsigned,
-    TypingEvent,
     UserID,
 )
 from mautrix.util.logging import TraceLogger
@@ -204,15 +202,11 @@ class MatrixHandler:
         # elif evt.type == EventType.ROOM_ENCRYPTION:
         #     await self.handle_encryption(evt)
         else:
-            if evt.type.is_state and isinstance(evt, StateEvent):
-                await self.handle_state_event(evt)
-            elif evt.type.is_ephemeral and isinstance(
-                evt, (PresenceEvent, TypingEvent, ReceiptEvent)
-            ):
-                self.log.debug("##################")
-                # await self.handle_ephemeral_event(evt)
-            # else:
-            #     await self.handle_event(evt)
+            if evt.type.is_ephemeral and isinstance(evt, (ReceiptEvent)):
+                await self.handle_ephemeral_event(evt)
+
+    async def handle_ephemeral_event(self, evt: Event):
+        self.log.debug(evt)
 
     async def handle_invite(self, evt: Event):
         """If the user who was invited is a acd*, then join the room

@@ -47,3 +47,17 @@ async def upgrade_v1(conn: Connection) -> None:
         UNIQUE (room_id)
         )"""
     )
+
+
+@upgrade_table.register(description="Messages table is added")
+async def upgrade_v2(conn: Connection) -> None:
+    await conn.execute(
+        """CREATE TABLE message (
+        event_id            TEXT PRIMARY KEY,
+        room_id             TEXT NOT NULL,
+        sender              TEXT NOT NULL,
+        receiver            TEXT NOT NULL,
+        timestamp           INT NOT NULL,
+        was_read            BOOLEAN NOT NULL DEFAULT false
+        )"""
+    )

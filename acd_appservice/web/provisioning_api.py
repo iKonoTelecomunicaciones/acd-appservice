@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import re
+from datetime import datetime
 from typing import Dict
 
 from aiohttp import web
@@ -18,6 +19,7 @@ from ..commands.handler import command_processor
 from ..commands.typehint import CommandEvent
 from ..config import Config
 from ..http_client import HTTPClient, ProvisionBridge
+from ..message import Message
 from ..puppet import Puppet
 from . import SUPPORTED_MESSAGE_TYPES
 from .error_responses import (
@@ -809,6 +811,17 @@ class ProvisioningAPI:
         except Exception as e:
             self.log.exception(e)
             return web.json_response(**SERVER_ERROR)
+
+        try:
+            await Message.insert_msg(
+                event_id=event_id,
+                room_id=customer_room_id,
+                sender=puppet.custom_mxid,
+                receiver=phone,
+                timestamp=datetime.timestamp(datetime.now()),
+            )
+        except Exception as e:
+            self.log.exception(e)
 
         return web.json_response(
             data={
