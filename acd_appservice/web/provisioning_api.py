@@ -395,24 +395,18 @@ class ProvisioningAPI:
 
         data: Dict = await request.json()
 
-        if not (data.get("user_email") and data.get("room_id") and data.get("user_id")):
+        if not (data.get("room_id") and data.get("user_id")):
             return web.json_response(**REQUIRED_VARIABLES)
-
-        email = data.get("user_email").lower()
-        error_result = await self.validate_email(user_email=email)
-
-        if error_result:
-            return web.json_response(**error_result)
-
-        # Obtenemos el puppet de este email si existe
-        puppet: Puppet = await Puppet.get_by_email(email)
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
 
         room_id = data.get("room_id")
         user_id = data.get("user_id")
         send_message = data.get("send_message") if data.get("send_message") else None
         bridge = data.get("bridge") if data.get("bridge") else None
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
 
         args = ["resolve", room_id, user_id, send_message, bridge]
 
@@ -459,12 +453,12 @@ class ProvisioningAPI:
                     event_type: "ik.chat.tag"
                     tags: [
                             {
-                                "id":"hola",
-                                "text":"hola"
+                                "id":"soporte",
+                                "text":"soporte"
                             },
                             {
-                                "id":"holaaa",
-                                "text":"holaaa"
+                                "id":"ventas",
+                                "text":"ventas"
                             }
                         ]
 

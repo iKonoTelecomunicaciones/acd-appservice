@@ -281,7 +281,7 @@ class RoomManager:
         return False
 
     async def is_guest_room(self, room_id: RoomID, intent: IntentAPI) -> bool:
-        """If the room is a customer room, return True.
+        """If the room is a guest room, return True.
         If not,
         check if any of the room members have a username that matches the regex in the config.
         If so, return True. Otherwise, return False
@@ -301,9 +301,9 @@ class RoomManager:
 
         try:
             room = self.ROOMS[room_id]
-            is_customer_room = room.get("is_guest_room")
-            if is_customer_room:
-                return is_customer_room
+            is_guest_room = room.get("is_guest_room")
+            if is_guest_room:
+                return is_guest_room
         except KeyError:
             pass
 
@@ -691,10 +691,7 @@ class RoomManager:
             The room ID of the room you want to invite the menubot to.
 
         """
-        bridge = await self.get_room_bridge(room_id=room_id, intent=intent)
-        if not bridge:
-            self.log.warning(f"Failed to invite supervisor")
-            return
+
         invitees = self.config["acd.supervisors_to_invite.invitees"]
         for user_id in invitees:
             for attempt in range(10):
@@ -741,6 +738,11 @@ class RoomManager:
                     self.log.debug(f"The bridge obtained is {bridge}")
                     self.ROOMS[room_id]["bridge"] = bridge
                     return bridge
+
+        if await self.is_guest_room(room_id=room_id, intent=intent):
+            self.ROOMS[room_id]["bridge"] = "plugin"
+            return "plugin"
+
         return None
 
     async def get_room_name(self, room_id: RoomID, intent: IntentAPI) -> str:
