@@ -75,6 +75,8 @@ class TestRoomManager:
         mocker.patch.object(
             room_manager.RoomManager, "get_room_creator", return_value=room_creator
         )
+        mocker.patch.object(room_manager.RoomManager, "is_guest_room", return_value=False)
+
         intent: IntentAPI = None
         result = await room_manager_mock.get_room_bridge(
             room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org"), intent=intent
