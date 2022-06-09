@@ -66,7 +66,13 @@ class ProvisioningAPI:
         swagger.add_get(path="/v1/ws_link_phone", handler=self.ws_link_phone, allow_head=False)
 
         # Commads endpoint
-        swagger.add_post(path="/v1/pm", handler=self.pm)
+        swagger.add_post(path="/v1/cmd/pm", handler=self.pm)
+        swagger.add_post(path="/v1/cmd/resolve", handler=self.resolve)
+        swagger.add_post(path="/v1/cmd/state_event", handler=self.state_event)
+        # cmd template sin pruebas
+        swagger.add_post(path="/v1/cmd/template", handler=self.template)
+        swagger.add_post(path="/v1/cmd/transfer", handler=self.transfer)
+        swagger.add_post(path="/v1/cmd/transfer_user", handler=self.transfer_user)
 
         self.loop = asyncio.get_running_loop()
 
@@ -346,6 +352,354 @@ class ProvisioningAPI:
         cmd_evt.intent = puppet.intent
         result = await command_processor(cmd_evt=cmd_evt)
         return web.json_response(**result)
+
+    async def resolve(self, request: web.Request) -> web.Response:
+        """
+        ---
+        summary: Command resolving a chat, ejecting the supervisor and the agent.
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room_id:
+                    type: string
+                  user_id:
+                    type: string
+                  send_message:
+                    type: string
+                example:
+                    room_id: "!gKEsOPrixwrrMFCQCJ:darknet"
+                    user_id: "@acd_1:darknet"
+                    send_message: "yes"
+
+        responses:
+            '200':
+                $ref: '#/components/responses/PmSuccessful'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+        """
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+        if not (data.get("room_id") and data.get("user_id")):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        room_id = data.get("room_id")
+        user_id = data.get("user_id")
+        send_message = data.get("send_message") if data.get("send_message") else None
+        bridge = data.get("bridge") if data.get("bridge") else None
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        args = ["resolve", room_id, user_id, send_message, bridge]
+
+        self.log.debug(args)
+        # Creating a fake command event and passing it to the command processor.
+        cmd_evt = CommandEvent(
+            cmd="resolve",
+            agent_manager=self.agent_manager,
+            sender=user_id,
+            room_id=room_id,
+            args=args,
+        )
+        cmd_evt.agent_manager.intent = puppet.intent
+        cmd_evt.intent = puppet.intent
+        await command_processor(cmd_evt=cmd_evt)
+        return web.json_response()
+
+    async def state_event(self, request: web.Request) -> web.Response:
+        """
+        ---
+        summary: Command that sends a state event to matrix.
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room_id:
+                    type: string
+                  event_type:
+                    type: string
+                example:
+                    room_id: "!gKEsOPrixwrrMFCQCJ:darknet"
+                    event_type: "ik.chat.tag"
+                    tags: [
+                            {
+                                "id":"soporte",
+                                "text":"soporte"
+                            },
+                            {
+                                "id":"ventas",
+                                "text":"ventas"
+                            }
+                        ]
+
+
+        responses:
+            '200':
+                $ref: '#/components/responses/PmSuccessful'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+        """
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+        if not (data.get("room_id") and data.get("event_type")):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        incoming_params = {
+            "room_id": data.get("room_id"),
+            "event_type": data.get("event_type"),
+        }
+
+        # Si llega vacia la lista tags es porque se quieren limpiar los tags
+        if data.get("tags") is not None:
+            incoming_params["tags"] = data.get("tags")
+        else:
+            incoming_params["content"] = data.get("content")
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=data.get("room_id"))
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        # Creating a fake command event and passing it to the command processor.
+        fake_command = f"state_event {json.dumps(incoming_params)}"
+        cmd_evt = CommandEvent(
+            cmd="state_event",
+            agent_manager=self.agent_manager,
+            sender=puppet.custom_mxid,
+            room_id=None,
+            text=fake_command,
+        )
+        cmd_evt.agent_manager.intent = puppet.intent
+        cmd_evt.intent = puppet.intent
+        await command_processor(cmd_evt=cmd_evt)
+        return web.json_response()
+
+    async def template(self, request: web.Request) -> web.Response:
+        """
+        ---
+        summary: This command is used to send templates
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room_id:
+                    type: string
+                  template_name:
+                    type: string
+                  template_message:
+                    type: string
+                  bridge:
+                    type: string
+                example:
+                    room_id: "!duOWDQQCshKjQvbyoh:darknet"
+                    template_name: "hola"
+                    template_message: "Hola iKono!!"
+                    bridge: "!wa"
+
+        responses:
+            '200':
+                $ref: '#/components/responses/PmSuccessful'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+        """
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+        if not (
+            data.get("room_id")
+            and data.get("template_name")
+            and data.get("template_message")
+            and data.get("bridge")
+        ):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        incoming_params = {
+            "room_id": data.get("room_id"),
+            "template_name": data.get("template_name"),
+            "template_message": data.get("template_message"),
+            "bridge": data.get("bridge"),
+        }
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=data.get("room_id"))
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        # Creating a fake command event and passing it to the command processor.
+        fake_command = f"template {json.dumps(incoming_params)}"
+        cmd_evt = CommandEvent(
+            cmd="template",
+            agent_manager=self.agent_manager,
+            sender=puppet.custom_mxid,
+            room_id=None,
+            text=fake_command,
+        )
+        cmd_evt.agent_manager.intent = puppet.intent
+        cmd_evt.intent = puppet.intent
+        await command_processor(cmd_evt=cmd_evt)
+        return web.json_response()
+
+    async def transfer(self, request: web.Request) -> web.Response:
+        """
+        ---
+        summary: Command that transfers a client to an campaign_room.
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_room_id:
+                    type: string
+                  campaign_room_id:
+                    type: string
+                example:
+                    customer_room_id: "!duOWDQQCshKjQvbyoh:darknet"
+                    campaign_room_id: "!TXMsaIzbeURlKPeCxJ:darknet"
+
+        responses:
+            '200':
+                $ref: '#/components/responses/PmSuccessful'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+        """
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+        if not (data.get("customer_room_id") and data.get("campaign_room_id")):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        customer_room_id = data.get("customer_room_id")
+        campaign_room_id = data.get("campaign_room_id")
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        args = ["transfer", customer_room_id, campaign_room_id]
+
+        # Creating a fake command event and passing it to the command processor.
+        cmd_evt = CommandEvent(
+            cmd="transfer",
+            agent_manager=self.agent_manager,
+            sender=puppet.custom_mxid,
+            room_id=None,
+            args=args,
+        )
+        cmd_evt.agent_manager.intent = puppet.intent
+        cmd_evt.intent = puppet.intent
+        await command_processor(cmd_evt=cmd_evt)
+        return web.json_response()
+
+    async def transfer_user(self, request: web.Request) -> web.Response:
+        """
+        ---
+        summary: Command that transfers a client from one agent to another.
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_room_id:
+                    type: string
+                  target_agent_id:
+                    type: string
+                example:
+                    customer_room_id: "!duOWDQQCshKjQvbyoh:darknet"
+                    target_agent_id: "@agente1:darknet"
+
+        responses:
+            '200':
+                $ref: '#/components/responses/PmSuccessful'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+        """
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+        if not (data.get("customer_room_id") and data.get("target_agent_id")):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        customer_room_id = data.get("customer_room_id")
+        target_agent_id = data.get("target_agent_id")
+
+        # Obtenemos el puppet de este email si existe
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        args = ["transfer_user", customer_room_id, target_agent_id]
+
+        # Creating a fake command event and passing it to the command processor.
+        cmd_evt = CommandEvent(
+            cmd="transfer_user",
+            agent_manager=self.agent_manager,
+            sender=puppet.custom_mxid,
+            room_id=None,
+            args=args,
+        )
+        cmd_evt.agent_manager.intent = puppet.intent
+        cmd_evt.intent = puppet.intent
+        await command_processor(cmd_evt=cmd_evt)
+        return web.json_response()
 
     async def send_message(self, request: web.Request) -> web.Response:
         """

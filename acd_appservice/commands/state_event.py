@@ -32,9 +32,9 @@ async def state_event(evt: CommandEvent) -> Dict:
         evt.reply(text=detail)
         return
 
-    prefix_and_command_length = len(f"{evt.cmd}")
+    command_length = len(f"{evt.cmd}")
 
-    incoming_message = (evt.text[prefix_and_command_length:]).strip()
+    incoming_message = (evt.text[command_length:]).strip()
 
     try:
         incoming_params = json.loads(incoming_message)
@@ -56,9 +56,12 @@ async def state_event(evt: CommandEvent) -> Dict:
         )
         return
 
-    if event_type == "ik.chat.tag":
+    # Si llega vacia la lista tags es porque se quieren limpiar los tags
+    if event_type == "ik.chat.tag" and incoming_params.get("tags") is not None:
         event_type = EventType.find("ik.chat.tag", EventType.Class.STATE)
         content = {"tags": incoming_params.get("tags")}
+    else:
+        content = incoming_params.get("content")
 
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
     if puppet:

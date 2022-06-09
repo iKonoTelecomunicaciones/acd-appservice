@@ -264,7 +264,8 @@ class RoomManager:
         try:
             room = self.ROOMS[room_id]
             is_customer_room = room.get("is_customer_room")
-            if is_customer_room:
+            # Para que ingrese aun si is_customer_room es False
+            if is_customer_room is not None:
                 return is_customer_room
         except KeyError:
             pass
@@ -276,6 +277,49 @@ class RoomManager:
                 if creator.startswith(f"@{user_prefix}"):
                     self.ROOMS[room_id]["is_customer_room"] = True
                     return True
+
+        self.ROOMS[room_id]["is_customer_room"] = False
+        return False
+
+    async def is_guest_room(self, room_id: RoomID, intent: IntentAPI) -> bool:
+        """If the room is a guest room, return True.
+        If not,
+        check if any of the room members have a username that matches the regex in the config.
+        If so, return True. Otherwise, return False
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to check.
+        intent : IntentAPI
+            IntentAPI
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+
+        try:
+            room = self.ROOMS[room_id]
+            is_guest_room = room.get("is_guest_room")
+            # Para que ingrese aun si is_guest_room es False
+            if is_guest_room is not None:
+                return is_guest_room
+        except KeyError:
+            pass
+
+        members = await intent.get_joined_members(room_id=room_id)
+
+        for member in members:
+            username_regex = self.config["acd.username_regex_guest"]
+            guest_prefix = re.search(username_regex, member)
+
+            if guest_prefix:
+                self.ROOMS[room_id]["is_guest_room"] = True
+                return True
+
+        self.ROOMS[room_id]["is_guest_room"] = False
         return False
 
     async def is_mx_whatsapp_status_broadcast(self, room_id: RoomID, intent: IntentAPI) -> bool:
@@ -465,7 +509,7 @@ class RoomManager:
                 menubot_id, "cancel_task", control_room_id, intent, room_id
             )
             try:
-                self.log.debug("Kicking the menubot [{menubot_id}]")
+                self.log.debug(f"Kicking the menubot [{menubot_id}]")
                 await intent.kick_user(room_id=room_id, user_id=menubot_id, reason=reason)
             except Exception as e:
                 self.log.warning(
@@ -503,11 +547,11 @@ class RoomManager:
 
         menubot_id: UserID = None
 
-        if self.config["acd.menubot"]:
+        if self.config["acd.menubot.active"]:
             menubot_id = self.config["acd.menubot.user_id"]
             return menubot_id
 
-        if room_id:
+        elif room_id:
             members = await intent.get_joined_members(room_id=room_id)
             if members:
                 for user_id in members:
@@ -515,7 +559,7 @@ class RoomManager:
                         menubot_id = user_id
                         break
 
-        if user_id:
+        elif user_id:
             username_regex = self.config["utils.username_regex"]
             user_prefix = re.search(username_regex, user_id)
             menubots: Dict[UserID, Dict] = self.config["acd.menubots"]
@@ -649,10 +693,7 @@ class RoomManager:
             The room ID of the room you want to invite the menubot to.
 
         """
-        bridge = await self.get_room_bridge(room_id=room_id, intent=intent)
-        if not bridge:
-            self.log.warning(f"Failed to invite supervisor")
-            return
+
         invitees = self.config["acd.supervisors_to_invite.invitees"]
         for user_id in invitees:
             for attempt in range(10):
@@ -699,6 +740,11 @@ class RoomManager:
                     self.log.debug(f"The bridge obtained is {bridge}")
                     self.ROOMS[room_id]["bridge"] = bridge
                     return bridge
+
+        if await self.is_guest_room(room_id=room_id, intent=intent):
+            self.ROOMS[room_id]["bridge"] = "plugin"
+            return "plugin"
+
         return None
 
     async def get_room_name(self, room_id: RoomID, intent: IntentAPI) -> str:
@@ -970,6 +1016,10 @@ class RoomManager:
                     selected_option = room.selected_option
 
                 puppet: pu.Puppet = await pu.Puppet.get_by_custom_mxid(puppet_mxid)
+                if not puppet:
+                    cls.log.error(f"Puppet not found {puppet_mxid}")
+                    return False
+
                 fk_puppet = room.fk_puppet if puppet.pk == room.fk_puppet else puppet.pk
                 await Room.update_room_by_room_id(room_id, selected_option, fk_puppet)
             else:

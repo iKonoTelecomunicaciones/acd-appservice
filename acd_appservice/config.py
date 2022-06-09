@@ -21,6 +21,7 @@ class Config(BaseBridgeConfig):
         copy("bridges.mautrix.mxid")
         copy("bridges.mautrix.provisioning.url_base")
         copy("bridges.mautrix.provisioning.shared_secret")
+        copy("bridges.plugin")
         copy("acd.keep_room_name")
         copy("acd.control_room_id")
         copy_dict("acd.menubot")

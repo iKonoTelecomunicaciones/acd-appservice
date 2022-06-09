@@ -40,12 +40,15 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
 
-    if (
-        room_id == puppet.control_room_id
-        or not await evt.agent_manager.room_manager.is_customer_room(
+    if room_id == puppet.control_room_id or (
+        not await evt.agent_manager.room_manager.is_customer_room(
+            room_id=room_id, intent=puppet.intent
+        )
+        and not await evt.agent_manager.room_manager.is_guest_room(
             room_id=room_id, intent=puppet.intent
         )
     ):
+
         detail = "Group rooms or control rooms cannot be resolved."
         evt.log.error(detail)
         await puppet.intent.send_notice(room_id=room_id, text=detail)
