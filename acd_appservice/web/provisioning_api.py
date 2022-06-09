@@ -368,8 +368,6 @@ class ProvisioningAPI:
               schema:
                 type: object
                 properties:
-                  user_email:
-                    type: string
                   room_id:
                     type: string
                   user_id:
@@ -377,7 +375,6 @@ class ProvisioningAPI:
                   send_message:
                     type: string
                 example:
-                    user_email: "nobody@somewhere.com"
                     room_id: "!gKEsOPrixwrrMFCQCJ:darknet"
                     user_id: "@acd_1:darknet"
                     send_message: "yes"
@@ -439,8 +436,6 @@ class ProvisioningAPI:
               schema:
                 type: object
                 properties:
-                  user_email:
-                    type: string
                   room_id:
                     type: string
                   event_type:
@@ -455,7 +450,6 @@ class ProvisioningAPI:
                             text:
                                 type: string
                 example:
-                    user_email: "nobody@somewhere.com"
                     room_id: "!gKEsOPrixwrrMFCQCJ:darknet"
                     event_type: "ik.chat.tag"
                     tags: [
@@ -526,8 +520,6 @@ class ProvisioningAPI:
               schema:
                 type: object
                 properties:
-                  user_email:
-                    type: string
                   room_id:
                     type: string
                   template_name:
@@ -537,7 +529,6 @@ class ProvisioningAPI:
                   bridge:
                     type: string
                 example:
-                    user_email: "nobody@somewhere.com"
                     room_id: "!duOWDQQCshKjQvbyoh:darknet"
                     template_name: "hola"
                     template_message: "Hola iKono!!"
@@ -605,14 +596,11 @@ class ProvisioningAPI:
               schema:
                 type: object
                 properties:
-                  user_email:
-                    type: string
                   customer_room_id:
                     type: string
                   campaign_room_id:
                     type: string
                 example:
-                    user_email: "nobody@somewhere.com"
                     customer_room_id: "!duOWDQQCshKjQvbyoh:darknet"
                     campaign_room_id: "!TXMsaIzbeURlKPeCxJ:darknet"
 
@@ -670,14 +658,11 @@ class ProvisioningAPI:
               schema:
                 type: object
                 properties:
-                  user_email:
-                    type: string
                   customer_room_id:
                     type: string
                   target_agent_id:
                     type: string
                 example:
-                    user_email: "nobody@somewhere.com"
                     customer_room_id: "!duOWDQQCshKjQvbyoh:darknet"
                     target_agent_id: "@agente1:darknet"
 
