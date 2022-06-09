@@ -56,9 +56,12 @@ async def state_event(evt: CommandEvent) -> Dict:
         )
         return
 
-    if event_type == "ik.chat.tag":
+    if event_type == "ik.chat.tag" and incoming_params.get("tags"):
         event_type = EventType.find("ik.chat.tag", EventType.Class.STATE)
         content = {"tags": incoming_params.get("tags")}
+
+    if incoming_params.get("content"):
+        content = incoming_params.get("content")
 
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
     if puppet:

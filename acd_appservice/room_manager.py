@@ -264,7 +264,8 @@ class RoomManager:
         try:
             room = self.ROOMS[room_id]
             is_customer_room = room.get("is_customer_room")
-            if is_customer_room:
+            # Para que ingrese aun si is_customer_room es False
+            if is_customer_room is not None:
                 return is_customer_room
         except KeyError:
             pass
@@ -302,7 +303,8 @@ class RoomManager:
         try:
             room = self.ROOMS[room_id]
             is_guest_room = room.get("is_guest_room")
-            if is_guest_room:
+            # Para que ingrese aun si is_guest_room es False
+            if is_guest_room is not None:
                 return is_guest_room
         except KeyError:
             pass

@@ -477,14 +477,18 @@ class ProvisioningAPI:
 
         data: Dict = await request.json()
 
-        if not (data.get("room_id") and data.get("event_type") and data.get("tags")):
+        if not (data.get("room_id") and data.get("event_type")):
             return web.json_response(**REQUIRED_VARIABLES)
 
         incoming_params = {
             "room_id": data.get("room_id"),
             "event_type": data.get("event_type"),
-            "tags": data.get("tags"),
         }
+
+        if data.get("tags"):
+            incoming_params["tags"] = data.get("tags")
+        if data.get("content"):
+            incoming_params["content"] = data.get("content")
 
         # Obtenemos el puppet de este email si existe
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=data.get("room_id"))
