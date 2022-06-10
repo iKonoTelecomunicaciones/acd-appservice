@@ -209,6 +209,19 @@ class MatrixHandler:
                 await self.handle_ephemeral_event(evt)
 
     async def handle_ephemeral_event(self, evt: ReceiptEvent):
+        """It takes a receipt event, checks if it's a read receipt,
+        and if it is, it updates the message in the database to reflect that it was read
+
+        Parameters
+        ----------
+        evt : ReceiptEvent
+            ReceiptEvent
+
+        Returns
+        -------
+            The message is being returned.
+
+        """
 
         if not evt.content:
             return

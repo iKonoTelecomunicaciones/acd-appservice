@@ -850,6 +850,7 @@ class ProvisioningAPI:
             return web.json_response(**SERVER_ERROR)
 
         try:
+            # Registramos el mensaje en la db
             await Message.insert_msg(
                 event_id=event_id,
                 room_id=customer_room_id,
