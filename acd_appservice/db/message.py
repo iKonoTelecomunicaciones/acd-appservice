@@ -42,31 +42,15 @@ class Message:
         )
         await self.db.execute(q, *self._values)
 
-    @classmethod
-    def _from_row(cls, row: asyncpg.Record) -> Message:
-        """It takes a class and a row from a database,
-        and returns an instance of the class with the row's values
-
-        Parameters
-        ----------
-        row : asyncpg.Record
-
-        Returns
-        -------
-            A Room object
-
-        """
-        return cls(**row)
-
     async def update(
         self, receiver: str, event_id: EventID, timestamp_read: int, was_read: bool
     ) -> None:
         q = "UPDATE message SET timestamp_read=$2, was_read=$3 WHERE event_id=$1"
         await self.db.execute(q, event_id, timestamp_read, was_read)
 
-        # El bridge de wpp solo nos envia el verificación de lectura del ultimo mensaje enviado
-        # entonces podemos suponer que los mensajes previos ya han sido ledios, realizamos una
-        # correción de los datos.
+        # El bridge de wpp solo nos envía la verificación de lectura del último mensaje enviado
+        # entonces podemos suponer que los mensajes previos ya han sido leídos, realizamos una
+        # corrección de los datos.
         await self.fix_message_read_events(receiver=receiver, timestamp_read=timestamp_read)
 
     async def fix_message_read_events(self, receiver: str, timestamp_read: int) -> None:

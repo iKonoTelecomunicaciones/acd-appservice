@@ -20,6 +20,24 @@ components:
         timeout:
           type: integer
 
+    MessageOk:
+      type: object
+      properties:
+        event_id:
+          type: string
+        room_id:
+          type: string
+        sender:
+          type: string
+        receiver:
+          type: string
+        timestamp_send:
+          type: integer
+        timestamp_read:
+          type: integer
+        was_read:
+          type: boolean
+
     LoginOk:
       type: object
       properties:
@@ -82,6 +100,20 @@ components:
             code: "2@Y0SYKO62z8tZXp9KDf4w8D/4qLioopgFtT3Bc2aSdt6Jdmg4DZlM1..."
             timeout: 60
           status: 200
+
+    MessageDataOk:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/MessageOk'
+      example:
+          event_id: "$viRb6Wrnt2_25VbfjGhT-MVS9M2V52ILe6Pe-KTr4C4"
+          room_id: "!JkbrMXRBOmnqacLMep:darknet"
+          sender: "@acd_1:darknet"
+          receiver: "+573123456789"
+          timestamp_send: 1654877677916
+          timestamp_read: 1654877699166
+          was_read: true
 
     QrDataFail:
       type: object
@@ -163,6 +195,13 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/QrDataOk'
+
+    MessageFound:
+      description: QR has been generated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageDataOk'
 
     LoginSuccessful:
       description: QR has been generated.

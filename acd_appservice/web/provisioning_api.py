@@ -285,14 +285,13 @@ class ProvisioningAPI:
 
         responses:
             '200':
-                $ref: '#/components/responses/QrGenerated'
+                $ref: '#/components/responses/MessageFound'
             '400':
                 $ref: '#/components/responses/BadRequest'
             '404':
                 $ref: '#/components/responses/NotExist'
-            '422':
-                $ref: '#/components/responses/QrNoGenerated'
         """
+
         event_id = request.rel_url.query["event_id"]
         if not event_id:
             return web.json_response(**REQUIRED_VARIABLES)

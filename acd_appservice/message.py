@@ -15,7 +15,6 @@ class Message(DBMessage):
     """Representa al mensaje en el synapse."""
 
     log: TraceLogger = logging.getLogger("acd.room_manager")
-    by_event_id: dict[str, Message] = {}
     config: Config
 
     def __init__(
@@ -37,9 +36,6 @@ class Message(DBMessage):
             timestamp_read=timestamp_read,
             was_read=was_read,
         )
-
-    def _add_to_cache(self) -> None:
-        self.by_event_id[self.event_id] = self
 
     def values(self):
         return (
@@ -73,18 +69,12 @@ class Message(DBMessage):
             was_read=was_read,
         )
         await msg.insert()
-        msg._add_to_cache()
 
     @classmethod
     async def get_by_event_id(cls, event_id: EventID) -> Message | None:
-        try:
-            return cls.by_event_id[event_id]
-        except KeyError:
-            pass
 
         message = cast(cls, await super().get_by_event_id(event_id))
         if message:
-            message._add_to_cache()
             return message
 
         return None
