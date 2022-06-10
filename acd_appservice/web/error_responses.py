@@ -49,6 +49,12 @@ MESSAGE_NOT_SENT = {
     "status": 422,
 }
 
+MESSAGE_NOT_FOUND = {
+    "data": {"error": "Message has not found"},
+    "status": 404,
+}
+
+
 USER_ALREADY_EXISTS = {
     "data": {"error": "User already exists"},
     "status": 422,

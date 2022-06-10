@@ -24,7 +24,8 @@ class Message(DBMessage):
         room_id: RoomID,
         sender: UserID,
         receiver: str,
-        timestamp: int,
+        timestamp_send: int | None,
+        timestamp_read: int | None = None,
         was_read: bool = False,
     ):
         super().__init__(
@@ -32,7 +33,8 @@ class Message(DBMessage):
             room_id=room_id,
             sender=sender,
             receiver=receiver,
-            timestamp=timestamp,
+            timestamp_send=timestamp_send,
+            timestamp_read=timestamp_read,
             was_read=was_read,
         )
 
@@ -45,7 +47,8 @@ class Message(DBMessage):
             self.room_id,
             self.sender,
             self.receiver,
-            self.timestamp,
+            self.timestamp_send,
+            self.timestamp_read,
             self.was_read,
         )
 
@@ -56,7 +59,8 @@ class Message(DBMessage):
         room_id: RoomID,
         sender: UserID,
         receiver: str,
-        timestamp: int,
+        timestamp_send: int | None,
+        timestamp_read: int | None = None,
         was_read: bool = False,
     ):
         msg = cls(
@@ -64,7 +68,8 @@ class Message(DBMessage):
             room_id=room_id,
             sender=sender,
             receiver=receiver,
-            timestamp=timestamp,
+            timestamp_send=timestamp_send,
+            timestamp_read=timestamp_read,
             was_read=was_read,
         )
         await msg.insert()

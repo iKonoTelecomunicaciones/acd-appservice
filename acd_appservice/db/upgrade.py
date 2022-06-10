@@ -57,7 +57,8 @@ async def upgrade_v2(conn: Connection) -> None:
         room_id             TEXT NOT NULL,
         sender              TEXT NOT NULL,
         receiver            TEXT NOT NULL,
-        timestamp           INT NOT NULL,
+        timestamp_send      BIGINT,
+        timestamp_read      BIGINT,
         was_read            BOOLEAN NOT NULL DEFAULT false
         )"""
     )

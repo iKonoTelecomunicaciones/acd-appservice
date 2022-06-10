@@ -18,8 +18,10 @@ from mautrix.types import (
     MessageType,
     PresenceState,
     ReceiptEvent,
+    ReceiptType,
     RoomID,
     RoomNameStateEventContent,
+    SingleReceiptEventContent,
     StateEvent,
     StateUnsigned,
     UserID,
@@ -32,6 +34,7 @@ from acd_appservice.room_manager import RoomManager
 
 from .commands.handler import command_processor
 from .commands.typehint import CommandEvent
+from .message import Message
 from .puppet import Puppet
 from .signaling import Signaling
 
@@ -205,8 +208,27 @@ class MatrixHandler:
             if evt.type.is_ephemeral and isinstance(evt, (ReceiptEvent)):
                 await self.handle_ephemeral_event(evt)
 
-    async def handle_ephemeral_event(self, evt: Event):
-        self.log.debug(evt)
+    async def handle_ephemeral_event(self, evt: ReceiptEvent):
+
+        if not evt.content:
+            return
+
+        for event_id in evt.content:
+            for user_id in evt.content.get(event_id).get(ReceiptType.READ):
+                username_regex = self.config["utils.username_regex"]
+                user_prefix = re.search(username_regex, user_id)
+                message = await Message.get_by_event_id(event_id=event_id)
+                if user_prefix and message:
+                    timestamp_read: SingleReceiptEventContent = (
+                        evt.content.get(event_id).get(ReceiptType.READ).get(user_id).ts
+                    )
+                    await message.update(
+                        receiver=f"+{user_prefix.group('number')}",
+                        event_id=event_id,
+                        timestamp_read=timestamp_read,
+                        was_read=True,
+                    )
+                    self.log.debug(f"The message {event_id} has been read at {timestamp_read}")
 
     async def handle_invite(self, evt: Event):
         """If the user who was invited is a acd*, then join the room
