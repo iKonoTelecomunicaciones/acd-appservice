@@ -25,7 +25,7 @@ services:
     volumes:
       - .:/opt/acd-appservice
       - ./data:/data
-      - /home/alejo/Documentos/ikono/python/mautrix:/usr/lib/python3.9/site-packages/mautrix
+      # - /home/alejo/Documentos/ikono/python/mautrix:/usr/lib/python3.9/site-packages/mautrix
     depends_on:
       - acd-az-db
       - synapse
