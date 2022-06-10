@@ -81,7 +81,7 @@ class ACDAppService(ACD):
         self.provisioning_api.agent_manager = self.matrix.agent_manager
         # Creamos la tarea que va revisar si las salas pendintes ya tienen a un agente para asignar
         self.add_shutdown_actions(self.provisioning_api.client.session.close())
-        # asyncio.create_task(self.checking_whatsapp_connection())
+        asyncio.create_task(self.checking_whatsapp_connection())
         asyncio.create_task(self.matrix.agent_manager.process_pending_rooms())
 
     def prepare_stop(self) -> None:
