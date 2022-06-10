@@ -72,6 +72,7 @@ class ProvisioningAPI:
         # Commads endpoint
         swagger.add_post(path="/v1/cmd/pm", handler=self.pm)
         swagger.add_post(path="/v1/cmd/resolve", handler=self.resolve)
+        swagger.add_post(path="/v1/cmd/resolve_bulk", handler=self.resolve_bulk)
         swagger.add_post(path="/v1/cmd/state_event", handler=self.state_event)
         # cmd template sin pruebas
         swagger.add_post(path="/v1/cmd/template", handler=self.template)
@@ -419,8 +420,6 @@ class ProvisioningAPI:
                     send_message: "yes"
 
         responses:
-            '200':
-                $ref: '#/components/responses/PmSuccessful'
             '400':
                 $ref: '#/components/responses/BadRequest'
             '404':
@@ -460,6 +459,92 @@ class ProvisioningAPI:
         await command_processor(cmd_evt=cmd_evt)
         return web.json_response()
 
+    async def resolve_bulk(self, request: web.Request) -> web.Response:
+        """
+        ---
+        summary: Command resolving a chats, ejecting the supervisor and the agent.
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                  user_id:
+                    type: string
+                  send_message:
+                    type: string
+                example:
+                    data: {
+                        room_ids: [
+                            "!gKEsOPrixwrrMFCQCJ:darknet",
+                            "!gKEsOPyrtyrtyfCQCJ:darknet",
+                            "!gsdfsddsfwrrMFCQCJ:darknet"
+                        ]
+                    }
+
+                    user_id: "@acd_1:darknet"
+                    send_message: "yes"
+
+        responses:
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+        """
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+        if not (data.get("room_ids") and data.get("user_id")):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        room_ids = data.get("room_ids")
+        user_id = data.get("user_id")
+        send_message = data.get("send_message") if data.get("send_message") else None
+        bridge = data.get("bridge") if data.get("bridge") else None
+        tasks = []
+        for room_id in room_ids:
+            # Obtenemos el puppet de este email si existe
+            puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+            if not puppet:
+                continue
+
+            bridge = await self.agent_manager.room_manager.get_room_bridge(
+                room_id=room_id, intent=puppet.intent
+            )
+
+            if not bridge:
+                continue
+
+            bridge_prefix = self.config[f"bridges.{bridge}.prefix"]
+
+            args = ["resolve", room_id, user_id, send_message, bridge_prefix]
+
+            self.log.debug(args)
+            # Creating a fake command event and passing it to the command processor.
+            cmd_evt = CommandEvent(
+                cmd="resolve",
+                agent_manager=self.agent_manager,
+                sender=user_id,
+                room_id=room_id,
+                args=args,
+            )
+            cmd_evt.agent_manager.intent = puppet.intent
+            cmd_evt.intent = puppet.intent
+            task = asyncio.create_task(command_processor(cmd_evt=cmd_evt))
+            tasks.append(task)
+
+        asyncio.gather(*tasks)
+        return web.json_response()
+
     async def state_event(self, request: web.Request) -> web.Response:
         """
         ---
@@ -495,8 +580,6 @@ class ProvisioningAPI:
 
 
         responses:
-            '200':
-                $ref: '#/components/responses/PmSuccessful'
             '400':
                 $ref: '#/components/responses/BadRequest'
             '404':
@@ -570,8 +653,6 @@ class ProvisioningAPI:
                     bridge: "!wa"
 
         responses:
-            '200':
-                $ref: '#/components/responses/PmSuccessful'
             '400':
                 $ref: '#/components/responses/BadRequest'
             '404':
@@ -640,8 +721,6 @@ class ProvisioningAPI:
                     campaign_room_id: "!TXMsaIzbeURlKPeCxJ:darknet"
 
         responses:
-            '200':
-                $ref: '#/components/responses/PmSuccessful'
             '400':
                 $ref: '#/components/responses/BadRequest'
             '404':
