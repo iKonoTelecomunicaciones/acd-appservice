@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import re
+from datetime import datetime
 from typing import Dict
 
 from aiohttp import web
@@ -18,11 +19,13 @@ from ..commands.handler import command_processor
 from ..commands.typehint import CommandEvent
 from ..config import Config
 from ..http_client import HTTPClient, ProvisionBridge
+from ..message import Message
 from ..puppet import Puppet
 from . import SUPPORTED_MESSAGE_TYPES
 from .error_responses import (
     INVALID_EMAIL,
     INVALID_PHONE,
+    MESSAGE_NOT_FOUND,
     MESSAGE_TYPE_NOT_SUPPORTED,
     NOT_DATA,
     NOT_EMAIL,
@@ -64,6 +67,7 @@ class ProvisioningAPI:
         swagger.add_post(path="/v1/send_message", handler=self.send_message)
         swagger.add_get(path="/v1/link_phone", handler=self.link_phone, allow_head=False)
         swagger.add_get(path="/v1/ws_link_phone", handler=self.ws_link_phone, allow_head=False)
+        swagger.add_get(path="/v1/read_check", handler=self.read_check, allow_head=False)
 
         # Commads endpoint
         swagger.add_post(path="/v1/cmd/pm", handler=self.pm)
@@ -263,6 +267,41 @@ class ProvisioningAPI:
         return web.json_response(
             **await self.bridge_connector.ws_connect(user_id=puppet.custom_mxid, easy_mode=True)
         )
+
+    async def read_check(self, request: web.Request) -> web.Response:
+        """
+        ---
+        summary:        Check if a message has been read
+        tags:
+            - users
+
+        parameters:
+        - in: query
+          name: event_id
+          schema:
+            type: string
+          required: true
+          description: message sent
+
+        responses:
+            '200':
+                $ref: '#/components/responses/MessageFound'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+        """
+
+        event_id = request.rel_url.query["event_id"]
+        if not event_id:
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        message: Message = await Message.get_by_event_id(event_id=event_id)
+
+        if not message:
+            return web.json_response(**MESSAGE_NOT_FOUND)
+
+        return web.json_response(data=message.__dict__)
 
     async def pm(self, request: web.Request) -> web.Response:
         """
@@ -809,6 +848,18 @@ class ProvisioningAPI:
         except Exception as e:
             self.log.exception(e)
             return web.json_response(**SERVER_ERROR)
+
+        try:
+            # Registramos el mensaje en la db
+            await Message.insert_msg(
+                event_id=event_id,
+                room_id=customer_room_id,
+                sender=puppet.custom_mxid,
+                receiver=phone,
+                timestamp_send=datetime.timestamp(datetime.utcnow()),
+            )
+        except Exception as e:
+            self.log.exception(e)
 
         return web.json_response(
             data={

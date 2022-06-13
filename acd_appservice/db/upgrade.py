@@ -47,3 +47,15 @@ async def upgrade_v1(conn: Connection) -> None:
         UNIQUE (room_id)
         )"""
     )
+
+    await conn.execute(
+        """CREATE TABLE message (
+        event_id            TEXT PRIMARY KEY,
+        room_id             TEXT NOT NULL,
+        sender              TEXT NOT NULL,
+        receiver            TEXT NOT NULL,
+        timestamp_send      BIGINT,
+        timestamp_read      BIGINT,
+        was_read            BOOLEAN NOT NULL DEFAULT false
+        )"""
+    )

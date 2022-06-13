@@ -17,20 +17,24 @@ from mautrix.types import (
     MessageEventContent,
     MessageType,
     PresenceState,
+    ReceiptEvent,
+    ReceiptType,
     RoomID,
     RoomNameStateEventContent,
+    SingleReceiptEventContent,
     StateEvent,
     StateUnsigned,
     UserID,
 )
 from mautrix.util.logging import TraceLogger
 
-from acd_appservice import acd_program, puppet
+from acd_appservice import acd_program
 from acd_appservice.agent_manager import AgentManager
 from acd_appservice.room_manager import RoomManager
 
 from .commands.handler import command_processor
 from .commands.typehint import CommandEvent
+from .message import Message
 from .puppet import Puppet
 from .signaling import Signaling
 
@@ -114,8 +118,7 @@ class MatrixHandler:
             Event has arrived
 
         """
-
-        self.log.debug(f"Received event: {evt.event_id} - {evt.type} in the room {evt.room_id}")
+        self.log.debug(f"Received event: {evt}")
 
         if evt.type == EventType.ROOM_MEMBER:
             evt: StateEvent
@@ -128,53 +131,11 @@ class MatrixHandler:
             elif evt.content.membership == Membership.LEAVE:
                 if prev_membership == Membership.BAN:
                     pass
-                #     await self.handle_unban(
-                #         evt.room_id,
-                #         UserID(evt.state_key),
-                #         evt.sender,
-                #         evt.content.reason,
-                #         evt.event_id,
-                #     )
                 elif prev_membership == Membership.INVITE:
                     pass
-                    # self.handle_disinvite(room_id=room)
-                #     if evt.sender == evt.state_key:
-                #         await self.handle_reject(
-                #             evt.room_id, UserID(evt.state_key), evt.content.reason, evt.event_id
-                #         )
-                #     else:
-                #         await self.handle_disinvite(
-                #             evt.room_id,
-                #             UserID(evt.state_key),
-                #             evt.sender,
-                #             evt.content.reason,
-                #             evt.event_id,
-                #         )
-                # elif evt.sender == evt.state_key:
-                #     await self.handle_leave(evt.room_id, UserID(evt.state_key), evt.event_id)
-                # else:
-                #     await self.handle_kick(
-                #         evt.room_id,
-                #         UserID(evt.state_key),
-                #         evt.sender,
-                #         evt.content.reason,
-                #         evt.event_id,
-                #     )
-            # elif evt.content.membership == Membership.BAN:
-            #     await self.handle_ban(
-            #         evt.room_id,
-            #         UserID(evt.state_key),
-            #         evt.sender,
-            #         evt.content.reason,
-            #         evt.event_id,
-            #     )
             elif evt.content.membership == Membership.JOIN:
                 if prev_membership != Membership.JOIN:
                     await self.handle_join(evt.room_id, UserID(evt.state_key), evt.event_id)
-                # else:
-                #     await self.handle_member_info_change(
-                #         evt.room_id, UserID(evt.state_key), evt.content, prev_content, evt.event_id
-                #     )
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
             evt: MessageEvent = evt
             evt.content.msgtype = MessageType(str(evt.type))
@@ -196,20 +157,43 @@ class MatrixHandler:
                 RoomManager.ROOMS[evt.room_id]["name"] = content.name
             except KeyError:
                 pass
+        elif evt.type.is_ephemeral and isinstance(evt, (ReceiptEvent)):
+            await self.handle_ephemeral_event(evt)
 
-        # elif evt.type == EventType.ROOM_ENCRYPTED:
-        #     await self.handle_encrypted(evt)
-        # elif evt.type == EventType.ROOM_ENCRYPTION:
-        #     await self.handle_encryption(evt)
-        # else:
-        #     if evt.type.is_state and isinstance(evt, StateEvent):
-        #         await self.handle_state_event(evt)
-        #     elif evt.type.is_ephemeral and isinstance(
-        #         evt, (PresenceEvent, TypingEvent, ReceiptEvent)
-        #     ):
-        #         await self.handle_ephemeral_event(evt)
-        #     else:
-        #         await self.handle_event(evt)
+    async def handle_ephemeral_event(self, evt: ReceiptEvent) -> None:
+        """It takes a receipt event, checks if it's a read receipt,
+        and if it is, it updates the message in the database to reflect that it was read
+
+        Parameters
+        ----------
+        evt : ReceiptEvent
+            ReceiptEvent
+
+        Returns
+        -------
+        """
+
+        if not evt.content:
+            return
+
+        for event_id in evt.content:
+
+            for user_id in evt.content.get(event_id).get(ReceiptType.READ):
+                username_regex = self.config["utils.username_regex"]
+                user_prefix = re.search(username_regex, user_id)
+                message = await Message.get_by_event_id(event_id=event_id)
+                if user_prefix and message:
+                    timestamp_read: SingleReceiptEventContent = (
+                        evt.content.get(event_id).get(ReceiptType.READ).get(user_id).ts
+                    )
+                    await message.mark_as_read(
+                        receiver=f"+{user_prefix.group('number')}",
+                        event_id=event_id,
+                        room_id=evt.room_id,
+                        timestamp_read=timestamp_read,
+                        was_read=True,
+                    )
+                    self.log.debug(f"The message {event_id} has been read at {timestamp_read}")
 
     async def handle_invite(self, evt: Event):
         """If the user who was invited is a acd*, then join the room

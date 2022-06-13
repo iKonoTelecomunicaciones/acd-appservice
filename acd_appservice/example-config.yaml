@@ -47,6 +47,7 @@ appservice:
     bot_username: acd
     # Email to be able to use the main bot
     email: "soporte@ikono.com.co"
+    ephemeral_events: true
 
 # Bridge config
 bridge:
