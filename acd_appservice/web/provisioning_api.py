@@ -5,12 +5,12 @@ import json
 import logging
 import re
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List
 
 from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from markdown import markdown
-from mautrix.types import Format, MessageType, TextMessageEventContent
+from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
@@ -506,10 +506,9 @@ class ProvisioningAPI:
         if not (data.get("room_ids") and data.get("user_id")):
             return web.json_response(**REQUIRED_VARIABLES)
 
-        room_ids = data.get("room_ids")
+        room_ids: List[RoomID] = data.get("room_ids")
         user_id = data.get("user_id")
         send_message = data.get("send_message") if data.get("send_message") else None
-        bridge = data.get("bridge") if data.get("bridge") else None
         tasks = []
         for room_id in room_ids:
             # Obtenemos el puppet de este email si existe
