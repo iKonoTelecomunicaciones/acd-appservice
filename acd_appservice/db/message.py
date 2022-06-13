@@ -42,7 +42,7 @@ class Message:
         )
         await self.db.execute(q, *self._values)
 
-    async def update(
+    async def mark_as_read(
         self, receiver: str, event_id: EventID, timestamp_read: int, was_read: bool
     ) -> None:
         q = "UPDATE message SET timestamp_read=$2, was_read=$3 WHERE event_id=$1"
