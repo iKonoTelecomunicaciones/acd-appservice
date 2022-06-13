@@ -131,53 +131,11 @@ class MatrixHandler:
             elif evt.content.membership == Membership.LEAVE:
                 if prev_membership == Membership.BAN:
                     pass
-                #     await self.handle_unban(
-                #         evt.room_id,
-                #         UserID(evt.state_key),
-                #         evt.sender,
-                #         evt.content.reason,
-                #         evt.event_id,
-                #     )
                 elif prev_membership == Membership.INVITE:
                     pass
-                    # self.handle_disinvite(room_id=room)
-                #     if evt.sender == evt.state_key:
-                #         await self.handle_reject(
-                #             evt.room_id, UserID(evt.state_key), evt.content.reason, evt.event_id
-                #         )
-                #     else:
-                #         await self.handle_disinvite(
-                #             evt.room_id,
-                #             UserID(evt.state_key),
-                #             evt.sender,
-                #             evt.content.reason,
-                #             evt.event_id,
-                #         )
-                # elif evt.sender == evt.state_key:
-                #     await self.handle_leave(evt.room_id, UserID(evt.state_key), evt.event_id)
-                # else:
-                #     await self.handle_kick(
-                #         evt.room_id,
-                #         UserID(evt.state_key),
-                #         evt.sender,
-                #         evt.content.reason,
-                #         evt.event_id,
-                #     )
-            # elif evt.content.membership == Membership.BAN:
-            #     await self.handle_ban(
-            #         evt.room_id,
-            #         UserID(evt.state_key),
-            #         evt.sender,
-            #         evt.content.reason,
-            #         evt.event_id,
-            #     )
             elif evt.content.membership == Membership.JOIN:
                 if prev_membership != Membership.JOIN:
                     await self.handle_join(evt.room_id, UserID(evt.state_key), evt.event_id)
-                # else:
-                #     await self.handle_member_info_change(
-                #         evt.room_id, UserID(evt.state_key), evt.content, prev_content, evt.event_id
-                #     )
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
             evt: MessageEvent = evt
             evt.content.msgtype = MessageType(str(evt.type))
@@ -199,16 +157,10 @@ class MatrixHandler:
                 RoomManager.ROOMS[evt.room_id]["name"] = content.name
             except KeyError:
                 pass
+        elif evt.type.is_ephemeral and isinstance(evt, (ReceiptEvent)):
+            await self.handle_ephemeral_event(evt)
 
-        # elif evt.type == EventType.ROOM_ENCRYPTED:
-        #     await self.handle_encrypted(evt)
-        # elif evt.type == EventType.ROOM_ENCRYPTION:
-        #     await self.handle_encryption(evt)
-        else:
-            if evt.type.is_ephemeral and isinstance(evt, (ReceiptEvent)):
-                await self.handle_ephemeral_event(evt)
-
-    async def handle_ephemeral_event(self, evt: ReceiptEvent):
+    async def handle_ephemeral_event(self, evt: ReceiptEvent) -> None:
         """It takes a receipt event, checks if it's a read receipt,
         and if it is, it updates the message in the database to reflect that it was read
 
@@ -219,8 +171,6 @@ class MatrixHandler:
 
         Returns
         -------
-            The message is being returned.
-
         """
 
         if not evt.content:
