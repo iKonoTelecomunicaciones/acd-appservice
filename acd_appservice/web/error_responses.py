@@ -50,7 +50,7 @@ MESSAGE_NOT_SENT = {
 }
 
 MESSAGE_NOT_FOUND = {
-    "data": {"error": "Message has not found"},
+    "data": {"error": "Message not found"},
     "status": 404,
 }
 

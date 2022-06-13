@@ -48,9 +48,6 @@ async def upgrade_v1(conn: Connection) -> None:
         )"""
     )
 
-
-@upgrade_table.register(description="Messages table is added")
-async def upgrade_v2(conn: Connection) -> None:
     await conn.execute(
         """CREATE TABLE message (
         event_id            TEXT PRIMARY KEY,

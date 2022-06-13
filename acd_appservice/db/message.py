@@ -43,19 +43,31 @@ class Message:
         await self.db.execute(q, *self._values)
 
     async def mark_as_read(
-        self, receiver: str, event_id: EventID, timestamp_read: int, was_read: bool
+        self,
+        receiver: str,
+        event_id: EventID,
+        room_id: RoomID,
+        timestamp_read: int,
+        was_read: bool,
     ) -> None:
-        q = "UPDATE message SET timestamp_read=$2, was_read=$3 WHERE event_id=$1"
-        await self.db.execute(q, event_id, timestamp_read, was_read)
+        q = "UPDATE message SET timestamp_read=$3, was_read=$4 WHERE event_id=$1 AND room_id=$2"
+        await self.db.execute(q, event_id, room_id, timestamp_read, was_read)
 
         # El bridge de wpp solo nos envía la verificación de lectura del último mensaje enviado
         # entonces podemos suponer que los mensajes previos ya han sido leídos, realizamos una
         # corrección de los datos.
-        await self.fix_message_read_events(receiver=receiver, timestamp_read=timestamp_read)
+        await self.fix_message_read_events(
+            receiver=receiver, room_id=room_id, timestamp_read=timestamp_read
+        )
 
-    async def fix_message_read_events(self, receiver: str, timestamp_read: int) -> None:
-        q = "UPDATE message SET timestamp_read=$2, was_read='t' WHERE receiver=$1 AND was_read='f'"
-        await self.db.execute(q, receiver, timestamp_read)
+    async def fix_message_read_events(
+        self, receiver: str, room_id: RoomID, timestamp_read: int
+    ) -> None:
+        q = (
+            "UPDATE message SET timestamp_read=$3, was_read='t' "
+            "WHERE receiver=$1 AND was_read='f' AND room_id=$2"
+        )
+        await self.db.execute(q, receiver, room_id, timestamp_read)
 
     @classmethod
     async def get_by_event_id(cls, event_id: EventID) -> Message | None:
