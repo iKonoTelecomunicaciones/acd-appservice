@@ -235,7 +235,7 @@ class MatrixHandler:
                     timestamp_read: SingleReceiptEventContent = (
                         evt.content.get(event_id).get(ReceiptType.READ).get(user_id).ts
                     )
-                    await message.update(
+                    await message.mark_as_read(
                         receiver=f"+{user_prefix.group('number')}",
                         event_id=event_id,
                         timestamp_read=timestamp_read,
