@@ -227,6 +227,7 @@ class MatrixHandler:
             return
 
         for event_id in evt.content:
+
             for user_id in evt.content.get(event_id).get(ReceiptType.READ):
                 username_regex = self.config["utils.username_regex"]
                 user_prefix = re.search(username_regex, user_id)
@@ -238,6 +239,7 @@ class MatrixHandler:
                     await message.mark_as_read(
                         receiver=f"+{user_prefix.group('number')}",
                         event_id=event_id,
+                        room_id=evt.room_id,
                         timestamp_read=timestamp_read,
                         was_read=True,
                     )
