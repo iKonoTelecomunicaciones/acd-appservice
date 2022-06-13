@@ -12,9 +12,9 @@ from .db import Message as DBMessage
 
 
 class Message(DBMessage):
-    """Representa al mensaje en el synapse."""
+    """Representa un mensaje enviado por el endpoint send_message"""
 
-    log: TraceLogger = logging.getLogger("acd.room_manager")
+    log: TraceLogger = logging.getLogger("acd.message")
     config: Config
 
     def __init__(
