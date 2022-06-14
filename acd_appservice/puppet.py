@@ -157,7 +157,6 @@ class Puppet(DBPuppet, BasePuppet):
             )
         except Exception as e:
             self.log.exception(e)
-            return
 
     def _add_to_cache(self) -> None:
         # Mete a cada marioneta en un dict que permite acceder de manera más rápida a las
