@@ -462,7 +462,7 @@ class ProvisioningAPI:
     async def resolve_bulk(self, request: web.Request) -> web.Response:
         """
         ---
-        summary: Command resolving a chats, ejecting the supervisor and the agent.
+        summary: Command to resolve chats en bloc, expelling the supervisor and the agent.
         tags:
             - users
 
@@ -509,20 +509,37 @@ class ProvisioningAPI:
         room_ids: List[RoomID] = data.get("room_ids")
         user_id = data.get("user_id")
         send_message = data.get("send_message") if data.get("send_message") else None
+
+        # Creamos una lista de tareas vacías que vamos a llenar con cada uno de los comandos
+        # de resolución y luego los ejecutaremos al mismo tiempo
+        # de esta manera podremos resolver muchas salas a la vez y poder tener un buen rendimiento
         tasks = []
         for room_id in room_ids:
             # Obtenemos el puppet de este email si existe
             puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
             if not puppet:
+                # Si esta sala no tiene puppet entonces pasamos a la siguiente
+                # la sala sin puppet no será resuelta.
+                self.log.warning(
+                    f"The room {room_id} not have resolved because I don't found the puppet"
+                )
                 continue
 
+            # Obtenemos el bridge de la sala dado el room_id
             bridge = await self.agent_manager.room_manager.get_room_bridge(
                 room_id=room_id, intent=puppet.intent
             )
 
             if not bridge:
+                # Si esta sala no tiene bridge entonces pasamos a la siguiente
+                # la sala sin bridge no será resuelta.
+                self.log.warning(
+                    f"The room {room_id} not have resolved because I don't found the bridge"
+                )
                 continue
 
+            # Con el bridge obtenido, podremos sacar su prefijo y así luego en el comando
+            # resolve podremos enviar un template si así lo queremos
             bridge_prefix = self.config[f"bridges.{bridge}.prefix"]
 
             args = ["resolve", room_id, user_id, send_message, bridge_prefix]
@@ -536,6 +553,10 @@ class ProvisioningAPI:
                 room_id=room_id,
                 args=args,
             )
+
+            # Debemos actualizar el intent del agent_manager y el intent para que lo que se ejecute
+            # dentro de estas tareas sean cotextos correctos independientes de cada puppet
+            # ósea, el puppet que corresponde a la sala que se va a resolver ;)
             cmd_evt.agent_manager.intent = puppet.intent
             cmd_evt.intent = puppet.intent
             task = asyncio.create_task(command_processor(cmd_evt=cmd_evt))
