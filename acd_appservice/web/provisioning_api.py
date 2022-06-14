@@ -481,16 +481,16 @@ class ProvisioningAPI:
                   send_message:
                     type: string
                 example:
-                    data: {
+                    {
                         room_ids: [
                             "!gKEsOPrixwrrMFCQCJ:darknet",
                             "!gKEsOPyrtyrtyfCQCJ:darknet",
                             "!gsdfsddsfwrrMFCQCJ:darknet"
                         ]
+                        user_id: "@acd_1:darknet"
+                        send_message: "yes"
                     }
 
-                    user_id: "@acd_1:darknet"
-                    send_message: "yes"
 
         responses:
             '400':
