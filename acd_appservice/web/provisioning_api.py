@@ -72,7 +72,7 @@ class ProvisioningAPI:
         # Commads endpoint
         swagger.add_post(path="/v1/cmd/pm", handler=self.pm)
         swagger.add_post(path="/v1/cmd/resolve", handler=self.resolve)
-        swagger.add_post(path="/v1/cmd/resolve_bulk", handler=self.bulk_resolve)
+        swagger.add_post(path="/v1/cmd/bulk_resolve", handler=self.bulk_resolve)
         swagger.add_post(path="/v1/cmd/state_event", handler=self.state_event)
         # cmd template sin pruebas
         swagger.add_post(path="/v1/cmd/template", handler=self.template)
@@ -82,7 +82,7 @@ class ProvisioningAPI:
         # Options
         swagger.add_options(path="/v1/cmd/pm", handler=self.options)
         swagger.add_options(path="/v1/cmd/resolve", handler=self.options)
-        swagger.add_options(path="/v1/cmd/resolve_bulk", handler=self.options)
+        swagger.add_options(path="/v1/cmd/bulk_resolve", handler=self.options)
         swagger.add_options(path="/v1/cmd/state_event", handler=self.options)
         swagger.add_options(path="/v1/cmd/template", handler=self.options)
         swagger.add_options(path="/v1/cmd/transfer", handler=self.options)
@@ -510,7 +510,10 @@ class ProvisioningAPI:
                     type: string
                 example:
                     "room_ids": [
-                        "!GmkrVrscIseYrhpTSz:darknet"
+                        "!GmkrVrscIseYrhpTSz:darknet",
+                        "!dsardsfasddcshpTSz:darknet",
+                        "!GmkrVrssetrhtrsdfz:darknet",
+                        "!GnjyuikfdvdfrhpTSz:darknet"
                         ]
                     "user_id": "@supervisor:darknet"
                     "send_message": "no"
