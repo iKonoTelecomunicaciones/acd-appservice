@@ -79,7 +79,34 @@ class ProvisioningAPI:
         swagger.add_post(path="/v1/cmd/transfer", handler=self.transfer)
         swagger.add_post(path="/v1/cmd/transfer_user", handler=self.transfer_user)
 
+        # Options
+        swagger.add_options(path="/v1/cmd/pm", handler=self.options)
+        swagger.add_options(path="/v1/cmd/resolve", handler=self.options)
+        swagger.add_options(path="/v1/cmd/resolve_bulk", handler=self.options)
+        swagger.add_options(path="/v1/cmd/state_event", handler=self.options)
+        swagger.add_options(path="/v1/cmd/template", handler=self.options)
+        swagger.add_options(path="/v1/cmd/transfer", handler=self.options)
+        swagger.add_options(path="/v1/cmd/transfer_user", handler=self.options)
+
         self.loop = asyncio.get_running_loop()
+
+    @property
+    def _acao_headers(self) -> dict[str, str]:
+        return {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Authorization, Content-Type",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        }
+
+    @property
+    def _headers(self) -> dict[str, str]:
+        return {
+            **self._acao_headers,
+            "Content-Type": "application/json",
+        }
+
+    async def options(self, _: web.Request):
+        return web.Response(status=200, headers=self._headers)
 
     async def create_user(self, request: web.Request) -> web.Response:
         """
