@@ -154,6 +154,7 @@ class ProvisioningAPI:
                 puppet.control_room_id = control_room_id
                 # Ahora si guardamos la sala de control en el puppet.control_room_id
                 await puppet.save()
+                await puppet.sync_puppet_account()
             except Exception as e:
                 self.log.exception(e)
                 return web.json_response(**SERVER_ERROR)

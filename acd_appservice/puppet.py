@@ -134,9 +134,6 @@ class Puppet(DBPuppet, BasePuppet):
                     room_id=mx_joined_room, selected_option=None, puppet_mxid=self.custom_mxid
                 )
 
-        # Synchronize the puppets account
-        await self.sync_puppet_account()
-
     async def sync_puppet_account(self):
         """It updates the puppet account's password and email address
 
