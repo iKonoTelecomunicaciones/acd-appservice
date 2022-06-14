@@ -72,7 +72,7 @@ class ProvisioningAPI:
         # Commads endpoint
         swagger.add_post(path="/v1/cmd/pm", handler=self.pm)
         swagger.add_post(path="/v1/cmd/resolve", handler=self.resolve)
-        swagger.add_post(path="/v1/cmd/resolve_bulk", handler=self.resolve_bulk)
+        swagger.add_post(path="/v1/cmd/resolve_bulk", handler=self.bulk_resolve)
         swagger.add_post(path="/v1/cmd/state_event", handler=self.state_event)
         # cmd template sin pruebas
         swagger.add_post(path="/v1/cmd/template", handler=self.template)
@@ -460,7 +460,7 @@ class ProvisioningAPI:
         await command_processor(cmd_evt=cmd_evt)
         return web.json_response()
 
-    async def resolve_bulk(self, request: web.Request) -> web.Response:
+    async def bulk_resolve(self, request: web.Request) -> web.Response:
         """
         ---
         summary: Command to resolve chats en bloc, expelling the supervisor and the agent.
@@ -505,7 +505,7 @@ class ProvisioningAPI:
 
         room_ids: List[RoomID] = data.get("room_ids")
         user_id = data.get("user_id")
-        send_message = data.get("send_message") if data.get("send_message") else None
+        send_message = data.get("send_message")
 
         # Creamos una lista de tareas vacías que vamos a llenar con cada uno de los comandos
         # de resolución y luego los ejecutaremos al mismo tiempo
@@ -518,7 +518,7 @@ class ProvisioningAPI:
                 # Si esta sala no tiene puppet entonces pasamos a la siguiente
                 # la sala sin puppet no será resuelta.
                 self.log.warning(
-                    f"The room {room_id} not have resolved because I don't found the puppet"
+                    f"The room {room_id} has not been resolved because the puppet was not found"
                 )
                 continue
 
@@ -531,7 +531,7 @@ class ProvisioningAPI:
                 # Si esta sala no tiene bridge entonces pasamos a la siguiente
                 # la sala sin bridge no será resuelta.
                 self.log.warning(
-                    f"The room {room_id} not have resolved because I don't found the bridge"
+                    f"The room {room_id} has not been resolved because I didn't found the bridge"
                 )
                 continue
 
