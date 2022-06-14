@@ -481,15 +481,11 @@ class ProvisioningAPI:
                   send_message:
                     type: string
                 example:
-                    {
-                        room_ids: [
-                            "!gKEsOPrixwrrMFCQCJ:darknet",
-                            "!gKEsOPyrtyrtyfCQCJ:darknet",
-                            "!gsdfsddsfwrrMFCQCJ:darknet"
+                    "room_ids": [
+                        "!GmkrVrscIseYrhpTSz:darknet"
                         ]
-                        user_id: "@acd_1:darknet"
-                        send_message: "yes"
-                    }
+                    "user_id": "@supervisor:darknet"
+                    "send_message": "no"
 
 
         responses:

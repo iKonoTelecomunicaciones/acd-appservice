@@ -47,6 +47,9 @@ appservice:
     bot_username: acd
     # Email to be able to use the main bot
     email: "soporte@ikono.com.co"
+    # Default password for the puppets
+    puppet_password: secrectfoo
+
     ephemeral_events: true
 
 # Bridge config

@@ -17,6 +17,7 @@ class Config(BaseBridgeConfig):
         copy("utils.wait_ping_time")
         copy("bridge.command_prefix")
         copy("appservice.email")
+        copy("appservice.puppet_password")
         copy_dict("bridges")
         copy("bridges.mautrix.mxid")
         copy("bridges.mautrix.provisioning.url_base")
