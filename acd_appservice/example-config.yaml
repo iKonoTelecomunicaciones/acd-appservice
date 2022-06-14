@@ -48,7 +48,7 @@ appservice:
     # Email to be able to use the main bot
     email: "soporte@ikono.com.co"
     # Default password for the puppets
-    puppet_password: secrectfoo
+    puppet_password: secretfoo
 
     ephemeral_events: true
 
