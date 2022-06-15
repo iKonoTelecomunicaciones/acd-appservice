@@ -93,8 +93,7 @@ class ProvisioningAPI:
     @property
     def _acao_headers(self) -> dict[str, str]:
         return {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Authorization, Content-Type",
+            "Access-Control-Allow-Headers": "Content-Type",
             "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
         }
 
