@@ -264,6 +264,20 @@ class MatrixHandler:
         """
         self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
 
+        # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
+        if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
+            await RoomManager.save_room(room_id=room_id, selected_option=None, puppet_mxid=user_id)
+
+        intent: IntentAPI = await self.get_intent(room_id=room_id)
+
+        if not intent:
+            return
+
+        if intent and intent.bot and intent.bot.mxid == user_id:
+            # Si el que se unió es el bot principal, debemos sacarlo para que no dañe
+            # el comportamiento del puppet
+            await intent.kick_user(room_id=room_id, user_id=user_id)
+
         # Generamos llaves para buscar en PENDING_INVITES (acd, transfer)
         future_key = RoomManager.get_future_key(room_id=room_id, agent_id=user_id)
         transfer_future_key = RoomManager.get_future_key(
@@ -289,17 +303,10 @@ class MatrixHandler:
             # timer stops
             AgentManager.PENDING_INVITES[transfer_future_key].set_result(True)
 
-        # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
-        if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
-            await RoomManager.save_room(room_id=room_id, selected_option=None, puppet_mxid=user_id)
-
         # If the joined user is a supervisor and the room is a customer room,
         # then send set-pl in the room
         if user_id.startswith(self.config["acd.supervisor_prefix"]):
-            intent = await self.get_intent(room_id=room_id)
-            if not intent or not await self.room_manager.is_customer_room(
-                room_id=room_id, intent=intent
-            ):
+            if not await self.room_manager.is_customer_room(room_id=room_id, intent=intent):
                 return
 
             bridge = await self.room_manager.get_room_bridge(room_id=room_id, intent=intent)
@@ -312,7 +319,6 @@ class MatrixHandler:
                     power_level=self.config["acd.supervisors_to_invite.power_level"],
                 )
 
-        intent = await self.get_intent(user_id=user_id)
         if not intent:
             self.log.debug(f"The user who has joined is neither a puppet nor the appservice_bot")
             return
@@ -611,7 +617,7 @@ class MatrixHandler:
                     await intent.set_room_name(room_id=room_id, name=new_room_name)
                     self.log.info(f"User {room_id} has changed the name of the room {intent.mxid}")
 
-            if intent.mxid == sender:
+            if Puppet.get_id_from_mxid(mxid=sender) or sender == intent.bot.mxid:
                 self.log.debug(f"Ignoring {sender} messages, is acd*")
                 return
 
