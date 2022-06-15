@@ -1,3 +1,3 @@
-VERSION = "0.0.0"
+VERSION = "bulk_resolve"
 
 __all__ = ["VERSION"]
