@@ -138,9 +138,8 @@ class MatrixHandler:
                     await self.handle_join(evt.room_id, UserID(evt.state_key), evt.event_id)
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
             evt: MessageEvent = evt
-            evt.content.msgtype = MessageType(str(evt.type))
             if evt.content.msgtype == MessageType.NOTICE:
-                self.log.debug(f"Ignoring the warning message: {evt}")
+                self.log.debug(f"Ignoring the notice message: {evt}")
                 return
             await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
         elif evt.type == EventType.ROOM_NAME:
@@ -327,8 +326,9 @@ class MatrixHandler:
             return
 
         # Solo se inicializa la sala si el que se une es el usuario acd*
-        if not await self.room_manager.initialize_room(room_id=room_id, intent=intent):
-            self.log.debug(f"Room {room_id} initialization has failed")
+        if Puppet.get_id_from_mxid(user_id):
+            if not await self.room_manager.initialize_room(room_id=room_id, intent=intent):
+                self.log.debug(f"Room {room_id} initialization has failed")
 
     def is_command(self, message: MessageEventContent) -> tuple[bool, str]:
         """It checks if a message starts with the command prefix, and if it does,
