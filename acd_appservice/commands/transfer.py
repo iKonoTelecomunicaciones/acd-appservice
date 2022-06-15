@@ -2,6 +2,7 @@ import asyncio
 
 from mautrix.types import PresenceState
 
+from ..room_manager import RoomManager
 from .handler import command_handler
 from .typehint import CommandEvent
 
@@ -33,15 +34,18 @@ async def transfer(evt: CommandEvent) -> str:
     customer_room_id = evt.args[1]
     campaign_room_id = evt.args[2]
 
+    room_manager = await RoomManager.get_room_manager(room_id=customer_room_id)
+    if not room_manager:
+        return
     # Checking if the room is locked, if it is, it returns.
-    if evt.agent_manager.room_manager.is_room_locked(room_id=customer_room_id, transfer=True):
+    if room_manager.is_room_locked(room_id=customer_room_id, transfer=True):
         evt.log.debug(f"Room: {customer_room_id} LOCKED by Transfer")
         return
 
     evt.log.debug(f"INIT TRANSFER to ROOM {campaign_room_id}")
 
     # Locking the room so that no other transfer can be made to the room.
-    evt.agent_manager.room_manager.lock_room(room_id=customer_room_id, transfer=True)
+    room_manager.lock_room(room_id=customer_room_id, transfer=True)
     is_agent = evt.agent_manager.is_agent(agent_id=evt.sender)
 
     # Checking if the sender is an agent, if not, it gets the agent id from the room.
@@ -92,15 +96,19 @@ async def transfer_user(evt: CommandEvent) -> str:
     customer_room_id = evt.args[1]
     target_agent_id = evt.args[2]
 
+    room_manager = await RoomManager.get_room_manager(room_id=customer_room_id)
+    if not room_manager:
+        return
+
     # Checking if the room is locked, if it is, it returns.
-    if evt.agent_manager.room_manager.is_room_locked(room_id=customer_room_id, transfer=True):
+    if room_manager.is_room_locked(room_id=customer_room_id, transfer=True):
         evt.log.debug(f"Room: {customer_room_id} LOCKED by Transfer")
         return
 
     evt.log.debug(f"INIT TRANSFER to AGENT {target_agent_id}")
 
     # Locking the room so that no other transfer can be made to the room.
-    evt.agent_manager.room_manager.lock_room(room_id=customer_room_id, transfer=True)
+    room_manager.lock_room(room_id=customer_room_id, transfer=True)
     is_agent = evt.agent_manager.is_agent(agent_id=evt.sender)
 
     # Checking if the sender is an agent, if not, it gets the agent id from the room.
@@ -113,11 +121,9 @@ async def transfer_user(evt: CommandEvent) -> str:
     # Checking if the agent is already in the room, if so, it sends a message to the room.
     if transfer_author == target_agent_id:
         msg = f"El agente {target_agent_id} ya está en la sala."
-        await evt.intent.send_notice(room_id=customer_room_id, text=msg)
+        await room_manager.intent.send_notice(room_id=customer_room_id, text=msg)
     else:
-        presence_response = await evt.agent_manager.room_manager.get_user_presence(
-            user_id=target_agent_id, intent=evt.intent
-        )
+        presence_response = await room_manager.get_user_presence(user_id=target_agent_id)
         evt.log.debug(
             f"PRESENCE RESPONSE: "
             f"[{target_agent_id}] -> [{presence_response.presence if presence_response else None}]"
@@ -128,6 +134,6 @@ async def transfer_user(evt: CommandEvent) -> str:
             )
         else:
             msg = f"El agente {target_agent_id} no está disponible."
-            await evt.intent.send_notice(room_id=customer_room_id, text=msg)
+            await room_manager.intent.send_notice(room_id=customer_room_id, text=msg)
 
-    evt.agent_manager.room_manager.unlock_room(room_id=customer_room_id, transfer=True)
+    room_manager.unlock_room(room_id=customer_room_id, transfer=True)

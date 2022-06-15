@@ -530,13 +530,12 @@ class MatrixHandler:
             # This is likely an edit, ignore
             return
 
-        intent = await room_manager.get_intent(room_id=room_id)
-        if not intent:
-            self.log.warning(f"I can't get an intent for the room {room_id}")
+        room_manager = await RoomManager.get_room_manager(room_id=room_id)
+        if not room_manager:
             return
 
         # Actualizamos el intent del agent_manager, dado el nuevo intent encontrado
-        self.agent_manager.intent = intent
+        self.agent_manager.intent = room_manager.intent
 
         # Ignore messages from whatsapp bots
         if sender == self.config["bridges.mautrix.mxid"]:
@@ -580,7 +579,7 @@ class MatrixHandler:
         if self.config["acd.voice_call"]:
             if message.body == self.config["acd.voice_call.call_message"]:
                 no_call_message = self.config["acd.voice_call.no_voice_call"]
-                await intent.send_text(room_id=room_id, text=no_call_message)
+                await room_manager.intent.send_text(room_id=room_id, text=no_call_message)
                 return
 
         # Ignorar la sala de status broadcast
@@ -608,10 +607,12 @@ class MatrixHandler:
                 creator = await room_manager.get_room_creator(room_id=room_id)
                 new_room_name = await room_manager.get_update_name(creator=creator)
                 if new_room_name:
-                    await intent.set_room_name(room_id=room_id, name=new_room_name)
-                    self.log.info(f"User {room_id} has changed the name of the room {intent.mxid}")
+                    await room_manager.intent.set_room_name(room_id=room_id, name=new_room_name)
+                    self.log.info(
+                        f"User {room_id} has changed the name of the room {room_manager.intent.mxid}"
+                    )
 
-            if Puppet.get_id_from_mxid(mxid=sender) or sender == intent.bot.mxid:
+            if Puppet.get_id_from_mxid(mxid=sender) or sender == room_manager.intent.bot.mxid:
                 self.log.debug(f"Ignoring {sender} messages, is acd*")
                 return
 

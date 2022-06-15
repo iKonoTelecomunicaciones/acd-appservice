@@ -2,6 +2,7 @@ import json
 from typing import Dict
 
 from ..puppet import Puppet
+from ..room_manager import RoomManager
 from ..signaling import Signaling
 from .handler import command_handler, command_processor
 from .typehint import CommandEvent
@@ -37,16 +38,15 @@ async def resolve(evt: CommandEvent) -> Dict:
     user_id = evt.args[2]
     send_message = evt.args[3] if len(evt.args) > 3 else None
     bridge = evt.args[4] if len(evt.args) > 4 else None
+    room_manager = await RoomManager.get_room_manager(room_id=room_id)
+    if not room_manager:
+        return
 
     puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
 
     if room_id == puppet.control_room_id or (
-        not await evt.agent_manager.room_manager.is_customer_room(
-            room_id=room_id, intent=puppet.intent
-        )
-        and not await evt.agent_manager.room_manager.is_guest_room(
-            room_id=room_id, intent=puppet.intent
-        )
+        not await room_manager.is_customer_room(room_id=room_id)
+        and not await room_manager.is_guest_room(room_id=room_id)
     ):
 
         detail = "Group rooms or control rooms cannot be resolved."
@@ -61,7 +61,9 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     try:
         if agent_id:
-            await evt.intent.kick_user(room_id=room_id, user_id=agent_id, reason="Chat resuelto")
+            await puppet.intent.kick_user(
+                room_id=room_id, user_id=agent_id, reason="Chat resuelto"
+            )
 
         supervisors = evt.config["acd.supervisors_to_invite.invitees"]
         if supervisors:
@@ -73,10 +75,9 @@ async def resolve(evt: CommandEvent) -> Dict:
         evt.log.warning(e)
 
     # When the supervisor resolves an open chat, menubot is still in the chat
-    await evt.agent_manager.room_manager.kick_menubot(
+    await room_manager.kick_menubot(
         room_id=room_id,
         reason="Chat resuelto",
-        intent=evt.intent,
         control_room_id=puppet.control_room_id,
     )
 
