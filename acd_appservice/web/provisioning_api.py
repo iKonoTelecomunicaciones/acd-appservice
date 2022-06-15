@@ -80,15 +80,6 @@ class ProvisioningAPI:
         swagger.add_post(path="/v1/cmd/transfer", handler=self.transfer)
         swagger.add_post(path="/v1/cmd/transfer_user", handler=self.transfer_user)
 
-        # Options
-        swagger.add_options(path="/v1/cmd/pm", handler=self.options)
-        swagger.add_options(path="/v1/cmd/resolve", handler=self.options)
-        swagger.add_options(path="/v1/cmd/bulk_resolve", handler=self.options)
-        swagger.add_options(path="/v1/cmd/state_event", handler=self.options)
-        swagger.add_options(path="/v1/cmd/template", handler=self.options)
-        swagger.add_options(path="/v1/cmd/transfer", handler=self.options)
-        swagger.add_options(path="/v1/cmd/transfer_user", handler=self.options)
-
         # Configure default CORS settings.
         cors = aiohttp_cors.setup(
             self.app,
@@ -103,6 +94,15 @@ class ProvisioningAPI:
 
         for route in list(self.app.router.routes()):
             cors.add(route)
+
+        # Options
+        swagger.add_options(path="/v1/cmd/pm", handler=self.options)
+        swagger.add_options(path="/v1/cmd/resolve", handler=self.options)
+        swagger.add_options(path="/v1/cmd/bulk_resolve", handler=self.options)
+        swagger.add_options(path="/v1/cmd/state_event", handler=self.options)
+        swagger.add_options(path="/v1/cmd/template", handler=self.options)
+        swagger.add_options(path="/v1/cmd/transfer", handler=self.options)
+        swagger.add_options(path="/v1/cmd/transfer_user", handler=self.options)
 
         self.loop = asyncio.get_running_loop()
 
