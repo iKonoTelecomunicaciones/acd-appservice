@@ -139,6 +139,9 @@ class MatrixHandler:
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
             evt: MessageEvent = evt
             evt.content.msgtype = MessageType(str(evt.type))
+            if evt.content.msgtype == MessageType.NOTICE:
+                self.log.debug(f"Ignoring the warning message: {evt}")
+                return
             await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
         elif evt.type == EventType.ROOM_NAME:
             # Setting the room name to the customer's name.
