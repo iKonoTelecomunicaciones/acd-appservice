@@ -7,6 +7,7 @@ import re
 from datetime import datetime
 from typing import Dict, List
 
+import aiohttp_cors
 from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from markdown import markdown
@@ -87,6 +88,21 @@ class ProvisioningAPI:
         swagger.add_options(path="/v1/cmd/template", handler=self.options)
         swagger.add_options(path="/v1/cmd/transfer", handler=self.options)
         swagger.add_options(path="/v1/cmd/transfer_user", handler=self.options)
+
+        # Configure default CORS settings.
+        cors = aiohttp_cors.setup(
+            self.app,
+            defaults={
+                "*": aiohttp_cors.ResourceOptions(
+                    allow_credentials=True,
+                    expose_headers="*",
+                    allow_headers="*",
+                )
+            },
+        )
+
+        for route in list(self.app.router.routes()):
+            cors.add(route)
 
         self.loop = asyncio.get_running_loop()
 
