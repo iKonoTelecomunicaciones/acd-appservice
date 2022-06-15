@@ -2,7 +2,10 @@
 
 **NOTA:** Se necesita tener previamente un synapse instalado con un bridge de `mautrix-whatsapp`.
 
-Pasos:
+## MIGRACIÓN ACD VIEJO:
+
+
+## INSTALACIÓN:
 
 - Crear un usuario administrador del synapse, para monitorear el AppService
 **NOTA:** Este comando debe ser ejecutado en el nodo donde está instalado el cliente
