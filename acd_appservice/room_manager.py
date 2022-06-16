@@ -24,8 +24,23 @@ from .config import Config
 from .db import Room
 
 
+async def get_intent_deco(func: function) -> IntentAPI:
+    async def nueva_funcion(self: RoomManager, room_id: RoomID, intent: IntentAPI):
+        # Getting the puppet from a customer room.
+        puppet = await pu.Puppet.get_customer_room_puppet(room_id=room_id)
+        if not puppet:
+            return
+
+        self.intent = puppet.intent
+        func(self, room_id=room_id, intent=intent)
+
+    return nueva_funcion
+
+
 class RoomManager:
     config: Config
+    intent: IntentAPI
+
     log: TraceLogger = logging.getLogger("acd.room_manager")
     ROOMS: dict[RoomID, Dict] = {}
     CONTROL_ROOMS: List[RoomID] = []
@@ -55,14 +70,6 @@ class RoomManager:
             Puppet's intent
 
         """
-        try:
-            if room_id:
-                room = self.ROOMS[room_id]
-                intent = room.get("intent")
-                if intent is not None:
-                    return intent
-        except KeyError:
-            pass
 
         # Coloco el intent del bot principal siempre para que cuando no pueda obtener uno
         # dado un user o un room_id, entonces regrese al acd principal
@@ -78,12 +85,13 @@ class RoomManager:
             # Getting the puppet from a customer room.
             puppet = await pu.Puppet.get_customer_room_puppet(room_id=room_id)
             if puppet:
-                self.ROOMS[room_id]["intent"] = puppet.intent
+                self.intent = puppet.intent
                 intent = puppet.intent
 
         return intent
 
-    async def initialize_room(self, room_id: RoomID, intent: IntentAPI) -> bool:
+    @get_intent_deco
+    async def initialize_room(self, room_id: RoomID) -> bool:
         """Initializing a room.
 
         Given a room and an IntentAPI, a room is configured, the room must be a room of a client.
@@ -104,10 +112,10 @@ class RoomManager:
             True if successful, False otherwise.
         """
 
-        if not await self.is_customer_room(room_id=room_id, intent=intent):
+        if not await self.is_customer_room(room_id=room_id, intent=self.intent):
             return False
 
-        bridge = await self.get_room_bridge(room_id=room_id, intent=intent)
+        bridge = await self.get_room_bridge(room_id=room_id, intent=self.intent)
 
         if not bridge:
             return False
@@ -115,19 +123,20 @@ class RoomManager:
         if bridge.startswith("mautrix"):
             await self.send_cmd_set_pl(
                 room_id=room_id,
-                intent=intent,
+                intent=self.intent,
                 bridge=bridge,
-                user_id=intent.mxid,
+                user_id=self.intent.mxid,
                 power_level=100,
             )
-            await self.send_cmd_set_relay(room_id=room_id, intent=intent, bridge=bridge)
+            await self.send_cmd_set_relay(room_id=room_id, intent=self.intent, bridge=bridge)
 
-        await asyncio.create_task(self.initial_room_setup(room_id=room_id, intent=intent))
+        await asyncio.create_task(self.initial_room_setup(room_id=room_id, intent=self.intent))
 
         self.log.info(f"Room {room_id} initialization is complete")
         return True
 
-    async def initial_room_setup(self, room_id: RoomID, intent: IntentAPI):
+    @get_intent_deco
+    async def initial_room_setup(self, room_id: RoomID):
         """Initializing a room visibility.
 
         it tries to add the room to the directory, that the room has a public join,
@@ -147,11 +156,11 @@ class RoomManager:
         for attempt in range(0, 10):
             self.log.debug(f"Attempt # {attempt} of room configuration")
             try:
-                await intent.set_room_directory_visibility(
+                await self.intent.set_room_directory_visibility(
                     room_id=room_id, visibility=RoomDirectoryVisibility.PUBLIC
                 )
-                await intent.set_join_rule(room_id=room_id, join_rule=JoinRule.PUBLIC)
-                await intent.send_state_event(
+                await self.intent.set_join_rule(room_id=room_id, join_rule=JoinRule.PUBLIC)
+                await self.intent.send_state_event(
                     room_id=room_id,
                     event_type=EventType.ROOM_HISTORY_VISIBILITY,
                     content={"history_visibility": "world_readable"},
