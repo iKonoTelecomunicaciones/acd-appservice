@@ -32,7 +32,7 @@ async def get_intent_deco(func: function) -> IntentAPI:
             return
 
         self.intent = puppet.intent
-        func(self, room_id=room_id, intent=intent)
+        await func(self, room_id=room_id, intent=intent)
 
     return nueva_funcion
 
