@@ -556,7 +556,6 @@ class ProvisioningAPI:
         # Creamos una lista de tareas vacías que vamos a llenar con cada uno de los comandos
         # de resolución y luego los ejecutaremos al mismo tiempo
         # de esta manera podremos resolver muchas salas a la vez y poder tener un buen rendimiento
-        tasks = []
         for room_id in room_ids:
             # Obtenemos el puppet de este email si existe
             puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
@@ -602,13 +601,8 @@ class ProvisioningAPI:
             # ósea, el puppet que corresponde a la sala que se va a resolver ;)
             cmd_evt.agent_manager.intent = puppet.intent
             cmd_evt.intent = puppet.intent
-            task = asyncio.create_task(command_processor(cmd_evt=cmd_evt))
-            tasks.append(task)
-
-        returns = asyncio.gather(*tasks, asyncio.sleep(1))
-        self.log.debug(returns)
-        if not returns:
-            return web.json_response(status=500, text="fail")
+            asyncio.create_task(command_processor(cmd_evt=cmd_evt))
+            await asyncio.sleep(1)
 
         return web.json_response(text="ok")
 
