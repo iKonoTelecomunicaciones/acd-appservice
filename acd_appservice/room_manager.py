@@ -39,8 +39,7 @@ class RoomManager:
     def __init__(self, config: Config) -> None:
         self.config = config
 
-    @classmethod
-    async def get_intent(cls, user_id: UserID = None, room_id: RoomID = None) -> IntentAPI:
+    async def get_intent(self, user_id: UserID = None, room_id: RoomID = None) -> IntentAPI:
         """If the user_id is not the bot's mxid, and the user_id is a custom mxid,
         then return the intent of the puppet that has the custom mxid
 
@@ -58,7 +57,7 @@ class RoomManager:
         """
         try:
             if room_id:
-                room = cls.ROOMS[room_id]
+                room = self.ROOMS[room_id]
                 intent = room.get("intent")
                 if intent is not None:
                     return intent
@@ -79,19 +78,10 @@ class RoomManager:
             # Getting the puppet from a customer room.
             puppet = await pu.Puppet.get_customer_room_puppet(room_id=room_id)
             if puppet:
-                cls.ROOMS[room_id]["intent"] = puppet.intent
+                self.ROOMS[room_id]["intent"] = puppet.intent
                 intent = puppet.intent
 
         return intent
-
-    @classmethod
-    async def get_room_manager(cls, room_id: RoomID) -> RoomManager | None:
-        intent = RoomManager.get_intent(room_id=room_id)
-        if not intent:
-            return
-        room_manager = RoomManager()
-        room_manager.intent
-        return room_manager
 
     async def initialize_room(self, room_id: RoomID, intent: IntentAPI) -> bool:
         """Initializing a room.

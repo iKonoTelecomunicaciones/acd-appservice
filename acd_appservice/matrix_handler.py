@@ -270,11 +270,10 @@ class MatrixHandler:
         if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
             await RoomManager.save_room(room_id=room_id, selected_option=None, puppet_mxid=user_id)
 
-        room_manager = await RoomManager.get_room_manager(room_id=room_id)
-        if not room_manager:
-            return
+        intent = await self.room_manager.get_intent(room_id=room_id)
 
-        intent = room_manager.intent
+        if not intent:
+            return
 
         if intent and intent.bot and intent.bot.mxid == user_id:
             # Si el que se unió es el bot principal, debemos sacarlo para que no dañe
@@ -309,7 +308,7 @@ class MatrixHandler:
         # If the joined user is a supervisor and the room is a customer room,
         # then send set-pl in the room
         if user_id.startswith(self.config["acd.supervisor_prefix"]):
-            if not await room_manager.is_customer_room(room_id=room_id):
+            if not await self.room_manager.is_customer_room(room_id=room_id):
                 return
 
             bridge = await self.room_manager.get_room_bridge(room_id=room_id, intent=intent)
@@ -329,7 +328,7 @@ class MatrixHandler:
 
         # Solo se inicializa la sala si el que se une es el usuario acd*
         if Puppet.get_id_from_mxid(user_id):
-            if not await room_manager.initialize_room(room_id=room_id):
+            if not await self.room_manager.initialize_room(room_id=room_id):
                 self.log.debug(f"Room {room_id} initialization has failed")
 
     def is_command(self, message: MessageEventContent) -> tuple[bool, str]:
