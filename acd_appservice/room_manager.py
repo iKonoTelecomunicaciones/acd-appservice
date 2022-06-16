@@ -27,12 +27,11 @@ from .db import Room
 def get_intent_deco(func: function):
     async def wrapper(self: RoomManager, *args, **kargs):
         # Getting the puppet from a customer room.
-        self.log.debug(f"##### {args}")
-        self.log.debug(f"##### {kargs}")
-        puppet = await pu.Puppet.get_customer_room_puppet(room_id=room_id)
-        if not puppet:
-            return
-        self.intent = puppet.intent
+        if kargs.get("room_id"):
+            puppet = await pu.Puppet.get_customer_room_puppet(room_id=kargs.get("room_id"))
+            if not puppet:
+                return
+            self.intent = puppet.intent
         return await func(self, *args, **kargs)
 
     return wrapper
