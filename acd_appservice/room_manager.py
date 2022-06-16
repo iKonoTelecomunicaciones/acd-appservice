@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from functools import wraps
 from typing import Dict, List, Tuple
 
 from mautrix.api import Method
@@ -25,6 +26,7 @@ from .db import Room
 
 
 def get_intent_deco(func: function):
+    @wraps(func)
     async def wrapper(self: RoomManager, *args, **kargs):
         # Getting the puppet from a customer room.
         if kargs.get("room_id"):
