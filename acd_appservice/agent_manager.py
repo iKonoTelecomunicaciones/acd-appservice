@@ -484,7 +484,6 @@ class AgentManager:
                     await self.room_manager.kick_menubot(
                         room_id=customer_room_id,
                         reason=detail if detail else f"agent [{agent_id}] accepted invite",
-                        intent=self.intent,
                         control_room_id=puppet.control_room_id,
                     )
                 except Exception as e:

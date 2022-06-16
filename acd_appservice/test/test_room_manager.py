@@ -24,7 +24,7 @@ class TestRoomManager:
 
         intent: IntentAPI = None
         result = await room_manager_mock.is_customer_room(
-            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org"), intent=intent
+            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
         )
         assert result == True
 
@@ -42,7 +42,7 @@ class TestRoomManager:
 
         intent: IntentAPI = None
         result = await room_manager_mock.is_customer_room(
-            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org"), intent=intent
+            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
         )
         assert result == False
 
@@ -59,7 +59,7 @@ class TestRoomManager:
         )
         intent: IntentAPI = None
         result = await room_manager_mock.get_room_bridge(
-            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org"), intent=intent
+            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
         )
 
         assert result == "mautrix"
@@ -79,7 +79,7 @@ class TestRoomManager:
 
         intent: IntentAPI = None
         result = await room_manager_mock.get_room_bridge(
-            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org"), intent=intent
+            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
         )
 
         assert result == None
@@ -95,7 +95,7 @@ class TestRoomManager:
         mocker.patch.object(room_manager.RoomManager, "get_room_name", return_value=room_name)
         intent: IntentAPI = None
         result = await room_manager_mock.is_mx_whatsapp_status_broadcast(
-            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org"), intent=intent
+            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
         )
 
         assert result == True
@@ -111,7 +111,7 @@ class TestRoomManager:
         mocker.patch.object(room_manager.RoomManager, "get_room_name", return_value=room_name)
         intent: IntentAPI = None
         result = await room_manager_mock.is_mx_whatsapp_status_broadcast(
-            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org"), intent=intent
+            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
         )
         assert result == False
 
@@ -124,7 +124,5 @@ class TestRoomManager:
             room_manager.RoomManager, "create_room_name", return_value=new_room_name
         )
         intent: IntentAPI = None
-        result = await room_manager_mock.get_update_name(
-            creator="@mxwa_573058790293", intent=intent
-        )
+        result = await room_manager_mock.get_update_name(creator="@mxwa_573058790293")
         assert result == "Alejandro Herrera (573058790293)"

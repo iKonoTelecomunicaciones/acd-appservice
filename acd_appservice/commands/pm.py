@@ -167,9 +167,7 @@ async def pm(evt: CommandEvent) -> Dict:
         )
         if evt.config["acd.supervisors_to_invite.invite"]:
             asyncio.create_task(
-                evt.agent_manager.room_manager.invite_supervisors(
-                    intent=evt.intent, room_id=customer_room_id
-                )
+                evt.agent_manager.room_manager.invite_supervisors(room_id=customer_room_id)
             )
 
         # kick menu bot
@@ -179,7 +177,6 @@ async def pm(evt: CommandEvent) -> Dict:
             await evt.agent_manager.room_manager.kick_menubot(
                 room_id=customer_room_id,
                 reason=f"{evt.sender} pm existing room {customer_room_id}",
-                intent=evt.intent,
                 control_room_id=puppet.control_room_id,
             )
         except Exception as e:

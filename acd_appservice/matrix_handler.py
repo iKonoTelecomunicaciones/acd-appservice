@@ -147,7 +147,7 @@ class MatrixHandler:
             if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
                 unsigned: StateUnsigned = evt.unsigned
                 await self.room_manager.put_name_customer_room(
-                    room_id=evt.room_id, intent=self.az.intent, old_name=unsigned.prev_content.name
+                    room_id=evt.room_id, old_name=unsigned.prev_content.name
                 )
 
             # Cuando el cliente cambia su perfil, ya sea que se quiera conservar el viejo
@@ -311,11 +311,10 @@ class MatrixHandler:
             if not await self.room_manager.is_customer_room(room_id=room_id):
                 return
 
-            bridge = await self.room_manager.get_room_bridge(room_id=room_id, intent=intent)
+            bridge = await self.room_manager.get_room_bridge(room_id=room_id)
             if bridge in ["mautrix", "instagram"]:
                 await self.room_manager.send_cmd_set_pl(
                     room_id=room_id,
-                    intent=intent,
                     bridge=bridge,
                     user_id=user_id,
                     power_level=self.config["acd.supervisors_to_invite.power_level"],
@@ -419,9 +418,7 @@ class MatrixHandler:
             )
             if self.config["acd.menubot"]:
                 menubot_id = self.config["acd.menubot.user_id"]
-                await self.room_manager.invite_menu_bot(
-                    intent=intent, room_id=room_id, menubot_id=menubot_id
-                )
+                await self.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)
             else:
                 user_id = await self.room_manager.get_room_creator(room_id=room_id)
                 if user_id:
@@ -548,9 +545,7 @@ class MatrixHandler:
         # Checking if the message is a command, and if it is,
         # it is sending the command to the command processor.
         is_command, text = self.is_command(message=message)
-        if is_command and not await self.room_manager.is_customer_room(
-            room_id=room_id, intent=intent
-        ):
+        if is_command and not await self.room_manager.is_customer_room(room_id=room_id):
             args = text.split()
             command_event = CommandEvent(
                 agent_manager=self.agent_manager,
@@ -589,7 +584,7 @@ class MatrixHandler:
                 return
 
         # Ignorar la sala de status broadcast
-        if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id, intent=intent):
+        if await self.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id):
             self.log.debug(f"Ignoring the room {room_id} because it is whatsapp_status_broadcast")
             return
 
@@ -606,14 +601,11 @@ class MatrixHandler:
         # it is getting the room name, and the creator of the room.
         # If the room name is empty, it is setting the room name to the new room name.
         user_prefix_guest = re.search(self.config[f"acd.username_regex_guest"], sender)
-        if (
-            await self.room_manager.is_customer_room(room_id=room_id, intent=intent)
-            or user_prefix_guest
-        ):
+        if await self.room_manager.is_customer_room(room_id=room_id) or user_prefix_guest:
 
-            room_name = await self.room_manager.get_room_name(room_id=room_id, intent=intent)
+            room_name = await self.room_manager.get_room_name(room_id=room_id)
             if not room_name:
-                creator = await self.room_manager.get_room_creator(room_id=room_id, intent=intent)
+                creator = await self.room_manager.get_room_creator(room_id=room_id)
                 new_room_name = await self.room_manager.get_update_name(
                     creator=creator, intent=intent
                 )
@@ -652,11 +644,11 @@ class MatrixHandler:
                     )
                 return
 
-            if await self.room_manager.has_menubot(room_id=room_id, intent=intent):
+            if await self.room_manager.has_menubot(room_id=room_id):
                 self.log.debug("Menu bot is here...")
                 return
 
-            if await self.room_manager.is_group_room(room_id=room_id, intent=intent):
+            if await self.room_manager.is_group_room(room_id=room_id):
                 self.log.debug(f"{room_id} is a group room, ignoring message")
                 return
 
@@ -667,9 +659,7 @@ class MatrixHandler:
                 )
 
                 if self.config["acd.supervisors_to_invite.invite"]:
-                    asyncio.create_task(
-                        self.room_manager.invite_supervisors(intent=intent, room_id=room_id)
-                    )
+                    asyncio.create_task(self.room_manager.invite_supervisors(room_id=room_id))
 
                 # clear campaign in the ik.chat.campaign_selection state event
                 await self.agent_manager.signaling.set_selected_campaign(
@@ -682,7 +672,5 @@ class MatrixHandler:
                 menubot_id = await self.room_manager.get_menubot_id(intent=intent, user_id=sender)
                 if menubot_id:
                     asyncio.create_task(
-                        self.room_manager.invite_menu_bot(
-                            intent=intent, room_id=room_id, menubot_id=menubot_id
-                        )
+                        self.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)
                     )
