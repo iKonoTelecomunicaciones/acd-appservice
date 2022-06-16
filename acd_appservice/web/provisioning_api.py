@@ -606,7 +606,7 @@ class ProvisioningAPI:
             tasks.append(task)
 
         returns = asyncio.gather(*tasks, asyncio.sleep(1))
-
+        self.log.debug(returns)
         if not returns:
             return web.json_response(status=500, text="fail")
 
