@@ -111,5 +111,3 @@ async def resolve(evt: CommandEvent) -> Dict:
             await command_processor(cmd_evt=cmd_evt)
 
         await puppet.intent.send_notice(room_id=room_id, text=resolve_chat_params["notice"])
-
-    return
