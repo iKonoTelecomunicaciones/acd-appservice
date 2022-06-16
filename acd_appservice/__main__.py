@@ -50,7 +50,6 @@ class ACDAppService(ACD):
         # Se sincronizan las salas donde este los puppets en matrix
         # creando las salas en nuestra bd
         self.add_startup_actions(Puppet.init_joined_rooms())
-        RoomManager.init_cls(config=self.config)
         # Definimos la ruta por la que se podrá acceder a la API
         api_route = self.config["bridge.provisioning.prefix"]
         # Creamos la instancia de ProvisioningAPI para luego crear una subapp
@@ -65,6 +64,7 @@ class ACDAppService(ACD):
         )
         # Usan la app de aiohttp, creamos una subaplicacion especifica para la API
         self.az.app.add_subapp(api_route, self.provisioning_api.app)
+        self.matrix.room_manager = RoomManager(config=self.config)
 
         # Iniciamos la aplicación
         await super().start()
@@ -73,8 +73,8 @@ class ACDAppService(ACD):
         # Los intents de los puppets y el bot se inicializan en el start
         self.matrix.config = self.config
         self.matrix.agent_manager = AgentManager(
+            room_manager=self.matrix.room_manager,
             intent=self.az.intent,
-            config=self.config,
             control_room_id=self.config["acd.control_room_id"],
         )
         self.matrix.agent_manager.client = self.provisioning_api.client

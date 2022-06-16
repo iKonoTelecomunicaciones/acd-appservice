@@ -11,10 +11,8 @@ from mautrix.errors.base import IntentError
 from mautrix.types import Member, PresenceState, RoomAlias, RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
-from acd_appservice import room_manager
 from acd_appservice.puppet import Puppet
 
-from .config import Config
 from .http_client import HTTPClient
 from .room_manager import RoomManager
 from .signaling import Signaling
@@ -24,6 +22,7 @@ class AgentManager:
     log: TraceLogger = logging.getLogger("acd.agent_manager")
     intent: IntentAPI
     client: HTTPClient
+    room_manager: RoomManager
     # last invited agent per control room (i.e. campaigns)
     CURRENT_AGENT = {}
 
@@ -32,11 +31,15 @@ class AgentManager:
 
     control_room_id: RoomID | None = None
 
-    def __init__(self, intent: IntentAPI, control_room_id: RoomID, config: Config) -> None:
+    def __init__(
+        self, intent: IntentAPI, control_room_id: RoomID, room_manager: RoomManager
+    ) -> None:
         self.intent = intent
+        self.config = room_manager.config
+        self.room_manager = room_manager
         self.control_room_id = control_room_id
+        self.room_manager = room_manager
         self.signaling = Signaling(intent=self.intent, config=self.config)
-        self.config = config
 
     async def process_distribution(
         self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
@@ -239,8 +242,7 @@ class AgentManager:
                 break
 
             if agent_id != transfer_author:
-
-                presence_response = await room_manager.get_user_presence(
+                presence_response = await self.room_manager.get_user_presence(
                     user_id=agent_id, intent=self.intent
                 )
                 self.log.debug(
@@ -414,15 +416,9 @@ class AgentManager:
             The message to send to the customer when the agent joins the room.
 
         """
-
-        room_manager = await RoomManager.get_room_manager(room_id=customer_room_id)
-        if not room_manager:
-            return
-        self.intent = room_manager.intent
-        self.signaling.intent = self.intent
-
         loop = get_running_loop()
         end_time = loop.time() + float(self.config["acd.agent_invite_timeout"])
+
         transfer = True if transfer_author else False
 
         while True:
@@ -445,7 +441,7 @@ class AgentManager:
         self.log.debug(f"futures left: {self.PENDING_INVITES}")
 
         puppet: Puppet = await Puppet.get_customer_room_puppet(customer_room_id)
-
+        self.signaling.intent = puppet.intent
         if agent_joined:
             if campaign_room_id:
                 self.CURRENT_AGENT[campaign_room_id] = agent_id
@@ -485,9 +481,10 @@ class AgentManager:
                 # kick menu bot
                 self.log.debug(f"Kicking the menubot out of the room {customer_room_id}")
                 try:
-                    await room_manager.kick_menubot(
+                    await self.room_manager.kick_menubot(
                         room_id=customer_room_id,
                         reason=detail if detail else f"agent [{agent_id}] accepted invite",
+                        intent=self.intent,
                         control_room_id=puppet.control_room_id,
                     )
                 except Exception as e:
@@ -617,17 +614,11 @@ class AgentManager:
             The room ID of the campaign room.
 
         """
-        room_manager = await RoomManager.get_room_manager(room_id=customer_room_id)
-        if not room_manager:
-            return
-
-        self.intent = room_manager.intent
-
-        menubot_id = await room_manager.get_menubot_id(
+        menubot_id = await self.room_manager.get_menubot_id(
             intent=self.intent, room_id=customer_room_id
         )
         if menubot_id:
-            await room_manager.send_menubot_command(
+            await self.room_manager.send_menubot_command(
                 menubot_id,
                 "no_agents_message",
                 self.control_room_id,

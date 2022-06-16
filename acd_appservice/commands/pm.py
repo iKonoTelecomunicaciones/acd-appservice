@@ -8,7 +8,6 @@ from markdown import markdown
 
 from ..http_client import ProvisionBridge
 from ..puppet import Puppet
-from ..room_manager import RoomManager
 from ..signaling import Signaling
 from .handler import command_handler
 from .typehint import CommandEvent
@@ -98,11 +97,7 @@ async def pm(evt: CommandEvent) -> Dict:
     # if the agent_id is not set,
     # it joins the agent to the room and sends a message to the room.
     customer_room_id = data.get("room_id")
-
     if customer_room_id:
-        room_manager = await RoomManager.get_room_manager(room_id=customer_room_id)
-        if not room_manager:
-            return
         agent_id = await evt.agent_manager.get_room_agent(room_id=customer_room_id)
 
         # Checking if the agent is already in the room, if it is, it returns a message to the frontend.
@@ -172,17 +167,19 @@ async def pm(evt: CommandEvent) -> Dict:
         )
         if evt.config["acd.supervisors_to_invite.invite"]:
             asyncio.create_task(
-                room_manager.invite_supervisors(intent=evt.intent, room_id=customer_room_id)
+                evt.agent_manager.room_manager.invite_supervisors(
+                    intent=evt.intent, room_id=customer_room_id
+                )
             )
 
         # kick menu bot
         evt.log.debug(f"Kicking the menubot out of the room {customer_room_id}")
         try:
             puppet: Puppet = await Puppet.get_customer_room_puppet(customer_room_id)
-            await room_manager.kick_menubot(
+            await evt.agent_manager.room_manager.kick_menubot(
                 room_id=customer_room_id,
                 reason=f"{evt.sender} pm existing room {customer_room_id}",
-                intent=room_manager.intent,
+                intent=evt.intent,
                 control_room_id=puppet.control_room_id,
             )
         except Exception as e:
