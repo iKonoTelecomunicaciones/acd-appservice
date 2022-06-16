@@ -25,7 +25,7 @@ from .db import Room
 
 
 def get_intent_deco(func: function):
-    async def nueva_funcion(self: RoomManager, room_id: RoomID):
+    async def wrapper(self: RoomManager, room_id: RoomID):
         # Getting the puppet from a customer room.
         puppet = await pu.Puppet.get_customer_room_puppet(room_id=room_id)
         if not puppet:
@@ -33,7 +33,7 @@ def get_intent_deco(func: function):
         self.intent = puppet.intent
         return await func(self, room_id=room_id)
 
-    return nueva_funcion
+    return wrapper
 
 
 class RoomManager:
@@ -129,7 +129,7 @@ class RoomManager:
             )
             await self.send_cmd_set_relay(room_id=room_id, intent=self.intent, bridge=bridge)
 
-        await asyncio.create_task(self.initial_room_setup(room_id=room_id, intent=self.intent))
+        await asyncio.create_task(self.initial_room_setup(room_id=room_id))
 
         self.log.info(f"Room {room_id} initialization is complete")
         return True
