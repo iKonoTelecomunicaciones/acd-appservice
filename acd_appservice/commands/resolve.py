@@ -31,7 +31,7 @@ async def resolve(evt: CommandEvent) -> Dict:
         detail = "Incomplete arguments for <code>resolve_chat</code> command"
         evt.log.error(detail)
         evt.reply(text=detail)
-        return False
+        return
 
     room_id = evt.args[1]
     user_id = evt.args[2]
@@ -52,7 +52,7 @@ async def resolve(evt: CommandEvent) -> Dict:
         detail = "Group rooms or control rooms cannot be resolved."
         evt.log.error(detail)
         await puppet.intent.send_notice(room_id=room_id, text=detail)
-        return False
+        return
 
     if send_message is not None:
         send_message = True if send_message == "yes" else False
@@ -112,4 +112,4 @@ async def resolve(evt: CommandEvent) -> Dict:
 
         await puppet.intent.send_notice(room_id=room_id, text=resolve_chat_params["notice"])
 
-    return True
+    return
