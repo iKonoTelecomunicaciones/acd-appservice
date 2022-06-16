@@ -605,8 +605,12 @@ class ProvisioningAPI:
             task = asyncio.create_task(command_processor(cmd_evt=cmd_evt))
             tasks.append(task)
 
-        asyncio.gather(*tasks)
-        return web.json_response()
+        returns = asyncio.gather(*tasks, asyncio.sleep(1))
+
+        if not returns:
+            return web.json_response(status=500, text="fail")
+
+        return web.json_response(text="ok")
 
     async def state_event(self, request: web.Request) -> web.Response:
         """
