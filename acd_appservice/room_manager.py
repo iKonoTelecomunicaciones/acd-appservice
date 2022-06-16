@@ -24,15 +24,14 @@ from .config import Config
 from .db import Room
 
 
-def get_intent_deco(func: function) -> IntentAPI:
-    def nueva_funcion(self: RoomManager, room_id: RoomID, intent: IntentAPI):
+def get_intent_deco(func: function):
+    def nueva_funcion(self: RoomManager, room_id: RoomID):
         # Getting the puppet from a customer room.
         puppet = pu.Puppet.get_customer_room_puppet(room_id=room_id)
         if not puppet:
             return
-
         self.intent = puppet.intent
-        return func(self, room_id=room_id, intent=intent)
+        return func(self, room_id=room_id)
 
     return nueva_funcion
 
