@@ -31,7 +31,7 @@ def get_intent_deco(func: function):
         if not puppet:
             return
         self.intent = puppet.intent
-        return func(self, room_id=room_id)
+        return await func(self, room_id=room_id)
 
     return nueva_funcion
 
