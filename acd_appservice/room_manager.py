@@ -25,9 +25,9 @@ from .db import Room
 
 
 def get_intent_deco(func: function):
-    def nueva_funcion(self: RoomManager, room_id: RoomID):
+    async def nueva_funcion(self: RoomManager, room_id: RoomID):
         # Getting the puppet from a customer room.
-        puppet = pu.Puppet.get_customer_room_puppet(room_id=room_id)
+        puppet = await pu.Puppet.get_customer_room_puppet(room_id=room_id)
         if not puppet:
             return
         self.intent = puppet.intent
