@@ -50,7 +50,7 @@ class ACDAppService(ACD):
         # Se sincronizan las salas donde este los puppets en matrix
         # creando las salas en nuestra bd
         self.add_startup_actions(Puppet.init_joined_rooms())
-        self.add_startup_actions(RoomManager.init_cls(config=self.config))
+        RoomManager.init_cls(config=self.config)
         # Definimos la ruta por la que se podrá acceder a la API
         api_route = self.config["bridge.provisioning.prefix"]
         # Creamos la instancia de ProvisioningAPI para luego crear una subapp
