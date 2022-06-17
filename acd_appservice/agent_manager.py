@@ -604,7 +604,7 @@ class AgentManager:
                 )
                 break
             except Exception as e:
-                self.log.exception(e)
+                self.log.warning(e)
 
             await sleep(1)
 

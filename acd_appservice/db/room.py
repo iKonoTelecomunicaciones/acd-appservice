@@ -15,11 +15,14 @@ class Room:
     """Representación en la bd de room y pending_room"""
 
     db: ClassVar[Database] = fake_db
-
     id: int | None
     room_id: RoomID
     selected_option: str | None
     fk_puppet: int | None = None
+    by_room_id: dict[RoomID, Room] = {}
+
+    def _add_to_cache(self) -> None:
+        self.by_room_id[self.room_id] = self
 
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> Room:
@@ -118,11 +121,20 @@ class Room:
             A Room object
 
         """
+        try:
+            return cls.by_room_id[room_id]
+        except KeyError:
+            pass
+
         q = "SELECT id, room_id, selected_option, fk_puppet FROM room WHERE room_id=$1"
         row = await cls.db.fetchrow(q, room_id)
         if not row:
             return None
-        return cls._from_row(row)
+
+        room = cls._from_row(row)
+        room._add_to_cache()
+
+        return room
 
     @classmethod
     async def get_pending_room_by_room_id(cls, room_id: RoomID) -> Room | None:
