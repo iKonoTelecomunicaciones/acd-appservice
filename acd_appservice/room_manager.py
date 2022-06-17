@@ -63,8 +63,9 @@ class RoomManager:
     def __init__(self, config: Config) -> None:
         self.config = config
 
-    def _add_to_cache(self, room_id, room: Room) -> None:
-        self.by_room_id[room_id] = room
+    @classmethod
+    def _add_to_cache(cls, room_id, room: Room) -> None:
+        cls.by_room_id[room_id] = room
 
     async def get_intent(self, user_id: UserID = None, room_id: RoomID = None) -> IntentAPI:
         """If the user_id is not the bot's mxid, and the user_id is a custom mxid,

@@ -22,7 +22,7 @@ class TestRoomManager:
             room_manager.RoomManager, "get_room_creator", return_value=room_creator
         )
 
-        intent: IntentAPI = None
+        room_manager_mock.intent = None
         result = await room_manager_mock.is_customer_room(
             room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
         )
@@ -40,7 +40,7 @@ class TestRoomManager:
             room_manager.RoomManager, "get_room_creator", return_value=room_creator
         )
 
-        intent: IntentAPI = None
+        room_manager_mock.intent = None
         result = await room_manager_mock.is_customer_room(
             room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
         )
@@ -57,7 +57,7 @@ class TestRoomManager:
         mocker.patch.object(
             room_manager.RoomManager, "get_room_creator", return_value=room_creator
         )
-        intent: IntentAPI = None
+        room_manager_mock.intent = None
         result = await room_manager_mock.get_room_bridge(
             room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
         )
@@ -77,7 +77,7 @@ class TestRoomManager:
         )
         mocker.patch.object(room_manager.RoomManager, "is_guest_room", return_value=False)
 
-        intent: IntentAPI = None
+        room_manager_mock.intent = None
         result = await room_manager_mock.get_room_bridge(
             room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
         )
@@ -93,7 +93,7 @@ class TestRoomManager:
         room_name = "WhatsApp Status Broadcast"
 
         mocker.patch.object(room_manager.RoomManager, "get_room_name", return_value=room_name)
-        intent: IntentAPI = None
+        room_manager_mock.intent = None
         result = await room_manager_mock.is_mx_whatsapp_status_broadcast(
             room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
         )
@@ -109,7 +109,7 @@ class TestRoomManager:
         room_name = "SALA DE CONTROL"
 
         mocker.patch.object(room_manager.RoomManager, "get_room_name", return_value=room_name)
-        intent: IntentAPI = None
+        room_manager_mock.intent = None
         result = await room_manager_mock.is_mx_whatsapp_status_broadcast(
             room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
         )
@@ -123,6 +123,8 @@ class TestRoomManager:
         mocker.patch.object(
             room_manager.RoomManager, "create_room_name", return_value=new_room_name
         )
-        intent: IntentAPI = None
-        result = await room_manager_mock.get_update_name(creator="@mxwa_573058790293")
+        room_manager_mock.intent = None
+        result = await room_manager_mock.get_update_name(
+            creator="@mxwa_573058790293", intent=intent
+        )
         assert result == "Alejandro Herrera (573058790293)"
