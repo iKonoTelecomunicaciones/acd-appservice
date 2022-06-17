@@ -199,7 +199,7 @@ class RoomManager:
             await asyncio.sleep(1)
 
     @get_intent_deco
-    async def put_name_customer_room(self, room_id: RoomID, old_name: str = None) -> bool:
+    async def put_name_customer_room(self, room_id: RoomID, old_name: str) -> bool:
         """Name a customer's room.
 
         Given a room and a matrix client, name the room correctly if needed.
@@ -263,7 +263,7 @@ class RoomManager:
         return None
 
     @get_intent_deco
-    async def send_cmd_set_relay(self, room_id: RoomID, bridge: str = None) -> None:
+    async def send_cmd_set_relay(self, room_id: RoomID, bridge: str) -> None:
         """Given a room, send the command set-relay.
 
         Parameters
@@ -290,9 +290,9 @@ class RoomManager:
     async def send_cmd_set_pl(
         self,
         room_id: RoomID,
-        bridge: str = None,
-        user_id: str = None,
-        power_level: int = None,
+        bridge: str,
+        user_id: str,
+        power_level: int,
     ) -> None:
         """Given a room, send the command set-pl.
 
@@ -584,9 +584,7 @@ class RoomManager:
         return creator
 
     @get_intent_deco
-    async def kick_menubot(
-        self, room_id: RoomID, reason: str = None, control_room_id: RoomID = None
-    ) -> None:
+    async def kick_menubot(self, room_id: RoomID, reason: str, control_room_id: RoomID) -> None:
         """Kick menubot from some room."""
         menubot_id = await self.get_menubot_id(intent=self.intent, room_id=room_id)
         if menubot_id:
@@ -744,7 +742,7 @@ class RoomManager:
         return False
 
     @get_intent_deco
-    async def invite_menu_bot(self, room_id: RoomID, menubot_id: UserID = None) -> None:
+    async def invite_menu_bot(self, room_id: RoomID, menubot_id: UserID) -> None:
         """It tries to invite the menubot to the room, and if it fails, it waits a couple of seconds and tries again
 
         Parameters
