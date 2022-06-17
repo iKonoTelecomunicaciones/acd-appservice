@@ -48,6 +48,10 @@ class RoomManager:
 
     log: TraceLogger = logging.getLogger("acd.room_manager")
     ROOMS: dict[RoomID, Dict] = {}
+
+    # Listado de salas  en la DB
+    by_room_id: dict[RoomID, Room] = {}
+
     CONTROL_ROOMS: List[RoomID] = []
 
     # list of room_ids to know if distribution process is taking place
@@ -58,6 +62,9 @@ class RoomManager:
 
     def __init__(self, config: Config) -> None:
         self.config = config
+
+    def _add_to_cache(self, room_id, room: Room) -> None:
+        self.by_room_id[room_id] = room
 
     async def get_intent(self, user_id: UserID = None, room_id: RoomID = None) -> IntentAPI:
         """If the user_id is not the bot's mxid, and the user_id is a custom mxid,
@@ -1183,6 +1190,42 @@ class RoomManager:
             return await Room.get_user_selected_menu(room_id=room_id)
         except Exception as e:
             cls.log.exception(e)
+
+    @classmethod
+    async def get_room(cls, room_id: RoomID) -> Room:
+        """If the room is in the cache, return it.
+        If not, get it from the database and add it to the cache.
+
+        The first thing we do is check if the room is in the cache.
+        If it is, we return it. If not, we get it from the database
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to get.
+
+        Returns
+        -------
+            A room object
+
+        """
+
+        try:
+            return cls.by_room_id[room_id]
+        except KeyError:
+            pass
+
+        try:
+            room = await Room.get_room_by_room_id(room_id=room_id)
+        except Exception as e:
+            cls.log.exception(e)
+
+        if not room:
+            return
+
+        cls._add_to_cache(room_id=room_id, room=room)
+
+        return room
 
     @classmethod
     async def is_a_control_room(cls, room_id: RoomID) -> bool:
