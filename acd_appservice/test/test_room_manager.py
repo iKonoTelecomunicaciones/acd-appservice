@@ -1,6 +1,5 @@
 import nest_asyncio
 import pytest
-from mautrix.appservice import IntentAPI
 from mautrix.types import RoomID
 
 from acd_appservice import room_manager
@@ -125,6 +124,6 @@ class TestRoomManager:
         )
         room_manager_mock.intent = None
         result = await room_manager_mock.get_update_name(
-            creator="@mxwa_573058790293", intent=intent
+            creator="@mxwa_573058790293", intent=room_manager_mock.intent
         )
         assert result == "Alejandro Herrera (573058790293)"

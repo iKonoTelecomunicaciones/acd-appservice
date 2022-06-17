@@ -26,17 +26,32 @@ from .db import Room
 
 
 def get_intent_deco(func: function):
+    """This function is a decorator that gets the intent of a customer room
+    and sets it to the intent attribute of the class
+
+    Parameters
+    ----------
+    func : function
+        function to decorate
+
+    Returns
+    -------
+        The wrapper function is being returned.
+
+    """
+
     @wraps(func)
     async def wrapper(self, *args, **kargs):
         # Getting the puppet from a customer room.
-        self.log.debug(f"##### {self.intent.mxid}")
         if kargs.get("room_id") or kargs.get("customer_room_id"):
             room_id = kargs.get("room_id") or kargs.get("customer_room_id")
             puppet = await pu.Puppet.get_customer_room_puppet(room_id=room_id)
             if not puppet:
                 return
+            # Si se esta ejecutando en pytest, entonces ignoramos el intent
+            elif puppet == "pytest":
+                return await func(self, *args, **kargs)
             self.intent = puppet.intent
-        self.log.debug(f"***** {self.intent.mxid}")
         return await func(self, *args, **kargs)
 
     return wrapper
@@ -1215,6 +1230,7 @@ class RoomManager:
             return cls.by_room_id[room_id]
         except KeyError:
             pass
+        room = None
 
         try:
             room = await Room.get_room_by_room_id(room_id=room_id)
