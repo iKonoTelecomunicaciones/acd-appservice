@@ -208,6 +208,8 @@ bridges:
     send_template_command: ""
 
 utils:
+    # Allows you to define how many groups of rooms can be solved in bulk resolve
+    room_blocks: 5
     # Whatsapp connection timeout (seconds)
     wait_ping_time: 7200
     # regex to email match

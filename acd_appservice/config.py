@@ -15,6 +15,7 @@ class Config(BaseBridgeConfig):
         copy("bridge.invitees_to_rooms")
         copy("bridge.username_template")
         copy("utils.wait_ping_time")
+        copy("utils.room_blocks")
         copy("bridge.command_prefix")
         copy("appservice.email")
         copy("appservice.puppet_password")
