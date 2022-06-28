@@ -25,7 +25,7 @@ from .config import Config
 from .db import Room
 
 
-def get_intent_deco(func: function):
+def get_intent(func: function):
     """This function is a decorator that gets the intent of a customer room
     and sets it to the intent attribute of the class
 
@@ -118,7 +118,7 @@ class RoomManager:
 
         return intent
 
-    @get_intent_deco
+    @get_intent
     async def initialize_room(self, room_id: RoomID) -> bool:
         """Initializing a room.
 
@@ -162,7 +162,7 @@ class RoomManager:
         self.log.info(f"Room {room_id} initialization is complete")
         return True
 
-    @get_intent_deco
+    @get_intent
     async def initial_room_setup(self, room_id: RoomID):
         """Initializing a room visibility.
 
@@ -198,7 +198,7 @@ class RoomManager:
 
             await asyncio.sleep(1)
 
-    @get_intent_deco
+    @get_intent
     async def put_name_customer_room(self, room_id: RoomID, old_name: str) -> bool:
         """Name a customer's room.
 
@@ -262,7 +262,7 @@ class RoomManager:
 
         return None
 
-    @get_intent_deco
+    @get_intent
     async def send_cmd_set_relay(self, room_id: RoomID, bridge: str) -> None:
         """Given a room, send the command set-relay.
 
@@ -286,7 +286,7 @@ class RoomManager:
 
         self.log.info(f"The command {cmd} has been sent to room {room_id}")
 
-    @get_intent_deco
+    @get_intent
     async def send_cmd_set_pl(
         self,
         room_id: RoomID,
@@ -324,7 +324,7 @@ class RoomManager:
     # SALAS DE CLIENTE (Cuando cuando el creador de la sala es un cliente)
     # OTRO TIPO DE SALA (Cuando es la sala de control, sala de agentes o de colas)
 
-    @get_intent_deco
+    @get_intent
     async def is_customer_room(self, room_id: RoomID) -> bool:
         """Given a room, verify that it is a customer's room.
 
@@ -362,7 +362,7 @@ class RoomManager:
         self.ROOMS[room_id]["is_customer_room"] = False
         return False
 
-    @get_intent_deco
+    @get_intent
     async def is_guest_room(self, room_id: RoomID) -> bool:
         """If the room is a guest room, return True.
         If not,
@@ -404,7 +404,7 @@ class RoomManager:
         self.ROOMS[room_id]["is_guest_room"] = False
         return False
 
-    @get_intent_deco
+    @get_intent
     async def is_mx_whatsapp_status_broadcast(self, room_id: RoomID) -> bool:
         """Check if a room is whatsapp_status_broadcast.
 
@@ -551,7 +551,7 @@ class RoomManager:
 
         return response
 
-    @get_intent_deco
+    @get_intent
     async def get_room_creator(self, room_id: RoomID) -> str:
         """Given a room, get its creator.
 
@@ -583,7 +583,7 @@ class RoomManager:
 
         return creator
 
-    @get_intent_deco
+    @get_intent
     async def kick_menubot(self, room_id: RoomID, reason: str, control_room_id: RoomID) -> None:
         """Kick menubot from some room."""
         menubot_id = await self.get_menubot_id(intent=self.intent, room_id=room_id)
@@ -665,7 +665,7 @@ class RoomManager:
 
         return menubot_id
 
-    @get_intent_deco
+    @get_intent
     async def has_menubot(self, room_id: RoomID) -> bool:
         """If the room has a menubot, return True. Otherwise, return False
 
@@ -697,7 +697,7 @@ class RoomManager:
 
         return False
 
-    @get_intent_deco
+    @get_intent
     async def is_group_room(self, room_id: RoomID) -> bool:
         """It checks if a room has more than one user in it, and if it does, it returns True
 
@@ -741,7 +741,7 @@ class RoomManager:
         self.ROOMS[room_id]["is_group_room"] = False
         return False
 
-    @get_intent_deco
+    @get_intent
     async def invite_menu_bot(self, room_id: RoomID, menubot_id: UserID) -> None:
         """It tries to invite the menubot to the room, and if it fails, it waits a couple of seconds and tries again
 
@@ -766,7 +766,7 @@ class RoomManager:
 
             await asyncio.sleep(2)
 
-    @get_intent_deco
+    @get_intent
     async def invite_supervisors(self, room_id: RoomID) -> None:
         """It tries to invite the menubot to the room, and if it fails, it waits a couple of seconds and tries again
 
@@ -792,7 +792,7 @@ class RoomManager:
 
                 await asyncio.sleep(2)
 
-    @get_intent_deco
+    @get_intent
     async def get_room_bridge(self, room_id: RoomID) -> str:
         """Given a room, get its bridge.
 
@@ -833,7 +833,7 @@ class RoomManager:
 
         return None
 
-    @get_intent_deco
+    @get_intent
     async def get_room_name(self, room_id: RoomID) -> str:
         """Given a room, get its name.
 
@@ -870,7 +870,7 @@ class RoomManager:
 
         return room_name
 
-    @get_intent_deco
+    @get_intent
     async def get_room_info(self, room_id: RoomID) -> Dict:
         """Given a room, get its room_info.
 
