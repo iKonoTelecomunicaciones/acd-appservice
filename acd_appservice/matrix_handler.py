@@ -305,6 +305,10 @@ class MatrixHandler:
             # timer stops
             AgentManager.PENDING_INVITES[transfer_future_key].set_result(True)
 
+        # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
+        if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
+            await RoomManager.save_room(room_id=room_id, selected_option=None, puppet_mxid=user_id)
+
         # If the joined user is a supervisor and the room is a customer room,
         # then send set-pl in the room
         if user_id.startswith(self.config["acd.supervisor_prefix"]):
@@ -613,7 +617,7 @@ class MatrixHandler:
                     await intent.set_room_name(room_id=room_id, name=new_room_name)
                     self.log.info(f"User {room_id} has changed the name of the room {intent.mxid}")
 
-            if Puppet.get_id_from_mxid(mxid=sender) or sender == intent.bot.mxid:
+            if intent.mxid == sender:
                 self.log.debug(f"Ignoring {sender} messages, is acd*")
                 return
 

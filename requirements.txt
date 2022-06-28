@@ -5,4 +5,5 @@ shortuuid==1.0.8
 asyncpg==0.23.0
 commonmark==0.9.1
 aiohttp-swagger3==0.7.1
+aiohttp-cors==0.7.0
 Markdown==3.3.6
