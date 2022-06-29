@@ -576,9 +576,7 @@ class ProvisioningAPI:
                     continue
 
                 # Obtenemos el bridge de la sala dado el room_id
-                bridge = await self.agent_manager.room_manager.get_room_bridge(
-                    room_id=room_id, intent=puppet.intent
-                )
+                bridge = await self.agent_manager.room_manager.get_room_bridge(room_id=room_id)
 
                 if not bridge:
                     # Si esta sala no tiene bridge entonces pasamos a la siguiente

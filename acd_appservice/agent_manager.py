@@ -14,7 +14,7 @@ from mautrix.util.logging import TraceLogger
 from acd_appservice.puppet import Puppet
 
 from .http_client import HTTPClient
-from .room_manager import RoomManager, get_intent
+from .room_manager import RoomManager, update_intent
 from .signaling import Signaling
 
 
@@ -41,7 +41,7 @@ class AgentManager:
         self.room_manager = room_manager
         self.signaling = Signaling(intent=self.intent, config=self.config)
 
-    @get_intent
+    @update_intent
     async def process_distribution(
         self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
     ) -> None:
@@ -175,7 +175,7 @@ class AgentManager:
             self.log.debug("\n")
             await sleep(self.config["acd.search_pending_rooms_interval"])
 
-    @get_intent
+    @update_intent
     async def loop_agents(
         self,
         customer_room_id: RoomID,
@@ -294,7 +294,7 @@ class AgentManager:
 
             self.log.debug(f"agent count: [{agent_count}] online_agents: [{online_agents}]")
 
-    @get_intent
+    @update_intent
     async def get_next_agent(self, agent_id: UserID, room_id: RoomID) -> UserID:
         """It takes a room ID and an agent ID, and returns the next agent in the room
 
@@ -338,7 +338,7 @@ class AgentManager:
 
         return None
 
-    @get_intent
+    @update_intent
     async def force_invite_agent(
         self,
         room_id: RoomID,
@@ -391,7 +391,7 @@ class AgentManager:
 
         await self.force_join_agent(room_id, agent_id)
 
-    @get_intent
+    @update_intent
     async def check_agent_joined(
         self,
         customer_room_id: RoomID,
@@ -573,7 +573,7 @@ class AgentManager:
                 await self.intent.send_notice(room_id=customer_room_id, text=msg)
                 RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
 
-    @get_intent
+    @update_intent
     async def force_join_agent(
         self, room_id: RoomID, agent_id: UserID, room_alias: RoomAlias = None
     ) -> None:
@@ -608,7 +608,7 @@ class AgentManager:
 
             await sleep(1)
 
-    @get_intent
+    @update_intent
     async def show_no_agents_message(self, customer_room_id, campaign_room_id) -> None:
         """It asks the menubot to show a message to the customer saying that there are no agents available
 
@@ -633,7 +633,7 @@ class AgentManager:
                 campaign_room_id,
             )
 
-    @get_intent
+    @update_intent
     async def get_agent_count(self, room_id: RoomID) -> int:
         """Get a room agent count
 
@@ -653,7 +653,7 @@ class AgentManager:
             total = len(agents)
         return total
 
-    @get_intent
+    @update_intent
     async def is_a_room_with_online_agents(self, room_id: RoomID) -> bool:
         """It checks if there is an online agent in the room
 
@@ -684,7 +684,7 @@ class AgentManager:
 
         return False
 
-    @get_intent
+    @update_intent
     async def get_room_agent(self, room_id: RoomID) -> UserID:
         """Return the room's assigned agent
 
@@ -707,7 +707,7 @@ class AgentManager:
 
         return None
 
-    @get_intent
+    @update_intent
     async def get_online_agent_in_room(self, room_id: RoomID) -> UserID:
         """ "Return online agent from room_id."
 
@@ -733,7 +733,7 @@ class AgentManager:
 
         return None
 
-    @get_intent
+    @update_intent
     async def get_agents(self, room_id: RoomID) -> List[UserID]:
         """Get a room agent list
 
