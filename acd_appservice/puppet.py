@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, AsyncGenerator, AsyncIterable, Awaitable, List, cast
 
+from mautrix.api import Method
 from mautrix.appservice import IntentAPI
 from mautrix.bridge import BasePuppet, async_getter_lock
 from mautrix.types import ContentURI, RoomID, SyncToken, UserID
@@ -12,7 +13,6 @@ from yarl import URL
 from . import room_manager as room_m
 from .config import Config
 from .db import Puppet as DBPuppet
-from .db.room import Room
 
 if TYPE_CHECKING:
     from .__main__ import ACDAppService
@@ -132,6 +132,30 @@ class Puppet(DBPuppet, BasePuppet):
                 await room_m.RoomManager.save_room(
                     room_id=mx_joined_room, selected_option=None, puppet_mxid=self.custom_mxid
                 )
+
+    async def sync_puppet_account(self):
+        """It updates the puppet account's password and email address
+
+        Returns
+        -------
+        """
+
+        data = {
+            "password": self.config["appservice.puppet_password"],
+            "threepids": [
+                {"medium": "email", "address": self.email},
+            ],
+        }
+
+        try:
+            api = self.intent.bot.api if self.intent.bot else self.intent.api
+            await api.request(
+                method=Method.PUT,
+                path=f"/_synapse/admin/v2/users/{self.custom_mxid}",
+                content=data,
+            )
+        except Exception as e:
+            self.log.exception(e)
 
     def _add_to_cache(self) -> None:
         # Mete a cada marioneta en un dict que permite acceder de manera más rápida a las
@@ -313,7 +337,7 @@ class Puppet(DBPuppet, BasePuppet):
         puppet: Puppet = None
 
         try:
-            room = await Room.get_room_by_room_id(room_id)
+            room = await room_m.RoomManager.get_room(room_id)
             if not (room and room.fk_puppet):
                 return
 

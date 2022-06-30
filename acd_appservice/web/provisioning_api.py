@@ -5,12 +5,13 @@ import json
 import logging
 import re
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List
 
+import aiohttp_cors
 from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from markdown import markdown
-from mautrix.types import Format, MessageType, TextMessageEventContent
+from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
@@ -72,13 +73,56 @@ class ProvisioningAPI:
         # Commads endpoint
         swagger.add_post(path="/v1/cmd/pm", handler=self.pm)
         swagger.add_post(path="/v1/cmd/resolve", handler=self.resolve)
+        swagger.add_post(path="/v1/cmd/bulk_resolve", handler=self.bulk_resolve)
         swagger.add_post(path="/v1/cmd/state_event", handler=self.state_event)
         # cmd template sin pruebas
         swagger.add_post(path="/v1/cmd/template", handler=self.template)
         swagger.add_post(path="/v1/cmd/transfer", handler=self.transfer)
         swagger.add_post(path="/v1/cmd/transfer_user", handler=self.transfer_user)
 
+        # Configure default CORS settings.
+        cors = aiohttp_cors.setup(
+            self.app,
+            defaults={
+                "*": aiohttp_cors.ResourceOptions(
+                    allow_credentials=True,
+                    expose_headers="*",
+                    allow_headers="*",
+                )
+            },
+        )
+
+        for route in list(self.app.router.routes()):
+            cors.add(route)
+
+        # Options
+        swagger.add_options(path="/v1/cmd/pm", handler=self.options)
+        swagger.add_options(path="/v1/cmd/resolve", handler=self.options)
+        swagger.add_options(path="/v1/cmd/bulk_resolve", handler=self.options)
+        swagger.add_options(path="/v1/cmd/state_event", handler=self.options)
+        swagger.add_options(path="/v1/cmd/template", handler=self.options)
+        swagger.add_options(path="/v1/cmd/transfer", handler=self.options)
+        swagger.add_options(path="/v1/cmd/transfer_user", handler=self.options)
+
         self.loop = asyncio.get_running_loop()
+
+    @property
+    def _acao_headers(self) -> dict[str, str]:
+        return {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Authorization, Content-Type",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        }
+
+    @property
+    def _headers(self) -> dict[str, str]:
+        return {
+            **self._acao_headers,
+            "Content-Type": "application/json",
+        }
+
+    async def options(self, _: web.Request):
+        return web.Response(status=200, headers=self._headers)
 
     async def create_user(self, request: web.Request) -> web.Response:
         """
@@ -156,6 +200,7 @@ class ProvisioningAPI:
                 puppet.control_room_id = control_room_id
                 # Ahora si guardamos la sala de control en el puppet.control_room_id
                 await puppet.save()
+                await puppet.sync_puppet_account()
             except Exception as e:
                 self.log.exception(e)
                 return web.json_response(**SERVER_ERROR)
@@ -422,8 +467,6 @@ class ProvisioningAPI:
                     send_message: "yes"
 
         responses:
-            '200':
-                $ref: '#/components/responses/PmSuccessful'
             '400':
                 $ref: '#/components/responses/BadRequest'
             '404':
@@ -463,6 +506,117 @@ class ProvisioningAPI:
         await command_processor(cmd_evt=cmd_evt)
         return web.json_response()
 
+    async def bulk_resolve(self, request: web.Request) -> web.Response:
+        """
+        ---
+        summary: Command to resolve chats en bloc, expelling the supervisor and the agent.
+        tags:
+            - users
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                  user_id:
+                    type: string
+                  send_message:
+                    type: string
+                example:
+                    "room_ids": [
+                        "!GmkrVrscIseYrhpTSz:darknet",
+                        "!dsardsfasddcshpTSz:darknet",
+                        "!GmkrVrssetrhtrsdfz:darknet",
+                        "!GnjyuikfdvdfrhpTSz:darknet"
+                        ]
+                    "user_id": "@supervisor:darknet"
+                    "send_message": "no"
+
+
+        responses:
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+        """
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data: Dict = await request.json()
+
+        if not (data.get("room_ids") and data.get("user_id")):
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        room_ids: List[RoomID] = data.get("room_ids")
+        user_id = data.get("user_id")
+        send_message = data.get("send_message")
+
+        # Creamos una lista de tareas vacías que vamos a llenar con cada uno de los comandos
+        # de resolución y luego los ejecutaremos al mismo tiempo
+        # de esta manera podremos resolver muchas salas a la vez y poder tener un buen rendimiento
+
+        # Debemos definir de a cuantas salas vamos a resolver
+        room_block = self.config["utils.room_blocks"]
+
+        # Dividimos las salas en sublistas y cada sublista de longitud room_block
+        list_room_ids = [room_ids[i : i + room_block] for i in range(0, len(room_ids), room_block)]
+        for room_ids in list_room_ids:
+            tasks = []
+            for room_id in room_ids:
+                # Obtenemos el puppet de este email si existe
+                puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+                if not puppet:
+                    # Si esta sala no tiene puppet entonces pasamos a la siguiente
+                    # la sala sin puppet no será resuelta.
+                    self.log.warning(
+                        f"The room {room_id} has not been resolved because the puppet was not found"
+                    )
+                    continue
+
+                # Obtenemos el bridge de la sala dado el room_id
+                bridge = await self.agent_manager.room_manager.get_room_bridge(room_id=room_id)
+
+                if not bridge:
+                    # Si esta sala no tiene bridge entonces pasamos a la siguiente
+                    # la sala sin bridge no será resuelta.
+                    self.log.warning(
+                        f"The room {room_id} has not been resolved because I didn't found the bridge"
+                    )
+                    continue
+
+                # Con el bridge obtenido, podremos sacar su prefijo y así luego en el comando
+                # resolve podremos enviar un template si así lo queremos
+                bridge_prefix = self.config[f"bridges.{bridge}.prefix"]
+
+                args = ["resolve", room_id, user_id, send_message, bridge_prefix]
+
+                self.log.debug(args)
+                # Creating a fake command event and passing it to the command processor.
+                cmd_evt = CommandEvent(
+                    cmd="resolve",
+                    agent_manager=self.agent_manager,
+                    sender=user_id,
+                    room_id=room_id,
+                    args=args,
+                )
+
+                # Debemos actualizar el intent del agent_manager y el intent para que lo que se ejecute
+                # dentro de estas tareas sean cotextos correctos independientes de cada puppet
+                # ósea, el puppet que corresponde a la sala que se va a resolver ;)
+                cmd_evt.agent_manager.intent = puppet.intent
+                cmd_evt.intent = puppet.intent
+                task = asyncio.create_task(command_processor(cmd_evt=cmd_evt))
+                tasks.append(task)
+
+            await asyncio.gather(*tasks)
+
+        return web.json_response(text="ok")
+
     async def state_event(self, request: web.Request) -> web.Response:
         """
         ---
@@ -498,8 +652,6 @@ class ProvisioningAPI:
 
 
         responses:
-            '200':
-                $ref: '#/components/responses/PmSuccessful'
             '400':
                 $ref: '#/components/responses/BadRequest'
             '404':
@@ -573,8 +725,6 @@ class ProvisioningAPI:
                     bridge: "!wa"
 
         responses:
-            '200':
-                $ref: '#/components/responses/PmSuccessful'
             '400':
                 $ref: '#/components/responses/BadRequest'
             '404':
@@ -643,8 +793,6 @@ class ProvisioningAPI:
                     campaign_room_id: "!TXMsaIzbeURlKPeCxJ:darknet"
 
         responses:
-            '200':
-                $ref: '#/components/responses/PmSuccessful'
             '400':
                 $ref: '#/components/responses/BadRequest'
             '404':

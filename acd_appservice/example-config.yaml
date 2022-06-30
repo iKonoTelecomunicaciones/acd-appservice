@@ -34,7 +34,9 @@ appservice:
     bot_username: acd
     # Email to be able to use the main bot
     email: "soporte@ikono.com.co"
-    # Do you want to receive ephemeral events?
+    # Default password for the puppets
+    puppet_password: secretfoo
+
     ephemeral_events: true
 
 # Bridge config
@@ -190,6 +192,8 @@ bridges:
     send_template_command: ""
 
 utils:
+    # Allows you to define how many groups of rooms can be solved in bulk resolve
+    room_blocks: 5
     # Whatsapp connection timeout (seconds)
     wait_ping_time: 7200
     # regex to email match

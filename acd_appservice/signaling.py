@@ -11,6 +11,7 @@ from mautrix.util.logging import TraceLogger
 
 from .config import Config
 from .puppet import Puppet
+from .room_manager import update_intent
 
 
 class Signaling:
@@ -154,15 +155,11 @@ class Signaling:
             The content of the event.
 
         """
-        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
-
-        if puppet:
-            self.intent = puppet.intent
-
         asyncio.create_task(
             self.put_room_state(room_id=room_id, event_type=event_type, content=content)
         )
 
+    @update_intent
     async def put_room_state(
         self,
         room_id: RoomID,
@@ -192,6 +189,7 @@ class Signaling:
                 self.log.warning(f"Failed to put state event attempt {attempt} to {room_id} : {e}")
                 await asyncio.sleep(2)
 
+    @update_intent
     async def get_chat_data(self, room_id: RoomID) -> StateEventContent:
         """It gets the chat status for a given room
 
