@@ -16,8 +16,13 @@ provisioning del nuevo acd:
 curl -X POST -d '{"user_email":"correo-cliente@test.com", "control_room_id":"!foo:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente-api.ikono.im/provision/v1/create_user
 ```
 - Ahora debería unir al nuevo usuario acd1 en las salas donde este el acd viejo
+
+<br>
 **NOTA:** El acd1 deberá haber enviado a todas las salas `!wa set-relay` y un `!wa set-pl @acd1:dominio_cliente.com 100`.
+
 **NOTA:** Mi recomendación es verificar varias veces que el acd1 se unió a todas las salas del acd viejo.
+<br>
+
 - Deberá iniciarse sesión con el acd1 en la sala de control, hacer `!wa login` y escanear el nuevo qr, el acd1 debería ser el nuevo anfitrión de todas las salas del acd viejo.
 - Ahora que ya tenemos al acd1 en las salas y conectado, podemos sacar al acd viejo de todas las salas donde él se encuentre, absolutamente todas.
 - Se debe ingresar a la base de datos del bridge, en la tabla portal debemos ejecutar el siguiente comando.
