@@ -8,7 +8,7 @@
 ```bash
 docker service rm nombrecliente-acd
 ```
-- Con el acd viejo enviar a la sala de control el siguiente mensaje `!wa logout` (ó !wa1, !wa2, dependiendo de la instalación del bridge).
+- Con el acd viejo enviar a la sala de control el siguiente mensaje `!wa logout` (ó `!wa1`, `!wa2`, dependiendo de la instalación del bridge).
 - Ahora se debe seguir la instalación de este nuevo acd
 - Con la instalación completa, debes crear un usuario enviando una solicitud al endpoint de la
 provisioning del nuevo acd:
