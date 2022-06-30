@@ -4,9 +4,37 @@
 
 ## MIGRACIÓN ACD VIEJO:
 
-
+- Lo primero es parar el servicio del acd viejo
+```bash
+docker service rm nombrecliente-acd
+```
+- Como el acd viejo enviar a la sala de control el siguiente mensaje `!wa logout` (ó !wa1, !wa2, dependiendo de la instalación del bridge).
+- Ahora se debe seguir la instalacion de este nuevo acd
+- Con la instalación completa, debes crear un usuario enviando una solicitud al endpoint de la provisionig del nuevo acd
+```curl
+curl -X POST -d '{"user_email":"correo-cliente@test.com", "control_room_id":"!foo:dominio_cliente.com"}' https://cliente-api.ikono.im/provision/v1/create_user
+```
+- Ahora deberia unir al nuevo usuario acd1 en las salas donde este el acd viejo
+**NOTA:** El acd1 debera haber enviado a todas las salas `!wa set-relay` y un `!wa set-pl @acd1:dominio_cliente.com 100`.
+**NOTA:** Mi recomendación es verificar varias veces que el acd1 se unio a todas las salas del acd viejo.
+- Debera loguearse con el acd1 en la sala de control, hacer `!wa login` y scanear el nuevo qr, el acd1 deberia ser el nuevo anfitrion de todas las salas del acd viejo.
+- Ahora que ya tenemos al acd1 en las salas y logueado, podemos sacar al acd viejo de todas las salas donde el se encuentre, absolutamente todas.
+- En teoria esto es todo para empezar a operar (jejej 😜).
+<br>
 ## INSTALACIÓN:
 
+- Debera cambiar el siguiente campo en el archivo de configuración del bridge de mautrix-whatsapp.
+```yaml
+    permissions:
+        '*': relay
+        '@acd:ixtal.com': admin
+        '@supervisor:ixtal.com': admin
+
+    # Debe cambiarla a
+
+    permissions:
+        'dominio_cliente.com': admin
+```
 - Crear un usuario administrador del synapse, para monitorear el AppService
 **NOTA:** Este comando debe ser ejecutado en el nodo donde está instalado el cliente
 ```bash
@@ -89,7 +117,7 @@ bridge:
     # Para invitar al admin a las salas de control
     provisioning:
         # Admin of the rooms created by provisioning
-        admin_provisioning: "@admin:example.com"
+        admin_provisioning: "@admin:dominio_cliente.com"
     ...
 acd:
     # Sala de control del acd que vamos a reemplazar,
@@ -99,16 +127,16 @@ acd:
     # en caso contrario en false
     menubot:
         active: true
-        user_id: "@menubot:example.com"
+        user_id: "@menubot:dominio_cliente.com"
         command_prefix: "!menubot"
 
     menubots:
-      "@menubota:example.com":
+      "@menubota:dominio_cliente.com":
         user_prefix: "gswA"
         command_prefix: "!menubotA"
         is_guest: true
 
-      "@menubotb:example.com":
+      "@menubotb:dominio_cliente.com":
         user_prefix: "gswB"
         command_prefix: "!menubotB"
     ...
@@ -119,8 +147,8 @@ acd:
         # If active is true, then invite users to invitees
         invite: false
         invitees:
-            - "@supervisor:example.com"
-            - "@admin:example.com"
+            - "@supervisor:dominio_cliente.com"
+            - "@admin:dominio_cliente.com"
 bridges:
   mautrix:
     # Mautrix UserID

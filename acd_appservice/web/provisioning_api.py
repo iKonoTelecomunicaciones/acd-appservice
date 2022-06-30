@@ -166,6 +166,9 @@ class ProvisioningAPI:
 
         email = data.get("user_email").lower()
 
+        # Si llega sala de control es porque estamos haciendo la migración de un acd viejo
+        control_room_id: RoomID = data.get("control_room_id")
+
         # Obtenemos el puppet de este email si existe
         puppet = await Puppet.get_by_email(email)
 
@@ -189,14 +192,18 @@ class ProvisioningAPI:
                 # Sincronizamos las salas del puppet, si es que ya existía en Matrix
                 # sin que nosotros nos diéramos cuenta
                 await puppet.sync_joined_rooms_in_db()
-                # NOTA: primero debe estar registrado el puppet en la db antes de crear la sala,
-                # ya que para crear una sala se necesita la pk del puppet (para usarla como fk)
-                control_room_id = await puppet.intent.create_room(
-                    invitees=[
-                        self.config["bridges.mautrix.mxid"],
-                        self.config["bridge.provisioning.admin_provisioning"],
-                    ]
-                )
+
+                # Si no se envio sala de control, entonces creamos una
+                if not control_room_id:
+                    # NOTA: primero debe estar registrado el puppet en la db antes de crear la sala,
+                    # ya que para crear una sala se necesita la pk del puppet (para usarla como fk)
+                    control_room_id = await puppet.intent.create_room(
+                        invitees=[
+                            self.config["bridges.mautrix.mxid"],
+                            self.config["bridge.provisioning.admin_provisioning"],
+                        ]
+                    )
+
                 puppet.control_room_id = control_room_id
                 # Ahora si guardamos la sala de control en el puppet.control_room_id
                 await puppet.save()
