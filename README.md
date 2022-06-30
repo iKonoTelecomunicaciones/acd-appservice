@@ -153,7 +153,7 @@ bridges:
   mautrix:
     # Mautrix UserID
     # Aquí debe poner el user_id del usuario del bridge
-    mxid: "@mx_whatsappbot:localhost"
+    mxid: "@mx_whatsappbot:dominio_cliente.com"
     # Prefix to be listened by bridge
     prefix: "!wa"
     # Prefix for users created
@@ -183,7 +183,7 @@ vim /var/data/dominio_cliente.com/synapse/homeserver.yaml
 - Agregan el registration en la lista de appservices:
 ```bash
 app_service_config_files:
-  - /data/registration-ik.yaml
+  - /data/registration-acd.yaml
 ```
 - Eliminar el servicio del synapse `dominio_clientecom-synapse`
 ```bash

@@ -17,6 +17,9 @@ appservice:
     # The hostname and port where this appservice should listen.
     hostname: 0.0.0.0
     port: 29000
+    # The maximum body size of appservice API requests (from the homeserver) in mebibytes
+    # Usually 1 is enough, but on high-traffic bridges you might need to increase this to avoid 413s
+    max_body_size: 1
     # The full URI to the database. Only Postgres is currently supported.
     database: postgres://synapse:onokisoft@postgres/acd_db
     # Additional arguments for asyncpg.create_pool()
@@ -214,7 +217,7 @@ logging:
         file:
             class: logging.handlers.RotatingFileHandler
             formatter: normal
-            filename: ./logs/acd-az.log
+            filename: ./acd-az.log
             maxBytes: 10485760
             backupCount: 10
         console:
