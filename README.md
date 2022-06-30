@@ -12,13 +12,17 @@ docker service rm nombrecliente-acd
 - Ahora se debe seguir la instalacion de este nuevo acd
 - Con la instalación completa, debes crear un usuario enviando una solicitud al endpoint de la provisionig del nuevo acd
 ```curl
-curl -X POST -d '{"user_email":"correo-cliente@test.com", "control_room_id":"!foo:dominio_cliente.com"}' https://cliente-api.ikono.im/provision/v1/create_user
+curl -X POST -d '{"user_email":"correo-cliente@test.com", "control_room_id":"!foo:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente-api.ikono.im/provision/v1/create_user
 ```
 - Ahora deberia unir al nuevo usuario acd1 en las salas donde este el acd viejo
 **NOTA:** El acd1 debera haber enviado a todas las salas `!wa set-relay` y un `!wa set-pl @acd1:dominio_cliente.com 100`.
 **NOTA:** Mi recomendación es verificar varias veces que el acd1 se unio a todas las salas del acd viejo.
 - Debera loguearse con el acd1 en la sala de control, hacer `!wa login` y scanear el nuevo qr, el acd1 deberia ser el nuevo anfitrion de todas las salas del acd viejo.
 - Ahora que ya tenemos al acd1 en las salas y logueado, podemos sacar al acd viejo de todas las salas donde el se encuentre, absolutamente todas.
+- Se debe ingresar a la base de datos del bridge, en la tabla portal debemos ejecutar el siguiente comando.
+```
+UPDATE portal SET relay_user_id = '@acd1:dominio_cliente.com' WHERE relay_user_id = '@acd:dominio_cliente.com';
+```
 - En teoria esto es todo para empezar a operar 😜.
 <br>
 ## INSTALACIÓN:
@@ -27,8 +31,8 @@ curl -X POST -d '{"user_email":"correo-cliente@test.com", "control_room_id":"!fo
 ```yaml
     permissions:
         '*': relay
-        '@acd:ixtal.com': admin
-        '@supervisor:ixtal.com': admin
+        '@acd:dominio_cliente.com': admin
+        '@supervisor:dominio_cliente.com': admin
 
     # Debe cambiarla a
 
