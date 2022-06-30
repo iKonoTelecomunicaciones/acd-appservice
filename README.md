@@ -8,22 +8,23 @@
 ```bash
 docker service rm nombrecliente-acd
 ```
-- Como el acd viejo enviar a la sala de control el siguiente mensaje `!wa logout` (ó !wa1, !wa2, dependiendo de la instalación del bridge).
-- Ahora se debe seguir la instalacion de este nuevo acd
-- Con la instalación completa, debes crear un usuario enviando una solicitud al endpoint de la provisionig del nuevo acd
+- Con el acd viejo enviar a la sala de control el siguiente mensaje `!wa logout` (ó !wa1, !wa2, dependiendo de la instalación del bridge).
+- Ahora se debe seguir la instalación de este nuevo acd
+- Con la instalación completa, debes crear un usuario enviando una solicitud al endpoint de la
+provisioning del nuevo acd:
 ```curl
 curl -X POST -d '{"user_email":"correo-cliente@test.com", "control_room_id":"!foo:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente-api.ikono.im/provision/v1/create_user
 ```
-- Ahora deberia unir al nuevo usuario acd1 en las salas donde este el acd viejo
-**NOTA:** El acd1 debera haber enviado a todas las salas `!wa set-relay` y un `!wa set-pl @acd1:dominio_cliente.com 100`.
-**NOTA:** Mi recomendación es verificar varias veces que el acd1 se unio a todas las salas del acd viejo.
-- Debera loguearse con el acd1 en la sala de control, hacer `!wa login` y scanear el nuevo qr, el acd1 deberia ser el nuevo anfitrion de todas las salas del acd viejo.
-- Ahora que ya tenemos al acd1 en las salas y logueado, podemos sacar al acd viejo de todas las salas donde el se encuentre, absolutamente todas.
+- Ahora debería unir al nuevo usuario acd1 en las salas donde este el acd viejo
+**NOTA:** El acd1 deberá haber enviado a todas las salas `!wa set-relay` y un `!wa set-pl @acd1:dominio_cliente.com 100`.
+**NOTA:** Mi recomendación es verificar varias veces que el acd1 se unió a todas las salas del acd viejo.
+- Deberá iniciarse sesión con el acd1 en la sala de control, hacer `!wa login` y escanear el nuevo qr, el acd1 debería ser el nuevo anfitrión de todas las salas del acd viejo.
+- Ahora que ya tenemos al acd1 en las salas y conectado, podemos sacar al acd viejo de todas las salas donde él se encuentre, absolutamente todas.
 - Se debe ingresar a la base de datos del bridge, en la tabla portal debemos ejecutar el siguiente comando.
 ```sql
 UPDATE portal SET relay_user_id = '@acd1:dominio_cliente.com' WHERE relay_user_id = '@acd:dominio_cliente.com';
 ```
-- En teoria esto es todo para empezar a operar 😜.
+- En teoría esto es todo para empezar a operar 😜.
 <br>
 ## INSTALACIÓN:
 
@@ -101,14 +102,14 @@ homeserver:
     domain: dominio_cliente.com
 ...
 appservice:
-    # Definir el aquí el nombre del servicio
+    # Definir aquí el nombre del servicio
     address: http://nombrecliente-acd:29666
     # La base de datos debe ser creada previamente
     # Si es creada en la red de docker, utilizar los alises
     # ó el nombre del contendor de postgres
     database: postgres://synapse:onokisoft@postgres/acd_db
 ...
-    # Este id debe ser diferente para cada appservice (si hay mas de un appservice, deben tener id diferentes)
+    # Este ID debe ser diferente para cada appservice (si hay más de un appservice, deben tener id diferentes)
     id: acd_az
 ...
     # Este bot_username debe ser diferente para cada appservice (si hay mas de un appservice, deben tener bot_username diferentes)
