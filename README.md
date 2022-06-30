@@ -19,15 +19,15 @@ curl -X POST -d '{"user_email":"correo-cliente@test.com", "control_room_id":"!fo
 
 <br>
 
-**NOTA:** El acd1 deberá haber enviado a todas las salas `!wa set-relay` y un `!wa set-pl @acd1:dominio_cliente.com 100`.
+**NOTA:** El acd1 deberá haber enviado a las salas de clientes los siguientes comandos`!wa set-relay` y un `!wa set-pl @acd1:dominio_cliente.com 100`.
 
 **NOTA:** Mi recomendación es verificar varias veces que el acd1 se unió a todas las salas del acd viejo.
 
 <br>
 
-- Deberá iniciarse sesión con el acd1 en la sala de control, hacer `!wa login` y escanear el nuevo qr, el acd1 debería ser el nuevo anfitrión de todas las salas del acd viejo.
-- Ahora que ya tenemos al acd1 en las salas y conectado, podemos sacar al acd viejo de todas las salas donde él se encuentre, absolutamente todas.
-- Se debe ingresar a la base de datos del bridge, en la tabla portal debemos ejecutar el siguiente comando.
+- Deberá iniciar sesión con el acd1 en la sala de control, hacer `!wa login` y escanear el nuevo qr, el acd1 debería ser el nuevo anfitrión de todas las salas del acd viejo.
+- Ahora que ya tenemos al acd1 en las salas y conectado a WhatsApp, podemos sacar al acd viejo de todas las salas donde él se encuentre, absolutamente todas.
+- Se debe ingresar a la base de datos del bridge, en la tabla `portal` debemos ejecutar el siguiente comando.
 ```sql
 UPDATE portal SET relay_user_id = '@acd1:dominio_cliente.com' WHERE relay_user_id = '@acd:dominio_cliente.com';
 ```
@@ -48,6 +48,8 @@ UPDATE portal SET relay_user_id = '@acd1:dominio_cliente.com' WHERE relay_user_i
         'dominio_cliente.com': admin
 ```
 - Crear un usuario administrador del synapse, para monitorear el AppService
+<br>
+
 **NOTA:** Este comando debe ser ejecutado en el nodo donde está instalado el cliente
 ```bash
 docker exec -it contenedor-synapse register_new_matrix_user -u admin -a -c /data/homeserver.yaml http://localhost:8008
