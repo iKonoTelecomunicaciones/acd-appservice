@@ -19,11 +19,11 @@ curl -X POST -d '{"user_email":"correo-cliente@test.com", "control_room_id":"!fo
 **NOTA:** Mi recomendación es verificar varias veces que el acd1 se unio a todas las salas del acd viejo.
 - Debera loguearse con el acd1 en la sala de control, hacer `!wa login` y scanear el nuevo qr, el acd1 deberia ser el nuevo anfitrion de todas las salas del acd viejo.
 - Ahora que ya tenemos al acd1 en las salas y logueado, podemos sacar al acd viejo de todas las salas donde el se encuentre, absolutamente todas.
-- En teoria esto es todo para empezar a operar (jejej 😜).
+- En teoria esto es todo para empezar a operar 😜.
 <br>
 ## INSTALACIÓN:
 
-- Debera cambiar el siguiente campo en el archivo de configuración del bridge de mautrix-whatsapp.
+- Debera cambiar el siguiente campo en el archivo de configuración del bridge de `mautrix-whatsapp`.
 ```yaml
     permissions:
         '*': relay
@@ -122,7 +122,7 @@ bridge:
 acd:
     # Sala de control del acd que vamos a reemplazar,
     # si la instalación es nueva, entonces no coloque nada
-    control_room_id: ""
+    control_room_id: "!foo:dominio_cliente.com"
     # Si hay solo un menubot, se debería tener menubot.active en true
     # en caso contrario en false
     menubot:
