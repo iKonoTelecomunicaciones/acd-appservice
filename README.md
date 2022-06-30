@@ -20,7 +20,7 @@ curl -X POST -d '{"user_email":"correo-cliente@test.com", "control_room_id":"!fo
 - Debera loguearse con el acd1 en la sala de control, hacer `!wa login` y scanear el nuevo qr, el acd1 deberia ser el nuevo anfitrion de todas las salas del acd viejo.
 - Ahora que ya tenemos al acd1 en las salas y logueado, podemos sacar al acd viejo de todas las salas donde el se encuentre, absolutamente todas.
 - Se debe ingresar a la base de datos del bridge, en la tabla portal debemos ejecutar el siguiente comando.
-```
+```sql
 UPDATE portal SET relay_user_id = '@acd1:dominio_cliente.com' WHERE relay_user_id = '@acd:dominio_cliente.com';
 ```
 - En teoria esto es todo para empezar a operar 😜.
