@@ -13,7 +13,6 @@ from yarl import URL
 from . import room_manager as room_m
 from .config import Config
 from .db import Puppet as DBPuppet
-from .db.room import Room
 
 if TYPE_CHECKING:
     from .__main__ import ACDAppService
@@ -338,7 +337,7 @@ class Puppet(DBPuppet, BasePuppet):
         puppet: Puppet = None
 
         try:
-            room = await Room.get_room_by_room_id(room_id)
+            room = await room_m.RoomManager.get_room(room_id)
             if not (room and room.fk_puppet):
                 return
 

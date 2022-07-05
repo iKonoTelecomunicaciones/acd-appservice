@@ -14,7 +14,7 @@ from mautrix.util.logging import TraceLogger
 from acd_appservice.puppet import Puppet
 
 from .http_client import HTTPClient
-from .room_manager import RoomManager
+from .room_manager import RoomManager, update_intent
 from .signaling import Signaling
 
 
@@ -41,6 +41,7 @@ class AgentManager:
         self.room_manager = room_manager
         self.signaling = Signaling(intent=self.intent, config=self.config)
 
+    @update_intent
     async def process_distribution(
         self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
     ) -> None:
@@ -174,6 +175,7 @@ class AgentManager:
             self.log.debug("\n")
             await sleep(self.config["acd.search_pending_rooms_interval"])
 
+    @update_intent
     async def loop_agents(
         self,
         customer_room_id: RoomID,
@@ -292,6 +294,7 @@ class AgentManager:
 
             self.log.debug(f"agent count: [{agent_count}] online_agents: [{online_agents}]")
 
+    @update_intent
     async def get_next_agent(self, agent_id: UserID, room_id: RoomID) -> UserID:
         """It takes a room ID and an agent ID, and returns the next agent in the room
 
@@ -335,6 +338,7 @@ class AgentManager:
 
         return None
 
+    @update_intent
     async def force_invite_agent(
         self,
         room_id: RoomID,
@@ -387,6 +391,7 @@ class AgentManager:
 
         await self.force_join_agent(room_id, agent_id)
 
+    @update_intent
     async def check_agent_joined(
         self,
         customer_room_id: RoomID,
@@ -484,7 +489,6 @@ class AgentManager:
                     await self.room_manager.kick_menubot(
                         room_id=customer_room_id,
                         reason=detail if detail else f"agent [{agent_id}] accepted invite",
-                        intent=self.intent,
                         control_room_id=puppet.control_room_id,
                     )
                 except Exception as e:
@@ -569,6 +573,7 @@ class AgentManager:
                 await self.intent.send_notice(room_id=customer_room_id, text=msg)
                 RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
 
+    @update_intent
     async def force_join_agent(
         self, room_id: RoomID, agent_id: UserID, room_alias: RoomAlias = None
     ) -> None:
@@ -599,10 +604,11 @@ class AgentManager:
                 )
                 break
             except Exception as e:
-                self.log.exception(e)
+                self.log.warning(e)
 
             await sleep(1)
 
+    @update_intent
     async def show_no_agents_message(self, customer_room_id, campaign_room_id) -> None:
         """It asks the menubot to show a message to the customer saying that there are no agents available
 
@@ -627,6 +633,7 @@ class AgentManager:
                 campaign_room_id,
             )
 
+    @update_intent
     async def get_agent_count(self, room_id: RoomID) -> int:
         """Get a room agent count
 
@@ -646,6 +653,7 @@ class AgentManager:
             total = len(agents)
         return total
 
+    @update_intent
     async def is_a_room_with_online_agents(self, room_id: RoomID) -> bool:
         """It checks if there is an online agent in the room
 
@@ -676,6 +684,7 @@ class AgentManager:
 
         return False
 
+    @update_intent
     async def get_room_agent(self, room_id: RoomID) -> UserID:
         """Return the room's assigned agent
 
@@ -698,6 +707,7 @@ class AgentManager:
 
         return None
 
+    @update_intent
     async def get_online_agent_in_room(self, room_id: RoomID) -> UserID:
         """ "Return online agent from room_id."
 
@@ -723,6 +733,7 @@ class AgentManager:
 
         return None
 
+    @update_intent
     async def get_agents(self, room_id: RoomID) -> List[UserID]:
         """Get a room agent list
 

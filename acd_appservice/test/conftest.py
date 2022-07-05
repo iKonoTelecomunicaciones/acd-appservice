@@ -1,13 +1,16 @@
 import pytest
 import pytest_asyncio
 
-from acd_appservice import room_manager
+from acd_appservice.puppet import Puppet
+from acd_appservice.room_manager import RoomManager
 
 from ..config import Config
 
 
 @pytest_asyncio.fixture
-async def room_manager_mock():
+async def room_manager_mock(mocker):
+
+    mocker.patch.object(Puppet, "get_customer_room_puppet", return_value="pytest")
 
     config = Config(
         path="acd_appservice/example-config.yaml",
@@ -17,11 +20,11 @@ async def room_manager_mock():
 
     config.load()
 
-    return room_manager.RoomManager(config=config)
+    return RoomManager(config=config)
 
 
 @pytest_asyncio.fixture
-async def get_room_info_mock(mocker, room_manager_mock: room_manager.RoomManager):
+async def get_room_info_mock(mocker, room_manager_mock: RoomManager):
 
     room_info = {
         "room_id": "!mscvqgqpHYjBGDxNym:matrix.org",
@@ -43,4 +46,4 @@ async def get_room_info_mock(mocker, room_manager_mock: room_manager.RoomManager
         "state_events": 93534,
     }
     room_manager_mock.ROOMS["!mscvqgqpHYjBGDxNym:matrix.org"] = room_info
-    mocker.patch.object(room_manager.RoomManager, "get_room_info", room_info)
+    mocker.patch.object(RoomManager, "get_room_info", room_info)

@@ -38,15 +38,11 @@ async def resolve(evt: CommandEvent) -> Dict:
     send_message = evt.args[3] if len(evt.args) > 3 else None
     bridge = evt.args[4] if len(evt.args) > 4 else None
 
-    puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
+    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
 
     if room_id == puppet.control_room_id or (
-        not await evt.agent_manager.room_manager.is_customer_room(
-            room_id=room_id, intent=puppet.intent
-        )
-        and not await evt.agent_manager.room_manager.is_guest_room(
-            room_id=room_id, intent=puppet.intent
-        )
+        not await evt.agent_manager.room_manager.is_customer_room(room_id=room_id)
+        and not await evt.agent_manager.room_manager.is_guest_room(room_id=room_id)
     ):
 
         detail = "Group rooms or control rooms cannot be resolved."
@@ -78,7 +74,6 @@ async def resolve(evt: CommandEvent) -> Dict:
     await evt.agent_manager.room_manager.kick_menubot(
         room_id=room_id,
         reason="Chat resuelto",
-        intent=puppet.intent,
         control_room_id=puppet.control_room_id,
     )
 
