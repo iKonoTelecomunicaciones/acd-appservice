@@ -82,6 +82,7 @@ class Puppet(DBPuppet, BasePuppet):
         self.agent_manager = agent_m.AgentManager(
             intent=self.intent, room_manager=self.room_manager
         )
+        self.agent_manager.control_room_id = control_room_id
 
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> AsyncIterable[Awaitable[None]]:

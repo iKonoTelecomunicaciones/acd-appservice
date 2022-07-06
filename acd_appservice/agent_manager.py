@@ -232,9 +232,7 @@ class AgentManager:
                 break
 
             if agent_id != transfer_author:
-                presence_response = await self.room_manager.get_user_presence(
-                    user_id=agent_id, intent=self.intent
-                )
+                presence_response = await self.room_manager.get_user_presence(user_id=agent_id)
                 self.log.debug(
                     f"PRESENCE RESPONSE: "
                     f"[{agent_id}] -> [{presence_response.presence if presence_response else None}]"
@@ -473,7 +471,7 @@ class AgentManager:
                     await self.room_manager.kick_menubot(
                         room_id=customer_room_id,
                         reason=detail if detail else f"agent [{agent_id}] accepted invite",
-                        control_room_id=puppet.control_room_id,
+                        control_room_id=self.control_room_id,
                     )
                 except Exception as e:
                     self.log.exception(e)
@@ -602,9 +600,7 @@ class AgentManager:
             The room ID of the campaign room.
 
         """
-        menubot_id = await self.room_manager.get_menubot_id(
-            intent=self.intent, room_id=customer_room_id
-        )
+        menubot_id = await self.room_manager.get_menubot_id(room_id=customer_room_id)
         if menubot_id:
             await self.room_manager.send_menubot_command(
                 menubot_id,

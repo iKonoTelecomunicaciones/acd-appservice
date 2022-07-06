@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from functools import wraps
 from typing import Dict, List, Tuple
 
 from mautrix.api import Method
@@ -23,39 +22,6 @@ from acd_appservice import puppet as pu
 
 from .config import Config
 from .db import Room
-
-
-def update_intent(func: function):
-    """This function is a decorator that gets the intent of a customer room
-    and sets it to the intent attribute of the class
-
-    Parameters
-    ----------
-    func : function
-        function to decorate
-
-    Returns
-    -------
-        The wrapper function is being returned.
-
-    """
-
-    @wraps(func)
-    async def wrapper(self, *args, **kargs):
-        # Getting the puppet from a customer room.
-        if kargs.get("room_id") or kargs.get("customer_room_id"):
-            room_id = kargs.get("room_id") or kargs.get("customer_room_id")
-            puppet = await pu.Puppet.get_customer_room_puppet(room_id=room_id)
-            if not puppet:
-                return
-            # Si se esta ejecutando en pytest, entonces ignoramos el intent
-            elif puppet == "pytest":
-                return await func(self, *args, **kargs)
-            self.intent = puppet.intent
-            self.log.debug(f"#######  {self.intent.mxid} --- {func.__name__}")
-        return await func(self, *args, **kargs)
-
-    return wrapper
 
 
 class RoomManager:
@@ -84,43 +50,6 @@ class RoomManager:
     def _add_to_cache(cls, room_id, room: Room) -> None:
         cls.by_room_id[room_id] = room
 
-    async def get_intent(self, user_id: UserID = None, room_id: RoomID = None) -> IntentAPI:
-        """If the user_id is not the bot's mxid, and the user_id is a custom mxid,
-        then return the intent of the puppet that has the custom mxid
-
-        Parameters
-        ----------
-        user_id : UserID
-            The user ID of the user you want to get the intent of.
-        room_id : RoomID
-            The room ID of the room you want to send the message to.
-
-        Returns
-        -------
-            Puppet's intent
-
-        """
-
-        # Coloco el intent del bot principal siempre para que cuando no pueda obtener uno
-        # dado un user o un room_id, entonces regrese al acd principal
-        intent: IntentAPI = None
-        if user_id:
-            # Checking if the user_id is not the bot_mxid and if the user_id is a puppet.
-            if pu.Puppet.get_id_from_mxid(user_id):
-                puppet: pu.Puppet = await pu.Puppet.get_by_custom_mxid(user_id)
-                if puppet:
-                    intent = puppet.intent
-
-        elif room_id:
-            # Getting the puppet from a customer room.
-            puppet = await pu.Puppet.get_customer_room_puppet(room_id=room_id)
-            if puppet:
-                self.intent = puppet.intent
-                intent = puppet.intent
-
-        return intent
-
-    @update_intent
     async def initialize_room(self, room_id: RoomID) -> bool:
         """Initializing a room.
 
@@ -133,8 +62,6 @@ class RoomManager:
         ----------
         room_id: RoomID
             Room to initialize.
-        intent: IntentAPI
-            Matrix client.
 
         Returns
         -------
@@ -164,7 +91,6 @@ class RoomManager:
         self.log.info(f"Room {room_id} initialization is complete")
         return True
 
-    @update_intent
     async def initial_room_setup(self, room_id: RoomID):
         """Initializing a room visibility.
 
@@ -175,8 +101,6 @@ class RoomManager:
         ----------
         room_id: RoomID
             Room to initialize.
-        intent: IntentAPI
-            Matrix client.
 
         Returns
         -------
@@ -200,7 +124,6 @@ class RoomManager:
 
             await asyncio.sleep(1)
 
-    @update_intent
     async def put_name_customer_room(self, room_id: RoomID, old_name: str) -> bool:
         """Name a customer's room.
 
@@ -210,8 +133,6 @@ class RoomManager:
         ----------
         room_id: RoomID
             Room to initialize.
-        intent: IntentAPI
-            Matrix client.
 
         Returns
         -------
@@ -235,15 +156,13 @@ class RoomManager:
 
         return False
 
-    async def create_room_name(self, user_id: UserID, intent: IntentAPI) -> str:
+    async def create_room_name(self, user_id: UserID) -> str:
         """Given a customer's mxid, pull the phone number and concatenate it to the name.
 
         Parameters
         ----------
         user_id: UserID
             User to get new name.
-        intent: IntentAPI
-            Matrix client.
 
         Returns
         -------
@@ -255,7 +174,7 @@ class RoomManager:
         if phone_match:
             self.log.debug(f"Formatting phone number {phone_match[0]}")
 
-            customer_displayname = await intent.get_displayname(user_id)
+            customer_displayname = await self.intent.get_displayname(user_id)
             if customer_displayname:
                 room_name = f"{customer_displayname.strip()} ({phone_match[0].strip()})"
             else:
@@ -264,7 +183,6 @@ class RoomManager:
 
         return None
 
-    @update_intent
     async def send_cmd_set_relay(self, room_id: RoomID, bridge: str) -> None:
         """Given a room, send the command set-relay.
 
@@ -272,8 +190,6 @@ class RoomManager:
         ----------
         room_id: RoomID
             Room to send command.
-        intent: IntentAPI
-            Matrix client.
 
         Returns
         -------
@@ -288,7 +204,6 @@ class RoomManager:
 
         self.log.info(f"The command {cmd} has been sent to room {room_id}")
 
-    @update_intent
     async def send_cmd_set_pl(
         self,
         room_id: RoomID,
@@ -302,8 +217,6 @@ class RoomManager:
         ----------
         room_id: RoomID
             Room to send command.
-        intent: IntentAPI
-            Matrix client.
 
         Returns
         -------
@@ -326,7 +239,6 @@ class RoomManager:
     # SALAS DE CLIENTE (Cuando cuando el creador de la sala es un cliente)
     # OTRO TIPO DE SALA (Cuando es la sala de control, sala de agentes o de colas)
 
-    @update_intent
     async def is_customer_room(self, room_id: RoomID) -> bool:
         """Given a room, verify that it is a customer's room.
 
@@ -334,8 +246,6 @@ class RoomManager:
         ----------
         room_id: RoomID
             Room to check.
-        intent: IntentAPI
-            Matrix client.
 
         Returns
         -------
@@ -364,7 +274,6 @@ class RoomManager:
         self.ROOMS[room_id]["is_customer_room"] = False
         return False
 
-    @update_intent
     async def is_guest_room(self, room_id: RoomID) -> bool:
         """If the room is a guest room, return True.
         If not,
@@ -375,8 +284,6 @@ class RoomManager:
         ----------
         room_id : RoomID
             The room ID of the room you want to check.
-        intent : IntentAPI
-            IntentAPI
 
         Returns
         -------
@@ -406,7 +313,6 @@ class RoomManager:
         self.ROOMS[room_id]["is_guest_room"] = False
         return False
 
-    @update_intent
     async def is_mx_whatsapp_status_broadcast(self, room_id: RoomID) -> bool:
         """Check if a room is whatsapp_status_broadcast.
 
@@ -414,8 +320,6 @@ class RoomManager:
         ----------
         room_id: RoomID
             Room to check.
-        intent: IntentAPI
-            Matrix client.
 
         Returns
         -------
@@ -487,7 +391,7 @@ class RoomManager:
         """Check if room is in offline menu state."""
         return room_id in cls.offline_menu
 
-    async def get_update_name(self, creator: UserID, intent: IntentAPI) -> str:
+    async def get_update_name(self, creator: UserID) -> str:
         """Given a customer's mxid, pull the phone number and concatenate it to the name
         and delete the postfix_template (WA).
 
@@ -495,8 +399,6 @@ class RoomManager:
         ----------
         creator: UserID
             User to get new name.
-        intent: IntentAPI
-            Matrix client.
 
         Returns
         -------
@@ -509,7 +411,7 @@ class RoomManager:
         for bridge in bridges:
             user_prefix = self.config[f"bridges.{bridge}.user_prefix"]
             if creator.startswith(f"@{user_prefix}"):
-                new_room_name = await self.create_room_name(user_id=creator, intent=intent)
+                new_room_name = await self.create_room_name(user_id=creator)
                 if new_room_name:
                     postfix_template = self.config[f"bridges.{bridge}.postfix_template"]
                     new_room_name = new_room_name.replace(f" {postfix_template}", "")
@@ -517,20 +419,20 @@ class RoomManager:
 
         return new_room_name
 
-    async def get_user_presence(self, user_id: UserID, intent: IntentAPI) -> PresenceEventContent:
+    async def get_user_presence(self, user_id: UserID) -> PresenceEventContent:
         """Get user presence status."""
         self.log.debug(f"Checking presence for....... [{user_id}]")
         response = None
         try:
-            response = await intent.get_presence(user_id=user_id)
+            response = await self.intent.get_presence(user_id=user_id)
             self.log.debug(f"Presence for....... [{user_id}] is [{response.presence}]")
         except IntentError as e:
             self.log.exception(e)
 
         return response
 
-    async def is_in_mobile_device(self, user_id: UserID, intent: IntentAPI) -> bool:
-        devices = await self.get_user_devices(user_id=user_id, intent=intent)
+    async def is_in_mobile_device(self, user_id: UserID) -> bool:
+        devices = await self.get_user_devices(user_id=user_id, intent=self.intent)
         device_name_regex = self.config["acd.device_name_regex"]
         if devices:
             for device in devices["devices"]:
@@ -539,11 +441,11 @@ class RoomManager:
                 ):
                     return True
 
-    async def get_user_devices(self, user_id: UserID, intent: IntentAPI) -> Dict[str, List[Dict]]:
+    async def get_user_devices(self, user_id: UserID) -> Dict[str, List[Dict]]:
         """Get devices where agent have sessions"""
         response: Dict[str, List[Dict]] = None
         try:
-            api = intent.bot.api if intent.bot else intent.api
+            api = self.intent.bot.api if self.intent.bot else self.intent.api
             response = await api.request(
                 method=Method.GET, path=f"/_synapse/admin/v2/users/{user_id}/devices"
             )
@@ -553,7 +455,6 @@ class RoomManager:
 
         return response
 
-    @update_intent
     async def get_room_creator(self, room_id: RoomID) -> str:
         """Given a room, get its creator.
 
@@ -561,8 +462,6 @@ class RoomManager:
         ----------
         room_id: RoomID
             Room to check.
-        intent: IntentAPI
-            Matrix client.
 
         Returns
         -------
@@ -585,14 +484,11 @@ class RoomManager:
 
         return creator
 
-    @update_intent
     async def kick_menubot(self, room_id: RoomID, reason: str, control_room_id: RoomID) -> None:
         """Kick menubot from some room."""
-        menubot_id = await self.get_menubot_id(intent=self.intent, room_id=room_id)
+        menubot_id = await self.get_menubot_id(room_id=room_id)
         if menubot_id:
-            await self.send_menubot_command(
-                menubot_id, "cancel_task", control_room_id, self.intent, room_id
-            )
+            await self.send_menubot_command(menubot_id, "cancel_task", control_room_id, room_id)
             try:
                 self.log.debug(f"Kicking the menubot [{menubot_id}]")
                 await self.intent.kick_user(room_id=room_id, user_id=menubot_id, reason=reason)
@@ -608,7 +504,6 @@ class RoomManager:
         menubot_id: UserID,
         command: str,
         control_room_id: RoomID,
-        intent: IntentAPI,
         *args: Tuple,
     ) -> None:
         """Send a command to menubot."""
@@ -623,12 +518,9 @@ class RoomManager:
             cmd = cmd.strip()
 
             self.log.debug(f"Sending command {command} for the menubot [{menubot_id}]")
-            await intent.send_text(room_id=control_room_id, text=cmd)
+            await self.intent.send_text(room_id=control_room_id, text=cmd)
 
-    @update_intent
-    async def get_menubot_id(
-        self, intent: IntentAPI, room_id: RoomID = None, user_id: UserID = None
-    ) -> UserID:
+    async def get_menubot_id(self, room_id: RoomID = None, user_id: UserID = None) -> UserID:
         """Get menubot_id by room_id or user_id or user_prefix"""
 
         menubot_id: UserID = None
@@ -638,7 +530,7 @@ class RoomManager:
             return menubot_id
 
         elif room_id:
-            members = await intent.get_joined_members(room_id=room_id)
+            members = await self.intent.get_joined_members(room_id=room_id)
             if members:
                 for user_id in members:
                     if user_id in self.config["acd.menubots"]:
@@ -668,7 +560,6 @@ class RoomManager:
 
         return menubot_id
 
-    @update_intent
     async def has_menubot(self, room_id: RoomID) -> bool:
         """If the room has a menubot, return True. Otherwise, return False
 
@@ -676,8 +567,6 @@ class RoomManager:
         ----------
         room_id : RoomID
             The room ID of the room you want to check.
-        intent : IntentAPI
-            IntentAPI
 
         Returns
         -------
@@ -700,7 +589,6 @@ class RoomManager:
 
         return False
 
-    @update_intent
     async def is_group_room(self, room_id: RoomID) -> bool:
         """It checks if a room has more than one user in it, and if it does, it returns True
 
@@ -708,8 +596,6 @@ class RoomManager:
         ----------
         room_id : RoomID
             The room ID of the room you want to check.
-        intent : IntentAPI
-            IntentAPI
 
         Returns
         -------
@@ -744,14 +630,11 @@ class RoomManager:
         self.ROOMS[room_id]["is_group_room"] = False
         return False
 
-    @update_intent
     async def invite_menu_bot(self, room_id: RoomID, menubot_id: UserID) -> None:
         """It tries to invite the menubot to the room, and if it fails, it waits a couple of seconds and tries again
 
         Parameters
         ----------
-        intent : IntentAPI
-            IntentAPI
         room_id : RoomID
             The room ID of the room you want to invite the menubot to.
         menubot_id : UserID
@@ -769,14 +652,11 @@ class RoomManager:
 
             await asyncio.sleep(2)
 
-    @update_intent
     async def invite_supervisors(self, room_id: RoomID) -> None:
         """It tries to invite the menubot to the room, and if it fails, it waits a couple of seconds and tries again
 
         Parameters
         ----------
-        intent : IntentAPI
-            IntentAPI
         room_id : RoomID
             The room ID of the room you want to invite the menubot to.
 
@@ -795,7 +675,6 @@ class RoomManager:
 
                 await asyncio.sleep(2)
 
-    @update_intent
     async def get_room_bridge(self, room_id: RoomID) -> str:
         """Given a room, get its bridge.
 
@@ -803,8 +682,6 @@ class RoomManager:
         ----------
         room_id: RoomID
             Room to check.
-        intent: IntentAPI
-            Matrix client.
 
         Returns
         -------
@@ -836,7 +713,6 @@ class RoomManager:
 
         return None
 
-    @update_intent
     async def get_room_name(self, room_id: RoomID) -> str:
         """Given a room, get its name.
 
@@ -844,8 +720,6 @@ class RoomManager:
         ----------
         room_id: RoomID
             Room to check.
-        intent: IntentAPI
-            Matrix client.
 
         Returns
         -------
@@ -873,7 +747,6 @@ class RoomManager:
 
         return room_name
 
-    @update_intent
     async def get_room_info(self, room_id: RoomID) -> Dict:
         """Given a room, get its room_info.
 
@@ -881,8 +754,6 @@ class RoomManager:
         ----------
         room_id: RoomID
             Room to check.
-        intent: IntentAPI
-            Matrix client.
 
         Returns
         -------

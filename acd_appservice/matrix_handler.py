@@ -321,7 +321,6 @@ class MatrixHandler:
                     power_level=self.config["acd.supervisors_to_invite.power_level"],
                 )
 
-        puppet.intent = await puppet.room_manager.get_intent(user_id=user_id)
         if not puppet.intent:
             self.log.debug(f"The user who has joined is neither a puppet nor the appservice_bot")
             return
@@ -617,9 +616,7 @@ class MatrixHandler:
             room_name = await puppet.room_manager.get_room_name(room_id=room_id)
             if not room_name:
                 creator = await puppet.room_manager.get_room_creator(room_id=room_id)
-                new_room_name = await puppet.room_manager.get_update_name(
-                    creator=creator, intent=puppet.intent
-                )
+                new_room_name = await puppet.room_manager.get_update_name(creator=creator)
                 if new_room_name:
                     await puppet.intent.set_room_name(room_id=room_id, name=new_room_name)
                     self.log.info(
@@ -634,7 +631,7 @@ class MatrixHandler:
             if puppet.room_manager.in_offline_menu(room_id):
                 puppet.room_manager.pull_from_offline_menu(room_id)
                 valid_option = await self.process_offline_selection(
-                    room_id=room_id, msg=message.body, intent=puppet.intent
+                    room_id=room_id, msg=message.body
                 )
                 if valid_option:
                     return
@@ -645,15 +642,12 @@ class MatrixHandler:
                 await self.agent_manager.signaling.set_chat_status(
                     room_id=room_id, status=Signaling.PENDING, agent=room_agent
                 )
-                presence = await puppet.room_manager.get_user_presence(
-                    user_id=room_agent, intent=puppet.intent
-                )
+                presence = await puppet.room_manager.get_user_presence(user_id=room_agent)
                 if presence and presence.presence != PresenceState.ONLINE:
                     await self.process_offline_agent(
                         room_id=room_id,
                         room_agent=room_agent,
                         last_active_ago=presence.last_active_ago,
-                        intent=puppet.intent,
                     )
                 return
 
@@ -682,9 +676,7 @@ class MatrixHandler:
                 # invite menubot to show menu
                 # this is done with create_task because with no official API set-pl can take
                 # a while so several invite attempts are made without blocking
-                menubot_id = await puppet.room_manager.get_menubot_id(
-                    intent=puppet.intent, user_id=sender
-                )
+                menubot_id = await puppet.room_manager.get_menubot_id(user_id=sender)
                 if menubot_id:
                     asyncio.create_task(
                         puppet.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)
