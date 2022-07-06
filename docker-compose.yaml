@@ -19,19 +19,19 @@ services:
       - 8008:8008
 
 
-  # acd-az:
-  #   build: .
-  #   restart: unless-stopped
-  #   volumes:
-  #     - .:/opt/acd-appservice
-  #     - ./data:/data
-  #     # - /home/alejo/Documentos/ikono/python/mautrix:/usr/lib/python3.9/site-packages/mautrix
-  #   depends_on:
-  #     - acd-az-db
-  #     - synapse
-  #   entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="." /opt/acd-appservice/docker-run.sh
-  #   ports:
-  #     - 26666:26666
+  acd-az:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - .:/opt/acd-appservice
+      - ./data:/data
+      # - /home/alejo/Documentos/ikono/python/mautrix:/usr/lib/python3.9/site-packages/mautrix
+    depends_on:
+      - acd-az-db
+      - synapse
+    entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="." /opt/acd-appservice/docker-run.sh
+    ports:
+      - 26666:26666
 
   menubot:
     # NOTA: Esa tal imagen de testing no sirve
@@ -42,13 +42,13 @@ services:
       #- ./menubot/menubot.db:/opt/store/menubot.db
       - ./menubot/logs:/opt/logs
 
-  # acd-az-db:
-  #   image: postgres:10-alpine
-  #   restart: unless-stopped
-  #   environment:
-  #     POSTGRES_USER: ikono
-  #     POSTGRES_PASSWORD: secretfoo
-  #     POSTGRES_DB: acd_db
-  #     POSTGRES_INITDB_ARGS: --encoding=UTF-8 --lc-collate=C --lc-ctype=C
-  #   volumes:
-  #     - ./schemas-acd_az:/var/lib/postgresql/data
+  acd-az-db:
+    image: postgres:10-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ikono
+      POSTGRES_PASSWORD: secretfoo
+      POSTGRES_DB: acd_db
+      POSTGRES_INITDB_ARGS: --encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - ./schemas-acd_az:/var/lib/postgresql/data
