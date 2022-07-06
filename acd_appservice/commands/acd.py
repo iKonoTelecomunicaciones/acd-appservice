@@ -36,13 +36,9 @@ async def acd(evt: CommandEvent) -> str:
 
     # Se crea el proceso de distribución dado el puppet que esté en la sala del cliente
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
-    agent_manager: AgentManager = AgentManager(
-        room_manager=evt.agent_manager.room_manager,
-        intent=puppet.intent,
-        control_room_id=puppet.control_room_id,
-    )
+
     try:
-        await agent_manager.process_distribution(
+        await puppet.agent_manager.process_distribution(
             customer_room_id=customer_room_id,
             campaign_room_id=campaign_room_id,
             joined_message=joined_message,

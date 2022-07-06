@@ -10,6 +10,7 @@ from mautrix.types import ContentURI, RoomID, SyncToken, UserID
 from mautrix.util.simple_template import SimpleTemplate
 from yarl import URL
 
+from . import agent_manager as agent_m
 from . import room_manager as room_m
 from .config import Config
 from .db import Puppet as DBPuppet
@@ -77,6 +78,10 @@ class Puppet(DBPuppet, BasePuppet):
         self.default_mxid_intent = self.az.intent.user(self.default_mxid)
         # Refresca el intent de cada marioneta
         self.intent = self._fresh_intent()
+        self.room_manager = room_m.RoomManager(config=self.config, intent=self.intent)
+        self.agent_manager = agent_m.AgentManager(
+            intent=self.intent, room_manager=self.room_manager
+        )
 
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> AsyncIterable[Awaitable[None]]:

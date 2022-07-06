@@ -52,6 +52,7 @@ def update_intent(func: function):
             elif puppet == "pytest":
                 return await func(self, *args, **kargs)
             self.intent = puppet.intent
+            self.log.debug(f"#######  {self.intent.mxid} --- {func.__name__}")
         return await func(self, *args, **kargs)
 
     return wrapper
@@ -75,8 +76,9 @@ class RoomManager:
     # rooms that are in offline agent menu
     offline_menu = set()
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Config, intent: IntentAPI) -> None:
         self.config = config
+        self.intent = intent
 
     @classmethod
     def _add_to_cache(cls, room_id, room: Room) -> None:

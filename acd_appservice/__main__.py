@@ -64,18 +64,17 @@ class ACDAppService(ACD):
         )
         # Usan la app de aiohttp, creamos una subaplicacion especifica para la API
         self.az.app.add_subapp(api_route, self.provisioning_api.app)
-        self.matrix.room_manager = RoomManager(config=self.config)
 
         # Iniciamos la aplicación
         await super().start()
 
+        self.matrix.room_manager = RoomManager(config=self.config, intent=self.az.intent)
         # El manejador de agentes debe ir despues del start para poder utilizar los intents
         # Los intents de los puppets y el bot se inicializan en el start
         self.matrix.config = self.config
         self.matrix.agent_manager = AgentManager(
             room_manager=self.matrix.room_manager,
             intent=self.az.intent,
-            control_room_id=self.config["acd.control_room_id"],
         )
         self.matrix.agent_manager.client = self.provisioning_api.client
         self.provisioning_api.agent_manager = self.matrix.agent_manager
