@@ -162,7 +162,6 @@ acd:
         invite: false
         invitees:
             - "@supervisor:dominio_cliente.com"
-            - "@admin:dominio_cliente.com"
 bridges:
   mautrix:
     # Mautrix UserID
