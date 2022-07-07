@@ -3,7 +3,6 @@ import json
 import re
 from typing import Dict
 
-from aiohttp import ClientSession
 from markdown import markdown
 
 from ..http_client import ProvisionBridge

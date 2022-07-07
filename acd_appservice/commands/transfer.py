@@ -116,7 +116,7 @@ async def transfer_user(evt: CommandEvent) -> str:
         await evt.intent.send_notice(room_id=customer_room_id, text=msg)
     else:
         presence_response = await evt.agent_manager.room_manager.get_user_presence(
-            user_id=target_agent_id, intent=evt.intent
+            user_id=target_agent_id
         )
         evt.log.debug(
             f"PRESENCE RESPONSE: "
