@@ -389,7 +389,7 @@ class ProvisioningAPI:
         if not room_id:
             return web.json_response(**REQUIRED_VARIABLES)
 
-        puppet: Puppet = Puppet.get_customer_room_puppet(room_id=room_id)
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
 
         if not puppet:
             return web.json_response(**USER_DOESNOT_EXIST)
