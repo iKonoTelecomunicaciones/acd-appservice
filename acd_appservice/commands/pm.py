@@ -6,7 +6,6 @@ from typing import Dict
 from aiohttp import ClientSession
 from markdown import markdown
 
-from ..__main__ import client
 from ..http_client import ProvisionBridge
 from ..puppet import Puppet
 from ..signaling import Signaling
@@ -82,7 +81,8 @@ async def pm(evt: CommandEvent) -> Dict:
         return {"data": return_params, "status": 422}
 
     # Sending a message to the customer.
-    session = client.session
+    puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
+    session = puppet.client.session
     bridge_connector = ProvisionBridge(session=session, config=evt.config)
     status, data = await bridge_connector.pm(user_id=evt.intent.mxid, phone=phone_number)
 
@@ -174,7 +174,7 @@ async def pm(evt: CommandEvent) -> Dict:
         # kick menu bot
         evt.log.debug(f"Kicking the menubot out of the room {customer_room_id}")
         try:
-            puppet: Puppet = await Puppet.get_customer_room_puppet(customer_room_id)
+
             await evt.agent_manager.room_manager.kick_menubot(
                 room_id=customer_room_id,
                 reason=f"{evt.sender} pm existing room {customer_room_id}",

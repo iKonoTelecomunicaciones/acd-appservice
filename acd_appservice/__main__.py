@@ -134,6 +134,4 @@ class ACDAppService(ACD):
 
 
 # Se corre la aplicación
-acd_z = ACDAppService()
-acd_z.run()
-client = acd_z.provisioning_api.client
+ACDAppService().run()
