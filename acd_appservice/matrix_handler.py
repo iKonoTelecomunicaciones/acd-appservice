@@ -633,10 +633,10 @@ class MatrixHandler:
                 if valid_option:
                     return
 
-            room_agent = await self.agent_manager.get_room_agent(room_id=room_id)
+            room_agent = await puppet.agent_manager.get_room_agent(room_id=room_id)
             if room_agent:
                 # if message is not from agents, bots or ourselves, it is from the customer
-                await self.agent_manager.signaling.set_chat_status(
+                await puppet.agent_manager.signaling.set_chat_status(
                     room_id=room_id, status=Signaling.PENDING, agent=room_agent
                 )
                 presence = await puppet.room_manager.get_user_presence(user_id=room_agent)
@@ -658,7 +658,7 @@ class MatrixHandler:
 
             if not puppet.room_manager.is_room_locked(room_id=room_id):
 
-                await self.agent_manager.signaling.set_chat_status(
+                await puppet.agent_manager.signaling.set_chat_status(
                     room_id=room_id, status=Signaling.OPEN
                 )
 
@@ -666,7 +666,7 @@ class MatrixHandler:
                     asyncio.create_task(puppet.room_manager.invite_supervisors(room_id=room_id))
 
                 # clear campaign in the ik.chat.campaign_selection state event
-                await self.agent_manager.signaling.set_selected_campaign(
+                await puppet.agent_manager.signaling.set_selected_campaign(
                     room_id=room_id, campaign_room_id=None
                 )
 
