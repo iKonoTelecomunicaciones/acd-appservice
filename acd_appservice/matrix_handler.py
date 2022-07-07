@@ -227,7 +227,7 @@ class MatrixHandler:
             self.log.warning(detail)
             return
 
-        puppet: Puppet = await Puppet.get_puppet_by_mxid(mxid=evt.state_key)
+        puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.state_key)
         self.log.debug(f"The user {puppet.intent.mxid} is trying join in the room {evt.room_id}")
         await puppet.intent.join_room(evt.room_id)
 
