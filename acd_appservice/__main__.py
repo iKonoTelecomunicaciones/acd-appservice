@@ -76,7 +76,6 @@ class ACDAppService(ACD):
             room_manager=self.matrix.room_manager,
             intent=self.az.intent,
         )
-        self.matrix.agent_manager.client = self.provisioning_api.client
         self.provisioning_api.agent_manager = self.matrix.agent_manager
         # Creamos la tarea que va revisar si las salas pendintes ya tienen a un agente para asignar
         self.add_shutdown_actions(self.provisioning_api.client.session.close())

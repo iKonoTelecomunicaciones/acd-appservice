@@ -42,7 +42,7 @@ class RoomManager:
     # rooms that are in offline agent menu
     offline_menu = set()
 
-    def __init__(self, config: Config, intent: IntentAPI) -> None:
+    def __init__(self, config: Config, intent: IntentAPI = None) -> None:
         self.config = config
         self.intent = intent
 

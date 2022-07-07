@@ -11,7 +11,6 @@ from mautrix.errors.base import IntentError
 from mautrix.types import Member, PresenceState, RoomAlias, RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
-from .http_client import HTTPClient
 from .room_manager import RoomManager
 from .signaling import Signaling
 
@@ -19,7 +18,6 @@ from .signaling import Signaling
 class AgentManager:
     log: TraceLogger = logging.getLogger("acd.agent_manager")
     intent: IntentAPI
-    client: HTTPClient
     room_manager: RoomManager
     # last invited agent per control room (i.e. campaigns)
     CURRENT_AGENT = {}

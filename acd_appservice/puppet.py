@@ -16,7 +16,7 @@ from .config import Config
 from .db import Puppet as DBPuppet
 
 if TYPE_CHECKING:
-    from .__main__ import ACDAppService, client
+    from .__main__ import ACDAppService
 
 
 class Puppet(DBPuppet, BasePuppet):
@@ -82,7 +82,6 @@ class Puppet(DBPuppet, BasePuppet):
         self.agent_manager = agent_m.AgentManager(
             intent=self.intent, room_manager=self.room_manager
         )
-        self.agent_manager.client = client
         self.agent_manager.control_room_id = control_room_id
 
     @classmethod

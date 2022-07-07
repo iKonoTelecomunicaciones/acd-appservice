@@ -6,6 +6,7 @@ from typing import Dict
 from aiohttp import ClientSession
 from markdown import markdown
 
+from ..__main__ import client
 from ..http_client import ProvisionBridge
 from ..puppet import Puppet
 from ..signaling import Signaling
@@ -81,7 +82,7 @@ async def pm(evt: CommandEvent) -> Dict:
         return {"data": return_params, "status": 422}
 
     # Sending a message to the customer.
-    session: ClientSession = evt.agent_manager.client.session
+    session = client.session
     bridge_connector = ProvisionBridge(session=session, config=evt.config)
     status, data = await bridge_connector.pm(user_id=evt.intent.mxid, phone=phone_number)
 

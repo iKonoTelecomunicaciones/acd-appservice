@@ -123,7 +123,5 @@ class TestRoomManager:
             room_manager.RoomManager, "create_room_name", return_value=new_room_name
         )
         room_manager_mock.intent = None
-        result = await room_manager_mock.get_update_name(
-            creator="@mxwa_573058790293", intent=room_manager_mock.intent
-        )
+        result = await room_manager_mock.get_update_name(creator="@mxwa_573058790293")
         assert result == "Alejandro Herrera (573058790293)"
