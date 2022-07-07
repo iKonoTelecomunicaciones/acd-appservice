@@ -37,7 +37,8 @@ class CommandEvent:
         self.log = self.log.getChild(self.cmd)
         self.config = agent_manager.config
         self.intent = agent_manager.intent
-        self.room_manager = agent_manager.room_manager
+        self.agent_manager = agent_manager
+        self.room_manager = self.agent_manager.room_manager
         self.command_prefix = self.config["bridge.command_prefix"]
         self.sender = sender
         self.room_id = room_id
