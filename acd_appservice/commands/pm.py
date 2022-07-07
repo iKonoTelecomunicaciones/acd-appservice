@@ -5,7 +5,7 @@ from typing import Dict
 
 from markdown import markdown
 
-from ..http_client import ProvisionBridge
+from ..http_client import ProvisionBridge, client
 from ..puppet import Puppet
 from ..signaling import Signaling
 from .handler import command_handler
@@ -81,7 +81,7 @@ async def pm(evt: CommandEvent) -> Dict:
 
     # Sending a message to the customer.
     puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
-    session = puppet.client.session
+    session = client.session
     bridge_connector = ProvisionBridge(session=session, config=evt.config)
     status, data = await bridge_connector.pm(user_id=evt.intent.mxid, phone=phone_number)
 

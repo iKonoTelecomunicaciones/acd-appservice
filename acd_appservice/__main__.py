@@ -9,7 +9,7 @@ from .acd_program import ACD
 from .config import Config
 from .db import init as init_db
 from .db import upgrade_table
-from .http_client import HTTPClient, ProvisionBridge
+from .http_client import ProvisionBridge, client
 from .matrix_handler import MatrixHandler
 from .puppet import Puppet
 from .room_manager import RoomManager
@@ -56,7 +56,7 @@ class ACDAppService(ACD):
         self.provisioning_api = ProvisioningAPI()
         # Le damos acceso del archivo de configuración a la API
         self.provisioning_api.config = self.config
-        self.provisioning_api.client = HTTPClient(app=self.az.app)
+        self.provisioning_api.client = client
         await self.provisioning_api.client.init_session()
         self.provisioning_api.client.config = self.config
         self.provisioning_api.bridge_connector = ProvisionBridge(
