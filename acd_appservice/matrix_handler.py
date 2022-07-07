@@ -229,6 +229,9 @@ class MatrixHandler:
 
         puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.state_key)
         self.log.debug(f"The user {puppet.intent.mxid} is trying join in the room {evt.room_id}")
+        await RoomManager.save_room(
+            room_id=evt.room_id, selected_option=None, puppet_mxid=puppet.mxid
+        )
         await puppet.intent.join_room(evt.room_id)
 
     async def handle_disinvite(
