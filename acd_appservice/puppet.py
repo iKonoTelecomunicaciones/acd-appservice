@@ -14,10 +14,9 @@ from . import agent_manager as agent_m
 from . import room_manager as room_m
 from .config import Config
 from .db import Puppet as DBPuppet
-from .http_client import HTTPClient
 
 if TYPE_CHECKING:
-    from .__main__ import ACDAppService
+    from .__main__ import ACDAppService, client
 
 
 class Puppet(DBPuppet, BasePuppet):
@@ -31,7 +30,6 @@ class Puppet(DBPuppet, BasePuppet):
 
     config: Config
 
-    client: HTTPClient
     default_mxid_intent: IntentAPI
     default_mxid: UserID
 
@@ -84,7 +82,7 @@ class Puppet(DBPuppet, BasePuppet):
         self.agent_manager = agent_m.AgentManager(
             intent=self.intent, room_manager=self.room_manager
         )
-        self.agent_manager.client = self.client
+        self.agent_manager.client = client
         self.agent_manager.control_room_id = control_room_id
 
     @classmethod
