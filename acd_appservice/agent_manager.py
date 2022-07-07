@@ -16,7 +16,7 @@ from .signaling import Signaling
 
 
 class AgentManager:
-    log: TraceLogger
+    log: TraceLogger = logging.getLogger("acd.agent_manager")
     intent: IntentAPI
     room_manager: RoomManager
     # last invited agent per control room (i.e. campaigns)
