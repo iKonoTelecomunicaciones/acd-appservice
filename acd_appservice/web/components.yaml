@@ -38,6 +38,12 @@ components:
         was_read:
           type: boolean
 
+    ControlRoom:
+      type: object
+      properties:
+        room_id:
+          type: string
+
     LoginOk:
       type: object
       properties:
@@ -114,6 +120,14 @@ components:
           timestamp_send: 1654877677916
           timestamp_read: 1654877699166
           was_read: true
+
+    ControlRoomDataOk:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ControlRoom'
+      example:
+          room_id: "!JkbrMXRBOmnqacLMep:darknet"
 
     QrDataFail:
       type: object
@@ -202,6 +216,13 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/MessageDataOk'
+
+    ControlRoomFound:
+      description: ControlRoom.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ControlRoomDataOk'
 
     LoginSuccessful:
       description: QR has been generated.
