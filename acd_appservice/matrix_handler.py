@@ -45,9 +45,6 @@ class MatrixHandler:
     config: config.BaseBridgeConfig
     acd_appservice: acd_program.ACD
 
-    agent_manager: AgentManager
-    room_manager: RoomManager
-
     def __init__(
         self,
         acd_appservice: acd_program.ACD | None = None,
@@ -146,7 +143,8 @@ class MatrixHandler:
             # Setting the room name to the customer's name.
             if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
                 unsigned: StateUnsigned = evt.unsigned
-                await self.room_manager.put_name_customer_room(
+                puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.room_id)
+                await puppet.room_manager.put_name_customer_room(
                     room_id=evt.room_id, old_name=unsigned.prev_content.name
                 )
 
