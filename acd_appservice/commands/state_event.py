@@ -3,7 +3,6 @@ from typing import Dict
 
 from mautrix.types import EventType
 
-from ..puppet import Puppet
 from .handler import command_handler
 from .typehint import CommandEvent
 
@@ -63,11 +62,6 @@ async def state_event(evt: CommandEvent) -> Dict:
     else:
         content = incoming_params.get("content")
 
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
-    if puppet:
-        evt.agent_manager.signaling.intent = puppet.intent
-        await evt.agent_manager.signaling.send_state_event(
-            room_id=room_id, event_type=event_type, content=content
-        )
-    else:
-        evt.log.error(f"No puppet found to create the tag {content}")
+    await evt.agent_manager.signaling.send_state_event(
+        room_id=room_id, event_type=event_type, content=content
+    )

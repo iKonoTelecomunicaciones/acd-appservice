@@ -404,8 +404,7 @@ class MatrixHandler:
                 cmd=args[0],
                 sender=room_agent,
                 room_id=room_id,
-                config=self.config,
-                intent=puppet.intent,
+                agent_manager=puppet.agent_manager,
                 text=fake_command,
                 args=args,
             )
@@ -498,8 +497,7 @@ class MatrixHandler:
                     cmd=args[0],
                     sender=room_agent,
                     room_id=room_id,
-                    config=self.config,
-                    intent=puppet.intent,
+                    agent_manager=puppet.agent_manager,
                     text=fake_command,
                     args=args,
                 )
@@ -560,8 +558,7 @@ class MatrixHandler:
                 cmd=args[0],
                 sender=sender,
                 room_id=room_id,
-                intent=puppet.intent,
-                config=self.config,
+                agent_manager=puppet.agent_manager,
                 text=text,
                 args=args,
             )
