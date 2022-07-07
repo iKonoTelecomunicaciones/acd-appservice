@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import re
 from typing import TYPE_CHECKING, AsyncGenerator, AsyncIterable, Awaitable, List, cast
 
@@ -82,6 +83,7 @@ class Puppet(DBPuppet, BasePuppet):
         self.agent_manager = agent_m.AgentManager(
             intent=self.intent, room_manager=self.room_manager
         )
+        asyncio.create_task(self.agent_manager.process_pending_rooms())
         self.agent_manager.control_room_id = control_room_id
 
     @classmethod

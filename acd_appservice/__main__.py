@@ -72,15 +72,15 @@ class ACDAppService(ACD):
         # El manejador de agentes debe ir despues del start para poder utilizar los intents
         # Los intents de los puppets y el bot se inicializan en el start
         self.matrix.config = self.config
-        self.matrix.agent_manager = AgentManager(
-            room_manager=self.matrix.room_manager,
-            intent=self.az.intent,
-        )
-        self.provisioning_api.agent_manager = self.matrix.agent_manager
+        # self.matrix.agent_manager = AgentManager(
+        #     room_manager=self.matrix.room_manager,
+        #     intent=self.az.intent,
+        # )
+        # self.provisioning_api.agent_manager = self.matrix.agent_manager
         # Creamos la tarea que va revisar si las salas pendintes ya tienen a un agente para asignar
         self.add_shutdown_actions(self.provisioning_api.client.session.close())
         asyncio.create_task(self.checking_whatsapp_connection())
-        asyncio.create_task(self.matrix.agent_manager.process_pending_rooms())
+        # asyncio.create_task(self.matrix.agent_manager.process_pending_rooms())
 
     def prepare_stop(self) -> None:
         # Detenemos todos los puppets que se estén sincronizando con el Synapse
