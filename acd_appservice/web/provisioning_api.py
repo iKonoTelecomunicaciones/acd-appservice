@@ -69,6 +69,9 @@ class ProvisioningAPI:
         swagger.add_get(path="/v1/link_phone", handler=self.link_phone, allow_head=False)
         swagger.add_get(path="/v1/ws_link_phone", handler=self.ws_link_phone, allow_head=False)
         swagger.add_get(path="/v1/read_check", handler=self.read_check, allow_head=False)
+        swagger.add_get(
+            path="/v1/get_control_room", handler=self.get_control_room, allow_head=False
+        )
 
         # Commads endpoint
         swagger.add_post(path="/v1/cmd/pm", handler=self.pm)
@@ -357,6 +360,41 @@ class ProvisioningAPI:
             return web.json_response(**MESSAGE_NOT_FOUND)
 
         return web.json_response(data=message.__dict__)
+
+    async def get_control_room(self, request: web.Request) -> web.Response:
+        """
+        ---
+        summary:        Given a room obtains the acd control room*.
+        tags:
+            - users
+
+        parameters:
+        - in: query
+          name: room_id
+          schema:
+            type: string
+          required: true
+          description: control room
+
+        responses:
+            '200':
+                $ref: '#/components/responses/ControlRoomFound'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+        """
+
+        room_id = request.rel_url.query["room_id"]
+        if not room_id:
+            return web.json_response(**REQUIRED_VARIABLES)
+
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        return web.json_response(data={"control_room_id": puppet.control_room_id})
 
     async def pm(self, request: web.Request) -> web.Response:
         """
