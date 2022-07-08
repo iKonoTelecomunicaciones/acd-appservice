@@ -208,9 +208,6 @@ class ProvisioningAPI:
                     control_room_id = await puppet.intent.create_room(
                         name=f"CONTROL ROOM ({puppet.email})",
                         topic="Control room",
-                        alias_localpart=f"control-room-{puppet.pk}",
-                        visibility=RoomDirectoryVisibility.PUBLIC,
-                        preset=RoomCreatePreset.PUBLIC,
                         invitees=[
                             self.config["bridges.mautrix.mxid"],
                             self.config["bridge.provisioning.admin_provisioning"],
@@ -218,6 +215,9 @@ class ProvisioningAPI:
                     )
 
                 puppet.control_room_id = control_room_id
+                await puppet.room_manager.save_room(
+                    room_id=control_room_id, selected_option=None, puppet_mxid=puppet.mxid
+                )
                 # Ahora si guardamos la sala de control en el puppet.control_room_id
                 await puppet.save()
                 # Si quieres configurar el estado inicial de los puppets, puedes hacerlo en esta
