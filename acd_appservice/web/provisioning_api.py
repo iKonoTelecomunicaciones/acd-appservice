@@ -11,7 +11,14 @@ import aiohttp_cors
 from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from markdown import markdown
-from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent
+from mautrix.types import (
+    Format,
+    MessageType,
+    RoomCreatePreset,
+    RoomDirectoryVisibility,
+    RoomID,
+    TextMessageEventContent,
+)
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
@@ -199,15 +206,22 @@ class ProvisioningAPI:
                     # NOTA: primero debe estar registrado el puppet en la db antes de crear la sala,
                     # ya que para crear una sala se necesita la pk del puppet (para usarla como fk)
                     control_room_id = await puppet.intent.create_room(
+                        name=f"CONTROL ROOM ({puppet.email})",
+                        topic="Control room",
+                        alias_localpart=f"control-room-{puppet.pk}",
+                        visibility=RoomDirectoryVisibility.PUBLIC,
+                        preset=RoomCreatePreset.PUBLIC,
                         invitees=[
                             self.config["bridges.mautrix.mxid"],
                             self.config["bridge.provisioning.admin_provisioning"],
-                        ]
+                        ],
                     )
 
                 puppet.control_room_id = control_room_id
                 # Ahora si guardamos la sala de control en el puppet.control_room_id
                 await puppet.save()
+                # Si quieres configurar el estado inicial de los puppets, puedes hacerlo en esta
+                # funcion
                 await puppet.sync_puppet_account()
             except Exception as e:
                 self.log.exception(e)
