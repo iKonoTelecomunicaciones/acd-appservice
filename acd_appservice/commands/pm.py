@@ -173,7 +173,6 @@ async def pm(evt: CommandEvent) -> Dict:
         # kick menu bot
         evt.log.debug(f"Kicking the menubot out of the room {customer_room_id}")
         try:
-
             await evt.agent_manager.room_manager.kick_menubot(
                 room_id=customer_room_id,
                 reason=f"{evt.sender} pm existing room {customer_room_id}",
