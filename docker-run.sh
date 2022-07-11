@@ -1,10 +1,6 @@
 #!/bin/sh
 cd /opt/acd-appservice
 
-if [ $DEV == "true"]; then
-	echo "Installing development requirements"
-	exec pip install -r requirements-dev.txt
-fi
 
 if [ ! -f /data/config.yaml ]; then
 	cp example-config.yaml /data/config.yaml
