@@ -1,6 +1,11 @@
 #!/bin/sh
 cd /opt/acd-appservice
 
+if [ $DEV == "true"]; then
+	echo "Installing development requirements"
+	exec pip install -r requirements-dev.txt
+fi
+
 if [ ! -f /data/config.yaml ]; then
 	cp example-config.yaml /data/config.yaml
 	echo "Didn't find a config file."
@@ -11,10 +16,8 @@ if [ ! -f /data/config.yaml ]; then
 fi
 
 if [ ! -f /data/registration.yaml ]; then
-	echo "Cargando archivo /data/registration.yaml"
 	python3 -m acd_appservice -g -c /data/config.yaml -r /data/registration.yaml
 	exit
 fi
 
-echo "Sin carga de archivo /data/registration.yaml"
 exec python3 -m acd_appservice -c /data/config.yaml

@@ -5,6 +5,8 @@ version: "3.9"
 # NOTA EJECUTAR DOS VECES ESTE COMANDO
 # CORRER ESTE COMANDO ANTES DE HACER EL up -d ::: docker run --rm -v $(pwd)/configs/gupshup:/data ikonoim/mautrix-gupshup:stable
 
+# PARA CREAR LA DB DEL Synapse
+# CREATE DATABASE synapse ENCODING 'UTF8' LC_COLLATE='C' LC_CTYPE='C' template=template0 OWNER ikono;
 
 # Si sale el error PermissionError: [Errno 13] Permission denied: '/opt/docker-run.sh' usar ::: sudo chmod 755 menu-bot/docker-run.sh
 services:
@@ -18,8 +20,8 @@ services:
     ports:
       - 8008:8008
 
-
   acd-az:
+    image: ikonoim/acd-appservice:testing
     build: .
     restart: unless-stopped
     volumes:
@@ -34,13 +36,21 @@ services:
       - 26666:26666
 
   menubot:
-    # NOTA: Esa tal imagen de testing no sirve
     image: ikonoim/menubot:stable
     restart: unless-stopped
     volumes:
       - ./menubot/menubot_config.yaml:/opt/config/config.yaml
       #- ./menubot/menubot.db:/opt/store/menubot.db
       - ./menubot/logs:/opt/logs
+
+    depends_on:
+      - synapse
+
+  whatsapp:
+    image: dock.mau.dev/mautrix/whatsapp:v0.4.0
+    restart: unless-stopped
+    volumes:
+      - ./whatsapp:/data
 
   acd-az-db:
     image: postgres:10-alpine

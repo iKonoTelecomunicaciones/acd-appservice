@@ -44,7 +44,6 @@ appservice:
 
 # Bridge config
 bridge:
-
     # Localpart template of MXIDs for AppService users.
     # {userid} is replaced with the user ID of the AppService user.
     command_prefix: "!acd"
@@ -65,7 +64,7 @@ bridge:
         # The prefix to use in the provisioning API endpoints.
         prefix: /provision
         # Admin of the rooms created by provisioning
-        admin_provisioning: "@admin:example.com"
+        admin: "@admin:example.com"
 
 acd:
     # Regex for get the puppet ID

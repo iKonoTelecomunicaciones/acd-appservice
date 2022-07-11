@@ -131,7 +131,7 @@ bridge:
     # Para invitar al admin a las salas de control
     provisioning:
         # Admin of the rooms created by provisioning
-        admin_provisioning: "@admin:dominio_cliente.com"
+        admin: "@admin:dominio_cliente.com"
     ...
 acd:
     # Sala de control del acd que vamos a reemplazar,
