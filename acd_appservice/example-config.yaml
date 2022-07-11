@@ -64,7 +64,7 @@ bridge:
         # The prefix to use in the provisioning API endpoints.
         prefix: /provision
         # Admin of the rooms created by provisioning
-        admin: "@admin:example.com"
+        admin: "@admin:dominio_cliente.com"
 
 acd:
     # Regex for get the puppet ID
@@ -82,16 +82,16 @@ acd:
     # If menubot.active is false, then menubots should have more than one menubot.
     menubot:
         active: true
-        user_id: "@menubot:example.com"
+        user_id: "@menubot:dominio_cliente.com"
         command_prefix: "!menubot"
 
     menubots:
-      "@menubota:example.com":
+      "@menubota:dominio_cliente.com":
         user_prefix: "gswA"
         command_prefix: "!menubotA"
         is_guest: true
 
-      "@menubotb:example.com":
+      "@menubotb:dominio_cliente.com":
         user_prefix: "gswB"
         command_prefix: "!menubotB"
 
@@ -115,7 +115,7 @@ acd:
         # If active is true, then invite users to invitees
         invite: false
         invitees:
-            - "@supervisor:example.com"
+            - "@supervisor:dominio_cliente.com"
     voice_call:
         call_message: "Incoming call"
         no_voice_call: "Hola! Te informamos que no atendemos llamadas de WhatsApp. Por favor envíanos un mensaje para comunicarte con nosotros."

@@ -11,14 +11,7 @@ import aiohttp_cors
 from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from markdown import markdown
-from mautrix.types import (
-    Format,
-    MessageType,
-    RoomCreatePreset,
-    RoomDirectoryVisibility,
-    RoomID,
-    TextMessageEventContent,
-)
+from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
