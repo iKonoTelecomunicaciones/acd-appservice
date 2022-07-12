@@ -55,6 +55,9 @@ class MatrixHandler:
         self.az.matrix_event_handler(self.int_handle_event)
 
     async def wait_for_connection(self) -> None:
+        """It tries to connect to the homeserver, and if it fails,
+        it waits 10 seconds and tries again. If it fails 6 times, it gives up
+        """
         self.log.info("Ensuring connectivity to homeserver")
         errors = 0
         tried_to_register = False

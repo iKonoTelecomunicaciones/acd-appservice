@@ -1,6 +1,5 @@
 """Este archivo almacena todas las respuestas de error que se repiten en la API"""
 
-
 NOT_DATA = {
     "data": {"error": "Please provide some data"},
     "status": 400,
@@ -25,7 +24,6 @@ MESSAGE_TYPE_NOT_SUPPORTED = {
     "data": {"error": "This type of message is not supported"},
     "status": 400,
 }
-
 
 USER_DOESNOT_EXIST = {
     "data": {"error": "User doesn't exist"},

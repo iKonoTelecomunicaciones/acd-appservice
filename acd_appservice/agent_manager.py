@@ -32,7 +32,7 @@ class AgentManager:
         self.config = room_manager.config
         self.room_manager = room_manager
         self.signaling = Signaling(intent=self.intent, config=self.config)
-        self.log = self.log.getChild(f"acd.{self.intent.mxid}.agent_manager")
+        self.log = self.log.getChild(self.intent.mxid)
 
     async def process_distribution(
         self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
@@ -268,7 +268,6 @@ class AgentManager:
 
                 if not transfer_author:
                     self.log.debug(f"Saving room [{customer_room_id}] in pending list")
-                    # self.bot.store.save_pending_room(customer_room_id, campaign_room_id) # TODO GUARDAR EN BASE DE DATOS
                     await RoomManager.save_pending_room(
                         room_id=customer_room_id,
                         selected_option=campaign_room_id,
@@ -445,7 +444,6 @@ class AgentManager:
                     change_selected_option=True if campaign_room_id else False,
                 )
                 self.log.debug(f"Removing room [{customer_room_id}] from pending list")
-                # self.bot.store.remove_pending_room(customer_room_id) # TODO BASE DE DATOS
                 await RoomManager.remove_pending_room(
                     room_id=customer_room_id,
                 )

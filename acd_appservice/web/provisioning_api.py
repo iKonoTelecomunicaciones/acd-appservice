@@ -35,9 +35,7 @@ from .error_responses import (
     USER_DOESNOT_EXIST,
 )
 
-LOGIN_PENDING_PROMISES = {}
 LOGOUT_PENDING_PROMISES = {}
-MESSAGE_PENDING_PROMISES = {}
 
 
 class ProvisioningAPI:
