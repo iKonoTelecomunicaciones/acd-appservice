@@ -13,7 +13,7 @@ from .matrix_handler import MatrixHandler
 from .puppet import Puppet
 from .web.provisioning_api import ProvisioningAPI
 
-ptvsd.enable_attach(address=("0.0.0.0", 5678))
+ptvsd.enable_attach(address=("0.0.0.0/debug", 29000))
 
 
 class ACDAppService(ACD):
