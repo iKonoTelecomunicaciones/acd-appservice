@@ -218,7 +218,7 @@ class AgentManager:
             joined_members = await self.intent.get_room_members(room_id=customer_room_id)
             if not joined_members:
                 self.log.debug(f"No joined members in the room [{customer_room_id}]")
-                RoomManager.unlock_room(customer_room_id, transfer=transfer)
+                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
                 break
 
             if len(joined_members) == 1 and joined_members[0] == self.intent.mxid:
@@ -227,7 +227,7 @@ class AgentManager:
                 await self.intent.leave_room(
                     room_id=customer_room_id, reason="NOBODY IN THIS ROOM, I'M LEAVING"
                 )
-                RoomManager.unlock_room(customer_room_id, transfer=transfer)
+                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
                 break
 
             if agent_id != transfer_author:

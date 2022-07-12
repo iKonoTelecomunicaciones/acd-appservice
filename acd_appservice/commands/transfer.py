@@ -35,7 +35,7 @@ async def transfer(evt: CommandEvent) -> str:
 
     # Checking if the room is locked, if it is, it returns.
     if evt.agent_manager.room_manager.is_room_locked(room_id=customer_room_id, transfer=True):
-        evt.log.debug(f"Room: {customer_room_id} LOCKED by Transfer")
+        evt.log.debug(f"Room: {customer_room_id} LOCKED by Transfer room")
         return
 
     evt.log.debug(f"INIT TRANSFER to ROOM {campaign_room_id}")
@@ -94,7 +94,7 @@ async def transfer_user(evt: CommandEvent) -> str:
 
     # Checking if the room is locked, if it is, it returns.
     if evt.agent_manager.room_manager.is_room_locked(room_id=customer_room_id, transfer=True):
-        evt.log.debug(f"Room: {customer_room_id} LOCKED by Transfer")
+        evt.log.debug(f"Room: {customer_room_id} LOCKED by Transfer user")
         return
 
     evt.log.debug(f"INIT TRANSFER to AGENT {target_agent_id}")
