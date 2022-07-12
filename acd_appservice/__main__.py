@@ -65,8 +65,6 @@ class ACDAppService(ACD):
         # Iniciamos la aplicación
         await super().start()
 
-        # El manejador de agentes debe ir despues del start para poder utilizar los intents
-        # Los intents de los puppets y el bot se inicializan en el start
         self.matrix.config = self.config
 
         self.add_shutdown_actions(self.provisioning_api.client.session.close())
