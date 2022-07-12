@@ -1,5 +1,6 @@
 import asyncio
 
+import ptvsd
 from mautrix.types import UserID
 
 from . import VERSION
@@ -11,6 +12,8 @@ from .http_client import ProvisionBridge, client
 from .matrix_handler import MatrixHandler
 from .puppet import Puppet
 from .web.provisioning_api import ProvisioningAPI
+
+ptvsd.enable_attach(address=("0.0.0.0", 5678))
 
 
 class ACDAppService(ACD):

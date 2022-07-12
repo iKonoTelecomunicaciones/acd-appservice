@@ -7,3 +7,4 @@ commonmark==0.9.1
 aiohttp-swagger3==0.7.1
 aiohttp-cors==0.7.0
 Markdown==3.3.6
+ptvsd==4.3.2
