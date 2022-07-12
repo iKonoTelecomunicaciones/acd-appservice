@@ -32,7 +32,7 @@ class AgentManager:
         self.config = room_manager.config
         self.room_manager = room_manager
         self.signaling = Signaling(intent=self.intent, config=self.config)
-        self.log = self.log.getChild(f"acd.{self.intent.mxid}-agent_manager")
+        self.log = self.log.getChild(f"acd.{self.intent.mxid}.agent_manager")
 
     async def process_distribution(
         self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
