@@ -449,9 +449,7 @@ class ProvisioningAPI:
               schema:
                 type: object
                 properties:
-                  user_email:
-                    type: string
-                  phone_number:
+                  customer_phone:
                     type: string
                   template_message:
                     type: string
@@ -461,7 +459,8 @@ class ProvisioningAPI:
                     type: string
                 example:
                     user_email: "nobody@somewhere.com"
-                    phone_number: "573123456789"
+                    customer_phone: "573123456789"
+                    company_phone: "57398765432"
                     template_message: "Hola iKono!!"
                     template_name: "text"
                     agent_id: "@agente1:somewhere.com"
@@ -482,27 +481,31 @@ class ProvisioningAPI:
         data: Dict = await request.json()
 
         if not (
-            data.get("phone_number")
+            data.get("customer_phone")
             and data.get("template_message")
             and data.get("template_name")
-            and data.get("user_email")
+            and (data.get("user_email") or data.get("company_phone"))
             and data.get("agent_id")
         ):
             return web.json_response(**REQUIRED_VARIABLES)
 
-        email = data.get("user_email").lower()
-        error_result = await self.validate_email(user_email=email)
+        if data.get("user_email"):
+            email = data.get("user_email").lower()
+            error_result = await self.validate_email(user_email=email)
+            if error_result:
+                return web.json_response(**error_result)
 
-        if error_result:
-            return web.json_response(**error_result)
+            puppet: Puppet = await Puppet.get_by_email(email)
+            if not puppet:
+                return web.json_response(**USER_DOESNOT_EXIST)
 
-        # Obtenemos el puppet de este email si existe
-        puppet: Puppet = await Puppet.get_by_email(email)
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
+        if data.get("company_phone"):
+            puppet: Puppet = await Puppet.get_by_phone(data.get("company_phone"))
+            if not puppet:
+                return web.json_response(**USER_DOESNOT_EXIST)
 
         incoming_params = {
-            "phone_number": data.get("phone_number"),
+            "phone_number": data.get("customer_phone"),
             "template_message": data.get("template_message"),
             "template_name": data.get("template_name"),
         }
