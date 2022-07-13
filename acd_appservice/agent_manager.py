@@ -262,12 +262,9 @@ class AgentManager:
                     msg = "No hay agentes disponibles para la transferencia."
                     await self.intent.send_notice(room_id=customer_room_id, text=msg)
                 else:
-                    try:
-                        await self.show_no_agents_message(  # TODO BUSCAR ERROR, NO SE ENVIA EL MENSAJE Y LA SALA QUEDA BLOQUEADA
-                            customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
-                        )
-                    except Exception as e:
-                        self.log.exception(e)
+                    await self.show_no_agents_message(
+                        customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
+                    )
 
                 if not transfer_author:
                     self.log.debug(f"Saving room [{customer_room_id}] in pending list")
