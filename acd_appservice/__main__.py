@@ -119,8 +119,8 @@ class ACDAppService(ACD):
                         )
 
                         # Actualizamos el numero registrado para este puppet
-                        puppet.phone = response.get("whatsapp").get("phone")
-                        await puppet.save()
+                        # puppet.phone = response.get("whatsapp").get("phone")
+                        # await puppet.save()
 
                     else:
                         self.log.warning(
