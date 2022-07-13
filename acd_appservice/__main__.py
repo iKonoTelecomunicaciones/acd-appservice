@@ -118,6 +118,10 @@ class ACDAppService(ACD):
                             text="✅ I am connected to WhastApp ✅",
                         )
 
+                        # Actualizamos el numero registrado para este puppet
+                        puppet.phone = response.get("whatsapp").get("phone")
+                        await puppet.save()
+
                     else:
                         self.log.warning(
                             f"The user [{puppet_id}] :: [{puppet.email}]"

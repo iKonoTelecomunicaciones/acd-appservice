@@ -19,7 +19,7 @@ class Puppet:
 
     pk: int | None
     email: str | None
-    name: str | None
+    phone: str | None
     username: str | None
     photo_id: str | None
     photo_mxc: ContentURI | None
@@ -38,7 +38,7 @@ class Puppet:
     def _values(self):
         return (
             self.email,
-            self.name,
+            self.phone,
             self.username,
             self.photo_id,
             self.photo_mxc,
@@ -54,7 +54,7 @@ class Puppet:
 
     async def insert(self) -> None:
         q = (
-            "INSERT INTO puppet (email, name, username, photo_id, photo_mxc, name_set, avatar_set,"
+            "INSERT INTO puppet (email, phone, username, photo_id, photo_mxc, name_set, avatar_set,"
             "                    is_registered, custom_mxid, access_token, next_batch, base_url, control_room_id) "
             "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
         )
@@ -62,7 +62,7 @@ class Puppet:
 
     async def update(self) -> None:
         q = (
-            "UPDATE puppet SET email=$1, name=$2, username=$3, photo_id=$4, photo_mxc=$5, name_set=$6,"
+            "UPDATE puppet SET email=$1, phone=$2, username=$3, photo_id=$4, photo_mxc=$5, name_set=$6,"
             "                  avatar_set=$7, is_registered=$8, custom_mxid=$9, access_token=$10,"
             "                  next_batch=$11, base_url=$12, control_room_id=$13 "
             "WHERE email=$1"
@@ -80,7 +80,7 @@ class Puppet:
     @property
     def query(cls) -> str:
         return (
-            "SELECT pk, email, name, username, photo_id, photo_mxc, name_set, avatar_set,"
+            "SELECT pk, email, phone, username, photo_id, photo_mxc, name_set, avatar_set,"
             "is_registered, custom_mxid, access_token, next_batch, base_url, control_room_id "
             "FROM puppet WHERE"
         )
@@ -105,6 +105,14 @@ class Puppet:
     async def get_by_email(cls, email: str) -> Puppet | None:
         q = f"{cls.query} email=$1"
         row = await cls.db.fetchrow(q, email)
+        if not row:
+            return None
+        return cls._from_row(row)
+
+    @classmethod
+    async def get_by_phone(cls, phone: str) -> Puppet | None:
+        q = f"{cls.query} phone=$1"
+        row = await cls.db.fetchrow(q, phone)
         if not row:
             return None
         return cls._from_row(row)
