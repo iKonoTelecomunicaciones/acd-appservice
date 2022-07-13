@@ -262,7 +262,7 @@ class AgentManager:
                     msg = "No hay agentes disponibles para la transferencia."
                     await self.intent.send_notice(room_id=customer_room_id, text=msg)
                 else:
-                    await self.show_no_agents_message(
+                    await self.show_no_agents_message(  # TODO BUSCAR ERROR, NO SE ENVIA EL MENSAJE Y LA SALA QUEDA BLOQUEADA
                         customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
                     )
 
