@@ -606,7 +606,6 @@ class AgentManager:
                 menubot_id,
                 "no_agents_message",
                 self.control_room_id,
-                self.intent,
                 customer_room_id,
                 campaign_room_id,
             )
