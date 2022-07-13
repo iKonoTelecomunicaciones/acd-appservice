@@ -72,7 +72,6 @@ class ProvisioningAPI:
         swagger.add_get(
             path="/v1/get_control_room", handler=self.get_control_room, allow_head=False
         )
-        swagger.add_get(path="/v1/puppet", handler=self.get_puppet, allow_head=False)
 
         # Commads endpoint
         swagger.add_post(path="/v1/cmd/pm", handler=self.pm)
@@ -396,41 +395,6 @@ class ProvisioningAPI:
             return web.json_response(**USER_DOESNOT_EXIST)
 
         return web.json_response(data={"control_room_id": puppet.control_room_id})
-
-    async def get_puppet(self, request: web.Request) -> web.Response:
-        """
-        ---
-        summary:        Given a phone obtains the puppet*.
-        tags:
-            - users
-
-        parameters:
-        - in: query
-          phone: phone
-          schema:
-            type: string
-          required: true
-          description: puppet
-
-        responses:
-            '200':
-                $ref: '#/components/responses/ControlRoomFound'
-            '400':
-                $ref: '#/components/responses/BadRequest'
-            '404':
-                $ref: '#/components/responses/NotExist'
-        """
-
-        phone = request.rel_url.query["phone"]
-        if not phone:
-            return web.json_response(**REQUIRED_VARIABLES)
-
-        puppet: Puppet = await Puppet.get_by_phone(phone)
-
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
-
-        return web.json_response(data=puppet.__dict__)
 
     async def pm(self, request: web.Request) -> web.Response:
         """
