@@ -136,31 +136,32 @@ class MatrixHandler:
             elif evt.content.membership == Membership.JOIN:
                 if prev_membership != Membership.JOIN:
                     await self.handle_join(evt.room_id, UserID(evt.state_key), evt.event_id)
+                else:
+                    # Setting the room name to the customer's name.
+                    if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
+                        self.log.debug(f"The room name for the room {evt.room_id} will be changed")
+                        unsigned: StateUnsigned = evt.unsigned
+                        puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.room_id)
+                        await puppet.room_manager.put_name_customer_room(
+                            room_id=evt.room_id, old_name=unsigned.prev_content.name
+                        )
+
+                    # Cuando el cliente cambia su perfil, ya sea que se quiera conservar el viejo
+                    # nombre o no, este código, se encarga de actualizar el nombre
+                    # en la caché de salas, si y solo si, la sala está cacheada en el
+                    # diccionario RoomManager.ROOMS
+                    try:
+                        content: RoomNameStateEventContent = evt.content
+                        RoomManager.ROOMS[evt.room_id]["name"] = content.name
+                    except KeyError:
+                        pass
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
             evt: MessageEvent = evt
             if evt.content.msgtype == MessageType.NOTICE:
                 self.log.debug(f"Ignoring the notice message: {evt}")
                 return
             await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
-        elif isinstance(evt.type, EventType.ROOM_NAME):
-            # Setting the room name to the customer's name.
-            if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
-                self.log.debug(f"The room name for the room {evt.room_id} will be changed")
-                unsigned: StateUnsigned = evt.unsigned
-                puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.room_id)
-                await puppet.room_manager.put_name_customer_room(
-                    room_id=evt.room_id, old_name=unsigned.prev_content.name
-                )
 
-            # Cuando el cliente cambia su perfil, ya sea que se quiera conservar el viejo
-            # nombre o no, este código, se encarga de actualizar el nombre
-            # en la caché de salas, si y solo si, la sala está cacheada en el
-            # diccionario RoomManager.ROOMS
-            try:
-                content: RoomNameStateEventContent = evt.content
-                RoomManager.ROOMS[evt.room_id]["name"] = content.name
-            except KeyError:
-                pass
         elif evt.type.is_ephemeral and isinstance(evt, (ReceiptEvent)):
             await self.handle_ephemeral_event(evt)
 
