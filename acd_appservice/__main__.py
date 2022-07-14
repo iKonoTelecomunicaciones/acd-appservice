@@ -133,6 +133,9 @@ class ACDAppService(ACD):
                             text=f"🚫 I am not connected to WhastApp 🚫 ::"
                             f" Error {response.get('error')}",
                         )
+                        # Actualizamos en blanco el número del puppet
+                        puppet.phone = None
+                        await puppet.save()
 
             except Exception as e:
                 self.log.exception(e)
