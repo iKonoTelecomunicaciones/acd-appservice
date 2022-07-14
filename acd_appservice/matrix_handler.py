@@ -143,7 +143,7 @@ class MatrixHandler:
                         unsigned: StateUnsigned = evt.unsigned
                         puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.room_id)
                         await puppet.room_manager.put_name_customer_room(
-                            room_id=evt.room_id, old_name=unsigned.prev_content.name
+                            room_id=evt.room_id, old_name=unsigned.prev_content.displayname
                         )
 
                     # Cuando el cliente cambia su perfil, ya sea que se quiera conservar el viejo
