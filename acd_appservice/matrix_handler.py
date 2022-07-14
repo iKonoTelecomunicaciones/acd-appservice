@@ -142,7 +142,7 @@ class MatrixHandler:
                 self.log.debug(f"Ignoring the notice message: {evt}")
                 return
             await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
-        elif evt.type == EventType.ROOM_NAME:
+        elif isinstance(evt.type, EventType.ROOM_NAME):
             # Setting the room name to the customer's name.
             if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
                 self.log.debug(f"The room name for the room {evt.room_id} will be changed")
