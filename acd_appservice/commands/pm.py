@@ -128,7 +128,8 @@ async def pm(evt: CommandEvent) -> Dict:
     # Setting the return_params dict with the sender_id, phone_number, room_id and agent_displayname.
     return_params["sender_id"] = evt.sender
     return_params["phone_number"] = phone_number
-    return_params["room_id"] = data.get("room_id")
+    # Cuando ya hay otro agente en la sala, se debe enviar room_id en None
+    return_params["room_id"] = None if agent_id and agent_id != evt.sender else data.get("room_id")
     return_params["agent_displayname"] = agent_displayname if agent_displayname else None
 
     error = None

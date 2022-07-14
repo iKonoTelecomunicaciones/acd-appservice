@@ -45,6 +45,7 @@ class RoomManager:
     def __init__(self, config: Config, intent: IntentAPI = None) -> None:
         self.config = config
         self.intent = intent
+        self.log = self.log.getChild(self.intent.mxid)
 
     @classmethod
     def _add_to_cache(cls, room_id, room: Room) -> None:
