@@ -464,7 +464,8 @@ class ProvisioningAPI:
                 return web.json_response(**USER_DOESNOT_EXIST)
 
         if data.get("company_phone"):
-            puppet: Puppet = await Puppet.get_by_phone(data.get("company_phone"))
+            company_phone = data.get("company_phone").replace("+", "")
+            puppet: Puppet = await Puppet.get_by_phone(company_phone)
             if not puppet:
                 return web.json_response(**USER_DOESNOT_EXIST)
 
