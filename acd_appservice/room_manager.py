@@ -931,7 +931,9 @@ class RoomManager:
 
     # Seccion DB
     @classmethod
-    async def save_pending_room(cls, room_id: RoomID, selected_option: str = None) -> bool:
+    async def save_pending_room(
+        cls, room_id: RoomID, puppet_mxid: str, selected_option: str = None
+    ) -> bool:
         """Save or update a pending room.
 
         Parameters
@@ -949,11 +951,11 @@ class RoomManager:
         room = await Room.get_pending_room_by_room_id(room_id)
         if room:
             return await cls.update_pending_room_in_db(
-                room_id=room_id, selected_option=selected_option
+                room_id=room_id, selected_option=selected_option, puppet_mxid=puppet_mxid
             )
         else:
             return await cls.insert_pending_room_in_db(
-                room_id=room_id, selected_option=selected_option
+                room_id=room_id, selected_option=selected_option, puppet_mxid=puppet_mxid
             )
 
     @classmethod
@@ -1047,7 +1049,9 @@ class RoomManager:
         return True
 
     @classmethod
-    async def insert_pending_room_in_db(cls, room_id: RoomID, selected_option: str) -> bool:
+    async def insert_pending_room_in_db(
+        cls, room_id: RoomID, selected_option: str, puppet_mxid: UserID
+    ) -> bool:
         """Inserts a pending_room in the database.
 
         Parameters
@@ -1067,7 +1071,8 @@ class RoomManager:
             if room:
                 return False
             else:
-                await Room.insert_pending_room(room_id, selected_option)
+                puppet: pu.Puppet = await pu.Puppet.get_by_custom_mxid(puppet_mxid)
+                await Room.insert_pending_room(room_id, selected_option, puppet.pk)
         except Exception as e:
             cls.log.exception(e)
             return False
@@ -1075,7 +1080,9 @@ class RoomManager:
         return True
 
     @classmethod
-    async def update_pending_room_in_db(cls, room_id: RoomID, selected_option: str) -> bool:
+    async def update_pending_room_in_db(
+        cls, room_id: RoomID, selected_option: str, puppet_mxid: str
+    ) -> bool:
         """Updates a pending_room in the database.
 
         Parameters
@@ -1093,7 +1100,13 @@ class RoomManager:
         try:
             room = await Room.get_pending_room_by_room_id(room_id)
             if room:
-                await Room.update_pending_room_by_room_id(room_id, selected_option)
+                puppet: pu.Puppet = await pu.Puppet.get_by_custom_mxid(puppet_mxid)
+                if not puppet:
+                    cls.log.error(f"Puppet not found {puppet_mxid}")
+                    return False
+
+                fk_puppet = room.fk_puppet if puppet.pk == room.fk_puppet else puppet.pk
+                await Room.update_pending_room_by_room_id(room_id, selected_option, fk_puppet)
             else:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
                 return False
@@ -1152,7 +1165,7 @@ class RoomManager:
         return True
 
     @classmethod
-    async def get_pending_rooms(cls) -> List[RoomID]:
+    async def get_pending_rooms(cls, fk_puppet: int) -> List[RoomID]:
         """Get a pending rooms in the database.
 
         Parameters
@@ -1166,7 +1179,7 @@ class RoomManager:
             List[RoomID] if successful, None otherwise.
         """
         try:
-            rooms = await Room.get_pending_rooms()
+            rooms = await Room.get_pending_rooms(fk_puppet)
         except Exception as e:
             cls.log.exception(e)
             return

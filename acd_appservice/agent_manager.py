@@ -26,6 +26,7 @@ class AgentManager:
     PENDING_INVITES: dict[str, Future] = {}
 
     control_room_id: RoomID | None = None
+    puppet_pk: int | None = None
 
     def __init__(self, intent: IntentAPI, room_manager: RoomManager) -> None:
         self.intent = intent
@@ -103,8 +104,7 @@ class AgentManager:
         while True:
 
             self.log.debug("Searching for pending rooms...")
-            # room_ids = self.bot.store.get_pending_rooms()
-            customer_room_ids = await RoomManager.get_pending_rooms()
+            customer_room_ids = await RoomManager.get_pending_rooms(fk_puppet=self.puppet_pk)
 
             if len(customer_room_ids) > 0:
                 last_campaign_room_id = None
@@ -271,6 +271,7 @@ class AgentManager:
                     await RoomManager.save_pending_room(
                         room_id=customer_room_id,
                         selected_option=campaign_room_id,
+                        puppet_mxid=self.intent.mxid,
                     )
 
                 RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)

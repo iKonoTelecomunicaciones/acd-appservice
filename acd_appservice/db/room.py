@@ -55,7 +55,9 @@ class Room:
         await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
 
     @classmethod
-    async def insert_pending_room(cls, room_id: RoomID, selected_option: RoomID) -> None:
+    async def insert_pending_room(
+        cls, room_id: RoomID, selected_option: RoomID, fk_puppet: int
+    ) -> None:
         """It inserts a row into the pending_room table
 
         Parameters
@@ -66,8 +68,8 @@ class Room:
             The room ID of the room that the user selected.
 
         """
-        q = "INSERT INTO pending_room (room_id, selected_option) VALUES ($1, $2)"
-        await cls.db.execute(q, *(room_id, selected_option))
+        q = "INSERT INTO pending_room (room_id, selected_option, fk_puppet) VALUES $1, $2, $3)"
+        await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
 
     @classmethod
     async def update_room_by_room_id(
@@ -89,7 +91,9 @@ class Room:
         await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
 
     @classmethod
-    async def update_pending_room_by_room_id(cls, room_id: RoomID, selected_option: str) -> None:
+    async def update_pending_room_by_room_id(
+        cls, room_id: RoomID, selected_option: str, fk_puppet: int
+    ) -> None:
         """Update the selected_option column of the pending_room table with the selected_option
         parameter where the room_id column is equal to the room_id parameter
 
@@ -101,8 +105,8 @@ class Room:
             The option that the user selected.
 
         """
-        q = "UPDATE pending_room SET selected_option=$2 WHERE room_id=$1"
-        await cls.db.execute(q, *(room_id, selected_option))
+        q = "UPDATE pending_room SET selected_option=$2, fk_puppet=$3 WHERE room_id=$1"
+        await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
 
     @classmethod
     async def get_room_by_room_id(cls, room_id: RoomID) -> Room | None:
@@ -185,7 +189,7 @@ class Room:
         return row
 
     @classmethod
-    async def get_pending_rooms(cls) -> List[Room] | None:
+    async def get_pending_rooms(cls, fk_puppet: int) -> List[Room] | None:
         """It returns a list of rooms that are pending
 
         Parameters
@@ -196,8 +200,11 @@ class Room:
             A list of Room objects
 
         """
-        q = "SELECT id, room_id, selected_option FROM pending_room ORDER BY selected_option"
-        rows = await cls.db.fetch(q)
+        q = (
+            "SELECT id, room_id, selected_option, fk_puppet FROM "
+            "pending_room ORDER BY selected_option where fk_puppet=$1"
+        )
+        rows = await cls.db.fetch(q, fk_puppet)
         if not rows:
             return None
 
