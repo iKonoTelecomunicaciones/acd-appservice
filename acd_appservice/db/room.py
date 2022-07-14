@@ -68,7 +68,7 @@ class Room:
             The room ID of the room that the user selected.
 
         """
-        q = "INSERT INTO pending_room (room_id, selected_option, fk_puppet) VALUES $1, $2, $3)"
+        q = "INSERT INTO pending_room (room_id, selected_option, fk_puppet) VALUES ($1, $2, $3)"
         await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
 
     @classmethod
