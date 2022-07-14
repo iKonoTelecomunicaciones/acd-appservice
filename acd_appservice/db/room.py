@@ -95,7 +95,7 @@ class Room:
         cls, room_id: RoomID, selected_option: str, fk_puppet: int
     ) -> None:
         """Update the selected_option column of the pending_room table with the selected_option
-        parameter where the room_id column is equal to the room_id parameter
+        parameter WHERE the room_id column is equal to the room_id parameter
 
         Parameters
         ----------
@@ -202,7 +202,7 @@ class Room:
         """
         q = (
             "SELECT id, room_id, selected_option, fk_puppet FROM "
-            "pending_room ORDER BY selected_option where fk_puppet=$1"
+            "pending_room WHERE fk_puppet=$1 ORDER BY selected_option"
         )
         rows = await cls.db.fetch(q, fk_puppet)
         if not rows:
@@ -222,7 +222,7 @@ class Room:
             A dict of Room objects
 
         """
-        q = "SELECT id, room_id, selected_option, fk_puppet FROM room where fk_puppet=$1"
+        q = "SELECT id, room_id, selected_option, fk_puppet FROM room WHERE fk_puppet=$1"
         rows = await cls.db.fetch(q, fk_puppet)
         if not rows:
             return None
