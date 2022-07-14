@@ -152,6 +152,7 @@ class RoomManager:
                 new_room_name = await self.get_update_name(creator=creator)
 
             if new_room_name:
+                self.log.debug(f"Setting the name {new_room_name} to the room {room_id}")
                 await self.intent.set_room_name(room_id, new_room_name)
                 return True
 

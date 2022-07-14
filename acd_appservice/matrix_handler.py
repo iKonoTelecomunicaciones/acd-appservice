@@ -145,6 +145,7 @@ class MatrixHandler:
         elif evt.type == EventType.ROOM_NAME:
             # Setting the room name to the customer's name.
             if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
+                self.log.debug(f"The room name for the room {evt.room_id} will be changed")
                 unsigned: StateUnsigned = evt.unsigned
                 puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.room_id)
                 await puppet.room_manager.put_name_customer_room(
