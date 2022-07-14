@@ -97,6 +97,7 @@ async def pm(evt: CommandEvent) -> Dict:
     # if the agent_id is not set,
     # it joins the agent to the room and sends a message to the room.
     customer_room_id = data.get("room_id")
+    agent_id = None
     if customer_room_id:
         agent_id = await evt.agent_manager.get_room_agent(room_id=customer_room_id)
 
