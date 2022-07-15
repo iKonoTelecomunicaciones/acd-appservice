@@ -125,7 +125,7 @@ class RoomManager:
 
             await asyncio.sleep(1)
 
-    async def put_name_customer_room(self, room_id: RoomID, old_name: str) -> bool:
+    async def put_name_customer_room(self, room_id: RoomID) -> bool:
         """Name a customer's room.
 
         Given a room and a matrix client, name the room correctly if needed.
@@ -142,20 +142,13 @@ class RoomManager:
         """
         new_room_name = None
         if await self.is_customer_room(room_id=room_id):
-            if self.config["acd.keep_room_name"]:
-
-                new_room_name = old_name
-            else:
-
+            if not self.config["acd.keep_room_name"]:
                 creator = await self.get_room_creator(room_id=room_id)
-
                 new_room_name = await self.get_update_name(creator=creator)
-
-            if new_room_name:
-                self.log.debug(f"Setting the name {new_room_name} to the room {room_id}")
-                await self.intent.set_room_name(room_id, new_room_name)
-                return True
-
+                if new_room_name:
+                    self.log.debug(f"Setting the name {new_room_name} to the room {room_id}")
+                    await self.intent.set_room_name(room_id, new_room_name)
+                    return True
         return False
 
     async def create_room_name(self, user_id: UserID) -> str:
