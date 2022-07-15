@@ -143,7 +143,10 @@ class RoomManager:
             True if successful, False otherwise.
         """
         if await self.is_customer_room(room_id=room_id):
-            if not self.config["acd.keep_room_name"]:
+            if (
+                not self.config["acd.keep_room_name"]
+                or self.ROOMS.get(room_id).get("name") is None
+            ):
                 creator = await self.get_room_creator(room_id=room_id)
                 new_room_name = await self.get_update_name(creator=creator)
                 if new_room_name:
