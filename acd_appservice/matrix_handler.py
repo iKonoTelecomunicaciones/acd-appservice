@@ -144,9 +144,7 @@ class MatrixHandler:
                         puppet: Puppet = await Puppet.get_customer_room_puppet(evt.room_id)
                         if not puppet:
                             return
-                        await puppet.room_manager.put_name_customer_room(
-                            room_id=evt.room_id, old_name=unsigned.prev_content.displayname
-                        )
+                        await puppet.room_manager.put_name_customer_room(room_id=evt.room_id)
 
                     # Cuando el cliente cambia su perfil, ya sea que se quiera conservar el viejo
                     # nombre o no, este código, se encarga de actualizar el nombre

@@ -140,7 +140,6 @@ class RoomManager:
         bool
             True if successful, False otherwise.
         """
-        new_room_name = None
         if await self.is_customer_room(room_id=room_id):
             if not self.config["acd.keep_room_name"]:
                 creator = await self.get_room_creator(room_id=room_id)
