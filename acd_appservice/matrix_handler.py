@@ -141,7 +141,7 @@ class MatrixHandler:
                     if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
                         self.log.debug(f"The room name for the room {evt.room_id} will be changed")
                         unsigned: StateUnsigned = evt.unsigned
-                        puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.room_id)
+                        puppet: Puppet = await Puppet.get_customer_room_puppet(evt.room_id)
                         if not puppet:
                             return
                         await puppet.room_manager.put_name_customer_room(
