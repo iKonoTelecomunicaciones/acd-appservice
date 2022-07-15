@@ -151,8 +151,8 @@ class MatrixHandler:
                     # en la caché de salas, si y solo si, la sala está cacheada en el
                     # diccionario RoomManager.ROOMS
                     try:
-                        content: RoomNameStateEventContent = evt.content
-                        RoomManager.ROOMS[evt.room_id]["name"] = content.name
+                        content: MemberStateEventContent = evt.content
+                        RoomManager.ROOMS[evt.room_id]["name"] = content.displayname
                     except KeyError:
                         pass
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
