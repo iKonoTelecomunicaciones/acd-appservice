@@ -44,6 +44,8 @@ class RoomManager:
 
     def __init__(self, config: Config, intent: IntentAPI = None) -> None:
         self.config = config
+        if not intent:
+            return
         self.intent = intent
         self.log = self.log.getChild(self.intent.mxid or None)
 
