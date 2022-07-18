@@ -84,7 +84,7 @@ class Puppet(DBPuppet, BasePuppet):
             intent=self.intent, room_manager=self.room_manager
         )
         self.agent_manager.puppet_pk = self.pk
-        asyncio.create_task(self.agent_manager.process_pending_rooms())
+        asyncio.create_task(self.agent_manager.process_pending_rooms(), name=self.custom_mxid)
         self.agent_manager.control_room_id = control_room_id
 
     @classmethod
