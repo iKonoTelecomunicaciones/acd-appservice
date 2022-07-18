@@ -373,8 +373,14 @@ class ProvisioningAPI:
           name: room_id
           schema:
             type: string
-          required: true
-          description: control room
+          required: false
+          description: room
+        - in: query
+          name: company_phone
+          schema:
+            type: string
+          required: false
+          description: company phone
 
         responses:
             '200':
