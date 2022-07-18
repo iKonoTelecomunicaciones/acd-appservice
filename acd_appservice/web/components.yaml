@@ -59,7 +59,7 @@ components:
       properties:
         sender_id:
           type: string
-        phone_number:
+        customer_phone:
           type: string
         room_id:
           type: string
@@ -152,7 +152,8 @@ components:
           type: integer
       example:
           sender_id: "@agente1:darknet"
-          phone_number: "+573123456789"
+          customer_phone: "+573123456789"
+          company_phone: "+57398765432"
           room_id: "!jIqZOpixKgUIplraWg:darknet"
           agent_displayname: "agente1"
           reply: "You are already in room with [number], message was sent."

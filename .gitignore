@@ -1,5 +1,6 @@
 /.venv
 /env/
+/.env/
 /synapse/
 /config.yaml
 /registration.yaml
@@ -9,4 +10,5 @@ __pycache__
 *.json
 *schemas*
 data
+whatsapp
 menubot
