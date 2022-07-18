@@ -393,6 +393,8 @@ class ProvisioningAPI:
 
         if room_id:
             puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+        else:
+            puppet: Puppet = await Puppet.get_by_phone(company_phone)
 
         if not puppet:
             return web.json_response(**USER_DOESNOT_EXIST)
