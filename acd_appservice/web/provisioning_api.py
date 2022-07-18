@@ -390,7 +390,8 @@ class ProvisioningAPI:
             '404':
                 $ref: '#/components/responses/NotExist'
         """
-
+        room_id = None
+        company_phone = None
         try:
             room_id = request.rel_url.query["room_id"]
             company_phone = request.rel_url.query["company_phone"]
