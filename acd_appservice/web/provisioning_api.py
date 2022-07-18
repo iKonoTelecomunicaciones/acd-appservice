@@ -396,6 +396,29 @@ class ProvisioningAPI:
 
         return web.json_response(data={"control_room_id": puppet.control_room_id})
 
+    async def get_control_rooms(self, request: web.Request) -> web.Response:
+        """
+        ---
+        summary:        Get the acd control rooms.
+        tags:
+            - users
+
+        responses:
+            '200':
+                $ref: '#/components/responses/ControlRoomFound'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+        """
+
+        control_room_ids = await Puppet.get_control_room_ids()
+
+        if not control_room_ids:
+            return web.json_response(**NOT_DATA)
+
+        return web.json_response(data={"control_room_ids": control_room_ids})
+
     async def pm(self, request: web.Request) -> web.Response:
         """
         Command that allows send a message to a customer.
