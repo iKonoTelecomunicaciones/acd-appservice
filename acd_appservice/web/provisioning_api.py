@@ -398,7 +398,7 @@ class ProvisioningAPI:
         except KeyError:
             pass
 
-        if not (room_id or company_phone):
+        if room_id is None and company_phone is None:
             return web.json_response(**REQUIRED_VARIABLES)
 
         if room_id:
