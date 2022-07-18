@@ -3,10 +3,9 @@ import json
 import re
 from typing import Dict
 
-from aiohttp import ClientSession
 from markdown import markdown
 
-from ..http_client import ProvisionBridge
+from ..http_client import ProvisionBridge, client
 from ..puppet import Puppet
 from ..signaling import Signaling
 from .handler import command_handler
@@ -81,7 +80,8 @@ async def pm(evt: CommandEvent) -> Dict:
         return {"data": return_params, "status": 422}
 
     # Sending a message to the customer.
-    session: ClientSession = evt.agent_manager.client.session
+    puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
+    session = client.session
     bridge_connector = ProvisionBridge(session=session, config=evt.config)
     status, data = await bridge_connector.pm(user_id=evt.intent.mxid, phone=phone_number)
 
@@ -97,6 +97,7 @@ async def pm(evt: CommandEvent) -> Dict:
     # if the agent_id is not set,
     # it joins the agent to the room and sends a message to the room.
     customer_room_id = data.get("room_id")
+    agent_id = None
     if customer_room_id:
         agent_id = await evt.agent_manager.get_room_agent(room_id=customer_room_id)
 
@@ -128,7 +129,8 @@ async def pm(evt: CommandEvent) -> Dict:
     # Setting the return_params dict with the sender_id, phone_number, room_id and agent_displayname.
     return_params["sender_id"] = evt.sender
     return_params["phone_number"] = phone_number
-    return_params["room_id"] = data.get("room_id")
+    # Cuando ya hay otro agente en la sala, se debe enviar room_id en None
+    return_params["room_id"] = None if agent_id and agent_id != evt.sender else data.get("room_id")
     return_params["agent_displayname"] = agent_displayname if agent_displayname else None
 
     error = None
@@ -173,7 +175,6 @@ async def pm(evt: CommandEvent) -> Dict:
         # kick menu bot
         evt.log.debug(f"Kicking the menubot out of the room {customer_room_id}")
         try:
-            puppet: Puppet = await Puppet.get_customer_room_puppet(customer_room_id)
             await evt.agent_manager.room_manager.kick_menubot(
                 room_id=customer_room_id,
                 reason=f"{evt.sender} pm existing room {customer_room_id}",

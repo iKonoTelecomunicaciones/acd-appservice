@@ -36,7 +36,7 @@ async def upgrade_v1(conn: Connection) -> None:
         )"""
     )
     await conn.execute(
-        "ALTER TABLE room ADD CONSTRAINT FK_puppet FOREIGN KEY (fk_puppet) references puppet (pk)"
+        "ALTER TABLE room ADD CONSTRAINT FK_puppet_room FOREIGN KEY (fk_puppet) references puppet (pk)"
     )
 
     await conn.execute(
@@ -44,8 +44,12 @@ async def upgrade_v1(conn: Connection) -> None:
         id                  SERIAL PRIMARY KEY,
         room_id             TEXT NOT NULL,
         selected_option     TEXT,
+        fk_puppet           INT NOT NULL,
         UNIQUE (room_id)
         )"""
+    )
+    await conn.execute(
+        "ALTER TABLE pending_room ADD CONSTRAINT FK_puppet_p_room FOREIGN KEY (fk_puppet) references puppet (pk)"
     )
 
     await conn.execute(

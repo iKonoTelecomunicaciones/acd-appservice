@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Dict, Optional
 
-from aiohttp import ClientSession, WSMsgType, web
+from aiohttp import ClientSession, WSMsgType
 from aiohttp.web import WebSocketResponse
 from mautrix.types import UserID
 from mautrix.util.logging import TraceLogger
@@ -16,12 +16,11 @@ class BaseClass:
     log: TraceLogger = logging.getLogger("acd.http")
     config: Config
     session: ClientSession
-    app: web.Application | None
 
 
 class HTTPClient(BaseClass):
-    def __init__(self, app: web.Application()):
-        self.app = app
+    def __init__(self):
+        self.session = None
 
     async def init_session(self):
         try:
@@ -181,3 +180,6 @@ class ProvisionBridge(BaseClass):
             return
 
         return data
+
+
+client = HTTPClient()

@@ -17,7 +17,7 @@ class Config(BaseBridgeConfig):
         copy("utils.wait_ping_time")
         copy("utils.room_blocks")
         copy("bridge.command_prefix")
-        copy("bridge.admin_provisioning")
+        copy("bridge.provisioning.admin")
         copy("appservice.email")
         copy("appservice.puppet_password")
         copy_dict("bridges")

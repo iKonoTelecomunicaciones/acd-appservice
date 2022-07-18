@@ -11,17 +11,13 @@ from mautrix.errors.base import IntentError
 from mautrix.types import Member, PresenceState, RoomAlias, RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
-from acd_appservice.puppet import Puppet
-
-from .http_client import HTTPClient
-from .room_manager import RoomManager, update_intent
+from .room_manager import RoomManager
 from .signaling import Signaling
 
 
 class AgentManager:
     log: TraceLogger = logging.getLogger("acd.agent_manager")
     intent: IntentAPI
-    client: HTTPClient
     room_manager: RoomManager
     # last invited agent per control room (i.e. campaigns)
     CURRENT_AGENT = {}
@@ -30,18 +26,15 @@ class AgentManager:
     PENDING_INVITES: dict[str, Future] = {}
 
     control_room_id: RoomID | None = None
+    puppet_pk: int | None = None
 
-    def __init__(
-        self, intent: IntentAPI, control_room_id: RoomID, room_manager: RoomManager
-    ) -> None:
+    def __init__(self, intent: IntentAPI, room_manager: RoomManager) -> None:
         self.intent = intent
         self.config = room_manager.config
         self.room_manager = room_manager
-        self.control_room_id = control_room_id
-        self.room_manager = room_manager
         self.signaling = Signaling(intent=self.intent, config=self.config)
+        self.log = self.log.getChild(self.intent.mxid)
 
-    @update_intent
     async def process_distribution(
         self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
     ) -> None:
@@ -111,8 +104,7 @@ class AgentManager:
         while True:
 
             self.log.debug("Searching for pending rooms...")
-            # room_ids = self.bot.store.get_pending_rooms()
-            customer_room_ids = await RoomManager.get_pending_rooms()
+            customer_room_ids = await RoomManager.get_pending_rooms(fk_puppet=self.puppet_pk)
 
             if len(customer_room_ids) > 0:
                 last_campaign_room_id = None
@@ -121,10 +113,6 @@ class AgentManager:
                 for customer_room_id in customer_room_ids:
                     # Se actualiza el puppet dada la sala que se tenga en pending_rooms :)
                     # que bug tan maluco le digo
-                    puppet: Puppet = await Puppet.get_customer_room_puppet(
-                        room_id=customer_room_id
-                    )
-                    self.intent = puppet.intent
                     result = await self.get_room_agent(room_id=customer_room_id)
                     if result:
                         self.log.debug(
@@ -175,7 +163,6 @@ class AgentManager:
             self.log.debug("\n")
             await sleep(self.config["acd.search_pending_rooms_interval"])
 
-    @update_intent
     async def loop_agents(
         self,
         customer_room_id: RoomID,
@@ -231,7 +218,7 @@ class AgentManager:
             joined_members = await self.intent.get_room_members(room_id=customer_room_id)
             if not joined_members:
                 self.log.debug(f"No joined members in the room [{customer_room_id}]")
-                RoomManager.unlock_room(customer_room_id, transfer=transfer)
+                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
                 break
 
             if len(joined_members) == 1 and joined_members[0] == self.intent.mxid:
@@ -240,13 +227,11 @@ class AgentManager:
                 await self.intent.leave_room(
                     room_id=customer_room_id, reason="NOBODY IN THIS ROOM, I'M LEAVING"
                 )
-                RoomManager.unlock_room(customer_room_id, transfer=transfer)
+                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
                 break
 
             if agent_id != transfer_author:
-                presence_response = await self.room_manager.get_user_presence(
-                    user_id=agent_id, intent=self.intent
-                )
+                presence_response = await self.room_manager.get_user_presence(user_id=agent_id)
                 self.log.debug(
                     f"PRESENCE RESPONSE: "
                     f"[{agent_id}] -> [{presence_response.presence if presence_response else None}]"
@@ -283,10 +268,10 @@ class AgentManager:
 
                 if not transfer_author:
                     self.log.debug(f"Saving room [{customer_room_id}] in pending list")
-                    # self.bot.store.save_pending_room(customer_room_id, campaign_room_id) # TODO GUARDAR EN BASE DE DATOS
                     await RoomManager.save_pending_room(
                         room_id=customer_room_id,
                         selected_option=campaign_room_id,
+                        puppet_mxid=self.intent.mxid,
                     )
 
                 RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
@@ -294,7 +279,6 @@ class AgentManager:
 
             self.log.debug(f"agent count: [{agent_count}] online_agents: [{online_agents}]")
 
-    @update_intent
     async def get_next_agent(self, agent_id: UserID, room_id: RoomID) -> UserID:
         """It takes a room ID and an agent ID, and returns the next agent in the room
 
@@ -338,7 +322,6 @@ class AgentManager:
 
         return None
 
-    @update_intent
     async def force_invite_agent(
         self,
         room_id: RoomID,
@@ -391,7 +374,6 @@ class AgentManager:
 
         await self.force_join_agent(room_id, agent_id)
 
-    @update_intent
     async def check_agent_joined(
         self,
         customer_room_id: RoomID,
@@ -445,8 +427,7 @@ class AgentManager:
             del self.PENDING_INVITES[future_key]
         self.log.debug(f"futures left: {self.PENDING_INVITES}")
 
-        puppet: Puppet = await Puppet.get_customer_room_puppet(customer_room_id)
-        self.signaling.intent = puppet.intent
+        self.signaling.intent = self.intent
         if agent_joined:
             if campaign_room_id:
                 self.CURRENT_AGENT[campaign_room_id] = agent_id
@@ -464,7 +445,6 @@ class AgentManager:
                     change_selected_option=True if campaign_room_id else False,
                 )
                 self.log.debug(f"Removing room [{customer_room_id}] from pending list")
-                # self.bot.store.remove_pending_room(customer_room_id) # TODO BASE DE DATOS
                 await RoomManager.remove_pending_room(
                     room_id=customer_room_id,
                 )
@@ -489,7 +469,7 @@ class AgentManager:
                     await self.room_manager.kick_menubot(
                         room_id=customer_room_id,
                         reason=detail if detail else f"agent [{agent_id}] accepted invite",
-                        control_room_id=puppet.control_room_id,
+                        control_room_id=self.control_room_id,
                     )
                 except Exception as e:
                     self.log.exception(e)
@@ -573,7 +553,6 @@ class AgentManager:
                 await self.intent.send_notice(room_id=customer_room_id, text=msg)
                 RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
 
-    @update_intent
     async def force_join_agent(
         self, room_id: RoomID, agent_id: UserID, room_alias: RoomAlias = None
     ) -> None:
@@ -608,7 +587,6 @@ class AgentManager:
 
             await sleep(1)
 
-    @update_intent
     async def show_no_agents_message(self, customer_room_id, campaign_room_id) -> None:
         """It asks the menubot to show a message to the customer saying that there are no agents available
 
@@ -620,20 +598,16 @@ class AgentManager:
             The room ID of the campaign room.
 
         """
-        menubot_id = await self.room_manager.get_menubot_id(
-            intent=self.intent, room_id=customer_room_id
-        )
+        menubot_id = await self.room_manager.get_menubot_id(room_id=customer_room_id)
         if menubot_id:
             await self.room_manager.send_menubot_command(
                 menubot_id,
                 "no_agents_message",
                 self.control_room_id,
-                self.intent,
                 customer_room_id,
                 campaign_room_id,
             )
 
-    @update_intent
     async def get_agent_count(self, room_id: RoomID) -> int:
         """Get a room agent count
 
@@ -653,7 +627,6 @@ class AgentManager:
             total = len(agents)
         return total
 
-    @update_intent
     async def is_a_room_with_online_agents(self, room_id: RoomID) -> bool:
         """It checks if there is an online agent in the room
 
@@ -684,7 +657,6 @@ class AgentManager:
 
         return False
 
-    @update_intent
     async def get_room_agent(self, room_id: RoomID) -> UserID:
         """Return the room's assigned agent
 
@@ -707,7 +679,6 @@ class AgentManager:
 
         return None
 
-    @update_intent
     async def get_online_agent_in_room(self, room_id: RoomID) -> UserID:
         """ "Return online agent from room_id."
 
@@ -733,7 +704,6 @@ class AgentManager:
 
         return None
 
-    @update_intent
     async def get_agents(self, room_id: RoomID) -> List[UserID]:
         """Get a room agent list
 
