@@ -72,6 +72,9 @@ class ProvisioningAPI:
         swagger.add_get(
             path="/v1/get_control_room", handler=self.get_control_room, allow_head=False
         )
+        swagger.add_get(
+            path="/v1/get_control_rooms", handler=self.get_control_rooms, allow_head=False
+        )
 
         # Commads endpoint
         swagger.add_post(path="/v1/cmd/pm", handler=self.pm)
