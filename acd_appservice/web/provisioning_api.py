@@ -385,8 +385,11 @@ class ProvisioningAPI:
                 $ref: '#/components/responses/NotExist'
         """
 
-        room_id = request.rel_url.query["room_id"]
-        company_phone = request.rel_url.query["company_phone"]
+        try:
+            room_id = request.rel_url.query["room_id"]
+            company_phone = request.rel_url.query["company_phone"]
+        except KeyError:
+            pass
 
         if not (room_id or company_phone):
             return web.json_response(**REQUIRED_VARIABLES)
