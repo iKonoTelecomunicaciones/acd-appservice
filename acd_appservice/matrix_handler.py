@@ -20,7 +20,6 @@ from mautrix.types import (
     ReceiptEvent,
     ReceiptType,
     RoomID,
-    RoomNameStateEventContent,
     SingleReceiptEventContent,
     StateEvent,
     StateUnsigned,
