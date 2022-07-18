@@ -394,12 +394,11 @@ class ProvisioningAPI:
         company_phone = None
         try:
             room_id = request.rel_url.query["room_id"]
-            company_phone = request.rel_url.query["company_phone"]
         except KeyError:
-            pass
-
-        if room_id is None and company_phone is None:
-            return web.json_response(**REQUIRED_VARIABLES)
+            try:
+                company_phone = request.rel_url.query["company_phone"]
+            except KeyError:
+                return web.json_response(**REQUIRED_VARIABLES)
 
         if room_id:
             puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
