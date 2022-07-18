@@ -386,10 +386,13 @@ class ProvisioningAPI:
         """
 
         room_id = request.rel_url.query["room_id"]
-        if not room_id:
+        company_phone = request.rel_url.query["company_phone"]
+
+        if not (room_id or company_phone):
             return web.json_response(**REQUIRED_VARIABLES)
 
-        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+        if room_id:
+            puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
 
         if not puppet:
             return web.json_response(**USER_DOESNOT_EXIST)
