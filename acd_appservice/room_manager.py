@@ -42,9 +42,12 @@ class RoomManager:
     # rooms that are in offline agent menu
     offline_menu = set()
 
-    def __init__(self, config: Config, intent: IntentAPI) -> None:
+    def __init__(self, config: Config, intent: IntentAPI = None) -> None:
         self.config = config
+        if not intent:
+            return
         self.intent = intent
+        self.log = self.log.getChild(self.intent.mxid or None)
 
     @classmethod
     def _add_to_cache(cls, room_id, room: Room) -> None:
@@ -124,7 +127,7 @@ class RoomManager:
 
             await asyncio.sleep(1)
 
-    async def put_name_customer_room(self, room_id: RoomID, old_name: str) -> bool:
+    async def put_name_customer_room(self, room_id: RoomID) -> bool:
         """Name a customer's room.
 
         Given a room and a matrix client, name the room correctly if needed.
@@ -139,21 +142,17 @@ class RoomManager:
         bool
             True if successful, False otherwise.
         """
-        new_room_name = None
         if await self.is_customer_room(room_id=room_id):
-            if self.config["acd.keep_room_name"]:
-
-                new_room_name = old_name
-            else:
-
+            if (
+                not self.config["acd.keep_room_name"]
+                or self.ROOMS.get(room_id).get("name") is None
+            ):
                 creator = await self.get_room_creator(room_id=room_id)
-
                 new_room_name = await self.get_update_name(creator=creator)
-
-            if new_room_name:
-                await self.intent.set_room_name(room_id, new_room_name)
-                return True
-
+                if new_room_name:
+                    self.log.debug(f"Setting the name {new_room_name} to the room {room_id}")
+                    await self.intent.set_room_name(room_id, new_room_name)
+                    return True
         return False
 
     async def create_room_name(self, user_id: UserID) -> str:
@@ -339,7 +338,16 @@ class RoomManager:
 
     @classmethod
     def lock_room(cls, room_id: RoomID, transfer: bool = False) -> None:
-        """Lock the room."""
+        """This function locks a room by adding it to the `LOCKED_ROOMS` set
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to lock.
+        transfer : bool, optional
+            If True, the room will be locked for transfer.
+
+        """
         if transfer:
             cls.log.debug(f"[TRANSFER] - LOCKING ROOM {room_id}...")
             room_id = cls.get_room_transfer_key(room_id=room_id)
@@ -349,7 +357,16 @@ class RoomManager:
 
     @classmethod
     def unlock_room(cls, room_id: RoomID, transfer: bool = False) -> None:
-        """Unlock the room."""
+        """Unlock the room
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to unlock.
+        transfer : bool, optional
+            bool = False
+
+        """
         if transfer:
             cls.log.debug(f"[TRANSFER] - UNLOCKING ROOM {room_id}...")
             room_id = cls.get_room_transfer_key(room_id=room_id)
@@ -360,35 +377,103 @@ class RoomManager:
 
     @classmethod
     def is_room_locked(cls, room_id: RoomID, transfer: bool = False) -> bool:
-        """Check if room is locked."""
+        """ "If the room is locked, return True, otherwise return False."
+
+        The first line of the function is a docstring.
+        This is a string that describes what the function does.
+        It's not required, but it's good practice to include one
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to lock.
+        transfer : bool, optional
+            If True, the room_id will be converted to a transfer key.
+
+        Returns
+        -------
+            A boolean value.
+
+        """
         if transfer:
             room_id = cls.get_room_transfer_key(room_id=room_id)
         return room_id in cls.LOCKED_ROOMS
 
     @classmethod
     def get_room_transfer_key(cls, room_id: RoomID):
-        """returns a string that is the key for the transfer for a given room"""
+        """`get_room_transfer_key` returns a string that is used as a key
+        for a Redis hash
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room to transfer.
+
+        Returns
+        -------
+            A string
+
+        """
         return f"transfer-{room_id}"
 
     @classmethod
     def get_future_key(cls, room_id: RoomID, agent_id: UserID, transfer: bool = False) -> str:
-        """Return the key for the dict of futures for a specific agent."""
+        """It returns a string that is used as a key to store the future in the cache
 
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to transfer the user to.
+        agent_id : UserID
+            The user ID of the agent who is being transferred to.
+        transfer : bool, optional
+            If True, the key will be for a transfer. If False, the key will be for a future.
+
+        Returns
+        -------
+            A string
+
+        """
         return f"trasnfer-{room_id}-{agent_id}" if transfer else f"{room_id}-{agent_id}"
 
     @classmethod
     def put_in_offline_menu(cls, room_id):
-        """Put the room in offline menu state."""
+        """It adds the room ID to the offline menu
+
+        Parameters
+        ----------
+        room_id
+            The room ID of the room you want to put in the offline menu.
+
+        """
         cls.offline_menu.add(room_id)
 
     @classmethod
     def pull_from_offline_menu(cls, room_id):
-        """Remove the room from offline menu state."""
+        """It removes the room_id from the offline_menu set
+
+        Parameters
+        ----------
+        room_id
+            The room ID of the room you want to add to the offline menu.
+
+        """
         cls.offline_menu.discard(room_id)
 
     @classmethod
     def in_offline_menu(cls, room_id):
-        """Check if room is in offline menu state."""
+        """If the room ID is in the offline menu, return True. Otherwise, return False
+
+        Parameters
+        ----------
+        room_id
+            The room ID of the room you want to add the offline menu to.
+
+        Returns
+        -------
+            The room_id is being returned.
+
+        """
         return room_id in cls.offline_menu
 
     async def get_update_name(self, creator: UserID) -> str:
@@ -420,7 +505,18 @@ class RoomManager:
         return new_room_name
 
     async def get_user_presence(self, user_id: UserID) -> PresenceEventContent:
-        """Get user presence status."""
+        """This function will return the presence of a user
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user you want to check the presence of.
+
+        Returns
+        -------
+            PresenceEventContent
+
+        """
         self.log.debug(f"Checking presence for....... [{user_id}]")
         response = None
         try:
@@ -432,6 +528,18 @@ class RoomManager:
         return response
 
     async def is_in_mobile_device(self, user_id: UserID) -> bool:
+        """It checks if the user is in a mobile device
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user you want to check.
+
+        Returns
+        -------
+            A boolean value.
+
+        """
         devices = await self.get_user_devices(user_id=user_id, intent=self.intent)
         device_name_regex = self.config["acd.device_name_regex"]
         if devices:
@@ -442,7 +550,18 @@ class RoomManager:
                     return True
 
     async def get_user_devices(self, user_id: UserID) -> Dict[str, List[Dict]]:
-        """Get devices where agent have sessions"""
+        """It gets a list of devices for a given user
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user whose devices you want to get.
+
+        Returns
+        -------
+            A dictionary of devices and their information.
+
+        """
         response: Dict[str, List[Dict]] = None
         try:
             api = self.intent.bot.api if self.intent.bot else self.intent.api
@@ -485,7 +604,18 @@ class RoomManager:
         return creator
 
     async def kick_menubot(self, room_id: RoomID, reason: str, control_room_id: RoomID) -> None:
-        """Kick menubot from some room."""
+        """It kicks the menubot out of the room
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room where the menubot is.
+        reason : str
+            str
+        control_room_id : RoomID
+            The room ID of the room where the menubot is running.
+
+        """
         menubot_id = await self.get_menubot_id(room_id=room_id)
         if menubot_id:
             await self.send_menubot_command(menubot_id, "cancel_task", control_room_id, room_id)
@@ -506,7 +636,20 @@ class RoomManager:
         control_room_id: RoomID,
         *args: Tuple,
     ) -> None:
-        """Send a command to menubot."""
+        """It sends a command to the menubot
+
+        Parameters
+        ----------
+        menubot_id : UserID
+            The user ID of the menubot.
+        command : str
+            The command to send to the menubot.
+        control_room_id : RoomID
+            The room ID of the room where the menubot is running.
+        args : Tuple
+        menubot_id: The ID of the menubot to send the command to.
+
+        """
         if menubot_id:
             if self.config["acd.menubot"]:
                 prefix = self.config["acd.menubot.command_prefix"]
@@ -521,7 +664,20 @@ class RoomManager:
             await self.intent.send_text(room_id=control_room_id, text=cmd)
 
     async def get_menubot_id(self, room_id: RoomID = None, user_id: UserID = None) -> UserID:
-        """Get menubot_id by room_id or user_id or user_prefix"""
+        """It returns the ID of the menubot that is assigned to a given room or user
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room where the user is.
+        user_id : UserID
+            The user ID of the user who is trying to access the menu.
+
+        Returns
+        -------
+            The menubot_id
+
+        """
 
         menubot_id: UserID = None
 
@@ -774,7 +930,9 @@ class RoomManager:
 
     # Seccion DB
     @classmethod
-    async def save_pending_room(cls, room_id: RoomID, selected_option: str = None) -> bool:
+    async def save_pending_room(
+        cls, room_id: RoomID, puppet_mxid: str, selected_option: str = None
+    ) -> bool:
         """Save or update a pending room.
 
         Parameters
@@ -792,11 +950,11 @@ class RoomManager:
         room = await Room.get_pending_room_by_room_id(room_id)
         if room:
             return await cls.update_pending_room_in_db(
-                room_id=room_id, selected_option=selected_option
+                room_id=room_id, selected_option=selected_option, puppet_mxid=puppet_mxid
             )
         else:
             return await cls.insert_pending_room_in_db(
-                room_id=room_id, selected_option=selected_option
+                room_id=room_id, selected_option=selected_option, puppet_mxid=puppet_mxid
             )
 
     @classmethod
@@ -890,7 +1048,9 @@ class RoomManager:
         return True
 
     @classmethod
-    async def insert_pending_room_in_db(cls, room_id: RoomID, selected_option: str) -> bool:
+    async def insert_pending_room_in_db(
+        cls, room_id: RoomID, selected_option: str, puppet_mxid: UserID
+    ) -> bool:
         """Inserts a pending_room in the database.
 
         Parameters
@@ -910,7 +1070,8 @@ class RoomManager:
             if room:
                 return False
             else:
-                await Room.insert_pending_room(room_id, selected_option)
+                puppet: pu.Puppet = await pu.Puppet.get_by_custom_mxid(puppet_mxid)
+                await Room.insert_pending_room(room_id, selected_option, puppet.pk)
         except Exception as e:
             cls.log.exception(e)
             return False
@@ -918,7 +1079,9 @@ class RoomManager:
         return True
 
     @classmethod
-    async def update_pending_room_in_db(cls, room_id: RoomID, selected_option: str) -> bool:
+    async def update_pending_room_in_db(
+        cls, room_id: RoomID, selected_option: str, puppet_mxid: str
+    ) -> bool:
         """Updates a pending_room in the database.
 
         Parameters
@@ -936,7 +1099,13 @@ class RoomManager:
         try:
             room = await Room.get_pending_room_by_room_id(room_id)
             if room:
-                await Room.update_pending_room_by_room_id(room_id, selected_option)
+                puppet: pu.Puppet = await pu.Puppet.get_by_custom_mxid(puppet_mxid)
+                if not puppet:
+                    cls.log.error(f"Puppet not found {puppet_mxid}")
+                    return False
+
+                fk_puppet = room.fk_puppet if puppet.pk == room.fk_puppet else puppet.pk
+                await Room.update_pending_room_by_room_id(room_id, selected_option, fk_puppet)
             else:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
                 return False
@@ -995,7 +1164,7 @@ class RoomManager:
         return True
 
     @classmethod
-    async def get_pending_rooms(cls) -> List[RoomID]:
+    async def get_pending_rooms(cls, fk_puppet: int) -> List[RoomID]:
         """Get a pending rooms in the database.
 
         Parameters
@@ -1009,7 +1178,7 @@ class RoomManager:
             List[RoomID] if successful, None otherwise.
         """
         try:
-            rooms = await Room.get_pending_rooms()
+            rooms = await Room.get_pending_rooms(fk_puppet)
         except Exception as e:
             cls.log.exception(e)
             return

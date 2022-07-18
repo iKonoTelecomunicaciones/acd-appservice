@@ -15,7 +15,6 @@ from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
-from ..agent_manager import AgentManager
 from ..commands.handler import command_processor
 from ..commands.typehint import CommandEvent
 from ..config import Config
@@ -36,9 +35,7 @@ from .error_responses import (
     USER_DOESNOT_EXIST,
 )
 
-LOGIN_PENDING_PROMISES = {}
 LOGOUT_PENDING_PROMISES = {}
-MESSAGE_PENDING_PROMISES = {}
 
 
 class ProvisioningAPI:
@@ -48,7 +45,6 @@ class ProvisioningAPI:
     app: web.Application
     config: Config
     client: HTTPClient
-    agent_manager: AgentManager
     bridge_connector: ProvisionBridge
 
     def __init__(self) -> None:
@@ -201,15 +197,22 @@ class ProvisioningAPI:
                     # NOTA: primero debe estar registrado el puppet en la db antes de crear la sala,
                     # ya que para crear una sala se necesita la pk del puppet (para usarla como fk)
                     control_room_id = await puppet.intent.create_room(
+                        name=f"CONTROL ROOM ({puppet.email})",
+                        topic="Control room",
                         invitees=[
                             self.config["bridges.mautrix.mxid"],
-                            self.config["bridge.provisioning.admin_provisioning"],
-                        ]
+                            self.config["bridge.provisioning.admin"] or None,
+                        ],
                     )
 
                 puppet.control_room_id = control_room_id
+                await puppet.room_manager.save_room(
+                    room_id=control_room_id, selected_option=None, puppet_mxid=puppet.mxid
+                )
                 # Ahora si guardamos la sala de control en el puppet.control_room_id
                 await puppet.save()
+                # Si quieres configurar el estado inicial de los puppets, puedes hacerlo en esta
+                # funcion
                 await puppet.sync_puppet_account()
             except Exception as e:
                 self.log.exception(e)
@@ -475,12 +478,11 @@ class ProvisioningAPI:
         fake_command = f"pm {json.dumps(incoming_params)}"
         cmd_evt = CommandEvent(
             cmd="pm",
-            agent_manager=self.agent_manager,
+            agent_manager=puppet.agent_manager,
             sender=data.get("agent_id"),
             room_id=None,
             text=fake_command,
         )
-        cmd_evt.agent_manager.intent = puppet.intent
         cmd_evt.intent = puppet.intent
         result = await command_processor(cmd_evt=cmd_evt)
         return web.json_response(**result)
@@ -541,12 +543,11 @@ class ProvisioningAPI:
         # Creating a fake command event and passing it to the command processor.
         cmd_evt = CommandEvent(
             cmd="resolve",
-            agent_manager=self.agent_manager,
+            agent_manager=puppet.agent_manager,
             sender=user_id,
             room_id=room_id,
             args=args,
         )
-        cmd_evt.agent_manager.intent = puppet.intent
         cmd_evt.intent = puppet.intent
         await command_processor(cmd_evt=cmd_evt)
         return web.json_response()
@@ -624,7 +625,7 @@ class ProvisioningAPI:
                     continue
 
                 # Obtenemos el bridge de la sala dado el room_id
-                bridge = await self.agent_manager.room_manager.get_room_bridge(room_id=room_id)
+                bridge = await puppet.agent_manager.room_manager.get_room_bridge(room_id=room_id)
 
                 if not bridge:
                     # Si esta sala no tiene bridge entonces pasamos a la siguiente
@@ -644,7 +645,7 @@ class ProvisioningAPI:
                 # Creating a fake command event and passing it to the command processor.
                 cmd_evt = CommandEvent(
                     cmd="resolve",
-                    agent_manager=self.agent_manager,
+                    agent_manager=puppet.agent_manager,
                     sender=user_id,
                     room_id=room_id,
                     args=args,
@@ -653,7 +654,6 @@ class ProvisioningAPI:
                 # Debemos actualizar el intent del agent_manager y el intent para que lo que se ejecute
                 # dentro de estas tareas sean cotextos correctos independientes de cada puppet
                 # ósea, el puppet que corresponde a la sala que se va a resolver ;)
-                cmd_evt.agent_manager.intent = puppet.intent
                 cmd_evt.intent = puppet.intent
                 task = asyncio.create_task(command_processor(cmd_evt=cmd_evt))
                 tasks.append(task)
@@ -730,12 +730,11 @@ class ProvisioningAPI:
         fake_command = f"state_event {json.dumps(incoming_params)}"
         cmd_evt = CommandEvent(
             cmd="state_event",
-            agent_manager=self.agent_manager,
+            agent_manager=puppet.agent_manager,
             sender=puppet.custom_mxid,
             room_id=None,
             text=fake_command,
         )
-        cmd_evt.agent_manager.intent = puppet.intent
         cmd_evt.intent = puppet.intent
         await command_processor(cmd_evt=cmd_evt)
         return web.json_response()
@@ -804,12 +803,11 @@ class ProvisioningAPI:
         fake_command = f"template {json.dumps(incoming_params)}"
         cmd_evt = CommandEvent(
             cmd="template",
-            agent_manager=self.agent_manager,
+            agent_manager=puppet.agent_manager,
             sender=puppet.custom_mxid,
             room_id=None,
             text=fake_command,
         )
-        cmd_evt.agent_manager.intent = puppet.intent
         cmd_evt.intent = puppet.intent
         await command_processor(cmd_evt=cmd_evt)
         return web.json_response()
@@ -864,12 +862,11 @@ class ProvisioningAPI:
         # Creating a fake command event and passing it to the command processor.
         cmd_evt = CommandEvent(
             cmd="transfer",
-            agent_manager=self.agent_manager,
+            agent_manager=puppet.agent_manager,
             sender=puppet.custom_mxid,
             room_id=None,
             args=args,
         )
-        cmd_evt.agent_manager.intent = puppet.intent
         cmd_evt.intent = puppet.intent
         await command_processor(cmd_evt=cmd_evt)
         return web.json_response()
@@ -926,12 +923,11 @@ class ProvisioningAPI:
         # Creating a fake command event and passing it to the command processor.
         cmd_evt = CommandEvent(
             cmd="transfer_user",
-            agent_manager=self.agent_manager,
+            agent_manager=puppet.agent_manager,
             sender=puppet.custom_mxid,
             room_id=None,
             args=args,
         )
-        cmd_evt.agent_manager.intent = puppet.intent
         cmd_evt.intent = puppet.intent
         await command_processor(cmd_evt=cmd_evt)
         return web.json_response()

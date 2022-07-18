@@ -3,10 +3,9 @@ import json
 import re
 from typing import Dict
 
-from aiohttp import ClientSession
 from markdown import markdown
 
-from ..http_client import ProvisionBridge
+from ..http_client import ProvisionBridge, client
 from ..puppet import Puppet
 from ..signaling import Signaling
 from .handler import command_handler
@@ -81,7 +80,8 @@ async def pm(evt: CommandEvent) -> Dict:
         return {"data": return_params, "status": 422}
 
     # Sending a message to the customer.
-    session: ClientSession = puppet.agent_manager.client.session
+    puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
+    session = client.session
     bridge_connector = ProvisionBridge(session=session, config=evt.config)
     status, data = await bridge_connector.pm(user_id=evt.intent.mxid, phone=phone_number)
 
@@ -97,9 +97,9 @@ async def pm(evt: CommandEvent) -> Dict:
     # if the agent_id is not set,
     # it joins the agent to the room and sends a message to the room.
     customer_room_id = data.get("room_id")
-    puppet: Puppet = await Puppet.get_customer_room_puppet(customer_room_id)
+    agent_id = None
     if customer_room_id:
-        agent_id = await puppet.agent_manager.get_room_agent(room_id=customer_room_id)
+        agent_id = await evt.agent_manager.get_room_agent(room_id=customer_room_id)
 
         # Checking if the agent is already in the room, if it is, it returns a message to the frontend.
         if agent_id and agent_id != evt.sender:
@@ -109,14 +109,14 @@ async def pm(evt: CommandEvent) -> Dict:
             ] = "The agent <agent_displayname> is already in room with [number]"
         else:
             # If the agent is already in the room, it returns a message to the frontend.
-            await puppet.agent_manager.signaling.set_chat_status(
+            await evt.agent_manager.signaling.set_chat_status(
                 room_id=customer_room_id, status=Signaling.FOLLOWUP, agent=evt.sender
             )
             if agent_id == evt.sender:
                 return_params["reply"] = "You are already in room with [number], message was sent."
             else:
                 # Joining the agent to the room.
-                await puppet.agent_manager.force_join_agent(
+                await evt.agent_manager.force_join_agent(
                     room_id=data.get("room_id"), agent_id=evt.sender
                 )
 
@@ -129,7 +129,8 @@ async def pm(evt: CommandEvent) -> Dict:
     # Setting the return_params dict with the sender_id, phone_number, room_id and agent_displayname.
     return_params["sender_id"] = evt.sender
     return_params["phone_number"] = phone_number
-    return_params["room_id"] = data.get("room_id")
+    # Cuando ya hay otro agente en la sala, se debe enviar room_id en None
+    return_params["room_id"] = None if agent_id and agent_id != evt.sender else data.get("room_id")
     return_params["agent_displayname"] = agent_displayname if agent_displayname else None
 
     error = None
@@ -155,7 +156,7 @@ async def pm(evt: CommandEvent) -> Dict:
     if not return_params.get("reply"):
         # the room is marked as followup and campaign from previous room state
         # is not kept
-        await puppet.agent_manager.signaling.set_chat_status(
+        await evt.agent_manager.signaling.set_chat_status(
             room_id=customer_room_id,
             status=Signaling.FOLLOWUP,
             agent=evt.sender,
@@ -163,18 +164,18 @@ async def pm(evt: CommandEvent) -> Dict:
             keep_campaign=False,
         )
         # clear campaign in the ik.chat.campaign_selection state event
-        await puppet.agent_manager.signaling.set_selected_campaign(
+        await evt.agent_manager.signaling.set_selected_campaign(
             room_id=customer_room_id, campaign_room_id=None
         )
         if evt.config["acd.supervisors_to_invite.invite"]:
             asyncio.create_task(
-                puppet.agent_manager.room_manager.invite_supervisors(room_id=customer_room_id)
+                evt.agent_manager.room_manager.invite_supervisors(room_id=customer_room_id)
             )
 
         # kick menu bot
         evt.log.debug(f"Kicking the menubot out of the room {customer_room_id}")
         try:
-            await puppet.agent_manager.room_manager.kick_menubot(
+            await evt.agent_manager.room_manager.kick_menubot(
                 room_id=customer_room_id,
                 reason=f"{evt.sender} pm existing room {customer_room_id}",
                 control_room_id=puppet.control_room_id,

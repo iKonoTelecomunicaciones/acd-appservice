@@ -20,7 +20,6 @@ from mautrix.types import (
     ReceiptEvent,
     ReceiptType,
     RoomID,
-    RoomNameStateEventContent,
     SingleReceiptEventContent,
     StateEvent,
     StateUnsigned,
@@ -45,9 +44,6 @@ class MatrixHandler:
     config: config.BaseBridgeConfig
     acd_appservice: acd_program.ACD
 
-    agent_manager: AgentManager
-    room_manager: RoomManager
-
     def __init__(
         self,
         acd_appservice: acd_program.ACD | None = None,
@@ -58,6 +54,9 @@ class MatrixHandler:
         self.az.matrix_event_handler(self.int_handle_event)
 
     async def wait_for_connection(self) -> None:
+        """It tries to connect to the homeserver, and if it fails,
+        it waits 10 seconds and tries again. If it fails 6 times, it gives up
+        """
         self.log.info("Ensuring connectivity to homeserver")
         errors = 0
         tried_to_register = False
@@ -136,29 +135,32 @@ class MatrixHandler:
             elif evt.content.membership == Membership.JOIN:
                 if prev_membership != Membership.JOIN:
                     await self.handle_join(evt.room_id, UserID(evt.state_key), evt.event_id)
+                else:
+                    # Setting the room name to the customer's name.
+                    if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
+                        self.log.debug(f"The room name for the room {evt.room_id} will be changed")
+                        unsigned: StateUnsigned = evt.unsigned
+                        puppet: Puppet = await Puppet.get_customer_room_puppet(evt.room_id)
+                        if not puppet:
+                            return
+                        await puppet.room_manager.put_name_customer_room(room_id=evt.room_id)
+
+                    # Cuando el cliente cambia su perfil, ya sea que se quiera conservar el viejo
+                    # nombre o no, este código, se encarga de actualizar el nombre
+                    # en la caché de salas, si y solo si, la sala está cacheada en el
+                    # diccionario RoomManager.ROOMS
+                    try:
+                        content: MemberStateEventContent = evt.content
+                        RoomManager.ROOMS[evt.room_id]["name"] = content.displayname
+                    except KeyError:
+                        pass
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
             evt: MessageEvent = evt
             if evt.content.msgtype == MessageType.NOTICE:
                 self.log.debug(f"Ignoring the notice message: {evt}")
                 return
             await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
-        elif evt.type == EventType.ROOM_NAME:
-            # Setting the room name to the customer's name.
-            if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
-                unsigned: StateUnsigned = evt.unsigned
-                await self.room_manager.put_name_customer_room(
-                    room_id=evt.room_id, old_name=unsigned.prev_content.name
-                )
 
-            # Cuando el cliente cambia su perfil, ya sea que se quiera conservar el viejo
-            # nombre o no, este código, se encarga de actualizar el nombre
-            # en la caché de salas, si y solo si, la sala está cacheada en el
-            # diccionario RoomManager.ROOMS
-            try:
-                content: RoomNameStateEventContent = evt.content
-                RoomManager.ROOMS[evt.room_id]["name"] = content.name
-            except KeyError:
-                pass
         elif evt.type.is_ephemeral and isinstance(evt, (ReceiptEvent)):
             await self.handle_ephemeral_event(evt)
 
@@ -229,10 +231,12 @@ class MatrixHandler:
             self.log.warning(detail)
             return
 
-        self.log.debug(
-            f"The user {puppet_inside.intent.mxid} is trying join in the room {evt.room_id}"
+        puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.state_key)
+        self.log.debug(f"The user {puppet.intent.mxid} is trying join in the room {evt.room_id}")
+        await RoomManager.save_room(
+            room_id=evt.room_id, selected_option=None, puppet_mxid=puppet.mxid
         )
-        await puppet_inside.intent.join_room(evt.room_id)
+        await puppet.intent.join_room(evt.room_id)
 
     async def handle_disinvite(
         self,
@@ -404,8 +408,7 @@ class MatrixHandler:
                 cmd=args[0],
                 sender=room_agent,
                 room_id=room_id,
-                config=self.config,
-                intent=puppet.intent,
+                agent_manager=puppet.agent_manager,
                 text=fake_command,
                 args=args,
             )
@@ -498,8 +501,7 @@ class MatrixHandler:
                     cmd=args[0],
                     sender=room_agent,
                     room_id=room_id,
-                    config=self.config,
-                    intent=puppet.intent,
+                    agent_manager=puppet.agent_manager,
                     text=fake_command,
                     args=args,
                 )
@@ -560,8 +562,7 @@ class MatrixHandler:
                 cmd=args[0],
                 sender=sender,
                 room_id=room_id,
-                intent=puppet.intent,
-                config=self.config,
+                agent_manager=puppet.agent_manager,
                 text=text,
                 args=args,
             )
@@ -636,10 +637,10 @@ class MatrixHandler:
                 if valid_option:
                     return
 
-            room_agent = await self.agent_manager.get_room_agent(room_id=room_id)
+            room_agent = await puppet.agent_manager.get_room_agent(room_id=room_id)
             if room_agent:
                 # if message is not from agents, bots or ourselves, it is from the customer
-                await self.agent_manager.signaling.set_chat_status(
+                await puppet.agent_manager.signaling.set_chat_status(
                     room_id=room_id, status=Signaling.PENDING, agent=room_agent
                 )
                 presence = await puppet.room_manager.get_user_presence(user_id=room_agent)
@@ -661,7 +662,7 @@ class MatrixHandler:
 
             if not puppet.room_manager.is_room_locked(room_id=room_id):
 
-                await self.agent_manager.signaling.set_chat_status(
+                await puppet.agent_manager.signaling.set_chat_status(
                     room_id=room_id, status=Signaling.OPEN
                 )
 
@@ -669,7 +670,7 @@ class MatrixHandler:
                     asyncio.create_task(puppet.room_manager.invite_supervisors(room_id=room_id))
 
                 # clear campaign in the ik.chat.campaign_selection state event
-                await self.agent_manager.signaling.set_selected_campaign(
+                await puppet.agent_manager.signaling.set_selected_campaign(
                     room_id=room_id, campaign_room_id=None
                 )
 

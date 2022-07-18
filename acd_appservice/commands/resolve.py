@@ -41,8 +41,8 @@ async def resolve(evt: CommandEvent) -> Dict:
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
 
     if room_id == puppet.control_room_id or (
-        not await evt.agent_manager.room_manager.is_customer_room(room_id=room_id)
-        and not await evt.agent_manager.room_manager.is_guest_room(room_id=room_id)
+        not await evt.room_manager.is_customer_room(room_id=room_id)
+        and not await evt.room_manager.is_guest_room(room_id=room_id)
     ):
 
         detail = "Group rooms or control rooms cannot be resolved."
@@ -71,7 +71,7 @@ async def resolve(evt: CommandEvent) -> Dict:
         evt.log.warning(e)
 
     # When the supervisor resolves an open chat, menubot is still in the chat
-    await evt.agent_manager.room_manager.kick_menubot(
+    await evt.room_manager.kick_menubot(
         room_id=room_id,
         reason="Chat resuelto",
         control_room_id=puppet.control_room_id,

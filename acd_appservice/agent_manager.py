@@ -11,7 +11,6 @@ from mautrix.errors.base import IntentError
 from mautrix.types import Member, PresenceState, RoomAlias, RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
-from .http_client import HTTPClient
 from .room_manager import RoomManager
 from .signaling import Signaling
 
@@ -19,7 +18,6 @@ from .signaling import Signaling
 class AgentManager:
     log: TraceLogger = logging.getLogger("acd.agent_manager")
     intent: IntentAPI
-    client: HTTPClient
     room_manager: RoomManager
     # last invited agent per control room (i.e. campaigns)
     CURRENT_AGENT = {}
@@ -28,12 +26,14 @@ class AgentManager:
     PENDING_INVITES: dict[str, Future] = {}
 
     control_room_id: RoomID | None = None
+    puppet_pk: int | None = None
 
     def __init__(self, intent: IntentAPI, room_manager: RoomManager) -> None:
         self.intent = intent
         self.config = room_manager.config
         self.room_manager = room_manager
         self.signaling = Signaling(intent=self.intent, config=self.config)
+        self.log = self.log.getChild(self.intent.mxid)
 
     async def process_distribution(
         self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
@@ -104,8 +104,7 @@ class AgentManager:
         while True:
 
             self.log.debug("Searching for pending rooms...")
-            # room_ids = self.bot.store.get_pending_rooms()
-            customer_room_ids = await RoomManager.get_pending_rooms()
+            customer_room_ids = await RoomManager.get_pending_rooms(fk_puppet=self.puppet_pk)
 
             if len(customer_room_ids) > 0:
                 last_campaign_room_id = None
@@ -219,7 +218,7 @@ class AgentManager:
             joined_members = await self.intent.get_room_members(room_id=customer_room_id)
             if not joined_members:
                 self.log.debug(f"No joined members in the room [{customer_room_id}]")
-                RoomManager.unlock_room(customer_room_id, transfer=transfer)
+                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
                 break
 
             if len(joined_members) == 1 and joined_members[0] == self.intent.mxid:
@@ -228,7 +227,7 @@ class AgentManager:
                 await self.intent.leave_room(
                     room_id=customer_room_id, reason="NOBODY IN THIS ROOM, I'M LEAVING"
                 )
-                RoomManager.unlock_room(customer_room_id, transfer=transfer)
+                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
                 break
 
             if agent_id != transfer_author:
@@ -269,10 +268,10 @@ class AgentManager:
 
                 if not transfer_author:
                     self.log.debug(f"Saving room [{customer_room_id}] in pending list")
-                    # self.bot.store.save_pending_room(customer_room_id, campaign_room_id) # TODO GUARDAR EN BASE DE DATOS
                     await RoomManager.save_pending_room(
                         room_id=customer_room_id,
                         selected_option=campaign_room_id,
+                        puppet_mxid=self.intent.mxid,
                     )
 
                 RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
@@ -446,7 +445,6 @@ class AgentManager:
                     change_selected_option=True if campaign_room_id else False,
                 )
                 self.log.debug(f"Removing room [{customer_room_id}] from pending list")
-                # self.bot.store.remove_pending_room(customer_room_id) # TODO BASE DE DATOS
                 await RoomManager.remove_pending_room(
                     room_id=customer_room_id,
                 )
@@ -606,7 +604,6 @@ class AgentManager:
                 menubot_id,
                 "no_agents_message",
                 self.control_room_id,
-                self.intent,
                 customer_room_id,
                 campaign_room_id,
             )
