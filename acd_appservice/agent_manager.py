@@ -453,7 +453,10 @@ class AgentManager:
             detail = ""
             if transfer_author:
                 detail = f"{transfer_author} transferred {customer_room_id} to {agent_id}"
-                msg = self.config["acd.transfer_message"].format(agentname=agent_displayname)
+                if self.config["acd.transfer_message"]:
+                    msg = self.config["acd.transfer_message"].format(agentname=agent_displayname)
+                else:
+                    msg = "Not message"
 
             # transfer_author can be a supervisor or admin when an open chat is transferred.
             if transfer_author is not None and self.is_agent(transfer_author):
@@ -482,8 +485,9 @@ class AgentManager:
                         agentname=agent_displayname
                     )
 
-                if msg:
+                if msg and not msg == "Not message":
                     await self.intent.send_text(room_id=customer_room_id, text=msg)
+
             except Exception as e:
                 self.log.exception(e)
 
