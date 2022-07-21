@@ -653,10 +653,7 @@ class RoomManager:
 
         """
         if menubot_id:
-            if self.config["acd.menubot"]:
-                prefix = self.config["acd.menubot.command_prefix"]
-            else:
-                prefix = self.config[f"acd.menubots.[{menubot_id}].command_prefix"]
+            prefix = self.config["acd.menubot_command_prefix"]
 
             cmd = f"{prefix} {command} {' '.join(args)}"
 
@@ -708,13 +705,8 @@ class RoomManager:
             return False
 
         for member in members:
-            if self.config["acd.menubot"]:
-                if member == self.config["acd.menubot.user_id"]:
-                    return True
-
-            if self.config["acd.menubots"]:
-                if member in self.config["acd.menubots"]:
-                    return True
+            if member == await self.get_menubot_id():
+                return True
 
         return False
 

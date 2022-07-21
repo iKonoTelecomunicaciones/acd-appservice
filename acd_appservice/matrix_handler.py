@@ -427,17 +427,10 @@ class MatrixHandler:
             await puppet.agent_manager.signaling.set_selected_campaign(
                 room_id=room_id, campaign_room_id=None
             )
-            if self.config["acd.menubot"]:
-                menubot_id = self.config["acd.menubot.user_id"]
-                await puppet.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)
-            else:
-                user_id = await puppet.room_manager.get_room_creator(room_id=room_id)
-                if user_id:
-                    menubot_id = await puppet.room_manager.get_menubot_id()
-                    if menubot_id:
-                        await puppet.room_manager.invite_menu_bot(
-                            room_id=room_id, menubot_id=menubot_id
-                        )
+
+            menubot_id = await puppet.room_manager.get_menubot_id()
+            await puppet.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)
+
         else:
             # if user enters an invalid option, shows offline menu again
             return False
@@ -582,10 +575,7 @@ class MatrixHandler:
             return
 
         # ignore messages other than commands from menu bot
-        if self.config["acd.menubot"] and sender == self.config["acd.menubot.user_id"]:
-            return
-
-        if self.config["acd.menubots"] and sender in self.config["acd.menubots"]:
+        if sender.startswith(self.config["acd.menubot_prefix"]):
             return
 
         # ignore messages other than commands from supervisor

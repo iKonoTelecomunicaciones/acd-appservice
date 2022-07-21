@@ -81,7 +81,8 @@ acd:
     supervisor_prefix: "@supervisor"
     # Prefix for identification of menubot user
     menubot_prefix: "@menubot"
-
+    # Prefijo de los comandos del menubot
+    menubot_command_prefix: "!menubot"
     # force join
     device_name_regex: "Element Android|Móvil|Mobile"
     force_join: false
