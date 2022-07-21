@@ -90,7 +90,7 @@ class ProvisionBridge(BaseClass):
                             return {"data": data, "status": 200}
                         if not easy_mode and not ws_customer.closed:
                             status = 201 if data.get("phone") else 200
-                            puppet.phone = data.get("phone") or None
+                            puppet.phone = data.get("phone")
                             await puppet.save()
                             await ws_customer.send_json({"data": data, "status": status})
 
