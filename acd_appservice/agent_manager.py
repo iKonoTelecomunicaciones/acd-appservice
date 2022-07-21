@@ -434,7 +434,7 @@ class AgentManager:
                 self.log.debug(f"[{agent_id}] ACCEPTED the invite. CHAT ASSIGNED.")
                 self.log.debug(f"NEW CURRENT_AGENT : [{self.CURRENT_AGENT}]")
                 self.log.debug(f"======> [{customer_room_id}] selected [{campaign_room_id}]")
-            # self.bot.store.set_user_selected_menu(customer_room_id, campaign_room_id)
+
             # Setting the selected menu option for the customer.
             self.log.debug(f"Saving room [{customer_room_id}]")
             await RoomManager.save_room(
@@ -452,10 +452,10 @@ class AgentManager:
             msg = ""
             detail = ""
             if transfer_author:
-                detail = f"acd transferred {customer_room_id} to {agent_id}"
+                detail = f"{transfer_author} transferred {customer_room_id} to {agent_id}"
                 msg = self.config["acd.transfer_message"].format(agentname=agent_displayname)
 
-            # transfer_author can be None when acd transfers an open chat to some agent
+            # transfer_author can be a supervisor or admin when an open chat is transferred.
             if transfer_author is not None and self.is_agent(transfer_author):
                 await self.intent.kick_user(
                     room_id=customer_room_id,
@@ -546,6 +546,7 @@ class AgentManager:
                     campaign_room_id=campaign_room_id,
                     agent_id=agent_id,
                     joined_message=joined_message,
+                    transfer_author=transfer_author,
                 )
             else:
                 # if it is a direct transfer, unlock the room
