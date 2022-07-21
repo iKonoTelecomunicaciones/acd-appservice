@@ -600,7 +600,7 @@ class AgentManager:
             The room ID of the campaign room.
 
         """
-        menubot_id = await self.room_manager.get_menubot_id(room_id=customer_room_id)
+        menubot_id = await self.room_manager.get_menubot_id()
         if menubot_id:
             await self.room_manager.send_menubot_command(
                 menubot_id,

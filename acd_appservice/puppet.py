@@ -92,6 +92,7 @@ class Puppet(DBPuppet, BasePuppet):
             self.log.debug(f"The task process_pending_rooms.{self.custom_mxid} already exists")
 
         self.agent_manager.control_room_id = control_room_id
+        self.room_manager.control_room_id = control_room_id
 
     def get_tasks_by_name(self, task_name: UserID):
         """> This function returns a task object from the current event loop by name

@@ -433,7 +433,7 @@ class MatrixHandler:
             else:
                 user_id = await puppet.room_manager.get_room_creator(room_id=room_id)
                 if user_id:
-                    menubot_id = await puppet.room_manager.get_menubot_id(user_id=user_id)
+                    menubot_id = await puppet.room_manager.get_menubot_id()
                     if menubot_id:
                         await puppet.room_manager.invite_menu_bot(
                             room_id=room_id, menubot_id=menubot_id
@@ -682,7 +682,7 @@ class MatrixHandler:
                 # invite menubot to show menu
                 # this is done with create_task because with no official API set-pl can take
                 # a while so several invite attempts are made without blocking
-                menubot_id = await puppet.room_manager.get_menubot_id(user_id=sender)
+                menubot_id = await puppet.room_manager.get_menubot_id()
                 if menubot_id:
                     asyncio.create_task(
                         puppet.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)

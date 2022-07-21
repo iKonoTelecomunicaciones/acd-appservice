@@ -27,8 +27,6 @@ class Config(BaseBridgeConfig):
         copy("bridges.plugin")
         copy("acd.keep_room_name")
         copy("acd.control_room_id")
-        copy_dict("acd.menubot")
-        copy_dict("acd.menubots")
         copy("acd.force_join")
         copy("acd.agent_invite_timeout")
         copy("acd.search_pending_rooms_interval")
