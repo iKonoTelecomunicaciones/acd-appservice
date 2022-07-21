@@ -414,7 +414,12 @@ class ProvisioningAPI:
         if not puppet:
             return web.json_response(**USER_DOESNOT_EXIST)
 
-        return web.json_response(data={"control_room_id": puppet.control_room_id})
+        data = {
+            "control_room_id": puppet.control_room_id,
+            "company_phone": puppet.phone,
+            "user_id": puppet.mxid,
+        }
+        return web.json_response(data=data)
 
     async def get_control_rooms(self, request: web.Request) -> web.Response:
         """
