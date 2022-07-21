@@ -434,29 +434,27 @@ class AgentManager:
                 self.log.debug(f"[{agent_id}] ACCEPTED the invite. CHAT ASSIGNED.")
                 self.log.debug(f"NEW CURRENT_AGENT : [{self.CURRENT_AGENT}]")
                 self.log.debug(f"======> [{customer_room_id}] selected [{campaign_room_id}]")
-            # self.bot.store.set_user_selected_menu(customer_room_id, campaign_room_id)
-            # Setting the selected menu option for the customer.
-            if not transfer_author:
-                self.log.debug(f"Saving room [{customer_room_id}]")
-                await RoomManager.save_room(
-                    room_id=customer_room_id,
-                    selected_option=campaign_room_id,
-                    puppet_mxid=self.intent.mxid,
-                    change_selected_option=True if campaign_room_id else False,
-                )
-                self.log.debug(f"Removing room [{customer_room_id}] from pending list")
-                await RoomManager.remove_pending_room(
-                    room_id=customer_room_id,
-                )
-            agent_displayname = await self.intent.get_displayname(user_id=agent_id)
-            msg = ""
-            if transfer_author:
-                detail = f"acd transferred {customer_room_id} to {agent_id}"
-                msg = self.config["acd.transfer_message"].format(agentname=agent_displayname)
 
-            # transfer_author can be None when acd transfers an open chat to some agent
+            # Setting the selected menu option for the customer.
+            self.log.debug(f"Saving room [{customer_room_id}]")
+            await RoomManager.save_room(
+                room_id=customer_room_id,
+                selected_option=campaign_room_id,
+                puppet_mxid=self.intent.mxid,
+                change_selected_option=True if campaign_room_id else False,
+            )
+            self.log.debug(f"Removing room [{customer_room_id}] from pending list")
+            await RoomManager.remove_pending_room(
+                room_id=customer_room_id,
+            )
+
+            agent_displayname = await self.intent.get_displayname(user_id=agent_id)
             detail = ""
-            if transfer_author is not None:
+            if transfer_author:
+                detail = f"{transfer_author} transferred {customer_room_id} to {agent_id}"
+
+            # transfer_author can be a supervisor or admin when an open chat is transferred.
+            if transfer_author is not None and self.is_agent(transfer_author):
                 await self.intent.kick_user(
                     room_id=customer_room_id,
                     user_id=transfer_author,
@@ -474,16 +472,19 @@ class AgentManager:
                 except Exception as e:
                     self.log.exception(e)
             try:
-                if joined_message:
+                msg = ""
+                if transfer_author:
+                    msg = self.config["acd.transfer_message"].format(agentname=agent_displayname)
+                elif joined_message:
                     msg = joined_message.format(agentname=agent_displayname)
-
-                if not msg:
+                else:
                     msg = self.config["acd.joined_agent_message"].format(
                         agentname=agent_displayname
                     )
 
                 if msg:
                     await self.intent.send_text(room_id=customer_room_id, text=msg)
+
             except Exception as e:
                 self.log.exception(e)
 
@@ -516,7 +517,7 @@ class AgentManager:
                     agent=agent_id,
                     source="transfer_user" if not campaign_room_id else "transfer_room",
                     campaign_room_id=campaign_room_id,
-                    previous_agent=transfer_author,
+                    previous_agent=transfer_author if self.is_agent(transfer_author) else None,
                 )
             else:
                 await self.signaling.set_chat_connect_agent(
@@ -546,6 +547,7 @@ class AgentManager:
                     campaign_room_id=campaign_room_id,
                     agent_id=agent_id,
                     joined_message=joined_message,
+                    transfer_author=transfer_author,
                 )
             else:
                 # if it is a direct transfer, unlock the room
