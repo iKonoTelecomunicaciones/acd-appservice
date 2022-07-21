@@ -160,7 +160,6 @@ class MatrixHandler:
                 self.log.debug(f"Ignoring the notice message: {evt}")
                 return
 
-            evt.content.body = evt.content.body.strip()
             await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
 
         elif evt.type.is_ephemeral and isinstance(evt, (ReceiptEvent)):
@@ -544,6 +543,10 @@ class MatrixHandler:
         if message.body.startswith(" * "):
             # This is likely an edit, ignore
             return
+
+        self.log.debug(f"#######1 {message.body}")
+        message.body = message.body.strip()
+        self.log.debug(f"#######2 {message.body}")
 
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
 
