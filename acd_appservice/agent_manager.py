@@ -449,14 +449,9 @@ class AgentManager:
             )
 
             agent_displayname = await self.intent.get_displayname(user_id=agent_id)
-            msg = ""
             detail = ""
             if transfer_author:
                 detail = f"{transfer_author} transferred {customer_room_id} to {agent_id}"
-                if self.config["acd.transfer_message"]:
-                    msg = self.config["acd.transfer_message"].format(agentname=agent_displayname)
-                else:
-                    msg = "Not message"
 
             # transfer_author can be a supervisor or admin when an open chat is transferred.
             if transfer_author is not None and self.is_agent(transfer_author):
@@ -477,15 +472,17 @@ class AgentManager:
                 except Exception as e:
                     self.log.exception(e)
             try:
-                if joined_message:
+                msg = ""
+                if transfer_author:
+                    msg = self.config["acd.transfer_message"].format(agentname=agent_displayname)
+                elif joined_message:
                     msg = joined_message.format(agentname=agent_displayname)
-
-                if not msg:
+                else:
                     msg = self.config["acd.joined_agent_message"].format(
                         agentname=agent_displayname
                     )
 
-                if msg and not msg == "Not message":
+                if msg:
                     await self.intent.send_text(room_id=customer_room_id, text=msg)
 
             except Exception as e:
