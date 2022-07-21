@@ -436,18 +436,18 @@ class AgentManager:
                 self.log.debug(f"======> [{customer_room_id}] selected [{campaign_room_id}]")
             # self.bot.store.set_user_selected_menu(customer_room_id, campaign_room_id)
             # Setting the selected menu option for the customer.
-            if not transfer_author:
-                self.log.debug(f"Saving room [{customer_room_id}]")
-                await RoomManager.save_room(
-                    room_id=customer_room_id,
-                    selected_option=campaign_room_id,
-                    puppet_mxid=self.intent.mxid,
-                    change_selected_option=True if campaign_room_id else False,
-                )
-                self.log.debug(f"Removing room [{customer_room_id}] from pending list")
-                await RoomManager.remove_pending_room(
-                    room_id=customer_room_id,
-                )
+            self.log.debug(f"Saving room [{customer_room_id}]")
+            await RoomManager.save_room(
+                room_id=customer_room_id,
+                selected_option=campaign_room_id,
+                puppet_mxid=self.intent.mxid,
+                change_selected_option=True if campaign_room_id else False,
+            )
+            self.log.debug(f"Removing room [{customer_room_id}] from pending list")
+            await RoomManager.remove_pending_room(
+                room_id=customer_room_id,
+            )
+
             agent_displayname = await self.intent.get_displayname(user_id=agent_id)
             msg = ""
             detail = ""
