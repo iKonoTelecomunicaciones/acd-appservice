@@ -78,10 +78,12 @@ class MatrixHandler:
                     tried_to_register = True
                 else:
                     raise
-            except Exception:
+            except Exception as e:
                 errors += 1
                 if errors <= 6:
-                    self.log.exception("Connection to homeserver failed, retrying in 10 seconds")
+                    self.log.error(
+                        f"Connection to homeserver failed, retrying in 10 seconds :: error: {e}"
+                    )
                     await asyncio.sleep(10)
                 else:
                     raise

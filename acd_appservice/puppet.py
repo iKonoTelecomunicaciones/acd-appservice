@@ -25,7 +25,8 @@ class Puppet(DBPuppet, BasePuppet):
 
     by_pk: dict[int, Puppet] = {}
     by_custom_mxid: dict[UserID, Puppet] = {}
-    by_custom_email: dict[str, Puppet] = {}
+    by_email: dict[str, Puppet] = {}
+    by_phone: dict[str, Puppet] = {}
     hs_domain: str
     mxid_template: SimpleTemplate[int]
 
@@ -41,7 +42,7 @@ class Puppet(DBPuppet, BasePuppet):
         self,
         pk: int | None = None,
         email: int | None = None,
-        name: str | None = None,
+        phone: str | None = None,
         username: str | None = None,
         photo_id: str | None = None,
         photo_mxc: ContentURI | None = None,
@@ -57,7 +58,7 @@ class Puppet(DBPuppet, BasePuppet):
         super().__init__(
             pk=pk,
             email=email,
-            name=name,
+            phone=phone,
             username=username,
             photo_id=photo_id,
             name_set=name_set,
@@ -195,6 +196,8 @@ class Puppet(DBPuppet, BasePuppet):
         # Mete a cada marioneta en un dict que permite acceder de manera más rápida a las
         # instancias de cada marioneta
         self.by_pk[self.pk] = self
+        self.by_email[self.email] = self
+        self.by_phone[self.phone] = self
         if self.custom_mxid:
             self.by_custom_mxid[self.custom_mxid] = self
 
@@ -227,7 +230,7 @@ class Puppet(DBPuppet, BasePuppet):
     @async_getter_lock
     async def get_by_email(cls, email: str) -> Puppet | None:
         try:
-            return cls.by_custom_email[email]
+            return cls.by_email[email]
         except KeyError:
             pass
 
@@ -381,6 +384,21 @@ class Puppet(DBPuppet, BasePuppet):
             return
 
         return puppet
+
+    @classmethod
+    @async_getter_lock
+    async def get_by_phone(cls, phone: str) -> Puppet | None:
+        try:
+            return cls.by_phone[phone]
+        except KeyError:
+            pass
+
+        puppet = cast(cls, await super().get_by_phone(phone))
+        if puppet:
+            puppet._add_to_cache()
+            return puppet
+
+        return None
 
     @classmethod
     async def get_puppets(cls) -> List[Puppet]:

@@ -12,7 +12,7 @@ async def upgrade_v1(conn: Connection) -> None:
         """CREATE TABLE puppet (
         pk              SERIAL PRIMARY KEY,
         email           TEXT,
-        name            TEXT,
+        phone           TEXT,
         username        TEXT,
         photo_id        TEXT,
         photo_mxc       TEXT,

@@ -68,6 +68,9 @@ class ProvisioningAPI:
         swagger.add_get(
             path="/v1/get_control_room", handler=self.get_control_room, allow_head=False
         )
+        swagger.add_get(
+            path="/v1/get_control_rooms", handler=self.get_control_rooms, allow_head=False
+        )
 
         # Commads endpoint
         swagger.add_post(path="/v1/cmd/pm", handler=self.pm)
@@ -280,7 +283,7 @@ class ProvisioningAPI:
         # Creamos una conector con el bridge
         bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
         # Creamos un WebSocket para conectarnos con el bridge
-        await bridge_connector.ws_connect(user_id=puppet.custom_mxid, ws_customer=ws_customer)
+        await bridge_connector.ws_connect(puppet=puppet, ws_customer=ws_customer)
 
         return ws_customer
 
@@ -326,7 +329,7 @@ class ProvisioningAPI:
         # Creamos una conector con el bridge
         # Creamos un WebSocket para conectarnos con el bridge
         return web.json_response(
-            **await self.bridge_connector.ws_connect(user_id=puppet.custom_mxid, easy_mode=True)
+            **await self.bridge_connector.ws_connect(puppet=puppet, easy_mode=True)
         )
 
     async def read_check(self, request: web.Request) -> web.Response:
@@ -376,8 +379,54 @@ class ProvisioningAPI:
           name: room_id
           schema:
             type: string
-          required: true
-          description: control room
+          required: false
+          description: room
+        - in: query
+          name: company_phone
+          schema:
+            type: string
+          required: false
+          description: company phone
+
+        responses:
+            '200':
+                $ref: '#/components/responses/ControlRoomFound'
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+        """
+        room_id = None
+        company_phone = None
+        try:
+            room_id = request.rel_url.query["room_id"]
+        except KeyError:
+            try:
+                company_phone = request.rel_url.query["company_phone"]
+            except KeyError:
+                return web.json_response(**REQUIRED_VARIABLES)
+
+        if room_id:
+            puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+        else:
+            puppet: Puppet = await Puppet.get_by_phone(company_phone)
+
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        data = {
+            "control_room_id": puppet.control_room_id,
+            "company_phone": puppet.phone,
+            "user_id": puppet.mxid,
+        }
+        return web.json_response(data=data)
+
+    async def get_control_rooms(self, request: web.Request) -> web.Response:
+        """
+        ---
+        summary:        Get the acd control rooms.
+        tags:
+            - users
 
         responses:
             '200':
@@ -388,16 +437,12 @@ class ProvisioningAPI:
                 $ref: '#/components/responses/NotExist'
         """
 
-        room_id = request.rel_url.query["room_id"]
-        if not room_id:
-            return web.json_response(**REQUIRED_VARIABLES)
+        control_room_ids = await Puppet.get_control_room_ids()
 
-        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+        if not control_room_ids:
+            return web.json_response(**NOT_DATA)
 
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
-
-        return web.json_response(data={"control_room_id": puppet.control_room_id})
+        return web.json_response(data={"control_room_ids": control_room_ids})
 
     async def pm(self, request: web.Request) -> web.Response:
         """
@@ -416,9 +461,7 @@ class ProvisioningAPI:
               schema:
                 type: object
                 properties:
-                  user_email:
-                    type: string
-                  phone_number:
+                  customer_phone:
                     type: string
                   template_message:
                     type: string
@@ -428,7 +471,8 @@ class ProvisioningAPI:
                     type: string
                 example:
                     user_email: "nobody@somewhere.com"
-                    phone_number: "573123456789"
+                    customer_phone: "573123456789"
+                    company_phone: "57398765432"
                     template_message: "Hola iKono!!"
                     template_name: "text"
                     agent_id: "@agente1:somewhere.com"
@@ -449,27 +493,32 @@ class ProvisioningAPI:
         data: Dict = await request.json()
 
         if not (
-            data.get("phone_number")
+            data.get("customer_phone")
             and data.get("template_message")
             and data.get("template_name")
-            and data.get("user_email")
+            and (data.get("user_email") or data.get("company_phone"))
             and data.get("agent_id")
         ):
             return web.json_response(**REQUIRED_VARIABLES)
 
-        email = data.get("user_email").lower()
-        error_result = await self.validate_email(user_email=email)
+        if data.get("user_email"):
+            email = data.get("user_email").lower()
+            error_result = await self.validate_email(user_email=email)
+            if error_result:
+                return web.json_response(**error_result)
 
-        if error_result:
-            return web.json_response(**error_result)
+            puppet: Puppet = await Puppet.get_by_email(email)
+            if not puppet:
+                return web.json_response(**USER_DOESNOT_EXIST)
 
-        # Obtenemos el puppet de este email si existe
-        puppet: Puppet = await Puppet.get_by_email(email)
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
+        if data.get("company_phone"):
+            company_phone = data.get("company_phone").replace("+", "")
+            puppet: Puppet = await Puppet.get_by_phone(company_phone)
+            if not puppet:
+                return web.json_response(**USER_DOESNOT_EXIST)
 
         incoming_params = {
-            "phone_number": data.get("phone_number"),
+            "phone_number": data.get("customer_phone"),
             "template_message": data.get("template_message"),
             "template_name": data.get("template_name"),
         }
