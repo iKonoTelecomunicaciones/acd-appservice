@@ -450,12 +450,12 @@ class AgentManager:
                 )
             agent_displayname = await self.intent.get_displayname(user_id=agent_id)
             msg = ""
+            detail = ""
             if transfer_author:
                 detail = f"acd transferred {customer_room_id} to {agent_id}"
                 msg = self.config["acd.transfer_message"].format(agentname=agent_displayname)
 
             # transfer_author can be None when acd transfers an open chat to some agent
-            detail = ""
             if transfer_author is not None and self.is_agent(transfer_author):
                 await self.intent.kick_user(
                     room_id=customer_room_id,
