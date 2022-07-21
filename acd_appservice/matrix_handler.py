@@ -544,9 +544,7 @@ class MatrixHandler:
             # This is likely an edit, ignore
             return
 
-        self.log.debug(f"#######1 {message.body}")
         message.body = message.body.strip()
-        self.log.debug(f"#######2 {message.body}")
 
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
 
