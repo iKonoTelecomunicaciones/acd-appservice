@@ -456,7 +456,9 @@ class AgentManager:
 
             # transfer_author can be None when acd transfers an open chat to some agent
             detail = ""
-            if transfer_author is not None:
+            if transfer_author is not None and not transfer_author.startswith(
+                self.config["acd.supervisor_prefix"]
+            ):
                 await self.intent.kick_user(
                     room_id=customer_room_id,
                     user_id=transfer_author,
