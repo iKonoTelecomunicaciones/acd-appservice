@@ -159,6 +159,8 @@ class MatrixHandler:
             if evt.content.msgtype == MessageType.NOTICE:
                 self.log.debug(f"Ignoring the notice message: {evt}")
                 return
+
+            evt.content.body = evt.content.body.strip()
             await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
 
         elif evt.type.is_ephemeral and isinstance(evt, (ReceiptEvent)):
