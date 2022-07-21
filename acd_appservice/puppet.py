@@ -84,8 +84,33 @@ class Puppet(DBPuppet, BasePuppet):
             intent=self.intent, room_manager=self.room_manager
         )
         self.agent_manager.puppet_pk = self.pk
-        asyncio.create_task(self.agent_manager.process_pending_rooms(), name=self.custom_mxid)
+
+        if not self.get_tasks_by_name(self.custom_mxid):
+            asyncio.create_task(self.agent_manager.process_pending_rooms(), name=self.custom_mxid)
+        else:
+            self.log.debug(f"The task process_pending_rooms.{self.custom_mxid} already exists")
+
         self.agent_manager.control_room_id = control_room_id
+
+    async def get_tasks_by_name(self, task_name: UserID):
+        """> This function returns a task object from the current event loop by name
+
+        Parameters
+        ----------
+        task_name : UserID
+            The name of the task you want to get.
+
+        Returns
+        -------
+            A list of all tasks that are currently running.
+
+        """
+        # get the current event loop
+        tasks = asyncio.all_tasks()
+        for task in tasks:
+            if task.get_name() == task_name:
+                return task
+        return None
 
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> AsyncIterable[Awaitable[None]]:
