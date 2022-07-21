@@ -92,7 +92,7 @@ class Puppet(DBPuppet, BasePuppet):
 
         self.agent_manager.control_room_id = control_room_id
 
-    async def get_tasks_by_name(self, task_name: UserID):
+    def get_tasks_by_name(self, task_name: UserID):
         """> This function returns a task object from the current event loop by name
 
         Parameters
@@ -102,7 +102,7 @@ class Puppet(DBPuppet, BasePuppet):
 
         Returns
         -------
-            A list of all tasks that are currently running.
+            A task that are currently running.
 
         """
         # get the current event loop
