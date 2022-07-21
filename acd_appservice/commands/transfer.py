@@ -57,7 +57,7 @@ async def transfer(evt: CommandEvent) -> str:
             customer_room_id=customer_room_id,
             campaign_room_id=campaign_room_id,
             agent_id=evt.agent_manager.CURRENT_AGENT.get(campaign_room_id),
-            transfer_author=transfer_author,
+            transfer_author=transfer_author or evt.sender,
         )
     )
 
@@ -124,7 +124,9 @@ async def transfer_user(evt: CommandEvent) -> str:
         )
         if presence_response and presence_response.presence == PresenceState.ONLINE:
             await evt.agent_manager.force_invite_agent(
-                room_id=customer_room_id, agent_id=target_agent_id, transfer_author=transfer_author
+                room_id=customer_room_id,
+                agent_id=target_agent_id,
+                transfer_author=transfer_author or evt.sender,
             )
         else:
             msg = f"El agente {target_agent_id} no está disponible."
