@@ -679,6 +679,7 @@ class RoomManager:
         except KeyError:
             pass
 
+        await self.get_room_info(room_id=self.control_room_id)
         members = await self.intent.get_joined_members(room_id=self.control_room_id)
 
         for user_id in members:
