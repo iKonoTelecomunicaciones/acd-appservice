@@ -683,7 +683,7 @@ class RoomManager:
 
         for user_id in members:
             if user_id.startswith(self.config["acd.menubot_prefix"]):
-                self.ROOMS[self.control_room_id] = user_id
+                self.ROOMS[self.control_room_id]["menubot_id"] = user_id
                 return user_id
 
     async def has_menubot(self, room_id: RoomID) -> bool:
