@@ -510,7 +510,7 @@ class RoomManager:
 
         return new_room_name
 
-    def get_emoji_number(number: str) -> str | None:
+    def get_emoji_number(self, number: str) -> str | None:
         """It takes a string of numbers and returns a string of emoji numbers
 
         Parameters
