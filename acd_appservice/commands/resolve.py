@@ -74,7 +74,6 @@ async def resolve(evt: CommandEvent) -> Dict:
     await evt.room_manager.kick_menubot(
         room_id=room_id,
         reason="Chat resuelto",
-        control_room_id=puppet.control_room_id,
     )
 
     await evt.agent_manager.signaling.set_chat_status(

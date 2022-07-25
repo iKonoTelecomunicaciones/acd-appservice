@@ -42,6 +42,8 @@ class RoomManager:
     # rooms that are in offline agent menu
     offline_menu = set()
 
+    control_room_id: RoomID | None = None
+
     def __init__(self, config: Config, intent: IntentAPI = None) -> None:
         self.config = config
         if not intent:
@@ -603,7 +605,7 @@ class RoomManager:
 
         return creator
 
-    async def kick_menubot(self, room_id: RoomID, reason: str, control_room_id: RoomID) -> None:
+    async def kick_menubot(self, room_id: RoomID, reason: str) -> None:
         """It kicks the menubot out of the room
 
         Parameters
@@ -612,13 +614,11 @@ class RoomManager:
             The room ID of the room where the menubot is.
         reason : str
             str
-        control_room_id : RoomID
-            The room ID of the room where the menubot is running.
 
         """
-        menubot_id = await self.get_menubot_id(room_id=room_id)
+        menubot_id = await self.get_menubot_id()
         if menubot_id:
-            await self.send_menubot_command(menubot_id, "cancel_task", control_room_id, room_id)
+            await self.send_menubot_command(menubot_id, "cancel_task", room_id)
             try:
                 self.log.debug(f"Kicking the menubot [{menubot_id}]")
                 await self.intent.kick_user(room_id=room_id, user_id=menubot_id, reason=reason)
@@ -633,7 +633,6 @@ class RoomManager:
         self,
         menubot_id: UserID,
         command: str,
-        control_room_id: RoomID,
         *args: Tuple,
     ) -> None:
         """It sends a command to the menubot
@@ -644,77 +643,44 @@ class RoomManager:
             The user ID of the menubot.
         command : str
             The command to send to the menubot.
-        control_room_id : RoomID
-            The room ID of the room where the menubot is running.
         args : Tuple
         menubot_id: The ID of the menubot to send the command to.
 
         """
         if menubot_id:
-            if self.config["acd.menubot"]:
-                prefix = self.config["acd.menubot.command_prefix"]
-            else:
-                prefix = self.config[f"acd.menubots.[{menubot_id}].command_prefix"]
+            prefix = self.config["acd.menubot_command_prefix"]
 
             cmd = f"{prefix} {command} {' '.join(args)}"
 
             cmd = cmd.strip()
 
             self.log.debug(f"Sending command {command} for the menubot [{menubot_id}]")
-            await self.intent.send_text(room_id=control_room_id, text=cmd)
+            await self.intent.send_text(room_id=self.control_room_id, text=cmd)
 
-    async def get_menubot_id(self, room_id: RoomID = None, user_id: UserID = None) -> UserID:
-        """It returns the ID of the menubot that is assigned to a given room or user
-
-        Parameters
-        ----------
-        room_id : RoomID
-            The room ID of the room where the user is.
-        user_id : UserID
-            The user ID of the user who is trying to access the menu.
+    async def get_menubot_id(self) -> UserID | None:
+        """It gets the ID of the menubot in the control room
 
         Returns
         -------
-            The menubot_id
+            The user_id of the menubot.
 
         """
 
-        menubot_id: UserID = None
+        try:
+            room = self.ROOMS[self.control_room_id]
+            menubot_id = room.get("menubot_id")
+            if menubot_id:
+                return menubot_id
+        except KeyError:
+            pass
 
-        if self.config["acd.menubot.active"]:
-            menubot_id = self.config["acd.menubot.user_id"]
-            return menubot_id
+        await self.get_room_info(room_id=self.control_room_id)
+        members = await self.intent.get_joined_members(room_id=self.control_room_id)
 
-        elif room_id:
-            members = await self.intent.get_joined_members(room_id=room_id)
-            if members:
-                for user_id in members:
-                    if user_id in self.config["acd.menubots"]:
-                        menubot_id = user_id
-                        break
-
-        elif user_id:
-            username_regex = self.config["utils.username_regex"]
-            user_prefix = re.search(username_regex, user_id)
-            menubots: Dict[UserID, Dict] = self.config["acd.menubots"]
-            if user_prefix:
-                # Llega aquí si es un cliente
-                user_prefix = user_prefix.group("user_prefix")
-                for menubot in menubots:
-                    if user_prefix == self.config[f"acd.menubots.{menubot}.user_prefix"]:
-                        menubot_id = menubot
-                        break
-            else:
-                username_regex_guest = self.config[f"acd.username_regex_guest"]
-                user_prefix_guest = re.search(username_regex_guest, user_id)
-                if user_prefix_guest:
-                    # Solo llega aquí si es un usuario tipo guest
-                    for menubot in menubots:
-                        if self.config[f"acd.menubots.{menubot}.is_guest"]:
-                            menubot_id = menubot
-                            break
-
-        return menubot_id
+        for user_id in members:
+            if user_id.startswith(self.config["acd.menubot_prefix"]):
+                self.ROOMS[self.control_room_id]["menubot_id"] = user_id
+                return user_id
 
     async def has_menubot(self, room_id: RoomID) -> bool:
         """If the room has a menubot, return True. Otherwise, return False
@@ -735,13 +701,8 @@ class RoomManager:
             return False
 
         for member in members:
-            if self.config["acd.menubot"]:
-                if member == self.config["acd.menubot.user_id"]:
-                    return True
-
-            if self.config["acd.menubots"]:
-                if member in self.config["acd.menubots"]:
-                    return True
+            if member == await self.get_menubot_id():
+                return True
 
         return False
 

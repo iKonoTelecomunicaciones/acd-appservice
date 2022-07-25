@@ -137,22 +137,6 @@ acd:
     # Sala de control del acd que vamos a reemplazar,
     # si la instalación es nueva, entonces no coloque nada
     control_room_id: "!foo:dominio_cliente.com"
-    # Si hay solo un menubot, se debería tener menubot.active en true
-    # en caso contrario en false
-    menubot:
-        active: true
-        user_id: "@menubot:dominio_cliente.com"
-        command_prefix: "!menubot"
-
-    menubots:
-      "@menubota:dominio_cliente.com":
-        user_prefix: "gswA"
-        command_prefix: "!menubotA"
-        is_guest: true
-
-      "@menubotb:dominio_cliente.com":
-        user_prefix: "gswB"
-        command_prefix: "!menubotB"
     ...
     # Para invitar a los supervisores, debe agregarlos a esta lista
     # y dejar en true supervisors_to_invite.invite

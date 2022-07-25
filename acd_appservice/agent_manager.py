@@ -467,7 +467,6 @@ class AgentManager:
                     await self.room_manager.kick_menubot(
                         room_id=customer_room_id,
                         reason=detail if detail else f"agent [{agent_id}] accepted invite",
-                        control_room_id=self.control_room_id,
                     )
                 except Exception as e:
                     self.log.exception(e)
@@ -600,12 +599,11 @@ class AgentManager:
             The room ID of the campaign room.
 
         """
-        menubot_id = await self.room_manager.get_menubot_id(room_id=customer_room_id)
+        menubot_id = await self.room_manager.get_menubot_id()
         if menubot_id:
             await self.room_manager.send_menubot_command(
                 menubot_id,
                 "no_agents_message",
-                self.control_room_id,
                 customer_room_id,
                 campaign_room_id,
             )

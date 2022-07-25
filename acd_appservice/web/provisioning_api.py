@@ -11,7 +11,7 @@ import aiohttp_cors
 from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from markdown import markdown
-from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent
+from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent, UserID
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
@@ -170,6 +170,7 @@ class ProvisioningAPI:
 
         # Si llega sala de control es porque estamos haciendo la migración de un acd viejo
         control_room_id: RoomID = data.get("control_room_id")
+        menubot_id: UserID = data.get("menubot_id")
 
         # Obtenemos el puppet de este email si existe
         puppet = await Puppet.get_by_email(email)
@@ -199,13 +200,17 @@ class ProvisioningAPI:
                 if not control_room_id:
                     # NOTA: primero debe estar registrado el puppet en la db antes de crear la sala,
                     # ya que para crear una sala se necesita la pk del puppet (para usarla como fk)
+                    invitees = [
+                        self.config["bridges.mautrix.mxid"],
+                        self.config["bridge.provisioning.admin"],
+                    ]
+                    if menubot_id:
+                        invitees.append(menubot_id)
+
                     control_room_id = await puppet.intent.create_room(
                         name=f"CONTROL ROOM ({puppet.email})",
                         topic="Control room",
-                        invitees=[
-                            self.config["bridges.mautrix.mxid"],
-                            self.config["bridge.provisioning.admin"] or None,
-                        ],
+                        invitees=invitees,
                     )
 
                 puppet.control_room_id = control_room_id

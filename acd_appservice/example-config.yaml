@@ -79,23 +79,10 @@ acd:
     control_room_id: ""
     # Prefix for identification of supervisor user
     supervisor_prefix: "@supervisor"
-    # If menubot.active is false, then menubots should have more than one menubot.
-    menubot:
-        active: true
-        user_id: "@menubot:dominio_cliente.com"
-        command_prefix: "!menubot"
-
-    menubots:
-      "@menubota:dominio_cliente.com":
-        user_prefix: "gswA"
-        command_prefix: "!menubotA"
-        is_guest: true
-
-      "@menubotb:dominio_cliente.com":
-        user_prefix: "gswB"
-        command_prefix: "!menubotB"
-
-
+    # Prefix for identification of menubot user
+    menubot_prefix: "@menubot"
+    # Prefijo de los comandos del menubot
+    menubot_command_prefix: "!menubot"
     # force join
     device_name_regex: "Element Android|Móvil|Mobile"
     force_join: false

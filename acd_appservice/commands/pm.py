@@ -178,7 +178,6 @@ async def pm(evt: CommandEvent) -> Dict:
             await evt.agent_manager.room_manager.kick_menubot(
                 room_id=customer_room_id,
                 reason=f"{evt.sender} pm existing room {customer_room_id}",
-                control_room_id=puppet.control_room_id,
             )
         except Exception as e:
             evt.log.exception(e)
