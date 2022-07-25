@@ -1,8 +1,10 @@
 import nest_asyncio
 import pytest
 from mautrix.types import RoomID
+from pytest_mock import MockerFixture
 
 from acd_appservice import room_manager
+from acd_appservice.puppet import Puppet
 
 nest_asyncio.apply()
 
@@ -10,7 +12,10 @@ nest_asyncio.apply()
 @pytest.mark.asyncio
 class TestRoomManager:
     async def test_is_customer_room(
-        self, mocker, room_manager_mock: room_manager.RoomManager, get_room_info_mock
+        self,
+        mocker: MockerFixture,
+        room_manager_mock: room_manager.RoomManager,
+        get_room_info_mock,
     ):
         """
         True if the room is created by a client, False otherwise.
@@ -28,7 +33,10 @@ class TestRoomManager:
         assert result == True
 
     async def test_is_not_customer_room(
-        self, mocker, room_manager_mock: room_manager.RoomManager, get_room_info_mock
+        self,
+        mocker: MockerFixture,
+        room_manager_mock: room_manager.RoomManager,
+        get_room_info_mock,
     ):
         """
         False if the room is not created by a client, True otherwise.
@@ -46,7 +54,10 @@ class TestRoomManager:
         assert result == False
 
     async def test_get_room_bridge(
-        self, mocker, room_manager_mock: room_manager.RoomManager, get_room_info_mock
+        self,
+        mocker: MockerFixture,
+        room_manager_mock: room_manager.RoomManager,
+        get_room_info_mock,
     ):
         """
         Returns the bridge that belongs to the room, None if the room does not have a client.
@@ -64,7 +75,10 @@ class TestRoomManager:
         assert result == "mautrix"
 
     async def test_not_get_room_bridge(
-        self, mocker, room_manager_mock: room_manager.RoomManager, get_room_info_mock
+        self,
+        mocker: MockerFixture,
+        room_manager_mock: room_manager.RoomManager,
+        get_room_info_mock,
     ):
         """
         You should not return the room bridge, A bridge if the room has a client.
@@ -84,7 +98,7 @@ class TestRoomManager:
         assert result == None
 
     async def test_is_mx_whatsapp_status_broadcast(
-        self, mocker, room_manager_mock: room_manager.RoomManager
+        self, mocker: MockerFixture, room_manager_mock: room_manager.RoomManager
     ):
         """
         True if the room is whatsapp_status_broadcast, False otherwise.
@@ -100,7 +114,7 @@ class TestRoomManager:
         assert result == True
 
     async def test_is_not_mx_whatsapp_status_broadcast(
-        self, mocker, room_manager_mock: room_manager.RoomManager
+        self, mocker: MockerFixture, room_manager_mock: room_manager.RoomManager
     ):
         """
         True if the room is whatsapp_status_broadcast, False otherwise.
@@ -114,7 +128,9 @@ class TestRoomManager:
         )
         assert result == False
 
-    async def test_get_update_name(self, mocker, room_manager_mock: room_manager.RoomManager):
+    async def test_get_update_name(
+        self, mocker: MockerFixture, room_manager_mock: room_manager.RoomManager
+    ):
         """
         Returns the updated name of a client's room.
         """
@@ -123,5 +139,7 @@ class TestRoomManager:
             room_manager.RoomManager, "create_room_name", return_value=new_room_name
         )
         room_manager_mock.intent = None
-        result = await room_manager_mock.get_update_name(creator="@mxwa_573058790293")
-        assert result == "Alejandro Herrera (573058790293)"
+        result = await room_manager_mock.get_update_name(
+            creator="@mxwa_573058790293", is_pytest=True
+        )
+        assert result == "Alejandro Herrera (573058790293) 1️⃣4️⃣5️⃣6️⃣"

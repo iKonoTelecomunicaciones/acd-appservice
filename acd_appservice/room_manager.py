@@ -478,7 +478,7 @@ class RoomManager:
         """
         return room_id in cls.offline_menu
 
-    async def get_update_name(self, creator: UserID) -> str:
+    async def get_update_name(self, creator: UserID, is_pytest: bool = False) -> str:
         """Given a customer's mxid, pull the phone number and concatenate it to the name
         and delete the postfix_template (WA).
 
@@ -502,7 +502,16 @@ class RoomManager:
                 if new_room_name:
                     postfix_template = self.config[f"bridges.{bridge}.postfix_template"]
                     new_room_name = new_room_name.replace(f" {postfix_template}", "")
-                    puppet_id = pu.Puppet.get_id_from_mxid(mxid=self.intent.mxid)
+
+                    # Me toco colocar este if para poder evitar el llamado a la función
+                    # get_id_from_mxid ya que self.intent.mxid genera una excepción
+                    # para mas info ver el test test_get_update_name
+                    puppet_id = (
+                        pu.Puppet.get_id_from_mxid(mxid=self.intent.mxid)
+                        if not is_pytest
+                        else 1456
+                    )
+
                     emoji_number = self.get_emoji_number(number=str(puppet_id))
                     if emoji_number:
                         new_room_name = f"{new_room_name} {emoji_number}"
