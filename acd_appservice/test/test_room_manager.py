@@ -4,7 +4,6 @@ from mautrix.types import RoomID
 from pytest_mock import MockerFixture
 
 from acd_appservice import room_manager
-from acd_appservice.puppet import Puppet
 
 nest_asyncio.apply()
 
