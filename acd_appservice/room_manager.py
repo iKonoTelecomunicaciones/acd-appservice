@@ -529,18 +529,19 @@ class RoomManager:
             the emoji number.
 
         """
-        emoji_number = ""
 
-        emoji_number = number.replace("0", "0️⃣")
-        emoji_number = number.replace("1", "1️⃣")
-        emoji_number = number.replace("2", "2️⃣")
-        emoji_number = number.replace("3", "3️⃣")
-        emoji_number = number.replace("4", "4️⃣")
-        emoji_number = number.replace("5", "5️⃣")
-        emoji_number = number.replace("6", "6️⃣")
-        emoji_number = number.replace("7", "7️⃣")
-        emoji_number = number.replace("8", "8️⃣")
-        emoji_number = number.replace("9", "9️⃣")
+        emoji_number = (
+            number.replace("0", "0️⃣")
+            .replace("1", "1️⃣")
+            .replace("2", "2️⃣")
+            .replace("3", "3️⃣")
+            .replace("4", "4️⃣")
+            .replace("5", "5️⃣")
+            .replace("6", "6️⃣")
+            .replace("7", "7️⃣")
+            .replace("8", "8️⃣")
+            .replace("9", "9️⃣")
+        )
 
         return emoji_number
 
