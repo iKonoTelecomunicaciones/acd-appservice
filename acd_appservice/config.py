@@ -26,6 +26,7 @@ class Config(BaseBridgeConfig):
         copy("bridges.mautrix.provisioning.shared_secret")
         copy("bridges.plugin")
         copy("acd.keep_room_name")
+        copy("acd.numbers_in_rooms")
         copy("acd.control_room_id")
         copy("acd.force_join")
         copy("acd.agent_invite_timeout")

@@ -504,16 +504,15 @@ class RoomManager:
                 if new_room_name:
                     postfix_template = self.config[f"bridges.{bridge}.postfix_template"]
                     new_room_name = new_room_name.replace(f" {postfix_template}", "")
-                    try:
-                        puppet_id = pu.Puppet.get_id_from_mxid(mxid=self.intent.mxid)
-                    except AttributeError as e:
-                        self.log.error(e)
-
-                    if puppet_id:
-                        emoji_number = self.get_emoji_number(number=str(puppet_id))
-
-                    if emoji_number:
-                        new_room_name = f"{new_room_name} {emoji_number}"
+                    if self.config["acd.numbers_in_rooms"]:
+                        try:
+                            puppet_id = pu.Puppet.get_id_from_mxid(mxid=self.intent.mxid)
+                            if puppet_id:
+                                emoji_number = self.get_emoji_number(number=str(puppet_id))
+                            if emoji_number:
+                                new_room_name = f"{new_room_name} {emoji_number}"
+                        except AttributeError as e:
+                            self.log.error(e)
                 break
 
         return new_room_name
