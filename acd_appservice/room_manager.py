@@ -605,7 +605,7 @@ class RoomManager:
 
         return creator
 
-    async def kick_menubot(self, room_id: RoomID, reason: str, control_room_id: RoomID) -> None:
+    async def kick_menubot(self, room_id: RoomID, reason: str) -> None:
         """It kicks the menubot out of the room
 
         Parameters
@@ -614,13 +614,11 @@ class RoomManager:
             The room ID of the room where the menubot is.
         reason : str
             str
-        control_room_id : RoomID
-            The room ID of the room where the menubot is running.
 
         """
         menubot_id = await self.get_menubot_id()
         if menubot_id:
-            await self.send_menubot_command(menubot_id, "cancel_task", control_room_id, room_id)
+            await self.send_menubot_command(menubot_id, "cancel_task", room_id)
             try:
                 self.log.debug(f"Kicking the menubot [{menubot_id}]")
                 await self.intent.kick_user(room_id=room_id, user_id=menubot_id, reason=reason)
@@ -635,7 +633,6 @@ class RoomManager:
         self,
         menubot_id: UserID,
         command: str,
-        control_room_id: RoomID,
         *args: Tuple,
     ) -> None:
         """It sends a command to the menubot
@@ -646,8 +643,6 @@ class RoomManager:
             The user ID of the menubot.
         command : str
             The command to send to the menubot.
-        control_room_id : RoomID
-            The room ID of the room where the menubot is running.
         args : Tuple
         menubot_id: The ID of the menubot to send the command to.
 
@@ -660,7 +655,7 @@ class RoomManager:
             cmd = cmd.strip()
 
             self.log.debug(f"Sending command {command} for the menubot [{menubot_id}]")
-            await self.intent.send_text(room_id=control_room_id, text=cmd)
+            await self.intent.send_text(room_id=self.control_room_id, text=cmd)
 
     async def get_menubot_id(self) -> UserID | None:
         """It gets the ID of the menubot in the control room
