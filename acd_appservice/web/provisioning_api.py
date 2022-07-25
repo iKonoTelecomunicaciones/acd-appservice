@@ -200,14 +200,17 @@ class ProvisioningAPI:
                 if not control_room_id:
                     # NOTA: primero debe estar registrado el puppet en la db antes de crear la sala,
                     # ya que para crear una sala se necesita la pk del puppet (para usarla como fk)
+                    invitees = [
+                        self.config["bridges.mautrix.mxid"],
+                        self.config["bridge.provisioning.admin"],
+                    ]
+                    if menubot_id:
+                        invitees.append(menubot_id)
+
                     control_room_id = await puppet.intent.create_room(
                         name=f"CONTROL ROOM ({puppet.email})",
                         topic="Control room",
-                        invitees=[
-                            self.config["bridges.mautrix.mxid"],
-                            self.config["bridge.provisioning.admin"] or None,
-                            menubot_id,
-                        ],
+                        invitees=invitees,
                     )
 
                 puppet.control_room_id = control_room_id
