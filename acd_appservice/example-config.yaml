@@ -73,6 +73,10 @@ acd:
     username_regex_guest: "^@(?P<number>[0-9]{1,}):.+$"
     # Feature for naming customer rooms
     keep_room_name: false
+    # Features for naming rooms by company_phone
+    # Si quieres que las salas se actualicen cada vez que el cliente
+    # cambie de nombre, entonces deber tener keep_room_name en true y numbers_in_rooms en true
+    numbers_in_rooms: true
     # Prefix for identification of agent user
     agent_prefix: "@agent"
     # agent control room, all agents must be here
