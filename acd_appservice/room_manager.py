@@ -494,6 +494,8 @@ class RoomManager:
         """
 
         new_room_name = None
+        puppet_id = ""
+        emoji_number = ""
         bridges = self.config["bridges"]
         for bridge in bridges:
             user_prefix = self.config[f"bridges.{bridge}.user_prefix"]
@@ -502,9 +504,48 @@ class RoomManager:
                 if new_room_name:
                     postfix_template = self.config[f"bridges.{bridge}.postfix_template"]
                     new_room_name = new_room_name.replace(f" {postfix_template}", "")
+                    try:
+                        puppet_id = pu.Puppet.get_id_from_mxid(mxid=self.intent.mxid)
+                    except AttributeError as e:
+                        self.log.error(e)
+
+                    if puppet_id:
+                        emoji_number = self.get_emoji_number(number=str(puppet_id))
+
+                    if emoji_number:
+                        new_room_name = f"{new_room_name} {emoji_number}"
                 break
 
         return new_room_name
+
+    def get_emoji_number(self, number: str) -> str | None:
+        """It takes a string of numbers and returns a string of emoji numbers
+
+        Parameters
+        ----------
+        number : str
+            The number you want to convert to emojis.
+
+        Returns
+        -------
+            the emoji number.
+
+        """
+
+        emoji_number = (
+            number.replace("0", "0️⃣")
+            .replace("1", "1️⃣")
+            .replace("2", "2️⃣")
+            .replace("3", "3️⃣")
+            .replace("4", "4️⃣")
+            .replace("5", "5️⃣")
+            .replace("6", "6️⃣")
+            .replace("7", "7️⃣")
+            .replace("8", "8️⃣")
+            .replace("9", "9️⃣")
+        )
+
+        return emoji_number
 
     async def get_user_presence(self, user_id: UserID) -> PresenceEventContent:
         """This function will return the presence of a user
