@@ -478,7 +478,7 @@ class RoomManager:
         """
         return room_id in cls.offline_menu
 
-    async def get_update_name(self, creator: UserID, is_pytest: bool = False) -> str:
+    async def get_update_name(self, creator: UserID) -> str:
         """Given a customer's mxid, pull the phone number and concatenate it to the name
         and delete the postfix_template (WA).
 
@@ -494,6 +494,7 @@ class RoomManager:
         """
 
         new_room_name = None
+        puppet_id = ""
         bridges = self.config["bridges"]
         for bridge in bridges:
             user_prefix = self.config[f"bridges.{bridge}.user_prefix"]
@@ -502,17 +503,13 @@ class RoomManager:
                 if new_room_name:
                     postfix_template = self.config[f"bridges.{bridge}.postfix_template"]
                     new_room_name = new_room_name.replace(f" {postfix_template}", "")
-
-                    # Me toco colocar este if para poder evitar el llamado a la función
-                    # get_id_from_mxid ya que self.intent.mxid genera una excepción
-                    # para mas info ver el test test_get_update_name
-                    puppet_id = (
-                        pu.Puppet.get_id_from_mxid(mxid=self.intent.mxid)
-                        if not is_pytest
-                        else 1456
-                    )
+                    try:
+                        puppet_id = pu.Puppet.get_id_from_mxid(mxid=self.intent.mxid)
+                    except AttributeError as e:
+                        self.log.error(e)
 
                     emoji_number = self.get_emoji_number(number=str(puppet_id))
+
                     if emoji_number:
                         new_room_name = f"{new_room_name} {emoji_number}"
                 break
@@ -533,29 +530,17 @@ class RoomManager:
 
         """
         emoji_number = ""
-        for i in number:
-            if i == "0":
-                emoji_number = emoji_number + "0️⃣"
-            elif i == "1":
-                emoji_number = emoji_number + "1️⃣"
-            elif i == "2":
-                emoji_number = emoji_number + "2️⃣"
-            elif i == "3":
-                emoji_number = emoji_number + "3️⃣"
-            elif i == "4":
-                emoji_number = emoji_number + "4️⃣"
-            elif i == "5":
-                emoji_number = emoji_number + "5️⃣"
-            elif i == "6":
-                emoji_number = emoji_number + "6️⃣"
-            elif i == "7":
-                emoji_number = emoji_number + "7️⃣"
-            elif i == "8":
-                emoji_number = emoji_number + "8️⃣"
-            elif i == "9":
-                emoji_number = emoji_number + "9️⃣"
-            else:
-                return
+
+        emoji_number = number.replace("0", "0️⃣")
+        emoji_number = number.replace("1", "1️⃣")
+        emoji_number = number.replace("2", "2️⃣")
+        emoji_number = number.replace("3", "3️⃣")
+        emoji_number = number.replace("4", "4️⃣")
+        emoji_number = number.replace("5", "5️⃣")
+        emoji_number = number.replace("6", "6️⃣")
+        emoji_number = number.replace("7", "7️⃣")
+        emoji_number = number.replace("8", "8️⃣")
+        emoji_number = number.replace("9", "9️⃣")
 
         return emoji_number
 
