@@ -495,6 +495,7 @@ class RoomManager:
 
         new_room_name = None
         puppet_id = ""
+        emoji_number = ""
         bridges = self.config["bridges"]
         for bridge in bridges:
             user_prefix = self.config[f"bridges.{bridge}.user_prefix"]
@@ -508,7 +509,8 @@ class RoomManager:
                     except AttributeError as e:
                         self.log.error(e)
 
-                    emoji_number = self.get_emoji_number(number=str(puppet_id))
+                    if puppet_id:
+                        emoji_number = self.get_emoji_number(number=str(puppet_id))
 
                     if emoji_number:
                         new_room_name = f"{new_room_name} {emoji_number}"
