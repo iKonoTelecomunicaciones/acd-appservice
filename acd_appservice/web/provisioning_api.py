@@ -11,7 +11,7 @@ import aiohttp_cors
 from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from markdown import markdown
-from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent
+from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent, UserID
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
@@ -170,6 +170,7 @@ class ProvisioningAPI:
 
         # Si llega sala de control es porque estamos haciendo la migración de un acd viejo
         control_room_id: RoomID = data.get("control_room_id")
+        menubot_id: UserID = data.get("menubot_id")
 
         # Obtenemos el puppet de este email si existe
         puppet = await Puppet.get_by_email(email)
@@ -205,6 +206,7 @@ class ProvisioningAPI:
                         invitees=[
                             self.config["bridges.mautrix.mxid"],
                             self.config["bridge.provisioning.admin"] or None,
+                            menubot_id,
                         ],
                     )
 

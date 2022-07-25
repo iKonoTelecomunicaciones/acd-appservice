@@ -669,7 +669,7 @@ class RoomManager:
         try:
             room = self.ROOMS[self.control_room_id]
             menubot_id = room.get("menubot_id")
-            if menubot_id is not None:
+            if menubot_id:
                 return menubot_id
         except KeyError:
             pass
