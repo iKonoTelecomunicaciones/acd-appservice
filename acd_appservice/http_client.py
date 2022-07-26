@@ -29,6 +29,57 @@ class HTTPClient(BaseClass):
             self.log.exception(f"Error creating aiohttp session: {e}")
 
 
+class IkonoAPIClient(HTTPClient):
+    def __init__(self, user_id: UserID):
+        self.api_token = None
+        self.user_id = user_id
+
+    async def get_api_token(self):
+
+        base_url = self.config["ikono_api.base_url"]
+        login_url = self.config["ikono_api.login_url"]
+        data = {
+            "username": self.user_id,
+            "password": self.config["appservice.puppet_password"],
+        }
+        url = f"{base_url}{login_url}"
+        try:
+            async with self.session.post(url, data=data) as response:
+                if response.status != 200:
+                    self.log.error(f"Failed to get api access token: {await response.text()}")
+                    return False
+                response_json = await response.json()
+        except Exception as e:
+            self.log.error(f"Error getting api access token: {e}")
+            return False
+
+        self.api_token = response_json.get("access_token")
+        return True
+
+    async def get_request(self, url: str, data: dict = None):
+        """Make get request"""
+
+        self.log.debug(f"GET {url}")
+        headers = {
+            "Authorization": f"Bearer {self.api_token}",
+        }
+
+        try:
+            async with self.session.get(url, headers=headers, data=data) as response:
+                if response.status == 401:
+                    self.log.debug("TOKEN viejo... Refrescando...")
+                    await self.get_api_token()
+                    headers = {"Authorization": f"Bearer {self.api_token}"}
+                    async with self.session.get(url, headers=headers, data=data) as response:
+                        response_json = await response.json()
+                else:
+                    response_json = await response.json()
+                return response.status, response_json
+        except Exception as e:
+            self.log.error(f"Error in GET {url} : {e}")
+            return (500, None)
+
+
 class ProvisionBridge(BaseClass):
     def __init__(self, session: ClientSession, config: Config):
         self.session = session

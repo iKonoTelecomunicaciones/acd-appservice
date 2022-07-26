@@ -638,6 +638,13 @@ class MatrixHandler:
                 await puppet.agent_manager.signaling.set_chat_status(
                     room_id=room_id, status=Signaling.PENDING, agent=room_agent
                 )
+
+                if await puppet.agent_manager.business_hours.is_not_business_hour():
+                    await puppet.agent_manager.business_hours.send_business_hours_message(
+                        room_id=room_id
+                    )
+                    return
+
                 presence = await puppet.room_manager.get_user_presence(user_id=room_agent)
                 if presence and presence.presence != PresenceState.ONLINE:
                     await self.process_offline_agent(
@@ -654,6 +661,14 @@ class MatrixHandler:
             if await puppet.room_manager.is_group_room(room_id=room_id):
                 self.log.debug(f"{room_id} is a group room, ignoring message")
                 return
+
+            # Send an informative message if the conversation started no within the business hour
+            if await puppet.agent_manager.business_hours.is_not_business_hour():
+                await puppet.agent_manager.business_hours.send_business_hours_message(
+                    room_id=room_id
+                )
+                if not self.config["utils.business_hours.show_menu"]:
+                    return
 
             if not puppet.room_manager.is_room_locked(room_id=room_id):
 

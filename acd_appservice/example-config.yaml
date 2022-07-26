@@ -193,6 +193,36 @@ utils:
     regex_email: "^[(a-z0-9\\_\\-\\.)]+@[(a-z0-9\\_\\-\\.)]+\\.[(a-z)]{2,15}$"
     # Regex to extract user phone number from matrix user ID
     username_regex: "^@(?P<user_prefix>.+)_(?P<number>[0-9]{8,}):.+$"
+    # Monday to friday
+    business_hours:
+        business_hours_message: ""
+        show_menu: false
+        monday:
+            - "08:00-12:00"
+            - "14:00-15:00"
+        tuesday:
+            - "08:00-12:00"
+            - "13:00-18:00"
+        wednesday:
+            - "08:00-12:00"
+        thursday:
+            - "10:00-12:00"
+            - "14:00-18:00"
+        friday:
+            - "10:00-12:00"
+            - "14:00-18:00"
+        saturday:
+            - "08:00-12:00"
+        sunday:
+        holiday:
+            - "08:00-12:00"
+            - "14:00-22:00"
+    timezone: "America/Bogota"
+
+ikono_api:
+  base_url: "https://api.ikono.im"
+  login_url: "/v1/auth/token"
+  holidays_url: "/v1/holidays"
 
 
 logging:
