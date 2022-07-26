@@ -15,6 +15,7 @@ class Config(BaseBridgeConfig):
         copy("bridge.invitees_to_rooms")
         copy("bridge.username_template")
         copy_dict("utils")
+        copy_dict("utils.business_hours")
         copy_dict("ikono_api")
         copy("bridge.command_prefix")
         copy("bridge.provisioning.admin")

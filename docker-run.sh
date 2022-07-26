@@ -1,6 +1,4 @@
 #!/bin/sh
-cd /opt/acd-appservice
-
 
 if [ ! -f /data/config.yaml ]; then
 	cp example-config.yaml /data/config.yaml
