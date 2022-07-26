@@ -48,7 +48,9 @@ class IkonoAPIClient(BaseClass):
         try:
             async with self.session.post(url, data=data) as response:
                 if response.status != 200:
-                    self.log.error(f"Failed to get api access token: {await response.text()}")
+                    self.log.error(
+                        f"Failed to get api access token {self.user_id} : {await response.text()}"
+                    )
                     return False
                 response_json = await response.json()
         except Exception as e:
