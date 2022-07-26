@@ -37,6 +37,13 @@ class IkonoAPIClient(BaseClass):
         self.api_token = None
 
     async def get_api_token(self):
+        """It gets an access token from the API
+
+        Returns
+        -------
+            The return value is a list of dictionaries.
+
+        """
 
         base_url = self.config["ikono_api.base_url"]
         login_url = self.config["ikono_api.login_url"]
@@ -61,7 +68,20 @@ class IkonoAPIClient(BaseClass):
         return True
 
     async def get_request(self, url: str, data: dict = None):
-        """Make get request"""
+        """It makes a GET request to the url provided.
+
+        Parameters
+        ----------
+        url : str
+            The URL to make the request to.
+        data : dict
+            The data to send to the server.
+
+        Returns
+        -------
+            The status code and the response in json format.
+
+        """
 
         self.log.debug(f"GET {url}")
         headers = {
