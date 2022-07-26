@@ -29,11 +29,12 @@ class HTTPClient(BaseClass):
             self.log.exception(f"Error creating aiohttp session: {e}")
 
 
-class IkonoAPIClient(HTTPClient):
-    def __init__(self, user_id: UserID):
-        self.session = None
-        self.api_token = None
+class IkonoAPIClient(BaseClass):
+    def __init__(self, session: ClientSession, config: Config, user_id: UserID):
+        self.session = session
+        self.config = config
         self.user_id = user_id
+        self.api_token = None
 
     async def get_api_token(self):
 
