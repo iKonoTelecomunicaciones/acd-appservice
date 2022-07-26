@@ -456,7 +456,7 @@ class ProvisioningAPI:
         summary:    It takes a phone number and a message,
                     and sends the message to the phone number.
         tags:
-            - users
+            - commands
 
         requestBody:
           required: true
@@ -546,7 +546,7 @@ class ProvisioningAPI:
         ---
         summary: Command resolving a chat, ejecting the supervisor and the agent.
         tags:
-            - users
+            - commands
 
         requestBody:
           required: true
@@ -611,7 +611,7 @@ class ProvisioningAPI:
         ---
         summary: Command to resolve chats en bloc, expelling the supervisor and the agent.
         tags:
-            - users
+            - commands
 
         requestBody:
           required: true
@@ -721,7 +721,7 @@ class ProvisioningAPI:
         ---
         summary: Command that sends a state event to matrix.
         tags:
-            - users
+            - commands
 
         requestBody:
           required: true
@@ -798,7 +798,7 @@ class ProvisioningAPI:
         ---
         summary: This command is used to send templates
         tags:
-            - users
+            - commands
 
         requestBody:
           required: true
@@ -871,7 +871,7 @@ class ProvisioningAPI:
         ---
         summary: Command that transfers a client to an campaign_room.
         tags:
-            - users
+            - commands
 
         requestBody:
           required: true
@@ -930,7 +930,7 @@ class ProvisioningAPI:
         ---
         summary: Command that transfers a client from one agent to another.
         tags:
-            - users
+            - commands
 
         requestBody:
           required: true
