@@ -1,5 +1,7 @@
 stages:
   - test
+  - build
+  - deploy
 
 lint:
   image: python:3.9
@@ -18,3 +20,44 @@ lint:
 
       - echo "** Ejecutando los test de la API **"
       - pytest acd_appservice -vv
+
+build-push-image:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - echo "$DOCKER_HUB_PASSWORD" | docker login docker.io --username $DOCKER_HUB_USERNAME --password-stdin
+  script:
+    - docker build -t $ACD_IMAGE .
+    - docker push $ACD_IMAGE
+  only:
+    - master
+
+deploy-testing:
+  stage: deploy
+  image: ubuntu:latest
+  before_script:
+    - echo "** Conectando al servidor de testing **"
+    # -qq hace que la ejecucion sea menos ruidosa
+    - apt-get update -qq
+    # Pregunta si existe ssh-agent; sino instala openssh-client
+    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
+    # ssh-agent es un programa en segundo plano que maneja contraseñas para claves privadas SSH.
+    # "ssh-agent -s" genera las variables de entorno que necesita para conectarse
+    # y al llamar eval, carga inmediatamente esas variables en su entorno.
+    - eval $(ssh-agent -s)
+    # El comando ssh-add solicita al usuario una contraseña de clave privada y la agrega a la lista mantenida por ssh-agent.
+    - ssh-add <(echo "$SSH_PRIVATE_KEY")
+    # Se crea el directorio .ssh, no hay error si existen, crea los directorios padres en caso necesario
+    - mkdir -p ~/.ssh
+    # Deshabilitar la verificación de la clave del host
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+  script:
+    - echo ""** Bajamos la nueva imagen **""
+    - ssh $TESTING "docker pull $ACD_IMAGE"
+    - echo "** Actualizar imagen del acd en mxacd **"
+    - ssh $TESTING "cd /mnt/shared/matrix/$CUSTOMER_DOMAIN &&  if docker service ls | grep $ACD_SERVICE; then  docker service rm $ACD_SERVICE; else echo "El servicio $ACD_SERVICE NO EXISTE"; fi"
+    - ssh $TESTING "cd /mnt/shared/matrix/$CUSTOMER_DOMAIN && docker-compose config | docker stack deploy -c - $(basename $CUSTOMER_DOMAIN | tr -d '.')"
+  only:
+    - master
