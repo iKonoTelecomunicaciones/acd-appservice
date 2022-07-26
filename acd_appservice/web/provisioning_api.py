@@ -132,7 +132,7 @@ class ProvisioningAPI:
         ---
         summary: Creates a user in the platform to be able to scan the WhatsApp QR code and send messages later using the API endpoints.
         tags:
-            - users
+            - ACD API
 
         requestBody:
           required: true
@@ -247,7 +247,7 @@ class ProvisioningAPI:
                         `qrcode` that you must scan to make a successful connection to `WhatsApp`, if
                         you do not login in time, the connection will be terminated by `timeout`.
         tags:
-            - users
+            - ACD API
 
         parameters:
         - in: query
@@ -299,7 +299,7 @@ class ProvisioningAPI:
         summary:        Generates a QR code for an existing user in order to create a QR image and
                         link the WhatsApp number by scanning the QR code with the cell phone.
         tags:
-            - users
+            - ACD API
 
         parameters:
         - in: query
@@ -342,7 +342,7 @@ class ProvisioningAPI:
         ---
         summary:        Check if a message has been read
         tags:
-            - users
+            - ACD API
 
         parameters:
         - in: query
@@ -377,7 +377,7 @@ class ProvisioningAPI:
         ---
         summary:        Given a room obtains the acd control room*.
         tags:
-            - users
+            - Puppet utils
 
         parameters:
         - in: query
@@ -431,7 +431,7 @@ class ProvisioningAPI:
         ---
         summary:        Get the acd control rooms.
         tags:
-            - users
+            - Puppet utils
 
         responses:
             '200':
@@ -456,7 +456,7 @@ class ProvisioningAPI:
         summary:    It takes a phone number and a message,
                     and sends the message to the phone number.
         tags:
-            - users
+            - Commands
 
         requestBody:
           required: true
@@ -546,7 +546,7 @@ class ProvisioningAPI:
         ---
         summary: Command resolving a chat, ejecting the supervisor and the agent.
         tags:
-            - users
+            - Commands
 
         requestBody:
           required: true
@@ -611,7 +611,7 @@ class ProvisioningAPI:
         ---
         summary: Command to resolve chats en bloc, expelling the supervisor and the agent.
         tags:
-            - users
+            - Commands
 
         requestBody:
           required: true
@@ -721,7 +721,7 @@ class ProvisioningAPI:
         ---
         summary: Command that sends a state event to matrix.
         tags:
-            - users
+            - Commands
 
         requestBody:
           required: true
@@ -798,7 +798,7 @@ class ProvisioningAPI:
         ---
         summary: This command is used to send templates
         tags:
-            - users
+            - Commands
 
         requestBody:
           required: true
@@ -871,7 +871,7 @@ class ProvisioningAPI:
         ---
         summary: Command that transfers a client to an campaign_room.
         tags:
-            - users
+            - Commands
 
         requestBody:
           required: true
@@ -930,7 +930,7 @@ class ProvisioningAPI:
         ---
         summary: Command that transfers a client from one agent to another.
         tags:
-            - users
+            - Commands
 
         requestBody:
           required: true
@@ -992,7 +992,7 @@ class ProvisioningAPI:
         ---
         summary: Send a message from the user account to a WhatsApp phone number.
         tags:
-            - users
+            - ACD API
 
         requestBody:
           required: true

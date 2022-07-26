@@ -13,6 +13,7 @@ from mautrix.util.logging import TraceLogger
 
 from .room_manager import RoomManager
 from .signaling import Signaling
+from .util.business_hours import BusinessHour
 
 
 class AgentManager:
@@ -33,6 +34,7 @@ class AgentManager:
         self.config = room_manager.config
         self.room_manager = room_manager
         self.signaling = Signaling(intent=self.intent, config=self.config)
+        self.business_hours = BusinessHour(intent=self.intent, config=self.config)
         self.log = self.log.getChild(self.intent.mxid)
 
     async def process_distribution(
@@ -61,6 +63,17 @@ class AgentManager:
 
         if RoomManager.is_room_locked(room_id=customer_room_id):
             self.log.debug(f"Room [{customer_room_id}] LOCKED")
+            return
+
+        # Send an informative message if the conversation started no within the business hour
+        if await self.business_hours.is_not_business_hour():
+            await self.business_hours.send_business_hours_message(room_id=customer_room_id)
+            self.log.debug(f"Saving room {customer_room_id} in pending list")
+            await RoomManager.save_pending_room(
+                room_id=customer_room_id,
+                selected_option=campaign_room_id,
+                puppet_mxid=self.intent.mxid,
+            )
             return
 
         self.log.debug(f"INIT Process distribution for [{customer_room_id}]")
@@ -102,6 +115,14 @@ class AgentManager:
         """
 
         while True:
+
+            # Stop process pending rooms if the conversation is not within the business hour
+            if await self.business_hours.is_not_business_hour():
+                self.log.debug(
+                    "Pending rooms process is stopped, the conversation is not within the business hour"
+                )
+                await sleep(self.config["acd.search_pending_rooms_interval"])
+                continue
 
             self.log.debug("Searching for pending rooms...")
             customer_room_ids = await RoomManager.get_pending_rooms(fk_puppet=self.puppet_pk)
