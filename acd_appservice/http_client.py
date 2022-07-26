@@ -49,7 +49,7 @@ class IkonoAPIClient(BaseClass):
             async with self.session.post(url, data=data) as response:
                 if response.status != 200:
                     self.log.error(
-                        f"Failed to get api access token {self.user_id} {self.config['appservice.puppet_password']}: {await response.text()}"
+                        f"Failed to get api access token {self.user_id}: {await response.text()}"
                     )
                     return False
                 response_json = await response.json()
