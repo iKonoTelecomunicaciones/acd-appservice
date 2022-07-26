@@ -8,8 +8,8 @@ from aiohttp.web import WebSocketResponse
 from mautrix.types import UserID
 from mautrix.util.logging import TraceLogger
 
+from . import puppet as pu
 from .config import Config
-from .puppet import Puppet
 
 
 class BaseClass:
@@ -97,7 +97,7 @@ class ProvisionBridge(BaseClass):
 
     async def ws_connect(
         self,
-        puppet: Puppet,
+        puppet: pu.Puppet,
         ws_customer: Optional[WebSocketResponse] = None,
         easy_mode: bool = False,
     ):
@@ -105,7 +105,7 @@ class ProvisionBridge(BaseClass):
 
         Parameters
         ----------
-        puppet : Puppet
+        puppet : pu.Puppet
             The puppet of the user requesting the qr.
         ws_customer : Optional[WebSocketResponse]
             The websocket connection to the client.
