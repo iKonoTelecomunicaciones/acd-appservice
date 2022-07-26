@@ -31,6 +31,7 @@ class HTTPClient(BaseClass):
 
 class IkonoAPIClient(HTTPClient):
     def __init__(self, user_id: UserID):
+        self.session = None
         self.api_token = None
         self.user_id = user_id
 
