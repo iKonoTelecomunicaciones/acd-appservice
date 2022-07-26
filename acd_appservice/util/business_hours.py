@@ -28,7 +28,7 @@ class BusinessHour:
 
         """
         if self.config["utils.business_hours"]:
-            time_zone = pytz.timezone(self.config["timezone"])
+            time_zone = pytz.timezone(self.config["utils.timezone"])
             now = datetime.now(time_zone)
             day = now.strftime("%A").lower()
 
