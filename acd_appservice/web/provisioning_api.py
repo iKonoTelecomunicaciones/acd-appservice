@@ -992,7 +992,7 @@ class ProvisioningAPI:
         ---
         summary: Send a message from the user account to a WhatsApp phone number.
         tags:
-            - users
+            - ACD API
 
         requestBody:
           required: true
