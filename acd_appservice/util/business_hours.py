@@ -87,4 +87,4 @@ class BusinessHour:
         """
         if self.config["utils.business_hours.business_hours_message"]:
             business_hour_message = self.config["utils.business_hours.business_hours_message"]
-            await self.intent.send_text(room_id, business_hour_message, False)
+            await self.intent.send_text(room_id=room_id, text=business_hour_message)
