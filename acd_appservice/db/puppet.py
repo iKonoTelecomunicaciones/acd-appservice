@@ -20,7 +20,7 @@ class Puppet:
     pk: int | None
     email: str | None
     phone: str | None
-    username: str | None
+    bridge: str | None
     photo_id: str | None
     photo_mxc: ContentURI | None
     name_set: bool
@@ -39,7 +39,7 @@ class Puppet:
         return (
             self.email,
             self.phone,
-            self.username,
+            self.bridge,
             self.photo_id,
             self.photo_mxc,
             self.name_set,
@@ -54,7 +54,7 @@ class Puppet:
 
     async def insert(self) -> None:
         q = (
-            "INSERT INTO puppet (email, phone, username, photo_id, photo_mxc, name_set, avatar_set,"
+            "INSERT INTO puppet (email, phone, bridge, photo_id, photo_mxc, name_set, avatar_set,"
             "                    is_registered, custom_mxid, access_token, next_batch, base_url, control_room_id) "
             "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
         )
@@ -62,7 +62,7 @@ class Puppet:
 
     async def update(self) -> None:
         q = (
-            "UPDATE puppet SET email=$1, phone=$2, username=$3, photo_id=$4, photo_mxc=$5, name_set=$6,"
+            "UPDATE puppet SET email=$1, phone=$2, bridge=$3, photo_id=$4, photo_mxc=$5, name_set=$6,"
             "                  avatar_set=$7, is_registered=$8, custom_mxid=$9, access_token=$10,"
             "                  next_batch=$11, base_url=$12, control_room_id=$13 "
             "WHERE email=$1"
@@ -80,7 +80,7 @@ class Puppet:
     @property
     def query(cls) -> str:
         return (
-            "SELECT pk, email, phone, username, photo_id, photo_mxc, name_set, avatar_set,"
+            "SELECT pk, email, phone, bridge, photo_id, photo_mxc, name_set, avatar_set,"
             "is_registered, custom_mxid, access_token, next_batch, base_url, control_room_id "
             "FROM puppet WHERE"
         )
@@ -120,6 +120,16 @@ class Puppet:
     @classmethod
     async def get_all_puppets(cls) -> list[UserID]:
         q = "SELECT * FROM puppet WHERE custom_mxid IS NOT NULL"
+        rows = await cls.db.fetch(q)
+
+        if not rows:
+            return []
+
+        return [cls._from_row(row).custom_mxid for row in rows]
+
+    @classmethod
+    async def get_all_puppets_from_mautrix(cls) -> list[UserID]:
+        q = "SELECT * FROM puppet WHERE custom_mxid IS NOT NULL AND bridge = 'mautrix'"
         rows = await cls.db.fetch(q)
 
         if not rows:

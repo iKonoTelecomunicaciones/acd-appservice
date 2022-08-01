@@ -139,12 +139,12 @@ class MatrixHandler:
                     await self.handle_join(evt.room_id, UserID(evt.state_key), evt.event_id)
                 else:
                     # Setting the room name to the customer's name.
-                    if evt.sender.startswith(f"@{self.config['bridges.mautrix.user_prefix']}"):
+                    puppet: Puppet = await Puppet.get_customer_room_puppet(evt.room_id)
+                    if not puppet:
+                        return
+                    if await puppet.room_manager.is_customer_room(room_id=evt.room_id):
                         self.log.debug(f"The room name for the room {evt.room_id} will be changed")
                         unsigned: StateUnsigned = evt.unsigned
-                        puppet: Puppet = await Puppet.get_customer_room_puppet(evt.room_id)
-                        if not puppet:
-                            return
                         await puppet.room_manager.put_name_customer_room(room_id=evt.room_id)
 
                     # Cuando el cliente cambia su perfil, ya sea que se quiera conservar el viejo
@@ -548,7 +548,8 @@ class MatrixHandler:
             return
 
         # Ignore messages from whatsapp bots
-        if sender == self.config["bridges.mautrix.mxid"]:
+        bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
+        if bridge and sender == self.config[f"bridges.{bridge}.mxid"]:
             return
 
         # Checking if the message is a command, and if it is,
@@ -611,13 +612,10 @@ class MatrixHandler:
 
             room_name = await puppet.room_manager.get_room_name(room_id=room_id)
             if not room_name:
-                creator = await puppet.room_manager.get_room_creator(room_id=room_id)
-                new_room_name = await puppet.room_manager.get_update_name(creator=creator)
-                if new_room_name:
-                    await puppet.intent.set_room_name(room_id=room_id, name=new_room_name)
-                    self.log.info(
-                        f"User {room_id} has changed the name of the room {puppet.intent.mxid}"
-                    )
+                await puppet.room_manager.put_name_customer_room(room_id=room_id)
+                self.log.info(
+                    f"User {room_id} has changed the name of the room {puppet.intent.mxid}"
+                )
 
             if puppet.intent.mxid == sender:
                 self.log.debug(f"Ignoring {sender} messages, is acd*")

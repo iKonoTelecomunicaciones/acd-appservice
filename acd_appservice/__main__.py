@@ -85,7 +85,7 @@ class ACDAppService(ACD):
         """This function checks if the puppet is connected to WhatsApp"""
         while True:
             try:
-                all_puppets = await Puppet.get_puppets()
+                all_puppets = await Puppet.get_puppets_from_mautrix()
                 for puppet_id in all_puppets:
                     puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_id)
                     response = await self.provisioning_api.bridge_connector.ping(user_id=puppet_id)
