@@ -133,6 +133,8 @@ appservice:
     # Este bot_username debe ser diferente para cada appservice (si hay mas de un appservice, deben tener bot_username diferentes)
     bot_username: acd
 ...
+    puppet_password: contrasena_segura
+...
 bridge:
     # Este username_template debe ser diferente para cada appservice (si hay mas de un appservice, deben tener username_template diferentes)
     username_template: "acd{userid}"
@@ -166,6 +168,19 @@ bridges:
     provisioning:
         url_base: "http://mautrix-whatsapp:29318/_matrix/provision"
         shared_secret: "gZv0kzqrZ4PFHb614IusrTuhPTDhUalJWq9xXL1K9OKBIs2bsxGD6SUOkgyN4OWP"
+  instagram:
+    # Instagram UserID
+    mxid: "@instagrambot:dominio_cliente.com"
+    # Prefix to be listened by bridge
+    prefix: "!ig"
+    # Prefix for users created
+    user_prefix: "ig"
+    # create_portal_command: "pm"
+    send_template_command: ""
+    # Postfix to identify a customer
+    postfix_template: "(IG)"
+    set_permissions: "set-pl {mxid} {power_level}"
+    set_relay: "set-relay"
 ```
 -  Ahora que tiene todos los campos configurados, se debe generar el `registration.yaml`:
 ```bash
@@ -195,16 +210,34 @@ docker service rm dominio_clientecom-synapse
 ```bash
 cd /mnt/shared/matrix/dominio_cliente.com/
 ```
-- Correr reiniciar los servicios:
+- El menubot debe ignorar un listado de acd* en la sección bots
+- Reiniciar los servicios:
 ```bash
 docker-compose config | docker stack deploy -c - $(basename $PWD | tr -d '.')
 ```
+- Por cada linea de whatsapp o aplicación de instagram se debe ejecutar el siguiente endpoint, el cual se encarga de las siguientes tareas:
+  - Crear el usuario acd* (puppet) encargado del manejo de la linea
+  - Crear la sala de control de la linea o canal
+  - Invitar al bridge bot que corresponde por linea
+  - Opcionalmente invita al menubot si se envia el parámetro en la petición
+  - Si ya existe una sala de control, tambien se puede enviar opcionalmente usando el parámetro `control_room_id`
+  - Por defecto el bridge usado en la sala de control es el bridge de web-whatsapp. Si la sala de control es de otro canal se debe especificar utilizando el parámetro `bridge`:
+    - `mautrix`
+    - `instagram`
+    - `gupshup`
+  - Puedes enviar el bridge que quieres invitar usando `bridge`
 
-- Con la instalación completa, debes crear un usuario enviando una solicitud al endpoint de la
-provisioning del nuevo acd:
-```curl
 - El menubot debe estar funcionando
+
+`mautrix`
+```curl
 curl -X POST -d '{"user_email":"correo-cliente@test.com", "menubot_id":"@menubot:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente-api.ikono.im/provision/v1/create_user
 ```
-- El menubot debe ignorar un listado de acd* en la sección bots
+
+`instagram`
+```curl
+curl -X POST -d '{"user_email":"correo-cliente@test.com", "menubot_id":"@menubot:dominio_cliente.com", "bridge":"instagram"}' -H "Content-Type: application/json" https://cliente-api.ikono.im/provision/v1/create_user
+```
+- NOTA: la contraseña de estos usuarios esta en el config `puppet_password`
+
 - Invitar al menubot y a los agentes a la nueva sala de control
