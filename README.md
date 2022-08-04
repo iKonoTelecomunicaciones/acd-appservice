@@ -38,6 +38,11 @@ UPDATE portal SET relay_user_id = '@acd1:dominio_cliente.com' WHERE relay_user_i
 
 - Debera cambiar el siguiente campo en el archivo de configuración del bridge de `mautrix-whatsapp`.
 ```yaml
+    provisioning:
+        shared_secret: generate
+
+    # y
+
     permissions:
         '*': relay
         '@acd:dominio_cliente.com': admin
@@ -48,6 +53,7 @@ UPDATE portal SET relay_user_id = '@acd1:dominio_cliente.com' WHERE relay_user_i
     permissions:
         'dominio_cliente.com': admin
 ```
+- Se debe eliminar el servicio del `mautrix-whatsapp` y volver hacer el despliegue para que se genere el shared_secret.
 - Crear un usuario administrador del synapse, para monitorear el AppService
 <br>
 
@@ -69,10 +75,15 @@ vim /mnt/shared/matrix/dominio_cliente.com/docker-compose.yml
 ```
 - Agregar la siguiente sección:
 ```yaml
-  nombrecliente-acd:
+cliente-acd:
     image: ikonoim/acd-appservice:stable
     volumes:
       - /var/data/${TOP_DOMAIN?Variable not set}/acd_data:/data
+    networks:
+      traefik-public:
+      default:
+        aliases:
+          - acd-as
     deploy:
       replicas: 1
       placement:
@@ -83,18 +94,15 @@ vim /mnt/shared/matrix/dominio_cliente.com/docker-compose.yml
         - traefik.docker.network=traefik-public
         - traefik.constraint-label=traefik-public
         # This block sets the routers
-        - traefik.http.routers.acd-${SERVICE?Variable not set}.rule=Host(`cliente-api.ikono.im`)
+        - traefik.http.routers.acd-${SERVICE?Variable not set}.rule=Host(`${ACD_API_DOMAIN?Variable not set}`)
         - traefik.http.routers.acd-${SERVICE?Variable not set}.entrypoints=https
         - traefik.http.routers.acd-${SERVICE?Variable not set}.tls=true
-        - traefik.http.services.acd-${SERVICE?Variable not set}.loadbalancer.server.port=29666
+        - traefik.http.services.acd-${SERVICE?Variable not set}.loadbalancer.server.port=29601
     logging:
       driver: json-file
       options:
         max-size: 20m
-        max-file: 10
-    networks:
-      - traefik-public
-      - default
+        max-file: "10"
 ```
 - Ir la carpeta:
 ```bash
@@ -135,10 +143,6 @@ bridge:
         admin: "@admin:dominio_cliente.com"
     ...
 acd:
-    # Sala de control del acd que vamos a reemplazar,
-    # si la instalación es nueva, entonces no coloque nada
-    control_room_id: "!foo:dominio_cliente.com"
-    ...
     # Para invitar a los supervisores, debe agregarlos a esta lista
     # y dejar en true supervisors_to_invite.invite
     supervisors_to_invite:
@@ -160,17 +164,17 @@ bridges:
     # Esta información la pueden obtener del archivo de configuración del brige
     # en la seccion provisioning
     provisioning:
-        url_base: "http://172.17.0.1:29665/_matrix/provision"
+        url_base: "http://mautrix-whatsapp:29318/_matrix/provision"
         shared_secret: "gZv0kzqrZ4PFHb614IusrTuhPTDhUalJWq9xXL1K9OKBIs2bsxGD6SUOkgyN4OWP"
 ```
--  Ahora que tiene todos los campos configurados, se debe generar el `config.yaml`:
+-  Ahora que tiene todos los campos configurados, se debe generar el `registration.yaml`:
 ```bash
 docker run --rm -v $(pwd):/data ikonoim/acd-appservice:stable
 ```
 - Copiar el `registration.yaml` en la ruta `/var/data/dominio_cliente.com/synapse`
 **NOTA:** Todos los `registrations` **deben ser diferentes**, por ejemplo **registration`-acd`.yaml**, **NO deben tener el mismo nombre**.
 ```bash
-cp registration.yaml /var/data/dominio_cliente.com/synapse/registration-acd.yaml
+cp registration.yaml /var/data/dominio_cliente.com/synapse/registration-acd-as.yaml
 ```
 
 - Registrar el appservice en el `homeserver.yaml`:
@@ -181,7 +185,7 @@ vim /var/data/dominio_cliente.com/synapse/homeserver.yaml
 - Agregan el registration en la lista de appservices:
 ```bash
 app_service_config_files:
-  - /data/registration-acd.yaml
+  - /data/registration-acd-as.yaml
 ```
 - Eliminar el servicio del synapse `dominio_clientecom-synapse`
 ```bash
@@ -195,3 +199,11 @@ cd /mnt/shared/matrix/dominio_cliente.com/
 ```bash
 docker-compose config | docker stack deploy -c - $(basename $PWD | tr -d '.')
 ```
+
+- Con la instalación completa, debes crear un usuario enviando una solicitud al endpoint de la
+provisioning del nuevo acd:
+```curl
+curl -X POST -d '{"user_email":"correo-cliente@test.com"}' -H "Content-Type: application/json" https://cliente-api.ikono.im/provision/v1/create_user
+```
+- El menubot debe ignorar un listado de acd* en la sección bots
+- Invitar al menubot y a los agentes a la nueva sala de control
