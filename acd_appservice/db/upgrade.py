@@ -13,7 +13,7 @@ async def upgrade_v1(conn: Connection) -> None:
         pk              SERIAL PRIMARY KEY,
         email           TEXT,
         phone           TEXT,
-        username        TEXT,
+        bridge          TEXT,
         photo_id        TEXT,
         photo_mxc       TEXT,
         name_set        BOOLEAN NOT NULL DEFAULT false,

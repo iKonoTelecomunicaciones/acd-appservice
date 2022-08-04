@@ -10,7 +10,7 @@ nest_asyncio.apply()
 
 @pytest.mark.asyncio
 class TestRoomManager:
-    async def test_is_customer_room(
+    async def test_is_mautrix_customer_room(
         self,
         mocker: MockerFixture,
         room_manager_mock: room_manager.RoomManager,
@@ -52,7 +52,28 @@ class TestRoomManager:
         )
         assert result == False
 
-    async def test_get_room_bridge(
+    async def test_is_instagram_customer_room(
+        self,
+        mocker: MockerFixture,
+        room_manager_mock: room_manager.RoomManager,
+        get_room_info_mock,
+    ):
+        """
+        True if the room is created by a client, False otherwise.
+        """
+        room_creator = "@ig_6546846652:matrix.org"
+
+        mocker.patch.object(
+            room_manager.RoomManager, "get_room_creator", return_value=room_creator
+        )
+
+        room_manager_mock.intent = None
+        result = await room_manager_mock.is_customer_room(
+            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
+        )
+        assert result == True
+
+    async def test_get_room_mautrix_bridge(
         self,
         mocker: MockerFixture,
         room_manager_mock: room_manager.RoomManager,
@@ -72,6 +93,27 @@ class TestRoomManager:
         )
 
         assert result == "mautrix"
+
+    async def test_get_room_instagram_bridge(
+        self,
+        mocker: MockerFixture,
+        room_manager_mock: room_manager.RoomManager,
+        get_room_info_mock,
+    ):
+        """
+        Returns the bridge that belongs to the room, None if the room does not have a client.
+        """
+        room_creator = "@ig_6546846652:matrix.org"
+
+        mocker.patch.object(
+            room_manager.RoomManager, "get_room_creator", return_value=room_creator
+        )
+        room_manager_mock.intent = None
+        result = await room_manager_mock.get_room_bridge(
+            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
+        )
+
+        assert result == "instagram"
 
     async def test_not_get_room_bridge(
         self,

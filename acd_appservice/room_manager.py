@@ -79,10 +79,7 @@ class RoomManager:
 
         bridge = await self.get_room_bridge(room_id=room_id)
 
-        if not bridge:
-            return False
-
-        if bridge.startswith("mautrix"):
+        if bridge and bridge in ["mautrix", "instagram"]:
             await self.send_cmd_set_pl(
                 room_id=room_id,
                 bridge=bridge,
@@ -90,6 +87,8 @@ class RoomManager:
                 power_level=100,
             )
             await self.send_cmd_set_relay(room_id=room_id, bridge=bridge)
+        else:
+            return False
 
         await asyncio.create_task(self.initial_room_setup(room_id=room_id))
 
@@ -153,7 +152,14 @@ class RoomManager:
                 new_room_name = await self.get_update_name(creator=creator)
                 if new_room_name:
                     self.log.debug(f"Setting the name {new_room_name} to the room {room_id}")
-                    await self.intent.set_room_name(room_id, new_room_name)
+                    for attempt in range(10):
+                        try:
+                            await self.intent.set_room_name(room_id, new_room_name)
+                            break
+                        except Exception as e:
+                            self.log.warning(f"Failed to set room name attempt {attempt}: {e}")
+
+                        await asyncio.sleep(2)
                     return True
         return False
 
@@ -500,7 +506,10 @@ class RoomManager:
         for bridge in bridges:
             user_prefix = self.config[f"bridges.{bridge}.user_prefix"]
             if creator.startswith(f"@{user_prefix}"):
-                new_room_name = await self.create_room_name(user_id=creator)
+                if bridge == "instagram":
+                    new_room_name = await self.intent.get_displayname(user_id=creator)
+                else:
+                    new_room_name = await self.create_room_name(user_id=creator)
                 if new_room_name:
                     postfix_template = self.config[f"bridges.{bridge}.postfix_template"]
                     new_room_name = new_room_name.replace(f" {postfix_template}", "")

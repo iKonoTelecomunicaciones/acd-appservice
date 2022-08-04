@@ -171,6 +171,11 @@ class ProvisioningAPI:
         # Si llega sala de control es porque estamos haciendo la migración de un acd viejo
         control_room_id: RoomID = data.get("control_room_id")
         menubot_id: UserID = data.get("menubot_id")
+        # Los bridge posibles a enviar son:
+        # mautrix
+        # instagram
+        # gupshup
+        bridge: str = data.get("bridge") or "mautrix"
 
         # Obtenemos el puppet de este email si existe
         puppet = await Puppet.get_by_email(email)
@@ -201,7 +206,7 @@ class ProvisioningAPI:
                     # NOTA: primero debe estar registrado el puppet en la db antes de crear la sala,
                     # ya que para crear una sala se necesita la pk del puppet (para usarla como fk)
                     invitees = [
-                        self.config["bridges.mautrix.mxid"],
+                        self.config[f"bridges.{bridge}.mxid"],
                         self.config["bridge.provisioning.admin"],
                     ]
                     if menubot_id:
@@ -217,6 +222,8 @@ class ProvisioningAPI:
                 await puppet.room_manager.save_room(
                     room_id=control_room_id, selected_option=None, puppet_mxid=puppet.mxid
                 )
+                # Registramos el bridge al que pertence el puppet
+                puppet.bridge = bridge
                 # Ahora si guardamos la sala de control en el puppet.control_room_id
                 await puppet.save()
                 # Si quieres configurar el estado inicial de los puppets, puedes hacerlo en esta

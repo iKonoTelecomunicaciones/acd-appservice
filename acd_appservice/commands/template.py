@@ -46,16 +46,16 @@ async def template(evt: CommandEvent) -> Dict:
     bridge = incoming_params.get("bridge")
 
     send_template_command = None
-    whatsapp_command_prefix = None
+    command_prefix = None
     for config_bridge in evt.config["bridges"]:
         if evt.config[f"bridges.{config_bridge}.prefix"] == bridge:
-            whatsapp_command_prefix = bridge
+            command_prefix = bridge
             send_template_command = evt.config[f"bridges.{config_bridge}.send_template_command"]
             break
 
     # Validate bridge used
-    # If there's no whatsapp_command_prefix means the received bridge isn't valid
-    if not whatsapp_command_prefix:
+    # If there's no command_prefix means the received bridge isn't valid
+    if not command_prefix:
         msg = "Bridge doesn't found, skipping message"
         return await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
 
@@ -70,7 +70,7 @@ async def template(evt: CommandEvent) -> Dict:
 
     if send_template_command:
         del incoming_params["bridge"]
-        msg = f"{whatsapp_command_prefix} {send_template_command} {template_data}"
+        msg = f"{command_prefix} {send_template_command} {template_data}"
         await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
     else:
         # If there's no send_template_command the message send directly to client

@@ -43,7 +43,7 @@ class Puppet(DBPuppet, BasePuppet):
         pk: int | None = None,
         email: int | None = None,
         phone: str | None = None,
-        username: str | None = None,
+        bridge: str | None = None,
         photo_id: str | None = None,
         photo_mxc: ContentURI | None = None,
         name_set: bool = False,
@@ -59,7 +59,7 @@ class Puppet(DBPuppet, BasePuppet):
             pk=pk,
             email=email,
             phone=phone,
-            username=username,
+            bridge=bridge,
             photo_id=photo_id,
             name_set=name_set,
             photo_mxc=photo_mxc,
@@ -402,7 +402,7 @@ class Puppet(DBPuppet, BasePuppet):
         return None
 
     @classmethod
-    async def get_puppets(cls) -> List[Puppet]:
+    async def get_puppets_from_mautrix(cls) -> List[Puppet]:
         """Get all puppets from the database
 
         Parameters
@@ -416,7 +416,7 @@ class Puppet(DBPuppet, BasePuppet):
         all_puppets = []
 
         try:
-            all_puppets = await cls.get_all_puppets()
+            all_puppets = await cls.get_all_puppets_from_mautrix()
         except Exception as e:
             cls.log.exception(e)
             return
@@ -426,6 +426,17 @@ class Puppet(DBPuppet, BasePuppet):
     @classmethod
     async def all_with_custom_mxid(cls) -> AsyncGenerator[Puppet, None]:
         puppets = await super().all_with_custom_mxid()
+        puppet: cls
+        for index, puppet in enumerate(puppets):
+            try:
+                yield cls.by_pk[puppet.pk]
+            except KeyError:
+                puppet._add_to_cache()
+                yield puppet
+
+    @classmethod
+    async def all_with_custom_mxid_from_mautrix(cls) -> AsyncGenerator[Puppet, None]:
+        puppets = await super().all_with_custom_mxid_from_mautrix()
         puppet: cls
         for index, puppet in enumerate(puppets):
             try:

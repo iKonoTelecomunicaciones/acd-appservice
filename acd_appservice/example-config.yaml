@@ -162,20 +162,29 @@ bridges:
         shared_secret: "gZv0kzqrZ4PFHb614IusrTuhPTDhUalJWq9xXL1K9OKBIs2bsxGD6SUOkgyN4OWP"
 
   instagram:
+    # Instagram UserID
+    mxid: "@instagrambot:localhost"
     # Prefix to be listened by bridge
     prefix: "!ig"
     # Prefix for users created
     user_prefix: "ig"
     # create_portal_command: "pm"
-    send_template_command: "template"
-    set_permissions: "set-pl {power_level} {mxid}"
+    send_template_command: ""
+    # Postfix to identify a customer
+    postfix_template: "(IG)"
+    set_permissions: "set-pl {mxid} {power_level}"
+    set_relay: "set-relay"
+
   gupshup:
+    # Gupshup UserID
+    mxid: "@gupshupbot:localhost"
     # Prefix to be listened by bridge
     prefix: "!gs"
     # Prefix for users created
     user_prefix: "gsmx"
     create_portal_command: "pm"
     send_template_command: "template"
+
   plugin:
     # Prefix to be listened by bridge
     prefix: "!plg"
