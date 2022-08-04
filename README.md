@@ -33,6 +33,7 @@ UPDATE portal SET relay_user_id = '@acd1:dominio_cliente.com' WHERE relay_user_i
 ```
 - En teoría esto es todo para empezar a operar 😜.
 <br>
+
 ## INSTALACIÓN:
 
 - Debera cambiar el siguiente campo en el archivo de configuración del bridge de `mautrix-whatsapp`.
