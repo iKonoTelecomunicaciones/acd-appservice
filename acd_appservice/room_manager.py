@@ -155,7 +155,6 @@ class RoomManager:
                     for attempt in range(10):
                         try:
                             await self.intent.set_room_name(room_id, new_room_name)
-                            self.log.debug("Menubot invite OK")
                             break
                         except Exception as e:
                             self.log.warning(f"Failed to set room name attempt {attempt}: {e}")
