@@ -203,7 +203,8 @@ docker-compose config | docker stack deploy -c - $(basename $PWD | tr -d '.')
 - Con la instalación completa, debes crear un usuario enviando una solicitud al endpoint de la
 provisioning del nuevo acd:
 ```curl
-curl -X POST -d '{"user_email":"correo-cliente@test.com"}' -H "Content-Type: application/json" https://cliente-api.ikono.im/provision/v1/create_user
+- El menubot debe estar funcionando
+curl -X POST -d '{"user_email":"correo-cliente@test.com", "menubot_id":"@menubot:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente-api.ikono.im/provision/v1/create_user
 ```
 - El menubot debe ignorar un listado de acd* en la sección bots
 - Invitar al menubot y a los agentes a la nueva sala de control
