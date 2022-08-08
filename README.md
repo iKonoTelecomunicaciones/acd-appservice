@@ -121,7 +121,7 @@ homeserver:
 ...
 appservice:
     # Definir aquí el nombre del servicio
-    address: http://nombrecliente-acd:29666
+    address: http://nombrecliente-acd:29601
     # La base de datos debe ser creada previamente
     # Si es creada en la red de docker, utilizar los alises
     # ó el nombre del contendor de postgres
