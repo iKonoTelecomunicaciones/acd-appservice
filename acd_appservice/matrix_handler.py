@@ -197,7 +197,7 @@ class MatrixHandler:
                         receiver=f"+{user_prefix.group('number')}",
                         event_id=event_id,
                         room_id=evt.room_id,
-                        timestamp_read=timestamp_read,
+                        timestamp_read=round(timestamp_read / 1000),
                         was_read=True,
                     )
                     self.log.debug(f"The message {event_id} has been read at {timestamp_read}")
