@@ -69,78 +69,68 @@ mkdir /var/data/dominio_cliente.com/acd_data/
 ```sql
 CREATE DATABASE acd_db ENCODING 'UTF8' LC_COLLATE='C' LC_CTYPE='C' template=template0 OWNER synapse;
 ```
+- Agregar la siguiente variable de entorno al `.env` del cliente
+```bash
+ACD_API_DOMAIN=cliente-tal.z.ikono.im
+```
+
 - Abrir el archivo `docker-compose.yml`
 ```bash
 vim /mnt/shared/matrix/dominio_cliente.com/docker-compose.yml
 ```
 - Agregar la siguiente sección:
 ```yaml
-cliente-acd:
-    image: ikonoim/acd-appservice:stable
-    volumes:
-      - /var/data/${TOP_DOMAIN?Variable not set}/acd_data:/data
-    networks:
-      traefik-public:
-      default:
-        aliases:
-          - acd-as
-    deploy:
-      replicas: 1
-      placement:
-        constraints:
-          - node.hostname == ${DEPLOY_SERVER?Variable not set}
-      labels:
-        - traefik.enable=true
-        - traefik.docker.network=traefik-public
-        - traefik.constraint-label=traefik-public
-        # This block sets the routers
-        - traefik.http.routers.acd-${SERVICE?Variable not set}.rule=Host(`${ACD_API_DOMAIN?Variable not set}`)
-        - traefik.http.routers.acd-${SERVICE?Variable not set}.entrypoints=https
-        - traefik.http.routers.acd-${SERVICE?Variable not set}.tls=true
-        - traefik.http.services.acd-${SERVICE?Variable not set}.loadbalancer.server.port=29601
-    logging:
-      driver: json-file
-      options:
-        max-size: 20m
-        max-file: "10"
+  cliente-acd:
+      image: ikonoim/acd-appservice:stable
+      volumes:
+        - /var/data/${TOP_DOMAIN?Variable not set}/acd_data:/data
+      networks:
+        traefik-public:
+        default:
+          aliases:
+            - acd-as
+      deploy:
+        replicas: 1
+        placement:
+          constraints:
+            - node.hostname == ${DEPLOY_SERVER?Variable not set}
+        labels:
+          - traefik.enable=true
+          - traefik.docker.network=traefik-public
+          - traefik.constraint-label=traefik-public
+          # This block sets the routers
+          - traefik.http.routers.acd-${SERVICE?Variable not set}.rule=Host(`${ACD_API_DOMAIN?Variable not set}`)
+          - traefik.http.routers.acd-${SERVICE?Variable not set}.entrypoints=https
+          - traefik.http.routers.acd-${SERVICE?Variable not set}.tls=true
+          - traefik.http.services.acd-${SERVICE?Variable not set}.loadbalancer.server.port=29601
+      logging:
+        driver: json-file
+        options:
+          max-size: 20m
+          max-file: "10"
 ```
 - Ir la carpeta:
 ```bash
 cd /var/data/dominio_cliente.com/acd_data/
 ```
+
 - Ejecutar un comando que creará el `config.yaml`
 ```bash
 docker run --rm -v $(pwd):/data ikonoim/acd-appservice:stable
 ```
+
 - Abra el archivo generado `config.yaml` y edite los siguientes campos:
 ```bash
 homeserver:
-    address: http://synapse:8008
-
+...
     domain: dominio_cliente.com
 ...
 appservice:
-    # Definir aquí el nombre del servicio
-    address: http://nombrecliente-acd:29601
-    # La base de datos debe ser creada previamente
-    # Si es creada en la red de docker, utilizar los alises
-    # ó el nombre del contendor de postgres
-    database: postgres://synapse:onokisoft@postgres/acd_db
 ...
-    port: 29601
-...
-    # Este ID debe ser diferente para cada appservice (si hay más de un appservice, deben tener id diferentes)
-    id: acd_az
-...
-    # Este bot_username debe ser diferente para cada appservice (si hay mas de un appservice, deben tener bot_username diferentes)
-    bot_username: acd
-...
-    puppet_password: contrasena_segura
+    puppet_password: contraseña_segura
 ...
 bridge:
-    # Este username_template debe ser diferente para cada appservice (si hay mas de un appservice, deben tener username_template diferentes)
-    username_template: "acd{userid}"
-
+...
     # Para invitar al admin a las salas de control
     provisioning:
         # Admin of the rooms created by provisioning
@@ -160,16 +150,12 @@ bridges:
     # Mautrix UserID
     # Aquí debe poner el user_id del usuario del bridge
     mxid: "@mx_whatsappbot:dominio_cliente.com"
-    # Prefix to be listened by bridge
-    prefix: "!wa"
-    # Prefix for users created
-    user_prefix: "mxwa"
     # Settings for provisioning API
     # Esta información la pueden obtener del archivo de configuración del brige
     # en la seccion provisioning
     provisioning:
         url_base: "http://mautrix-whatsapp:29318/_matrix/provision"
-        shared_secret: "gZv0kzqrZ4PFHb614IusrTuhPTDhUalJWq9xXL1K9OKBIs2bsxGD6SUOkgyN4OWP"
+        shared_secret: "copiar_shared_secret_del_provisioning_del_config_del_mautrix"
   instagram:
     # Instagram UserID
     mxid: "@instagrambot:dominio_cliente.com"
@@ -189,7 +175,6 @@ bridges:
 docker run --rm -v $(pwd):/data ikonoim/acd-appservice:stable
 ```
 - Copiar el `registration.yaml` en la ruta `/var/data/dominio_cliente.com/synapse`
-**NOTA:** Todos los `registrations` **deben ser diferentes**, por ejemplo **registration`-acd`.yaml**, **NO deben tener el mismo nombre**.
 ```bash
 cp registration.yaml /var/data/dominio_cliente.com/synapse/registration-acd-as.yaml
 ```

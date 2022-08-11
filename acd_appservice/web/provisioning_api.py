@@ -11,7 +11,14 @@ import aiohttp_cors
 from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
 from markdown import markdown
-from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent, UserID
+from mautrix.types import (
+    Format,
+    MessageType,
+    PowerLevelStateEventContent,
+    RoomID,
+    TextMessageEventContent,
+    UserID,
+)
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
@@ -216,6 +223,15 @@ class ProvisioningAPI:
                         name=f"CONTROL ROOM ({puppet.email})",
                         topic="Control room",
                         invitees=invitees,
+                    )
+                    power_level_content = PowerLevelStateEventContent(
+                        users={
+                            puppet.custom_mxid: 100,
+                            self.config["bridge.provisioning.admin"]: 100,
+                        }
+                    )
+                    await puppet.intent.set_power_levels(
+                        room_id=control_room_id, content=power_level_content
                     )
 
                 puppet.control_room_id = control_room_id
