@@ -569,10 +569,7 @@ class MatrixHandler:
             return
 
         # Checking if the room is a control room.
-        if (
-            await RoomManager.is_a_control_room(room_id=room_id)
-            or room_id == self.config["acd.control_room_id"]
-        ):
+        if await RoomManager.is_a_control_room(room_id=room_id):
             return
 
         # ignore messages other than commands from menu bot
