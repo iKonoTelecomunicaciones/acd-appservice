@@ -52,7 +52,7 @@ class MatrixHandler:
         self.acd_appservice = acd_appservice
         self.az = self.acd_appservice.az
         self.config = self.acd_appservice.config
-        self.az.matrix_event_handler(self.int_handle_event)
+        self.az.matrix_event_handler(self.init_handle_event)
 
     async def wait_for_connection(self) -> None:
         """It tries to connect to the homeserver, and if it fails,
@@ -111,7 +111,7 @@ class MatrixHandler:
             except Exception:
                 self.log.exception("Failed to set bot avatar")
 
-    async def int_handle_event(self, evt: Event) -> None:
+    async def init_handle_event(self, evt: Event) -> None:
         """If the event is a room member event, then handle it
 
         Parameters
@@ -535,7 +535,7 @@ class MatrixHandler:
 
         """
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
-        if not puppet.phone:
+        if puppet and not puppet.phone:
             bridge_conector = ProvisionBridge(session=self.az.http_session, config=self.config)
             response = await bridge_conector.ping(user_id=puppet.custom_mxid)
             if (
