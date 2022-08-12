@@ -200,8 +200,8 @@ class Puppet(DBPuppet, BasePuppet):
         self.by_pk[self.pk] = self
         if self.phone:
             self.by_phone[self.phone] = self
-        if self.by_email:
-            self.by_email[self.by_email] = self
+        if self.email:
+            self.by_email[self.email] = self
         if self.custom_mxid:
             self.by_custom_mxid[self.custom_mxid] = self
 
