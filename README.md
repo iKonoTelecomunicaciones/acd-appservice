@@ -229,7 +229,7 @@ curl -X POST -d '{"user_email":"correo-cliente@test.com", "menubot_id":"@menubot
 
 - Invitar al menubot y a los agentes a la nueva sala de control
 
-## ACD Modo API
+## ACD Modo API:
 
 # Envia un mensaje	
 Endpoint: `/provision/v1/send_message`
