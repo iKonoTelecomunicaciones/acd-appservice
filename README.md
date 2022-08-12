@@ -229,9 +229,11 @@ curl -X POST -d '{"user_email":"correo-cliente@test.com", "menubot_id":"@menubot
 
 - Invitar al menubot y a los agentes a la nueva sala de control
 
+
 ## ACD Modo API:
 
-# Envia un mensaje	
+#### Envia un mensaje
+
 Endpoint: `/provision/v1/send_message`
 Metodo: `POST`
 Datos requeridos:
@@ -249,8 +251,8 @@ curl -X POST -d '{"user_email":"foo@foo.com.co", "phone":"573123456789", "msg_ty
 **NOTA**:  Actualmente, solo se pueden enviar mensajes tipo `text`
 **NOTA**:  El campo `phone` debe tener el formato del pais
 
-## Respuestas:
-#### 1 -  El mensaje ha sido enviado correctamente
+##### Respuestas:
+###### 1 -  El mensaje ha sido enviado correctamente
 Status: `201`
 Respuesta:
 
@@ -260,7 +262,7 @@ Respuesta:
       "room_id": "!JJJPEfigBmkDBIvWvF:sender.ikono.im"
     }
     
-#### 2 - El número no existe en WhatsApp
+##### 2 - El número no existe en WhatsApp
 Status: `404`
 Respuesta:
 
@@ -270,7 +272,7 @@ Respuesta:
 	  "errcode": "not on whatsapp"
 	}
 
-#### 3 - Parametros faltantes
+##### 3 - Parametros faltantes
 Status: `422`
 Respuesta:
 
@@ -278,14 +280,14 @@ Respuesta:
 	  "error": "Please provide required variables"
 	}
 
-#### 4 - Error interno
+##### 4 - Error interno
 Status: `500`
 En este caso comunícate con soporte de iKono Chat:  soporte@ikono.com.co - [WhatsApp Soporte Ikono](https://wa.me/573148901850)
 
 ---
 ---
 
-# Verificación de lectura
+#### Verificación de lectura
 Endpoint: `/provision/v1/read_check?event_id=xyz_123`
 Metodo: `GET`
 
@@ -295,7 +297,7 @@ Ejemplo:
 curl --location --request GET 'https://sender.z.ikono.im/provision/v1/read_check?event_id=$ZuC98SlYtdWPoKPaUeHnTO3eLJL5fVGr3vpuHOoevBk'
 ```
 
-#### 1 -  Lectura del mensaje
+##### 1 -  Lectura del mensaje
 Status: `200`
 Respuesta:
 
@@ -309,7 +311,7 @@ Respuesta:
 	  "was_read": true
 	}
 
-#### 2 - Mensaje no encontrado
+##### 2 - Mensaje no encontrado
 Status: `404`
 Respuesta:
 
@@ -317,7 +319,7 @@ Respuesta:
 	    "error": "Message not found"
 	}
 
-#### 3 - Parametros faltantes
+##### 3 - Parametros faltantes
 Status: `422`
 Respuesta:
 
@@ -325,6 +327,6 @@ Respuesta:
 	  "error": "Please provide required variables"
 	}
 
-#### 4 - Error interno
+##### 4 - Error interno
 Status: `500`
 En este caso comunícate con soporte de iKono Chat:  soporte@ikono.com.co - [WhasApp Soporte Ikono](https://wa.me/573148901850)
