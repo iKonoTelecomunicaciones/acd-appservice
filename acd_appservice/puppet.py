@@ -93,6 +93,7 @@ class Puppet(DBPuppet, BasePuppet):
 
         self.agent_manager.control_room_id = control_room_id
         self.room_manager.control_room_id = control_room_id
+        self._add_to_cache()
 
     def get_tasks_by_name(self, task_name: UserID):
         """> This function returns a task object from the current event loop by name
@@ -197,12 +198,15 @@ class Puppet(DBPuppet, BasePuppet):
         # Mete a cada marioneta en un dict que permite acceder de manera más rápida a las
         # instancias de cada marioneta
         self.by_pk[self.pk] = self
-        self.by_email[self.email] = self
-        self.by_phone[self.phone] = self
+        if self.phone:
+            self.by_phone[self.phone] = self
+        if self.email:
+            self.by_email[self.email] = self
         if self.custom_mxid:
             self.by_custom_mxid[self.custom_mxid] = self
 
     async def save(self) -> None:
+        self._add_to_cache()
         await self.update()
 
     @classmethod

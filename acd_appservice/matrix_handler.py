@@ -33,6 +33,7 @@ from acd_appservice.room_manager import RoomManager
 
 from .commands.handler import command_processor
 from .commands.typehint import CommandEvent
+from .http_client import ProvisionBridge
 from .message import Message
 from .puppet import Puppet
 from .signaling import Signaling
@@ -51,7 +52,7 @@ class MatrixHandler:
         self.acd_appservice = acd_appservice
         self.az = self.acd_appservice.az
         self.config = self.acd_appservice.config
-        self.az.matrix_event_handler(self.int_handle_event)
+        self.az.matrix_event_handler(self.init_handle_event)
 
     async def wait_for_connection(self) -> None:
         """It tries to connect to the homeserver, and if it fails,
@@ -110,7 +111,7 @@ class MatrixHandler:
             except Exception:
                 self.log.exception("Failed to set bot avatar")
 
-    async def int_handle_event(self, evt: Event) -> None:
+    async def init_handle_event(self, evt: Event) -> None:
         """If the event is a room member event, then handle it
 
         Parameters
@@ -160,6 +161,7 @@ class MatrixHandler:
             evt: MessageEvent = evt
             if evt.content.msgtype == MessageType.NOTICE:
                 self.log.debug(f"Ignoring the notice message: {evt}")
+                await self.handle_notice(evt.room_id, evt.sender, evt.content, evt.event_id)
                 return
 
             await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
@@ -512,6 +514,39 @@ class MatrixHandler:
                     f"<b>2.</b> Para ver el menú.<br>"
                 )
                 await puppet.intent.send_text(room_id=room_id, html=menu)
+
+    async def handle_notice(
+        self, room_id: RoomID, sender: UserID, message: MessageEventContent, event_id: EventID
+    ) -> None:
+        """If the puppet doesn't have a phone number,
+        we ask the bridge for it, and if the bridge says the puppet is connected,
+        we update the puppet's phone number
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room the message was sent in.
+        sender : UserID
+            The user ID of the user who sent the message.
+        message : MessageEventContent
+            The message that was sent.
+        event_id : EventID
+            The ID of the event that triggered the call.
+
+        """
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+        if puppet and not puppet.phone:
+            bridge_conector = ProvisionBridge(session=self.az.http_session, config=self.config)
+            response = await bridge_conector.ping(user_id=puppet.custom_mxid)
+            if (
+                not response.get("error")
+                and response.get("whatsapp").get("conn")
+                and response.get("whatsapp").get("conn").get("is_connected")
+            ):
+                # Actualizamos el numero registrado para este puppet
+                # sin el +
+                puppet.phone = response.get("whatsapp").get("phone").replace("+", "")
+                await puppet.save()
 
     async def handle_message(
         self, room_id: RoomID, sender: UserID, message: MessageEventContent, event_id: EventID
