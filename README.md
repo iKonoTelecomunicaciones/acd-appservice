@@ -228,3 +228,103 @@ curl -X POST -d '{"user_email":"correo-cliente@test.com", "menubot_id":"@menubot
 - NOTA: la contraseña de estos usuarios esta en el config `puppet_password`
 
 - Invitar al menubot y a los agentes a la nueva sala de control
+
+## ACD Modo API
+
+# Envia un mensaje	
+Endpoint: `/provision/v1/send_message`
+Metodo: `POST`
+Datos requeridos:
+- `user_email`: foo@foo.com.co
+- `phone`: 573123456789
+- `msg_type`: text
+- `message`: Hola Mundo!!
+
+Ejemplo: 
+
+```curl
+curl -X POST -d '{"user_email":"foo@foo.com.co", "phone":"573123456789", "msg_type":"text", "message":"Hola Mundo!!"}' -H "Content-Type: application/json" https://sender.z.ikono.im/provision/v1/send_message
+```
+
+**NOTA**:  Actualmente, solo se pueden enviar mensajes tipo `text`
+**NOTA**:  El campo `phone` debe tener el formato del pais
+
+## Respuestas:
+#### 1 -  El mensaje ha sido enviado correctamente
+Status: `201`
+Respuesta:
+
+    {
+      "detail": "The message has been sent (probably)",
+      "event_id": "$xhm6sSrK2nCr7s5Xp09jhjy_PNqBcVnTI3dKcDdOLJ8",
+      "room_id": "!JJJPEfigBmkDBIvWvF:sender.ikono.im"
+    }
+    
+#### 2 - El número no existe en WhatsApp
+Status: `404`
+Respuesta:
+
+    {
+	  "success": false,
+	  "error": "The server said +573058 is not on WhatsApp",
+	  "errcode": "not on whatsapp"
+	}
+
+#### 3 - Parametros faltantes
+Status: `422`
+Respuesta:
+
+	{
+	  "error": "Please provide required variables"
+	}
+
+#### 4 - Error interno
+Status: `500`
+En este caso comunícate con soporte de iKono Chat:  soporte@ikono.com.co - [WhatsApp Soporte Ikono](https://wa.me/573148901850)
+
+---
+---
+
+# Verificación de lectura
+Endpoint: `/provision/v1/read_check?event_id=xyz_123`
+Metodo: `GET`
+
+Ejemplo: 
+
+```curl
+curl --location --request GET 'https://sender.z.ikono.im/provision/v1/read_check?event_id=$ZuC98SlYtdWPoKPaUeHnTO3eLJL5fVGr3vpuHOoevBk'
+```
+
+#### 1 -  Lectura del mensaje
+Status: `200`
+Respuesta:
+
+	{
+	  "event_id": "$kPo-UMnVUn0VvrrTvcqF1MRg7V9Nr_U1XwcmlGUykAE",
+	  "room_id": "!JJJPEfigBmkDBIvWvF:sender.ikono.im",
+	  "sender": "@acd3:sender.ikono.im",
+	  "receiver": "+573058790290",
+	  "timestamp_send": 1660331743,
+	  "timestamp_read": 1660331768,
+	  "was_read": true
+	}
+
+#### 2 - Mensaje no encontrado
+Status: `404`
+Respuesta:
+
+    {
+	    "error": "Message not found"
+	}
+
+#### 3 - Parametros faltantes
+Status: `422`
+Respuesta:
+
+	{
+	  "error": "Please provide required variables"
+	}
+
+#### 4 - Error interno
+Status: `500`
+En este caso comunícate con soporte de iKono Chat:  soporte@ikono.com.co - [WhasApp Soporte Ikono](https://wa.me/573148901850)
