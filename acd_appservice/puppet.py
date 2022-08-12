@@ -423,6 +423,22 @@ class Puppet(DBPuppet, BasePuppet):
 
         return all_puppets
 
+    async def is_another_puppet(self, phone: str) -> bool:
+        """It checks if the phone number is in the by_phone dictionary.
+
+        Parameters
+        ----------
+        phone : str
+            The phone number of the user.
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+
+        return True if phone in self.by_phone else False
+
     @classmethod
     async def all_with_custom_mxid(cls) -> AsyncGenerator[Puppet, None]:
         puppets = await super().all_with_custom_mxid()
