@@ -6,7 +6,6 @@ from typing import Dict
 from markdown import markdown
 
 from ..http_client import ProvisionBridge, client
-from ..puppet import Puppet
 from ..signaling import Signaling
 from .handler import command_handler
 from .typehint import CommandEvent
@@ -80,10 +79,9 @@ async def pm(evt: CommandEvent) -> Dict:
         return {"data": return_params, "status": 422}
 
     # Sending a message to the customer.
-    puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
     session = client.session
     bridge_connector = ProvisionBridge(session=session, config=evt.config)
-    status, data = await bridge_connector.pm(user_id=evt.intent.mxid, phone=phone_number)
+    status, data = await bridge_connector.mautrix_pm(user_id=evt.intent.mxid, phone=phone_number)
 
     if not status in [200, 201]:
         evt.log.error(data)

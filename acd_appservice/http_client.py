@@ -105,21 +105,22 @@ class IkonoAPIClient(BaseClass):
 
 
 class ProvisionBridge(BaseClass):
-    def __init__(self, session: ClientSession, config: Config):
+    def __init__(self, session: ClientSession, config: Config, bridge: str = "mautrix"):
         self.session = session
         self.config = config
+        self.bridge = bridge
 
     @property
     def headers(self) -> Dict:
         return {
-            "Authorization": f"Bearer {self.config['bridges.mautrix.provisioning.shared_secret']}"
+            "Authorization": f"Bearer {self.config[f'bridges.{self.bridge}.provisioning.shared_secret']}"
         }
 
     @property
     def url_base(self) -> str:
-        return self.config["bridges.mautrix.provisioning.url_base"]
+        return self.config[f"bridges.{self.bridge}.provisioning.url_base"]
 
-    async def ws_connect(
+    async def mautrix_ws_connect(
         self,
         puppet: pu.Puppet,
         ws_customer: Optional[WebSocketResponse] = None,
@@ -198,7 +199,7 @@ class ProvisionBridge(BaseClass):
                         await ws_customer.close()
                     break
 
-    async def pm(self, user_id: UserID, phone: str) -> tuple[int, Dict]:
+    async def mautrix_pm(self, user_id: UserID, phone: str) -> tuple[int, Dict]:
         """It sends a private message to a user.
 
         Parameters
@@ -229,7 +230,7 @@ class ProvisionBridge(BaseClass):
 
         return response.status, data
 
-    async def ping(self, user_id: UserID) -> Dict:
+    async def mautrix_ping(self, user_id: UserID) -> Dict:
         """It sends a ping to the user with the given user_id.
 
         Parameters
@@ -256,7 +257,78 @@ class ProvisionBridge(BaseClass):
         data = await response.json()
         if not response.status in [200, 201]:
             self.log.error(data)
-            return
+
+        return data
+
+    async def instagram_login(self, user_id: UserID, username: str, password: str) -> Dict:
+        """It sends a POST request to the `/v1/api/login` endpoint with the user's Instagram username and password
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user who is logging in.
+        username : str
+            The username of the account you want to login to.
+        password : str
+            The password of the account you want to login to.
+
+        Returns
+        -------
+            A dictionary with the key "error" and the value of the error message.
+
+        """
+        try:
+            response = await self.session.post(
+                url=f"{self.url_base}/v1/api/login",
+                headers=self.headers,
+                json={
+                    "username": username,
+                    "password": password,
+                },
+                params={"user_id": user_id},
+            )
+        except Exception as e:
+            self.log.error(e)
+            return {"error": str(e)}
+
+        data = await response.json()
+        if not response.status in [200, 201]:
+            self.log.error(await response.text())
+
+        return data
+
+    async def instagram_challenge(self, user_id: UserID, code: str) -> Dict:
+        """It sends a POST request to the Instagram API with the user's ID and the code they entered
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the account you're trying to log into.
+        code : str
+            The code you received from the challenge.
+
+        Returns
+        -------
+            A dictionary with the key "error" and the value of the error message.
+
+        """
+
+        try:
+            response = await self.session.post(
+                url=f"{self.url_base}/v1/api/login/checkpoint",
+                headers=self.headers,
+                json={
+                    "code": code,
+                },
+                params={"user_id": user_id},
+            )
+        except Exception as e:
+            self.log.error(e)
+            return {"error": str(e)}
+
+        data = await response.json()
+        if not response.status in [200, 201]:
+            self.log.error(await response.text())
 
         return data
 
