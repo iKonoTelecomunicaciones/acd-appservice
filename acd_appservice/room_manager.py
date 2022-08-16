@@ -42,6 +42,9 @@ class RoomManager:
     # rooms that are in offline agent menu
     offline_menu = set()
 
+    # blacklist of rooms
+    blacklist_rooms = set()
+
     control_room_id: RoomID | None = None
 
     def __init__(self, config: Config, intent: IntentAPI = None) -> None:
@@ -483,6 +486,34 @@ class RoomManager:
 
         """
         return room_id in cls.offline_menu
+
+    @classmethod
+    def put_in_blacklist_rooms(cls, room_id):
+        """This function adds the room_id to the blacklist_rooms set
+
+        Parameters
+        ----------
+        room_id
+            The room ID of the room you want to blacklist.
+
+        """
+        cls.blacklist_rooms.add(room_id)
+
+    @classmethod
+    def in_blacklist_rooms(cls, room_id) -> bool:
+        """If the room ID is in the blacklist, return True. Otherwise, return False
+
+        Parameters
+        ----------
+        room_id
+            The room ID of the room you want to blacklist.
+
+        Returns
+        -------
+            The room_id is being returned.
+
+        """
+        return room_id in cls.blacklist_rooms
 
     async def get_update_name(self, creator: UserID) -> str:
         """Given a customer's mxid, pull the phone number and concatenate it to the name
