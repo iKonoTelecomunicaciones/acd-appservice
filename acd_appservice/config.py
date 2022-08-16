@@ -23,6 +23,7 @@ class Config(BaseBridgeConfig):
         copy("appservice.puppet_password")
         copy_dict("bridges.mautrix")
         copy_dict("bridges.instagram")
+        copy_dict("bridges.instagram.provisioning")
         copy("bridges.plugin")
         copy("acd.keep_room_name")
         copy("acd.numbers_in_rooms")

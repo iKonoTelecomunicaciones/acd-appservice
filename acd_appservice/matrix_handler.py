@@ -537,7 +537,7 @@ class MatrixHandler:
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
         if puppet and not puppet.phone:
             bridge_conector = ProvisionBridge(session=self.az.http_session, config=self.config)
-            response = await bridge_conector.ping(user_id=puppet.custom_mxid)
+            response = await bridge_conector.mautrix_ping(user_id=puppet.custom_mxid)
             if (
                 not response.get("error")
                 and response.get("whatsapp").get("conn")

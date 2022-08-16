@@ -52,7 +52,6 @@ class ProvisioningAPI:
     app: web.Application
     config: Config
     client: HTTPClient
-    bridge_connector: ProvisionBridge
 
     def __init__(self) -> None:
         self.app = web.Application()
@@ -68,9 +67,19 @@ class ProvisioningAPI:
         )
 
         swagger.add_post(path="/v1/create_user", handler=self.create_user)
-        swagger.add_post(path="/v1/send_message", handler=self.send_message)
-        swagger.add_get(path="/v1/link_phone", handler=self.link_phone, allow_head=False)
-        swagger.add_get(path="/v1/ws_link_phone", handler=self.ws_link_phone, allow_head=False)
+
+        # Mautrix WhatsApp endpoints
+        swagger.add_post(path="/v1/whatsapp/send_message", handler=self.send_message)
+        swagger.add_get(path="/v1/whatsapp/link_phone", handler=self.link_phone, allow_head=False)
+        swagger.add_get(
+            path="/v1/whatsapp/ws_link_phone", handler=self.ws_link_phone, allow_head=False
+        )
+
+        # Mautrix Instagram endpoints
+        swagger.add_post(path="/v1/instagram/login", handler=self.instagram_login)
+        swagger.add_post(path="/v1/instagram/challenge", handler=self.instagram_challenge)
+
+        # General
         swagger.add_get(path="/v1/read_check", handler=self.read_check, allow_head=False)
         swagger.add_get(
             path="/v1/get_control_room", handler=self.get_control_room, allow_head=False
@@ -84,7 +93,6 @@ class ProvisioningAPI:
         swagger.add_post(path="/v1/cmd/resolve", handler=self.resolve)
         swagger.add_post(path="/v1/cmd/bulk_resolve", handler=self.bulk_resolve)
         swagger.add_post(path="/v1/cmd/state_event", handler=self.state_event)
-        # cmd template sin pruebas
         swagger.add_post(path="/v1/cmd/template", handler=self.template)
         swagger.add_post(path="/v1/cmd/transfer", handler=self.transfer)
         swagger.add_post(path="/v1/cmd/transfer_user", handler=self.transfer_user)
@@ -105,6 +113,7 @@ class ProvisioningAPI:
             cors.add(route)
 
         # Options
+        # Aqui se agregan todos los los endpoints de metodo POST
         swagger.add_options(path="/v1/cmd/pm", handler=self.options)
         swagger.add_options(path="/v1/cmd/resolve", handler=self.options)
         swagger.add_options(path="/v1/cmd/bulk_resolve", handler=self.options)
@@ -112,6 +121,9 @@ class ProvisioningAPI:
         swagger.add_options(path="/v1/cmd/template", handler=self.options)
         swagger.add_options(path="/v1/cmd/transfer", handler=self.options)
         swagger.add_options(path="/v1/cmd/transfer_user", handler=self.options)
+        swagger.add_options(path="/v1/whatsapp/send_message", handler=self.options)
+        swagger.add_options(path="/v1/instagram/login", handler=self.options)
+        swagger.add_options(path="/v1/instagram/challenge", handler=self.options)
 
         self.loop = asyncio.get_running_loop()
 
@@ -311,7 +323,7 @@ class ProvisioningAPI:
         # Creamos una conector con el bridge
         bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
         # Creamos un WebSocket para conectarnos con el bridge
-        await bridge_connector.ws_connect(puppet=puppet, ws_customer=ws_customer)
+        await bridge_connector.mautrix_ws_connect(puppet=puppet, ws_customer=ws_customer)
 
         return ws_customer
 
@@ -355,10 +367,131 @@ class ProvisioningAPI:
             return web.json_response(**USER_DOESNOT_EXIST)
 
         # Creamos una conector con el bridge
+        bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
         # Creamos un WebSocket para conectarnos con el bridge
         return web.json_response(
-            **await self.bridge_connector.ws_connect(puppet=puppet, easy_mode=True)
+            **await bridge_connector.mautrix_ws_connect(puppet=puppet, easy_mode=True)
         )
+
+    async def instagram_login(self, request: web.Request) -> web.Response:
+        """
+        Login to Instagram Bridge.
+        ---
+        summary:        Sign in with your instagram account to start receiving messages.
+
+        tags:
+            - Instagram
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_email:
+                    type: string
+                  username:
+                    type: string
+                  password:
+                    type: string
+                example:
+                    user_email: nobody@somewhere.com
+                    username: instagram_user
+                    password: secretfoo
+
+        responses:
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+        """
+
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data = await request.json()
+        user_email = data.get("user_email")
+        username = data.get("username")
+        password = data.get("password")
+
+        error_result = await self.validate_email(user_email=user_email)
+
+        if error_result:
+            return web.json_response(**error_result)
+
+        puppet: Puppet = await Puppet.get_by_email(user_email)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        bridge_connector = ProvisionBridge(
+            session=self.client.session, config=self.config, bridge=puppet.bridge
+        )
+
+        response = await bridge_connector.instagram_login(
+            user_id=puppet.custom_mxid, username=username, password=password
+        )
+
+        return web.json_response(data=response)
+
+    async def instagram_challenge(self, request: web.Request) -> web.Response:
+        """
+        Solve the instagram login challenge.
+        ---
+        summary:        By sending the code that instagram sent you, you can finish the login process.
+
+        tags:
+            - Instagram
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_email:
+                    type: string
+                  code:
+                    type: string
+                example:
+                    user_email: nobody@somewhere.com
+                    code: 54862
+
+        responses:
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+        """
+
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data = await request.json()
+        user_email = data.get("user_email")
+        code = data.get("code")
+
+        error_result = await self.validate_email(user_email=user_email)
+
+        if error_result:
+            return web.json_response(**error_result)
+
+        puppet: Puppet = await Puppet.get_by_email(user_email)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        bridge_connector = ProvisionBridge(
+            session=self.client.session, config=self.config, bridge=puppet.bridge
+        )
+
+        response = await bridge_connector.instagram_challenge(
+            user_id=puppet.custom_mxid, code=code
+        )
+
+        return web.json_response(data=response)
 
     async def read_check(self, request: web.Request) -> web.Response:
         """
@@ -1089,7 +1222,12 @@ class ProvisioningAPI:
         message = data.get("message")
         phone = phone if phone.startswith("+") else f"+{phone}"
 
-        status, response = await self.bridge_connector.pm(user_id=puppet.custom_mxid, phone=phone)
+        # Creamos una conector con el bridge
+        bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
+
+        status, response = await bridge_connector.mautrix_pm(
+            user_id=puppet.custom_mxid, phone=phone
+        )
         if response.get("error"):
             return web.json_response(data=response, status=status)
 
