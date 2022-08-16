@@ -582,9 +582,13 @@ class MatrixHandler:
             self.log.warning(f"I can't get an puppet for the room {room_id}")
             return
 
+        # Se ignoran todas las salas que hayan sido agregadas a la lista negra
         if RoomManager.in_blacklist_rooms(room_id=room_id):
             return
 
+        # Dado un user_id obtenemos el número y buscamos que el número no sea uno de los ya
+        # registrados en el ACD - AZ, si es así lo agregamos a la lista negra
+        # luego se envía un mensaje indicando personalizado.
         customer_match = re.match(self.config["utils.username_regex"], sender)
         if customer_match:
             customer_phone = customer_match.group("number")
