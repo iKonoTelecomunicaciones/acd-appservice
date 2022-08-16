@@ -547,6 +547,9 @@ class MatrixHandler:
             self.log.warning(f"I can't get an puppet for the room {room_id}")
             return
 
+        if RoomManager.in_blacklist_rooms(room_id=room_id):
+            return
+
         customer_match = re.match(self.config["utils.username_regex"], sender)
         if customer_match:
             customer_phone = customer_match.group("number")
@@ -555,6 +558,7 @@ class MatrixHandler:
                 await puppet.intent.send_text(
                     room_id=room_id, text=self.config["utils.message_bot_war"]
                 )
+                RoomManager.put_in_blacklist_rooms(room_id=room_id)
                 return
 
         # Ignore messages from whatsapp bots
