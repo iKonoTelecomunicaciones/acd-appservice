@@ -64,6 +64,7 @@ UPDATE portal SET relay_user_id = '@acd1:dominio_cliente.com' WHERE relay_user_i
 <br>
 
 ## INSTALACIÓN:
+- Eliminar la sala de control del menubot y del frontend
 - Debera cambiar el siguiente campo en el archivo de configuración del bridge de `mautrix-whatsapp`.
 ```yaml
     permissions:
