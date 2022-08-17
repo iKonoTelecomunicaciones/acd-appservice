@@ -11,6 +11,9 @@ fi
 
 if [ ! -f /data/registration.yaml ]; then
 	python3 -m acd_appservice -g -c /data/config.yaml -r /data/registration.yaml
+	echo "Didn't find a registration file."
+	echo "Copied default registration file to /data/registration.yaml"
+	echo "Modify that registration file to your liking."
 	exit
 fi
 

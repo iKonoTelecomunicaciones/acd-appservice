@@ -4,16 +4,26 @@
 
 ## MIGRACIÓN ACD VIEJO:
 
-- Lo primero es parar el servicio del acd viejo
+- Con el acd viejo enviar a la sala de control el siguiente mensaje `!acd br-cmd !wa logout` (ó `!wa1`, `!wa2`, dependiendo de la instalación del bridge).
+- Ahora se debe parar el servicio del acd viejo
 ```bash
 docker service rm nombrecliente-acd
 ```
-- Con el acd viejo enviar a la sala de control el siguiente mensaje `!wa logout` (ó `!wa1`, `!wa2`, dependiendo de la instalación del bridge).
 - Ahora se debe seguir la instalación de este nuevo acd
 - Con la instalación completa, debes crear un usuario enviando una solicitud al endpoint de la
 provisioning del nuevo acd:
+- Eliminar la sala de control del menubot y del frontend
+- Debera configurar la provisioning de la API del acd en el Element en agente y supervisor
+```json
+    "acd_provisioning_api": {
+        "API_PROTOCOL": "https",
+        "API_HOST": "cliente.z.ikono.im/provision",
+        "API_PORT": "",
+        "API_VERSION": "v1"
+    }
+```
 ```curl
-curl -X POST -d '{"user_email":"correo-cliente@test.com", "control_room_id":"!foo:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente-api.ikono.im/provision/v1/create_user
+curl -X POST -d '{"user_email":"correo-cliente@test.com", "control_room_id":"!foo:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente.z.ikono.im/provision/v1/create_user
 ```
 - Ahora debería unir al nuevo usuario acd1 en las salas donde este el acd viejo
 
@@ -35,20 +45,26 @@ UPDATE portal SET relay_user_id = '@acd1:dominio_cliente.com' WHERE relay_user_i
 <br>
 
 ## INSTALACIÓN:
-
-- Debera cambiar el siguiente campo en el archivo de configuración del bridge de `mautrix-whatsapp`.
+- Debera tener actualizado el synapse a la version 1.54.0 (docker image `ikonoim/synapse:v1.54.0`)
+- Si usted viene de la versión del bridge 0.2.4, debe cambriar primero esto en el config del bridge:
 ```yaml
     provisioning:
+        shared_secret: disable
+
+    # CAMBIRAR A
+
+    provisioning:
         shared_secret: generate
-
-    # y
-
+```
+- Debera instalar la version 0.6.0 del bridge (docker image `dock.mau.dev/mautrix/whatsapp:v0.6.0`)
+- Debera cambiar el siguiente campo en el archivo de configuración del bridge de `mautrix-whatsapp`.
+```yaml
     permissions:
         '*': relay
         '@acd:dominio_cliente.com': admin
         '@supervisor:dominio_cliente.com': admin
 
-    # Debe cambiarla a
+    # DEBE CAMBIAR A
 
     permissions:
         'dominio_cliente.com': admin
@@ -63,7 +79,7 @@ docker exec -it contenedor-synapse register_new_matrix_user -u admin -a -c /data
 ```
 - Crear una carpeta para almacenar la data del appservice:
 ```bash
-mkdir /var/data/dominio_cliente.com/acd_data/
+mkdir /mnt/shared/matrix/dominio_cliente.com/acd_data/
 ```
 - Crear una bd para el appservice (en el mismo contenedor de postgres donde está la bd del synapse):
 ```sql
@@ -83,7 +99,7 @@ vim /mnt/shared/matrix/dominio_cliente.com/docker-compose.yml
   cliente-acd:
       image: ikonoim/acd-appservice:stable
       volumes:
-        - /var/data/${TOP_DOMAIN?Variable not set}/acd_data:/data
+        - /mnt/shared/matrix/${TOP_DOMAIN?Variable not set}/acd_data:/data
       networks:
         traefik-public:
         default:
@@ -111,7 +127,7 @@ vim /mnt/shared/matrix/dominio_cliente.com/docker-compose.yml
 ```
 - Ir la carpeta:
 ```bash
-cd /var/data/dominio_cliente.com/acd_data/
+cd /mnt/shared/matrix/dominio_cliente.com/acd_data/
 ```
 
 - Ejecutar un comando que creará el `config.yaml`
@@ -159,16 +175,6 @@ bridges:
   instagram:
     # Instagram UserID
     mxid: "@instagrambot:dominio_cliente.com"
-    # Prefix to be listened by bridge
-    prefix: "!ig"
-    # Prefix for users created
-    user_prefix: "ig"
-    # create_portal_command: "pm"
-    send_template_command: ""
-    # Postfix to identify a customer
-    postfix_template: "(IG)"
-    set_permissions: "set-pl {mxid} {power_level}"
-    set_relay: "set-relay"
 ```
 -  Ahora que tiene todos los campos configurados, se debe generar el `registration.yaml`:
 ```bash
@@ -218,12 +224,12 @@ docker-compose config | docker stack deploy -c - $(basename $PWD | tr -d '.')
 
 `mautrix`
 ```curl
-curl -X POST -d '{"user_email":"correo-cliente@test.com", "menubot_id":"@menubot:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente-api.ikono.im/provision/v1/create_user
+curl -X POST -d '{"user_email":"correo-cliente@test.com", "menubot_id":"@menubot:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente.z.ikono.im/provision/v1/create_user
 ```
 
 `instagram`
 ```curl
-curl -X POST -d '{"user_email":"correo-cliente@test.com", "menubot_id":"@menubot:dominio_cliente.com", "bridge":"instagram"}' -H "Content-Type: application/json" https://cliente-api.ikono.im/provision/v1/create_user
+curl -X POST -d '{"user_email":"correo-cliente@test.com", "menubot_id":"@menubot:dominio_cliente.com", "bridge":"instagram"}' -H "Content-Type: application/json" https://cliente.z.ikono.im/provision/v1/create_user
 ```
 - NOTA: la contraseña de estos usuarios esta en el config `puppet_password`
 
@@ -242,7 +248,7 @@ Datos requeridos:
 - `msg_type`: text
 - `message`: Hola Mundo!!
 
-Ejemplo: 
+Ejemplo:
 
 ```curl
 curl -X POST -d '{"user_email":"foo@foo.com.co", "phone":"573123456789", "msg_type":"text", "message":"Hola Mundo!!"}' -H "Content-Type: application/json" https://sender.z.ikono.im/provision/v1/send_message
@@ -261,7 +267,7 @@ Respuesta:
       "event_id": "$xhm6sSrK2nCr7s5Xp09jhjy_PNqBcVnTI3dKcDdOLJ8",
       "room_id": "!JJJPEfigBmkDBIvWvF:sender.ikono.im"
     }
-    
+
 ##### 2 - El número no existe en WhatsApp
 Status: `404`
 Respuesta:
@@ -291,7 +297,7 @@ En este caso comunícate con soporte de iKono Chat:  soporte@ikono.com.co - [Wha
 Endpoint: `/provision/v1/read_check?event_id=xyz_123`
 Metodo: `GET`
 
-Ejemplo: 
+Ejemplo:
 
 ```curl
 curl --location --request GET 'https://sender.z.ikono.im/provision/v1/read_check?event_id=$ZuC98SlYtdWPoKPaUeHnTO3eLJL5fVGr3vpuHOoevBk'

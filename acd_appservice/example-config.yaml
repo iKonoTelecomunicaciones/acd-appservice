@@ -156,7 +156,7 @@ bridges:
     # Settings for provisioning API
     provisioning:
         url_base: "http://mautrix-whatsapp:29318/_matrix/provision"
-        shared_secret: "gZv0kzqrZ4PFHb614IusrTuhPTDhUalJWq9xXL1K9OKBIs2bsxGD6SUOkgyN4OWP"
+        shared_secret: ""
 
   instagram:
     # Instagram UserID
@@ -174,7 +174,7 @@ bridges:
     # Settings for provisioning API
     provisioning:
         url_base: "http://mautrix-instagram:29320/_matrix/provision"
-        shared_secret: "gZv0kzqrZ4PFHb614IusrTuhPTDhUalJWq9xXL1K9OKBIs2bsxGD6SUOkgyN4OWP"
+        shared_secret: ""
 
   gupshup:
     # Gupshup UserID
