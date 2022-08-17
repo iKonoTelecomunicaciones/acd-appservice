@@ -4,6 +4,25 @@
 
 ## MIGRACIÓN ACD VIEJO:
 
+- Debera tener actualizado el synapse a la version 1.54.0 (docker image `ikonoim/synapse:v1.54.0`)
+- Si usted viene de la versión del bridge 0.2.4, debe cambriar primero esto en el config del bridge:
+```yaml
+    provisioning:
+        shared_secret: disable
+
+    # CAMBIAR A
+
+    provisioning:
+        shared_secret: generate
+```
+- Debera instalar la version 0.6.0 del bridge (docker image `dock.mau.dev/mautrix/whatsapp:v0.6.0`)
+- Se debe eliminar el servicio del `mautrix-whatsapp` y volver hacer el despliegue para que se genere el shared_secret.
+- Crear un usuario administrador del synapse, para monitorear el AppService
+
+**NOTA:** Este comando debe ser ejecutado en el nodo donde está instalado el cliente
+```bash
+docker exec -it contenedor-synapse register_new_matrix_user -u admin -a -c /data/homeserver.yaml http://localhost:8008
+```
 - Con el acd viejo enviar a la sala de control el siguiente mensaje `!acd br-cmd !wa logout` (ó `!wa1`, `!wa2`, dependiendo de la instalación del bridge).
 - Ahora se debe parar el servicio del acd viejo
 ```bash
@@ -45,18 +64,6 @@ UPDATE portal SET relay_user_id = '@acd1:dominio_cliente.com' WHERE relay_user_i
 <br>
 
 ## INSTALACIÓN:
-- Debera tener actualizado el synapse a la version 1.54.0 (docker image `ikonoim/synapse:v1.54.0`)
-- Si usted viene de la versión del bridge 0.2.4, debe cambriar primero esto en el config del bridge:
-```yaml
-    provisioning:
-        shared_secret: disable
-
-    # CAMBIRAR A
-
-    provisioning:
-        shared_secret: generate
-```
-- Debera instalar la version 0.6.0 del bridge (docker image `dock.mau.dev/mautrix/whatsapp:v0.6.0`)
 - Debera cambiar el siguiente campo en el archivo de configuración del bridge de `mautrix-whatsapp`.
 ```yaml
     permissions:
@@ -69,14 +76,8 @@ UPDATE portal SET relay_user_id = '@acd1:dominio_cliente.com' WHERE relay_user_i
     permissions:
         'dominio_cliente.com': admin
 ```
-- Se debe eliminar el servicio del `mautrix-whatsapp` y volver hacer el despliegue para que se genere el shared_secret.
-- Crear un usuario administrador del synapse, para monitorear el AppService
 <br>
 
-**NOTA:** Este comando debe ser ejecutado en el nodo donde está instalado el cliente
-```bash
-docker exec -it contenedor-synapse register_new_matrix_user -u admin -a -c /data/homeserver.yaml http://localhost:8008
-```
 - Crear una carpeta para almacenar la data del appservice:
 ```bash
 mkdir /mnt/shared/matrix/dominio_cliente.com/acd_data/
