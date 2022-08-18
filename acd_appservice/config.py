@@ -9,7 +9,7 @@ class Config(BaseBridgeConfig):
         # Se deben poner los campos que no deben cambiar
         # esto hace que cuando actualicemos en config.yaml
         super().do_update(helper)
-        copy, copy_dict = helper.copy, helper.copy_dict
+        copy, copy_dict, base = helper
         copy("bridge.bot_user_id")
         copy("bridge.prefix")
         copy("bridge.invitees_to_rooms")
@@ -21,7 +21,8 @@ class Config(BaseBridgeConfig):
         copy("bridge.command_prefix")
         copy("bridge.provisioning.admin")
         copy("appservice.email")
-        copy("appservice.puppet_password")
+        if base["appservice.puppet_password"] == "generate":
+            base["appservice.puppet_password"] = self._new_token()
         copy_dict("bridges.mautrix")
         copy_dict("bridges.instagram")
         copy_dict("bridges.instagram.provisioning")
