@@ -37,7 +37,8 @@ appservice:
     bot_username: acd
 
     # Default password for the puppets
-    puppet_password: secretfoo
+    # Set to "generate" to generate and save a new token.
+    puppet_password: generate
 
     ephemeral_events: true
 
