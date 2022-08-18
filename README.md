@@ -29,18 +29,20 @@ docker exec -it contenedor-synapse register_new_matrix_user -u admin -a -c /data
 docker service rm nombrecliente-acd
 ```
 - Ahora se debe seguir la instalación de este nuevo acd
-- Con la instalación completa, debes crear un usuario enviando una solicitud al endpoint de la
-provisioning del nuevo acd:
 - Eliminar la sala de control del menubot y del frontend
 - Debera configurar la provisioning de la API del acd en el Element en agente y supervisor
 ```json
     "acd_provisioning_api": {
-        "API_PROTOCOL": "https",
+      "API_PROTOCOL": "https",
         "API_HOST": "cliente.z.ikono.im/provision",
         "API_PORT": "",
         "API_VERSION": "v1"
     }
 ```
+
+- Con la instalación completa, debes crear un usuario enviando una solicitud al endpoint de la
+provisioning del nuevo acd:
+
 ```curl
 curl -X POST -d '{"user_email":"correo-cliente@test.com", "control_room_id":"!foo:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente.z.ikono.im/provision/v1/create_user
 ```
