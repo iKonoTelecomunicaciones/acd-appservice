@@ -44,7 +44,7 @@ docker service rm nombrecliente-acd
 provisioning del nuevo acd:
 
 ```curl
-curl -X POST -d '{"user_email":"correo-cliente@test.com", "control_room_id":"!foo:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente.z.ikono.im/provision/v1/create_user
+curl -X POST -d '{"user_email":"acd1@dominio_cliente.com", "control_room_id":"!foo:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente.z.ikono.im/provision/v1/create_user
 ```
 - Ahora debería unir al nuevo usuario acd1 en las salas donde este el acd viejo
 
@@ -238,12 +238,12 @@ docker-compose config | docker stack deploy -c - $(basename $PWD | tr -d '.')
 
 `mautrix`
 ```curl
-curl -X POST -d '{"user_email":"correo-cliente@test.com", "menubot_id":"@menubot:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente.z.ikono.im/provision/v1/create_user
+curl -X POST -d '{"user_email":"acd1@dominio_cliente.com", "menubot_id":"@menubot:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente.z.ikono.im/provision/v1/create_user
 ```
 
 `instagram`
 ```curl
-curl -X POST -d '{"user_email":"correo-cliente@test.com", "menubot_id":"@menubot:dominio_cliente.com", "bridge":"instagram"}' -H "Content-Type: application/json" https://cliente.z.ikono.im/provision/v1/create_user
+curl -X POST -d '{"user_email":"acd1@dominio_cliente.com", "menubot_id":"@menubot:dominio_cliente.com", "bridge":"instagram"}' -H "Content-Type: application/json" https://cliente.z.ikono.im/provision/v1/create_user
 ```
 - NOTA: la contraseña de estos usuarios esta en el config `puppet_password`
 
