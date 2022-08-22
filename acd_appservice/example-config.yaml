@@ -140,7 +140,7 @@ bridges:
     send_template_command: "template"
   mautrix:
     # Mautrix UserID
-    mxid: "@mx_whatsappbot:localhost"
+    mxid: "@mx_whatsappbot:dominio_cliente.com"
     # Prefix to be listened by bridge
     prefix: "!wa"
     # Prefix for users created
@@ -161,7 +161,7 @@ bridges:
 
   instagram:
     # Instagram UserID
-    mxid: "@instagrambot:localhost"
+    mxid: "@instagrambot:dominio_cliente.com"
     # Prefix to be listened by bridge
     prefix: "!ig"
     # Prefix for users created
@@ -179,7 +179,7 @@ bridges:
 
   gupshup:
     # Gupshup UserID
-    mxid: "@gupshupbot:localhost"
+    mxid: "@gupshupbot:dominio_cliente.com"
     # Prefix to be listened by bridge
     prefix: "!gs"
     # Prefix for users created
