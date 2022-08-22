@@ -207,7 +207,17 @@ docker service rm dominio_clientecom-synapse
 ```bash
 cd /mnt/shared/matrix/dominio_cliente.com/
 ```
-- El menubot debe ignorar un listado de acd* en la sección bots
+- Agregar a la sección `bots` del `menubot_config.yaml` el listado de puppets según la cantidad de lineas que tenga el cliente
+```yaml
+...
+bots:
+  ...
+  - "@acd1:dominio_cliente.com"
+  - "@acd2:dominio_cliente.com"
+  ...
+...
+```
+- Eliminar el servicio del menubot `dominio_clientecom-menubot`
 - Reiniciar los servicios:
 ```bash
 docker-compose config | docker stack deploy -c - $(basename $PWD | tr -d '.')
