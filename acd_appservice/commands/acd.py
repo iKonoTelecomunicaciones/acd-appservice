@@ -30,7 +30,7 @@ async def acd(evt: CommandEvent) -> str:
     customer_room_id = evt.args[1]
     campaign_room_id = evt.args[2] if len(evt.args) >= 3 else None
     room_params = f"{evt.cmd} {customer_room_id} {campaign_room_id}"
-    joined_message = (evt.args[len(room_params) :]).strip() if len(evt.args) > 3 else None
+    joined_message = (evt.text[len(room_params) :]).strip() if len(evt.args) > 3 else None
 
     try:
         await evt.agent_manager.process_distribution(

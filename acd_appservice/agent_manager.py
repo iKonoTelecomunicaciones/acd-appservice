@@ -503,7 +503,7 @@ class AgentManager:
                     )
 
                 if msg:
-                    await self.intent.send_text(room_id=customer_room_id, text=msg)
+                    self.room_manager.send_formatted_message(room_id=customer_room_id, msg=msg)
 
             except Exception as e:
                 self.log.exception(e)

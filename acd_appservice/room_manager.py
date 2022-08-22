@@ -5,15 +5,19 @@ import logging
 import re
 from typing import Dict, List, Tuple
 
+from markdown import markdown
 from mautrix.api import Method
 from mautrix.appservice import IntentAPI
 from mautrix.errors.base import IntentError
 from mautrix.types import (
     EventType,
+    Format,
     JoinRule,
+    MessageType,
     PresenceEventContent,
     RoomDirectoryVisibility,
     RoomID,
+    TextMessageEventContent,
     UserID,
 )
 from mautrix.util.logging import TraceLogger
@@ -243,6 +247,34 @@ class RoomManager:
             self.log.exception(e)
 
         self.log.info(f"The command {cmd} has been sent to room {room_id}")
+
+    async def send_formatted_message(
+        self,
+        room_id: RoomID,
+        msg: str,
+    ) -> None:
+        """It sends a message to a room, and the message is formatted using Markdown
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to send the message to.
+        msg : str
+            The message to send.
+
+        """
+        html = markdown(msg)
+        content = TextMessageEventContent(
+            msgtype=MessageType.TEXT,
+            body=msg,
+            format=Format.HTML,
+            formatted_body=html,
+        )
+
+        await self.intent.send_message(
+            room_id=room_id,
+            content=content,
+        )
 
     # HAY 3 TIPOS DE SALAS
     # SALAS DE GRUPOS (Cuando hay mas de un cliente en la sala)
