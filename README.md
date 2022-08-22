@@ -100,7 +100,7 @@ vim /mnt/shared/matrix/dominio_cliente.com/docker-compose.yml
 ```
 - Agregar la siguiente sección:
 ```yaml
-  cliente-acd:
+  cliente-acd-as:
       image: ikonoim/acd-appservice:stable
       volumes:
         - /mnt/shared/matrix/${TOP_DOMAIN?Variable not set}/acd_data:/data
