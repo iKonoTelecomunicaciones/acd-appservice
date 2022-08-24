@@ -274,7 +274,9 @@ class MatrixHandler:
 
         # Si el usuario que se une es un acd* entonces verificamos si se encuntra en la sala
         if Puppet.get_id_from_mxid(user_id):
-            self.log.debug(f"Checking in matrix if the puppet is joined in the room {room_id}")
+            self.log.debug(
+                f"Checking in matrix if the puppet {user_id} is joined in the room {room_id}"
+            )
             puppet: Puppet = await Puppet.get_puppet_by_mxid(user_id)
             if puppet:
                 try:
@@ -287,7 +289,7 @@ class MatrixHandler:
                     if result:
                         # Como se encontro el acd dentro de la sala, entonces la guardamos
                         # en la tabla rooms
-                        self.log.debug(f"The puppet is joined in the room {room_id}")
+                        self.log.debug(f"The puppet {user_id} is joined in the room {room_id}")
                         await RoomManager.save_room(
                             room_id=room_id, selected_option=None, puppet_mxid=puppet.mxid
                         )
