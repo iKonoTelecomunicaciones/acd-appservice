@@ -272,37 +272,41 @@ class MatrixHandler:
         """
         self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
 
-        # Si el usuario que se une es un acd* entonces verificamos si se encuntra en la sala
-        if Puppet.get_id_from_mxid(user_id):
-            self.log.debug(
-                f"Checking in matrix if the puppet {user_id} is joined in the room {room_id}"
-            )
-            puppet: Puppet = await Puppet.get_puppet_by_mxid(user_id)
-            if puppet:
-                try:
-                    # Este endpoint verifica que el usuario acd* este en la sala
-                    # Si es así entonces result tendra contenido
-                    # Si no, entonces genera una exepción
-                    result = await puppet.intent.get_room_member_info(
-                        room_id=room_id, user_id=user_id, ignore_cache=True
-                    )
-                    if result:
-                        # Como se encontro el acd dentro de la sala, entonces la guardamos
-                        # en la tabla rooms
-                        self.log.debug(f"The puppet {user_id} is joined in the room {room_id}")
-                        await RoomManager.save_room(
-                            room_id=room_id, selected_option=None, puppet_mxid=puppet.mxid
-                        )
-                except Exception as e:
-                    self.log.warning(
-                        f"I can't get an puppet for the room {room_id} in [MATRIX] :: {e}"
-                    )
-
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
 
         if not puppet:
-            self.log.warning(f"I can't get an puppet for the room {room_id}  in [DB]")
-            return
+            self.log.warning(f"I can't get a puppet for the room {room_id}  in [DB]")
+
+            # Si el usuario que se une es un acd* entonces verificamos si se encuentra en la sala
+            if Puppet.get_id_from_mxid(user_id):
+                self.log.debug(
+                    f"Checking in matrix if the puppet {user_id} has already in the room {room_id}"
+                )
+                puppet: Puppet = await Puppet.get_puppet_by_mxid(user_id)
+                if puppet:
+                    result = None
+                    try:
+                        # Este endpoint verifica que el usuario acd* este en la sala
+                        # Si es así, entonces result tendrá contenido
+                        # Si no, entonces genera una excepción
+                        result = await puppet.intent.get_room_member_info(
+                            room_id=room_id, user_id=user_id, ignore_cache=True
+                        )
+                    except Exception as e:
+                        self.log.warning(
+                            f"I can't get a puppet for the room {room_id} in [MATRIX] :: {e}"
+                        )
+                        return
+
+                    if result:
+                        # Como se encontró el acd* dentro de la sala, entonces la guardamos
+                        # en la tabla rooms
+                        self.log.debug(f"The puppet {user_id} has already in the room {room_id}")
+                        await RoomManager.save_room(
+                            room_id=room_id, selected_option=None, puppet_mxid=puppet.mxid
+                        )
+            else:
+                return
 
         # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
         if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
