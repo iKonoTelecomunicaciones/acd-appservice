@@ -342,10 +342,6 @@ class MatrixHandler:
             # timer stops
             AgentManager.PENDING_INVITES[transfer_future_key].set_result(True)
 
-        # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
-        if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
-            await RoomManager.save_room(room_id=room_id, selected_option=None, puppet_mxid=user_id)
-
         # If the joined user is a supervisor and the room is a customer room,
         # then send set-pl in the room
         if user_id.startswith(self.config["acd.supervisor_prefix"]):
