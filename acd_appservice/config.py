@@ -21,6 +21,7 @@ class Config(BaseBridgeConfig):
         copy("bridge.command_prefix")
         copy("bridge.provisioning.admin")
         copy("appservice.email")
+        copy("appservice.puppet_password")
         if base["appservice.puppet_password"] == "generate":
             base["appservice.puppet_password"] = self._new_token()
         copy_dict("bridges.mautrix")

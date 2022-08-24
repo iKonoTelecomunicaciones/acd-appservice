@@ -1053,6 +1053,7 @@ class RoomManager:
             True if successful, False otherwise.
         """
         room = await Room.get_room_by_room_id(room_id)
+        cls.log.debug(f"Saving the room {room_id} for the puppet {puppet_mxid}")
         if room:
             return await cls.update_room_in_db(
                 room_id=room_id,
