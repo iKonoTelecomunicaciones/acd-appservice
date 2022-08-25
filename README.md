@@ -247,6 +247,8 @@ curl -X POST -d '{"user_email":"acd1@dominio_cliente.com", "menubot_id":"@menubo
 ```
 - NOTA: la contraseña de estos usuarios esta en el config `puppet_password`
 
+- Si la sala de control ya existía se debe salir el `@acd:dominio_cliente.com` de esta sala y de todas las salas en las que se encuentre (debe quedar sin salas).
+- Se debe invitar a al `acd*` a las salas de colas, de control y hacerlo admin.
 - Invitar al menubot y a los agentes a la nueva sala de control
 
 
