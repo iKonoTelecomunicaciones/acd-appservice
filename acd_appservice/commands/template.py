@@ -46,13 +46,14 @@ async def template(evt: CommandEvent) -> Dict:
     template_name = incoming_params.get("template_name")
     template_message = incoming_params.get("template_message")
 
-    bridge = await evt.room_manager.get_room_bridge(room_id=room_id)
 
     # Validating incoming params
     if not room_id:
         msg = "You must specify a room ID"
         await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
         return
+
+    bridge = await evt.room_manager.get_room_bridge(room_id=room_id)
 
     if not template_name or not template_message:
         msg = "You must specify a template name and message"
