@@ -30,6 +30,7 @@ from ..message import Message
 from ..puppet import Puppet
 from . import SUPPORTED_MESSAGE_TYPES
 from .error_responses import (
+    BRIDGE_INVALID,
     INVALID_EMAIL,
     INVALID_PHONE,
     MESSAGE_NOT_FOUND,
@@ -69,11 +70,15 @@ class ProvisioningAPI:
         swagger.add_post(path="/v1/create_user", handler=self.create_user)
 
         # Mautrix WhatsApp endpoints
-        swagger.add_post(path="/v1/whatsapp/send_message", handler=self.send_message)
-        swagger.add_get(path="/v1/whatsapp/link_phone", handler=self.link_phone, allow_head=False)
+        swagger.add_post(path="/v1/mautrix/send_message", handler=self.send_message)
+        swagger.add_get(path="/v1/mautrix/link_phone", handler=self.link_phone, allow_head=False)
         swagger.add_get(
-            path="/v1/whatsapp/ws_link_phone", handler=self.ws_link_phone, allow_head=False
+            path="/v1/mautrix/ws_link_phone", handler=self.ws_link_phone, allow_head=False
         )
+
+        # Mautrix Gupshup endpoints
+        swagger.add_post(path="/v1/gupshup/send_message", handler=self.send_message)
+        swagger.add_post(path="/v1/gupshup/register", handler=self.gupshup_register)
 
         # Mautrix Instagram endpoints
         swagger.add_post(path="/v1/instagram/login", handler=self.instagram_login)
@@ -121,7 +126,9 @@ class ProvisioningAPI:
         swagger.add_options(path="/v1/cmd/template", handler=self.options)
         swagger.add_options(path="/v1/cmd/transfer", handler=self.options)
         swagger.add_options(path="/v1/cmd/transfer_user", handler=self.options)
-        swagger.add_options(path="/v1/whatsapp/send_message", handler=self.options)
+        swagger.add_options(path="/v1/mautrix/send_message", handler=self.options)
+        swagger.add_options(path="/v1/gupshup/send_message", handler=self.options)
+        swagger.add_options(path="/v1/gupshup/register", handler=self.options)
         swagger.add_options(path="/v1/instagram/login", handler=self.options)
         swagger.add_options(path="/v1/instagram/challenge", handler=self.options)
 
@@ -435,6 +442,83 @@ class ProvisioningAPI:
 
         return web.json_response(data=response)
 
+    async def gupshup_register(self, request: web.Request) -> web.Response:
+        """
+        Register a gupshup app
+        ---
+        summary:        Sending information you can register a new gupshup line.
+
+        tags:
+            - Gupshup
+
+        requestBody:
+          required: true
+          description: A json with `user_email`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_email:
+                    type: string
+                  gs_app_name:
+                    type: string
+                  gs_app_phone:
+                    type: string
+                  api_key:
+                    type: string
+                  app_id:
+                    type: string
+                example:
+                    user_email: nobody@somewhere.com
+                    gs_app_name: AppName
+                    gs_app_phone: 573123456789
+                    api_key: your_api_key
+                    app_id: AppID
+
+        responses:
+            '400':
+                $ref: '#/components/responses/BadRequest'
+            '404':
+                $ref: '#/components/responses/NotExist'
+        """
+
+        if not request.body_exists:
+            return web.json_response(**NOT_DATA)
+
+        data = await request.json()
+        user_email = data.get("user_email")
+
+        gs_app_data = {
+            "gs_app_name": data.get("gs_app_name"),
+            "gs_app_phone": data.get("gs_app_phone"),
+            "api_key": data.get("api_key"),
+            "app_id": data.get("app_id"),
+        }
+
+        error_result = await self.validate_email(user_email=user_email)
+
+        if error_result:
+            return web.json_response(**error_result)
+
+        puppet: Puppet = await Puppet.get_by_email(user_email)
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
+
+        bridge_connector = ProvisionBridge(
+            session=self.client.session, config=self.config, bridge=puppet.bridge
+        )
+
+        status, data = await bridge_connector.gupshup_register_app(
+            user_id=puppet.custom_mxid, data=gs_app_data
+        )
+
+        if status in [200, 201]:
+            puppet.phone = data.get("gs_app_phone")
+            await puppet.save()
+
+        return web.json_response(status=status, data=data)
+
     async def instagram_challenge(self, request: web.Request) -> web.Response:
         """
         Solve the instagram login challenge.
@@ -631,12 +715,12 @@ class ProvisioningAPI:
                   agent_id:
                     type: string
                 example:
-                    user_email: "nobody@somewhere.com"
                     customer_phone: "573123456789"
                     company_phone: "57398765432"
                     template_message: "Hola iKono!!"
                     template_name: "text"
                     agent_id: "@agente1:somewhere.com"
+                    bridge: "!wa"
 
         responses:
             '200':
@@ -682,6 +766,10 @@ class ProvisioningAPI:
             "phone_number": data.get("customer_phone"),
             "template_message": data.get("template_message"),
             "template_name": data.get("template_name"),
+            "bridge": data.get("bridge")
+            or self.config[
+                "bridges.mautrix.prefix"
+            ],  # TODO eliminar  `or self.config["bridges.mautrix.prefix"]` cuando todos los clientes tengan el front actualizado
         }
 
         # Creating a fake command event and passing it to the command processor.
@@ -694,7 +782,12 @@ class ProvisioningAPI:
             text=fake_command,
         )
         cmd_evt.intent = puppet.intent
-        result = await command_processor(cmd_evt=cmd_evt)
+
+        try:
+            result = await command_processor(cmd_evt=cmd_evt)
+        except Exception as e:
+            return web.json_response(status=500, data={"error": str(e)})
+
         return web.json_response(**result)
 
     async def resolve(self, request: web.Request) -> web.Response:
@@ -835,7 +928,7 @@ class ProvisioningAPI:
                     continue
 
                 # Obtenemos el bridge de la sala dado el room_id
-                bridge = await puppet.agent_manager.room_manager.get_room_bridge(room_id=room_id)
+                bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
 
                 if not bridge:
                     # Si esta sala no tiene bridge entonces pasamos a la siguiente
@@ -970,13 +1063,10 @@ class ProvisioningAPI:
                     type: string
                   template_message:
                     type: string
-                  bridge:
-                    type: string
                 example:
                     room_id: "!duOWDQQCshKjQvbyoh:darknet"
                     template_name: "hola"
                     template_message: "Hola iKono!!"
-                    bridge: "!wa"
 
         responses:
             '400':
@@ -990,10 +1080,7 @@ class ProvisioningAPI:
         data: Dict = await request.json()
 
         if not (
-            data.get("room_id")
-            and data.get("template_name")
-            and data.get("template_message")
-            and data.get("bridge")
+            data.get("room_id") and data.get("template_name") and data.get("template_message")
         ):
             return web.json_response(**REQUIRED_VARIABLES)
 
@@ -1001,7 +1088,6 @@ class ProvisioningAPI:
             "room_id": data.get("room_id"),
             "template_name": data.get("template_name"),
             "template_message": data.get("template_message"),
-            "bridge": data.get("bridge"),
         }
 
         # Obtenemos el puppet de este email si existe
@@ -1185,11 +1271,13 @@ class ProvisioningAPI:
                 $ref: '#/components/responses/TooManyRequests'
         """
 
+        url_sections: List[str] = request.path.split("/")
+        bridge = url_sections[3]
+
         if not request.body_exists:
             return web.json_response(**NOT_DATA)
 
         data: Dict = await request.json()
-
         data = await request.json()
         if not (
             data.get("phone")
@@ -1214,6 +1302,9 @@ class ProvisioningAPI:
         if not puppet:
             return web.json_response(**USER_DOESNOT_EXIST)
 
+        if puppet.bridge != bridge:
+            return web.json_response(**BRIDGE_INVALID)
+
         phone = str(data.get("phone"))
         if not (phone.isdigit() and 5 <= len(phone) <= 15):
             return web.json_response(**INVALID_PHONE)
@@ -1223,12 +1314,13 @@ class ProvisioningAPI:
         phone = phone if phone.startswith("+") else f"+{phone}"
 
         # Creamos una conector con el bridge
-        bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
-
-        status, response = await bridge_connector.mautrix_pm(
-            user_id=puppet.custom_mxid, phone=phone
+        bridge_connector = ProvisionBridge(
+            session=self.client.session, config=self.config, bridge=bridge
         )
-        if response.get("error"):
+
+        status, response = await bridge_connector.pm(user_id=puppet.custom_mxid, phone=phone)
+
+        if response.get("error") or not response.get("room_id"):
             return web.json_response(data=response, status=status)
 
         customer_room_id = response.get("room_id")
@@ -1251,7 +1343,20 @@ class ProvisioningAPI:
         #     )
 
         try:
-            event_id = await puppet.intent.send_message(room_id=customer_room_id, content=content)
+            if self.config[f"bridges.{bridge}.send_template_command"]:
+
+                # TODO Si otro bridge debe enviar templates, hacer generico este metodo (gupshup_template)
+                status, data = await bridge_connector.gupshup_template(
+                    room_id=customer_room_id, user_id=puppet.custom_mxid, template=message
+                )
+                if not status in [200, 201]:
+                    return web.json_response(status=status, data=data)
+
+                event_id = data.get("event_id")
+            else:
+                event_id = await puppet.intent.send_message(
+                    room_id=customer_room_id, content=content
+                )
         except Exception as e:
             self.log.exception(e)
             return web.json_response(**SERVER_ERROR)

@@ -5,7 +5,7 @@ from typing import Dict, Optional
 
 from aiohttp import ClientSession, WSMsgType
 from aiohttp.web import WebSocketResponse
-from mautrix.types import UserID
+from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
 from . import puppet as pu
@@ -199,7 +199,7 @@ class ProvisionBridge(BaseClass):
                         await ws_customer.close()
                     break
 
-    async def mautrix_pm(self, user_id: UserID, phone: str) -> tuple[int, Dict]:
+    async def pm(self, user_id: UserID, phone: str) -> tuple[int, Dict]:
         """It sends a private message to a user.
 
         Parameters
@@ -218,6 +218,75 @@ class ProvisionBridge(BaseClass):
             response = await self.session.post(
                 url=f"{self.url_base}/v1/pm/{phone}",
                 headers=self.headers,
+                params={"user_id": user_id},
+            )
+        except Exception as e:
+            self.log.error(e)
+            return 500, {"error": str(e)}
+
+        data = await response.json()
+        if not response.status in [200, 201]:
+            self.log.error(data)
+
+        return response.status, data
+
+    async def gupshup_template(
+        self, user_id: UserID, room_id: RoomID, template: str
+    ) -> tuple[int, Dict]:
+        """It sends a template message to a user.
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user you want to send the message to.
+        room_id : RoomID
+            The room ID of the room you want to send the message to.
+        template : str
+            The template message to be sent.
+
+        Returns
+        -------
+            The status code and the data
+
+        """
+
+        try:
+            response = await self.session.post(
+                url=f"{self.url_base}/v1/template",
+                headers=self.headers,
+                json={"room_id": room_id, "template_message": template},
+                params={"user_id": user_id},
+            )
+        except Exception as e:
+            self.log.error(e)
+            return 500, {"error": str(e)}
+
+        data = await response.json()
+        if not response.status in [200, 201]:
+            self.log.error(data)
+
+        return response.status, data
+
+    async def gupshup_register_app(self, user_id: UserID, data: Dict) -> tuple[int, Dict]:
+        """It registers an app with Gupshup.
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user who is registering the app.
+        data : Dict
+            The data necessary to register a line
+        Returns
+        -------
+            A tuple of the status code and the data.
+
+        """
+
+        try:
+            response = await self.session.post(
+                url=f"{self.url_base}/v1/register_app",
+                headers=self.headers,
+                json=data,
                 params={"user_id": user_id},
             )
         except Exception as e:

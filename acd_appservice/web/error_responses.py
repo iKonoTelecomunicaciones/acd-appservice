@@ -66,3 +66,8 @@ SERVER_ERROR = {
     "data": {"error": "Server error"},
     "status": 500,
 }
+
+BRIDGE_INVALID = {
+    "data": {"error": "Bridge invalid"},
+    "status": 422,
+}
