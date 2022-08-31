@@ -19,7 +19,7 @@ class TestRoomManager:
         """
         True if the room is created by a client, False otherwise.
         """
-        room_creator = "@mxwa_573058790290:matrix.org"
+        room_creator = "@mxwa_573123456789:matrix.org"
 
         mocker.patch.object(
             room_manager.RoomManager, "get_room_creator", return_value=room_creator
@@ -73,6 +73,27 @@ class TestRoomManager:
         )
         assert result == True
 
+    async def test_is_gupshup_customer_room(
+        self,
+        mocker: MockerFixture,
+        room_manager_mock: room_manager.RoomManager,
+        get_room_info_mock,
+    ):
+        """
+        True if the room is created by a client, False otherwise.
+        """
+        room_creator = "@gswa_573123456789:matrix.org"
+
+        mocker.patch.object(
+            room_manager.RoomManager, "get_room_creator", return_value=room_creator
+        )
+
+        room_manager_mock.intent = None
+        result = await room_manager_mock.is_customer_room(
+            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
+        )
+        assert result == True
+
     async def test_get_room_mautrix_bridge(
         self,
         mocker: MockerFixture,
@@ -82,7 +103,7 @@ class TestRoomManager:
         """
         Returns the bridge that belongs to the room, None if the room does not have a client.
         """
-        room_creator = "@mxwa_573058790290:matrix.org"
+        room_creator = "@mxwa_573123456789:matrix.org"
 
         mocker.patch.object(
             room_manager.RoomManager, "get_room_creator", return_value=room_creator
@@ -93,6 +114,22 @@ class TestRoomManager:
         )
 
         assert result == "mautrix"
+
+    async def test_get_bridge_by_cmd_prefix(
+        self,
+        room_manager_mock: room_manager.RoomManager,
+        get_room_info_mock,
+    ):
+        """
+        Checks that the get_bridge_by_cmd_prefix function returns
+        the correct bridge given a cmd_prefix
+        """
+
+        room_manager_mock.intent = None
+        for bridge in room_manager_mock.config["bridges"]:
+            assert bridge == await room_manager_mock.get_bridge_by_cmd_prefix(
+                room_manager_mock.config[f"bridges.{bridge}.prefix"]
+            )
 
     async def test_get_room_instagram_bridge(
         self,
@@ -114,6 +151,27 @@ class TestRoomManager:
         )
 
         assert result == "instagram"
+
+    async def test_get_room_gupshup_bridge(
+        self,
+        mocker: MockerFixture,
+        room_manager_mock: room_manager.RoomManager,
+        get_room_info_mock,
+    ):
+        """
+        Returns the bridge that belongs to the room, None if the room does not have a client.
+        """
+        room_creator = "@gswa_573123456789:matrix.org"
+
+        mocker.patch.object(
+            room_manager.RoomManager, "get_room_creator", return_value=room_creator
+        )
+        room_manager_mock.intent = None
+        result = await room_manager_mock.get_room_bridge(
+            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
+        )
+
+        assert result == "gupshup"
 
     async def test_not_get_room_bridge(
         self,

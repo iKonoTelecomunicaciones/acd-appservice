@@ -47,6 +47,8 @@ async def pm(evt: CommandEvent) -> Dict:
     phone_number: str = data.get("phone_number")
     template_message = data.get("template_message")
     template_name = data.get("template_name")
+    bridge_cmd_prefix = data.get("bridge") or evt.config["bridges.mautrix.prefix"]
+    # TODO eliminar  `or self.config["bridges.mautrix.prefix"]` cuando todos los clientes tengan el front actualizado
 
     # A dict that will be sent to the frontend.
     return_params = {
@@ -62,10 +64,14 @@ async def pm(evt: CommandEvent) -> Dict:
     agent_displayname = None
 
     # Checking if the phone number is a number and if the template name and message are not empty.
+    bridge = await evt.room_manager.get_bridge_by_cmd_prefix(cmd_prefix=bridge_cmd_prefix)
+
     if not phone_number.isdigit():
         return_params["reply"] = "You must specify a valid phone number with country prefix."
     if not template_name or not template_message:
         return_params["reply"] = "You must specify a template name and message"
+    if not bridge:
+        return_params["reply"] = "You must specify a bridge available"
 
     # Checking if the phone number starts with a plus sign, if not, it adds it.
     phone_number = phone_number if phone_number.startswith("+") else f"+{phone_number}"
@@ -79,9 +85,8 @@ async def pm(evt: CommandEvent) -> Dict:
         return {"data": return_params, "status": 422}
 
     # Sending a message to the customer.
-    session = client.session
-    bridge_connector = ProvisionBridge(session=session, config=evt.config)
-    status, data = await bridge_connector.mautrix_pm(user_id=evt.intent.mxid, phone=phone_number)
+    bridge_connector = ProvisionBridge(session=client.session, config=evt.config, bridge=bridge)
+    status, data = await bridge_connector.pm(user_id=evt.intent.mxid, phone=phone_number)
 
     if not status in [200, 201]:
         evt.log.error(data)
@@ -120,9 +125,16 @@ async def pm(evt: CommandEvent) -> Dict:
 
             agent_displayname = await evt.intent.get_displayname(user_id=evt.sender)
 
-            await evt.intent.send_text(
-                room_id=data.get("room_id"), text=template_message, html=markdown(template_message)
-            )
+            if evt.config[f"bridges.{bridge}.send_template_command"]:
+                await bridge_connector.gupshup_template(
+                    user_id=evt.intent.mxid, room_id=data.get("room_id"), template=template_message
+                )
+            else:
+                await evt.intent.send_text(
+                    room_id=data.get("room_id"),
+                    text=template_message,
+                    html=markdown(template_message),
+                )
 
     # Setting the return_params dict with the sender_id, phone_number, room_id and agent_displayname.
     return_params["sender_id"] = evt.sender

@@ -222,6 +222,7 @@ bots:
 ```bash
 docker-compose config | docker stack deploy -c - $(basename $PWD | tr -d '.')
 ```
+**NOTA:** Los acd* no aceptarán invitaciones a salas donde ya haya ingresado previamente un acd*, esto puede afectarlos en salas de colas.
 - Por cada linea de whatsapp o aplicación de instagram se debe ejecutar el siguiente endpoint, el cual se encarga de las siguientes tareas:
   - Crear el usuario acd* (puppet) encargado del manejo de la linea
   - Crear la sala de control de la linea o canal
@@ -256,7 +257,7 @@ curl -X POST -d '{"user_email":"acd1@dominio_cliente.com", "menubot_id":"@menubo
 
 #### Envia un mensaje
 
-Endpoint: `/provision/v1/send_message`
+Endpoint: `/provision/v1/mautrix/send_message`
 Metodo: `POST`
 Datos requeridos:
 - `user_email`: foo@foo.com.co
@@ -267,7 +268,7 @@ Datos requeridos:
 Ejemplo:
 
 ```curl
-curl -X POST -d '{"user_email":"foo@foo.com.co", "phone":"573123456789", "msg_type":"text", "message":"Hola Mundo!!"}' -H "Content-Type: application/json" https://sender.z.ikono.im/provision/v1/send_message
+curl -X POST -d '{"user_email":"foo@foo.com.co", "phone":"573123456789", "msg_type":"text", "message":"Hola Mundo!!"}' -H "Content-Type: application/json" https://sender.z.ikono.im/provision/v1/mautrix/send_message
 ```
 
 **NOTA**:  Actualmente, solo se pueden enviar mensajes tipo `text`

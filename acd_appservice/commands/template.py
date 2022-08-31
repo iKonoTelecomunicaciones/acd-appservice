@@ -1,6 +1,7 @@
 import json
 from typing import Dict
 
+from ..http_client import ProvisionBridge, client
 from ..puppet import Puppet
 from .handler import command_handler
 from .typehint import CommandEvent
@@ -38,40 +39,35 @@ async def template(evt: CommandEvent) -> Dict:
         incoming_params = json.loads(template_data)
     except Exception:
         msg = "Error processing incoming params, skipping message"
-        return await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
+        await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
+        return
 
     room_id = incoming_params.get("room_id")
     template_name = incoming_params.get("template_name")
     template_message = incoming_params.get("template_message")
-    bridge = incoming_params.get("bridge")
 
-    send_template_command = None
-    command_prefix = None
-    for config_bridge in evt.config["bridges"]:
-        if evt.config[f"bridges.{config_bridge}.prefix"] == bridge:
-            command_prefix = bridge
-            send_template_command = evt.config[f"bridges.{config_bridge}.send_template_command"]
-            break
-
-    # Validate bridge used
-    # If there's no command_prefix means the received bridge isn't valid
-    if not command_prefix:
-        msg = "Bridge doesn't found, skipping message"
-        return await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
+    bridge = await evt.room_manager.get_room_bridge(room_id=room_id)
 
     # Validating incoming params
     if not room_id:
         msg = "You must specify a room ID"
-        return await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
+        await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
+        return
 
     if not template_name or not template_message:
         msg = "You must specify a template name and message"
-        return await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
-
-    if send_template_command:
-        del incoming_params["bridge"]
-        msg = f"{command_prefix} {send_template_command} {template_data}"
         await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
+        return
+
+    if evt.config[f"bridges.{bridge}.send_template_command"]:
+        bridge_connector = ProvisionBridge(
+            session=client.session, config=evt.config, bridge=bridge
+        )
+
+        # TODO Si otro bridge debe enviar templates, hacer generico este metodo (gupshup_template)
+        await bridge_connector.gupshup_template(
+            room_id=room_id, user_id=evt.intent.mxid, template=template_message
+        )
     else:
         # If there's no send_template_command the message send directly to client
         await evt.intent.send_text(room_id=room_id, text=template_message)

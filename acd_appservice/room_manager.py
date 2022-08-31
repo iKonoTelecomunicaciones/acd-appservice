@@ -82,11 +82,11 @@ class RoomManager:
         """
 
         if not await self.is_customer_room(room_id=room_id):
+            self.log.debug(f"Only customer rooms are initialised :: {room_id}")
             return False
 
         bridge = await self.get_room_bridge(room_id=room_id)
-
-        if bridge and bridge in ["mautrix", "instagram"]:
+        if bridge and bridge in self.config["bridges"] and bridge != "plugin":
             await self.send_cmd_set_pl(
                 room_id=room_id,
                 bridge=bridge,
@@ -941,6 +941,27 @@ class RoomManager:
             return "plugin"
 
         return None
+
+    async def get_bridge_by_cmd_prefix(self, cmd_prefix: str) -> str:
+        """It takes a command prefix and returns the bridge that it belongs to
+
+        Parameters
+        ----------
+        cmd_prefix : str
+            The command prefix that the user used to call the command.
+
+        Returns
+        -------
+            The bridge name.
+
+        """
+
+        bridges = self.config["bridges"]
+
+        for bridge in bridges:
+            bridge_cmd_prefix = self.config[f"bridges.{bridge}.prefix"]
+            if cmd_prefix.startswith(bridge_cmd_prefix):
+                return bridge
 
     async def get_room_name(self, room_id: RoomID) -> str:
         """Given a room, get its name.

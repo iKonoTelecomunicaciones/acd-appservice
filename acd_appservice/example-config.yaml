@@ -131,13 +131,7 @@ acd:
 
 # ACD will send below commands to interact with any WA bridge
 bridges:
-  twilio:
-    # Prefix to be listened by bridge
-    prefix: "!tw"
-    # Prefix for users created
-    user_prefix: "twa"
-    create_portal_command: "pm"
-    send_template_command: "template"
+
   mautrix:
     # Mautrix UserID
     mxid: "@mx_whatsappbot:dominio_cliente.com"
@@ -183,9 +177,17 @@ bridges:
     # Prefix to be listened by bridge
     prefix: "!gs"
     # Prefix for users created
-    user_prefix: "gsmx"
+    user_prefix: "gswa"
     create_portal_command: "pm"
     send_template_command: "template"
+    # Postfix to identify a customer
+    postfix_template: "(GS)"
+    set_permissions: "set-pl {mxid} {power_level}"
+    set_relay: "set-relay"
+    # Settings for provisioning API
+    provisioning:
+        url_base: "http://gupshup-matrix:29322/_matrix/provision"
+        shared_secret: ""
 
   plugin:
     # Prefix to be listened by bridge
