@@ -46,7 +46,6 @@ async def template(evt: CommandEvent) -> Dict:
     template_name = incoming_params.get("template_name")
     template_message = incoming_params.get("template_message")
 
-
     # Validating incoming params
     if not room_id:
         msg = "You must specify a room ID"
