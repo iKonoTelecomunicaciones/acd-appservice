@@ -448,7 +448,11 @@ class MatrixHandler:
 
         elif offline_menu_option == "2":
             # user selected kick current offline agent and see the main menu
-            await puppet.room_manager.user_leaves(room_id=room_id, user_id=room_agent)
+            await puppet.room_manager.user_leaves(
+                room_id=room_id,
+                user_id=room_agent,
+                reason=self.config["acd.offline_menu_user_selection"],
+            )
             await puppet.agent_manager.signaling.set_chat_status(room_id, Signaling.OPEN)
             # clear campaign in the ik.chat.campaign_selection state event
             await puppet.agent_manager.signaling.set_selected_campaign(

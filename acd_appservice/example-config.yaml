@@ -67,7 +67,7 @@ bridge:
         admin: "@admin:dominio_cliente.com"
 
 acd:
-
+    # User domain spaces you want to manipulate
     namespaces:
         - "agente{userid}"
         - "menubot{userid}"
@@ -123,6 +123,8 @@ acd:
     offline_agent_timeout: 0
     # message to show when agent is offline longer than offline_agent_timeout
     offline_agent_message: "{agentname} no está disponible en este momento."
+    # User requested to see the menu
+    offline_menu_user_selection: El usuario solicitó ver el menú
     # message to show to the user if 'menu' action is active, and the user selects to be transferred
     # to another agent, but no sagent is available
     no_agents_for_transfer: "No hay agentes disponibles para la transferencia."

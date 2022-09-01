@@ -19,6 +19,7 @@ class Config(BaseBridgeConfig):
         copy("bridge.bot_user_id")
         copy("bridge.prefix")
         copy("bridge.invitees_to_rooms")
+        copy("bridge.username_template")
         copy_dict("utils")
         copy_dict("utils.business_hours")
         copy("utils.message_bot_war")
@@ -49,6 +50,7 @@ class Config(BaseBridgeConfig):
         copy("acd.offline_agent_action")
         copy("acd.offline_agent_timeout")
         copy("acd.offline_agent_message")
+        copy("acd.offline_menu_user_selection")
         copy("acd.no_agents_for_transfer")
         copy_dict("acd.resolve_chat")
 

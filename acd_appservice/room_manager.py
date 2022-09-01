@@ -6,7 +6,7 @@ import re
 from typing import Dict, List, Tuple
 
 from markdown import markdown
-from mautrix.api import Method, Path, SynapseAdminPath
+from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI
 from mautrix.errors.base import IntentError
 from mautrix.types import (
@@ -740,16 +740,19 @@ class RoomManager:
                 self.log.error(str(e))
 
     async def user_leaves(self, room_id: RoomID, user_id: UserID, reason: str = None):
-        """It leaves a user from a room
+        """It sends a request to the homeserver to leave a room
 
         Parameters
         ----------
         room_id : RoomID
-            The room ID of the room you want to leave.
+            The room ID of the room you want to kick the user from.
         user_id : UserID
-            The user ID of the user to leave.
+            The user ID of the user to kick.
+        reason : str
+            The reason for leaving the room.
 
         """
+
         try:
             data = {}
             if reason:

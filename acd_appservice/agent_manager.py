@@ -477,7 +477,9 @@ class AgentManager:
             # transfer_author can be a supervisor or admin when an open chat is transferred.
             if transfer_author is not None and self.is_agent(transfer_author):
                 await self.room_manager.user_leaves(
-                    room_id=customer_room_id, user_id=transfer_author
+                    room_id=customer_room_id,
+                    user_id=transfer_author,
+                    reason=self.config["acd.transfer_message"],
                 )
             else:
                 # kick menu bot
