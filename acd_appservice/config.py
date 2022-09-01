@@ -1,3 +1,9 @@
+from __future__ import annotations
+
+import re
+import time
+from typing import Any
+
 from mautrix.bridge.config import BaseBridgeConfig
 from mautrix.util.config import ConfigUpdateHelper
 
@@ -13,7 +19,7 @@ class Config(BaseBridgeConfig):
         copy("bridge.bot_user_id")
         copy("bridge.prefix")
         copy("bridge.invitees_to_rooms")
-        copy("bridge.username_template")
+        copy("bridge.username_templates")
         copy_dict("utils")
         copy_dict("utils.business_hours")
         copy("utils.message_bot_war")
@@ -45,3 +51,44 @@ class Config(BaseBridgeConfig):
         copy("acd.offline_agent_message")
         copy("acd.no_agents_for_transfer")
         copy_dict("acd.resolve_chat")
+
+    @property
+    def namespaces(self) -> dict[str, list[dict[str, Any]]]:
+        """
+        Generate the user ID and room alias namespace config for the registration as specified in
+        https://matrix.org/docs/spec/application_service/r0.1.0.html#application-services
+        """
+        homeserver = self["homeserver.domain"]
+        regex_ph = f"regexplaceholder{int(time.time())}"
+
+        username_formats = [
+            username_template.format(userid=regex_ph)
+            for username_template in self["bridge.username_templates"]
+        ]
+
+        users = []
+
+        for username_format in username_formats:
+            users.append(
+                {
+                    "exclusive": True,
+                    "regex": re.escape(f"@{username_format}:{homeserver}").replace(regex_ph, ".*"),
+                }
+            )
+        alias_format = (
+            self["bridge.alias_template"].format(groupname=regex_ph)
+            if "bridge.alias_template" in self
+            else None
+        )
+
+        return {
+            "users": users,
+            "aliases": [
+                {
+                    "exclusive": True,
+                    "regex": re.escape(f"#{alias_format}:{homeserver}").replace(regex_ph, ".*"),
+                }
+            ]
+            if alias_format
+            else [],
+        }

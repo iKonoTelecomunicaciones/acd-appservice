@@ -315,7 +315,7 @@ class MatrixHandler:
         if puppet.intent and puppet.intent.bot and puppet.intent.bot.mxid == user_id:
             # Si el que se unió es el bot principal, debemos sacarlo para que no dañe
             # el comportamiento del puppet
-            await puppet.intent.kick_user(room_id=room_id, user_id=user_id)
+            await puppet.room_manager.leave_user(room_id=room_id, user_id=user_id)
 
         # Generamos llaves para buscar en PENDING_INVITES (acd, transfer)
         future_key = RoomManager.get_future_key(room_id=room_id, agent_id=user_id)
@@ -448,9 +448,7 @@ class MatrixHandler:
 
         elif offline_menu_option == "2":
             # user selected kick current offline agent and see the main menu
-            await puppet.intent.kick_user(
-                room_id=room_id, user_id=room_agent, reason="Usuario seleccionó ver el menú."
-            )
+            await puppet.room_manager.leave_user(room_id=room_id, user_id=room_agent)
             await puppet.agent_manager.signaling.set_chat_status(room_id, Signaling.OPEN)
             # clear campaign in the ik.chat.campaign_selection state event
             await puppet.agent_manager.signaling.set_selected_campaign(

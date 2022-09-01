@@ -57,16 +57,11 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     try:
         if agent_id:
-            await puppet.intent.kick_user(
-                room_id=room_id, user_id=agent_id, reason="Chat resuelto"
-            )
-
+            await puppet.room_manager.leave_user(room_id=room_id, user_id=agent_id)
         supervisors = evt.config["acd.supervisors_to_invite.invitees"]
         if supervisors:
             for supervisor_id in supervisors:
-                await puppet.intent.kick_user(
-                    room_id=room_id, user_id=supervisor_id, reason="Chat resuelto"
-                )
+                await puppet.room_manager.leave_user(room_id=room_id, user_id=supervisor_id)
     except Exception as e:
         evt.log.warning(e)
 

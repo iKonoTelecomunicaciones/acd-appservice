@@ -125,7 +125,7 @@ class Puppet(DBPuppet, BasePuppet):
         # Este atributo permite generar un template relacionado con los namesapces de usuarios
         # separados en el registration
         cls.mxid_template = SimpleTemplate(
-            cls.config["bridge.username_template"],
+            cls.config["bridge.username_templates"][0],
             "userid",
             prefix="@",
             suffix=f":{cls.hs_domain}",

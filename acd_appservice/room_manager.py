@@ -6,7 +6,7 @@ import re
 from typing import Dict, List, Tuple
 
 from markdown import markdown
-from mautrix.api import Method
+from mautrix.api import Method, Path
 from mautrix.appservice import IntentAPI
 from mautrix.errors.base import IntentError
 from mautrix.types import (
@@ -733,13 +733,34 @@ class RoomManager:
             await self.send_menubot_command(menubot_id, "cancel_task", room_id)
             try:
                 self.log.debug(f"Kicking the menubot [{menubot_id}]")
-                await self.intent.kick_user(room_id=room_id, user_id=menubot_id, reason=reason)
+                await self.leave_user(room_id=room_id, user_id=menubot_id)
             except Exception as e:
                 self.log.warning(
                     str(e) + f":: the user who was going to be kicked out: {menubot_id}"
                 )
 
             self.log.debug(f"User [{menubot_id}] KICKED from room [{room_id}]")
+
+    async def leave_user(self, room_id: RoomID, user_id: UserID):
+        """It leaves a user from a room
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to leave.
+        user_id : UserID
+            The user ID of the user to leave.
+
+        """
+        try:
+            await self.intent.api.request(
+                method=Method.POST,
+                path=f"/_matrix/client/v3/rooms/{room_id}/leave",
+                query_params={"user_id": user_id},
+            )
+            self.log.debug(f"User {user_id} has left the room {room_id}")
+        except Exception as e:
+            self.log.exception(e)
 
     async def send_menubot_command(
         self,

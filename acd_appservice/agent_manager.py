@@ -476,10 +476,8 @@ class AgentManager:
 
             # transfer_author can be a supervisor or admin when an open chat is transferred.
             if transfer_author is not None and self.is_agent(transfer_author):
-                await self.intent.kick_user(
-                    room_id=customer_room_id,
-                    user_id=transfer_author,
-                    reason=f"Conversación transferida a {agent_displayname}",
+                await self.room_manager.leave_user(
+                    room_id=customer_room_id, user_id=transfer_author
                 )
             else:
                 # kick menu bot
