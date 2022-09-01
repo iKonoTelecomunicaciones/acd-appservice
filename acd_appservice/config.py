@@ -19,7 +19,6 @@ class Config(BaseBridgeConfig):
         copy("bridge.bot_user_id")
         copy("bridge.prefix")
         copy("bridge.invitees_to_rooms")
-        copy("bridge.username_templates")
         copy_dict("utils")
         copy_dict("utils.business_hours")
         copy("utils.message_bot_war")
@@ -34,6 +33,7 @@ class Config(BaseBridgeConfig):
         copy_dict("bridges.instagram")
         copy_dict("bridges.gupshup")
         copy_dict("bridges.plugin")
+        copy("acd.namespaces")
         copy("acd.keep_room_name")
         copy("acd.numbers_in_rooms")
         copy("acd.force_join")
@@ -60,21 +60,27 @@ class Config(BaseBridgeConfig):
         """
         homeserver = self["homeserver.domain"]
         regex_ph = f"regexplaceholder{int(time.time())}"
-
-        username_formats = [
+        username_format = self["bridge.username_template"].format(userid=regex_ph)
+        acd_namespaces = [
             username_template.format(userid=regex_ph)
-            for username_template in self["bridge.username_templates"]
+            for username_template in self["acd.namespaces"]
         ]
 
-        users = []
+        users = [
+            {
+                "exclusive": True,
+                "regex": re.escape(f"@{username_format}:{homeserver}").replace(regex_ph, ".*"),
+            }
+        ]
 
-        for username_format in username_formats:
+        for acd_namespace in acd_namespaces:
             users.append(
                 {
                     "exclusive": True,
-                    "regex": re.escape(f"@{username_format}:{homeserver}").replace(regex_ph, ".*"),
+                    "regex": re.escape(f"@{acd_namespace}:{homeserver}").replace(regex_ph, ".*"),
                 }
             )
+
         alias_format = (
             self["bridge.alias_template"].format(groupname=regex_ph)
             if "bridge.alias_template" in self

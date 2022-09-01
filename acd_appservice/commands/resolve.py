@@ -57,18 +57,18 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     try:
         if agent_id:
-            await puppet.room_manager.leave_user(room_id=room_id, user_id=agent_id)
+            await puppet.room_manager.user_leaves(room_id=room_id, user_id=agent_id)
         supervisors = evt.config["acd.supervisors_to_invite.invitees"]
         if supervisors:
             for supervisor_id in supervisors:
-                await puppet.room_manager.leave_user(room_id=room_id, user_id=supervisor_id)
+                await puppet.room_manager.user_leaves(room_id=room_id, user_id=supervisor_id)
     except Exception as e:
         evt.log.warning(e)
 
     # When the supervisor resolves an open chat, menubot is still in the chat
-    await evt.room_manager.kick_menubot(
+    await evt.room_manager.menubot_leaves(
         room_id=room_id,
-        reason="Chat resuelto",
+        reason="Chat resolved",
     )
 
     await evt.agent_manager.signaling.set_chat_status(

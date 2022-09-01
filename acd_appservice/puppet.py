@@ -4,7 +4,7 @@ import asyncio
 import re
 from typing import TYPE_CHECKING, AsyncGenerator, AsyncIterable, Awaitable, List, cast
 
-from mautrix.api import Method
+from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI
 from mautrix.bridge import BasePuppet, async_getter_lock
 from mautrix.types import ContentURI, RoomID, SyncToken, UserID
@@ -125,7 +125,7 @@ class Puppet(DBPuppet, BasePuppet):
         # Este atributo permite generar un template relacionado con los namesapces de usuarios
         # separados en el registration
         cls.mxid_template = SimpleTemplate(
-            cls.config["bridge.username_templates"][0],
+            cls.config["bridge.username_template"],
             "userid",
             prefix="@",
             suffix=f":{cls.hs_domain}",
@@ -188,7 +188,7 @@ class Puppet(DBPuppet, BasePuppet):
             api = self.intent.bot.api if self.intent.bot else self.intent.api
             await api.request(
                 method=Method.PUT,
-                path=f"/_synapse/admin/v2/users/{self.custom_mxid}",
+                path=SynapseAdminPath.v2.users[self.custom_mxid],
                 content=data,
             )
         except Exception as e:
