@@ -173,7 +173,7 @@ bridges:
 
   gupshup:
     # Gupshup UserID
-    mxid: "@gupshupbot:dominio_cliente.com"
+    mxid: "@gs_whatsappbot:dominio_cliente.com"
     # Prefix to be listened by bridge
     prefix: "!gs"
     # Prefix for users created
