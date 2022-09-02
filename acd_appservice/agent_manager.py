@@ -280,7 +280,7 @@ class AgentManager:
                     self.log.debug("THERE ARE ONLINE AGENTS BUT ERROR ON INVITE")
 
                 if transfer_author:
-                    msg = "No hay agentes disponibles para la transferencia."
+                    msg = self.config["acd.no_agents_for_transfer"]
                     await self.intent.send_notice(room_id=customer_room_id, text=msg)
                 else:
                     await self.show_no_agents_message(
