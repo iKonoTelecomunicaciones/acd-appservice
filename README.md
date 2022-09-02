@@ -255,6 +255,12 @@ curl -X POST -d '{"user_email":"acd1@dominio_cliente.com", "menubot_id":"@menubo
 ```curl
 curl -X POST -d '{"user_email":"acd1@dominio_cliente.com", "menubot_id":"@menubot:dominio_cliente.com", "bridge":"instagram"}' -H "Content-Type: application/json" https://cliente.z.ikono.im/provision/v1/create_user
 ```
+
+`gupshup`
+```curl
+curl -X POST -d '{"user_email":"acd1@dominio_cliente.com", "menubot_id":"@menubot:dominio_cliente.com", "bridge":"gupshup"}' -H "Content-Type: application/json" https://cliente.z.ikono.im/provision/v1/create_user
+```
+
 - NOTA: la contraseña de estos usuarios esta en el config `puppet_password`
 
 - Si la sala de control ya existía se debe salir el `@acd:dominio_cliente.com` de esta sala y de todas las salas en las que se encuentre (debe quedar sin salas).
