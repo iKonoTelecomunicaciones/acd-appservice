@@ -174,7 +174,7 @@ class ProvisioningAPI:
                     user_email: "@acd1:somewhere.com"
                     control_room_id: "!foo:somewhere.com"
                     menubot_id: "nobody@somewhere.com"
-                    bridge: "nobody@somewhere.com"
+                    bridge: "mautrix"
         responses:
             '201':
                 $ref: '#/components/responses/UserCreated'
