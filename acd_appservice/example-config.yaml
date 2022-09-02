@@ -208,31 +208,31 @@ utils:
     username_regex: "^@(?P<user_prefix>.+)_(?P<number>[0-9]{8,}):.+$"
     message_bot_war: "Ignorando mensaje entrante porque este pertenece a una cuenta registrada en iKono Chat"
     # Monday to friday
-    business_hours:
-        business_hours_message: ""
-        show_menu: false
-        monday:
-            - "08:00-12:00"
-            - "13:00-18:00"
-        tuesday:
-            - "08:00-12:00"
-            - "13:00-18:00"
-        wednesday:
-            - "08:00-12:00"
-            - "13:00-18:00"
-        thursday:
-            - "08:00-12:00"
-            - "13:00-18:00"
-        friday:
-            - "08:00-12:00"
-            - "13:00-18:00"
-        saturday:
-            - "08:00-12:00"
-            - "13:00-18:00"
-        sunday:
-        holiday:
-            - "08:00-12:00"
-            - "13:00-18:00"
+    # business_hours:
+    #     business_hours_message: ""
+    #     show_menu: false
+    #     monday:
+    #         - "08:00-12:00"
+    #         - "13:00-18:00"
+    #     tuesday:
+    #         - "08:00-12:00"
+    #         - "13:00-18:00"
+    #     wednesday:
+    #         - "08:00-12:00"
+    #         - "13:00-18:00"
+    #     thursday:
+    #         - "08:00-12:00"
+    #         - "13:00-18:00"
+    #     friday:
+    #         - "08:00-12:00"
+    #         - "13:00-18:00"
+    #     saturday:
+    #         - "08:00-12:00"
+    #         - "13:00-18:00"
+    #     sunday:
+    #     holiday:
+    #         - "08:00-12:00"
+    #         - "13:00-18:00"
     timezone: "America/Bogota"
 
 ikono_api:
