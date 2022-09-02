@@ -179,6 +179,15 @@ bridges:
   instagram:
     # Instagram UserID
     mxid: "@instagrambot:dominio_cliente.com"
+    provisioning:
+        url_base: "http://mautrix-instagram:29320/_matrix/provision"
+        shared_secret: "copiar_shared_secret_del_provisioning_del_config_del_instagram"
+  gupshup:
+    # Gupshup UserID
+    mxid: "@gs_whatsappbot:dominio_cliente.com"
+    provisioning:
+        url_base: "http://gupshup-matrix:29322/_matrix/provision"
+        shared_secret: "copiar_shared_secret_del_provisioning_del_config_del_gupshup"
 ```
 -  Ahora que tiene todos los campos configurados, se debe generar el `registration.yaml`:
 ```bash
