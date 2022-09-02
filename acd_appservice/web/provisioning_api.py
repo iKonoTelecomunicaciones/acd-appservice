@@ -171,8 +171,9 @@ class ProvisioningAPI:
                   user_email:
                     type: string
                 example:
-                    user_email: nobody@somewhere.com
-
+                    user_id: @acd1:somewhere.com
+                    control_room_id: !foo:somewhere.com
+                    email: nobody@somewhere.com
         responses:
             '201':
                 $ref: '#/components/responses/UserCreated'
