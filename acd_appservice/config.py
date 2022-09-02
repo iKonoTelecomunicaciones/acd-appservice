@@ -1,3 +1,9 @@
+from __future__ import annotations
+
+import re
+import time
+from typing import Any
+
 from mautrix.bridge.config import BaseBridgeConfig
 from mautrix.util.config import ConfigUpdateHelper
 
@@ -28,6 +34,7 @@ class Config(BaseBridgeConfig):
         copy_dict("bridges.instagram")
         copy_dict("bridges.gupshup")
         copy_dict("bridges.plugin")
+        copy("acd.namespaces")
         copy("acd.keep_room_name")
         copy("acd.numbers_in_rooms")
         copy("acd.force_join")
@@ -43,5 +50,53 @@ class Config(BaseBridgeConfig):
         copy("acd.offline_agent_action")
         copy("acd.offline_agent_timeout")
         copy("acd.offline_agent_message")
+        copy("acd.offline_menu_user_selection")
         copy("acd.no_agents_for_transfer")
         copy_dict("acd.resolve_chat")
+
+    @property
+    def namespaces(self) -> dict[str, list[dict[str, Any]]]:
+        """
+        Generate the user ID and room alias namespace config for the registration as specified in
+        https://matrix.org/docs/spec/application_service/r0.1.0.html#application-services
+        """
+        homeserver = self["homeserver.domain"]
+        regex_ph = f"regexplaceholder{int(time.time())}"
+        username_format = self["bridge.username_template"].format(userid=regex_ph)
+        acd_namespaces = [
+            username_template.format(userid=regex_ph)
+            for username_template in self["acd.namespaces"]
+        ]
+
+        users = [
+            {
+                "exclusive": True,
+                "regex": re.escape(f"@{username_format}:{homeserver}").replace(regex_ph, ".*"),
+            }
+        ]
+
+        for acd_namespace in acd_namespaces:
+            users.append(
+                {
+                    "exclusive": True,
+                    "regex": re.escape(f"@{acd_namespace}:{homeserver}").replace(regex_ph, ".*"),
+                }
+            )
+
+        alias_format = (
+            self["bridge.alias_template"].format(groupname=regex_ph)
+            if "bridge.alias_template" in self
+            else None
+        )
+
+        return {
+            "users": users,
+            "aliases": [
+                {
+                    "exclusive": True,
+                    "regex": re.escape(f"#{alias_format}:{homeserver}").replace(regex_ph, ".*"),
+                }
+            ]
+            if alias_format
+            else [],
+        }

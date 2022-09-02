@@ -5,7 +5,7 @@ from asyncio import Future, create_task, get_running_loop, sleep
 from datetime import datetime
 from typing import List, Optional
 
-from mautrix.api import Method
+from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI
 from mautrix.errors.base import IntentError
 from mautrix.types import Member, PresenceState, RoomAlias, RoomID, UserID
@@ -476,16 +476,16 @@ class AgentManager:
 
             # transfer_author can be a supervisor or admin when an open chat is transferred.
             if transfer_author is not None and self.is_agent(transfer_author):
-                await self.intent.kick_user(
+                await self.room_manager.user_leaves(
                     room_id=customer_room_id,
                     user_id=transfer_author,
-                    reason=f"Conversación transferida a {agent_displayname}",
+                    reason=self.config["acd.transfer_message"].format(agentname=agent_displayname),
                 )
             else:
                 # kick menu bot
                 self.log.debug(f"Kicking the menubot out of the room {customer_room_id}")
                 try:
-                    await self.room_manager.kick_menubot(
+                    await self.room_manager.menubot_leaves(
                         room_id=customer_room_id,
                         reason=detail if detail else f"agent [{agent_id}] accepted invite",
                     )
@@ -602,7 +602,7 @@ class AgentManager:
             try:
                 await api.request(
                     method=Method.POST,
-                    path=f"/_synapse/admin/v1/join/{room_alias if room_alias else room_id}",
+                    path=SynapseAdminPath.v1.join[room_alias if room_alias else room_id],
                     content={"user_id": agent_id},
                 )
                 break

@@ -6,7 +6,7 @@ import re
 from typing import Dict, List, Tuple
 
 from markdown import markdown
-from mautrix.api import Method
+from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI
 from mautrix.errors.base import IntentError
 from mautrix.types import (
@@ -680,7 +680,7 @@ class RoomManager:
         try:
             api = self.intent.bot.api if self.intent.bot else self.intent.api
             response = await api.request(
-                method=Method.GET, path=f"/_synapse/admin/v2/users/{user_id}/devices"
+                method=Method.GET, path=SynapseAdminPath.v2.users[user_id].devices
             )
 
         except IntentError as e:
@@ -717,29 +717,56 @@ class RoomManager:
 
         return creator
 
-    async def kick_menubot(self, room_id: RoomID, reason: str) -> None:
-        """It kicks the menubot out of the room
+    async def menubot_leaves(self, room_id: RoomID, reason: str = None) -> None:
+        """It sends a command to the menubot to cancel the task, then it leaves the room
 
         Parameters
         ----------
         room_id : RoomID
-            The room ID of the room where the menubot is.
+            The room ID of the room the menubot is in.
         reason : str
-            str
+            The reason for the user leaving the room.
 
         """
+
         menubot_id = await self.get_menubot_id()
         if menubot_id:
             await self.send_menubot_command(menubot_id, "cancel_task", room_id)
             try:
-                self.log.debug(f"Kicking the menubot [{menubot_id}]")
-                await self.intent.kick_user(room_id=room_id, user_id=menubot_id, reason=reason)
-            except Exception as e:
-                self.log.warning(
-                    str(e) + f":: the user who was going to be kicked out: {menubot_id}"
-                )
 
-            self.log.debug(f"User [{menubot_id}] KICKED from room [{room_id}]")
+                self.log.debug(f"Menubot [{menubot_id}] is leaving the room {room_id}")
+                await self.user_leaves(room_id=room_id, user_id=menubot_id, reason=reason)
+            except Exception as e:
+                self.log.error(str(e))
+
+    async def user_leaves(self, room_id: RoomID, user_id: UserID, reason: str = None):
+        """It sends a request to the homeserver to leave a room
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to kick the user from.
+        user_id : UserID
+            The user ID of the user to kick.
+        reason : str
+            The reason for leaving the room.
+
+        """
+
+        try:
+            data = {}
+            if reason:
+                data["reason"] = reason
+
+            await self.intent.api.session.post(
+                url=f"{self.intent.api.base_url}/_matrix/client/v3/rooms/{room_id}/leave",
+                headers={"Authorization": f"Bearer {self.intent.api.token}"},
+                json=data,
+                params={"user_id": user_id},
+            )
+            self.log.debug(f"User {user_id} has left the room {room_id}")
+        except Exception as e:
+            self.log.exception(e)
 
     async def send_menubot_command(
         self,
@@ -1013,7 +1040,7 @@ class RoomManager:
         try:
             api = self.intent.bot.api if self.intent.bot else self.intent.api
             room_info = await api.request(
-                method=Method.GET, path=f"/_synapse/admin/v1/rooms/{room_id}"
+                method=Method.GET, path=SynapseAdminPath.v1.rooms[room_id]
             )
             self.ROOMS[room_id] = room_info
         except Exception as e:
