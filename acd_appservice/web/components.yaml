@@ -12,6 +12,17 @@ components:
       properties:
         message:
           type: string
+
+    UserCreatedSuccess:
+      type: object
+      properties:
+        user_id:
+          type: string
+        control_room_id:
+          type: string
+        email:
+          type: string
+
     QrOk:
       type: object
       properties:
@@ -195,7 +206,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Success'
+            $ref: '#/components/schemas/UserCreatedSuccess'
 
     PmSuccessful:
       description: Pm successful.
