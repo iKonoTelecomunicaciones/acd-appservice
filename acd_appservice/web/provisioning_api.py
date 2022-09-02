@@ -835,16 +835,19 @@ class ProvisioningAPI:
         room_id = data.get("room_id")
         user_id = data.get("user_id")
         send_message = data.get("send_message") if data.get("send_message") else None
-        bridge = data.get("bridge") if data.get("bridge") else None
 
         # Obtenemos el puppet de este email si existe
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
         if not puppet:
             return web.json_response(**USER_DOESNOT_EXIST)
 
-        args = ["resolve", room_id, user_id, send_message, bridge]
+        bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
 
-        self.log.debug(args)
+        if not bridge:
+            return web.json_response(**BRIDGE_INVALID)
+
+        args = ["resolve", room_id, user_id, send_message, self.config[f"bridges.{bridge}.prefix"]]
+
         # Creating a fake command event and passing it to the command processor.
         cmd_evt = CommandEvent(
             cmd="resolve",
