@@ -479,7 +479,7 @@ class AgentManager:
                 await self.room_manager.user_leaves(
                     room_id=customer_room_id,
                     user_id=transfer_author,
-                    reason=self.config["acd.transfer_message"],
+                    reason=self.config["acd.transfer_message"].format(agentname=agent_displayname),
                 )
             else:
                 # kick menu bot
