@@ -4,30 +4,21 @@ import logging
 from typing import List
 
 from markdown import markdown
+from mautrix.appservice import IntentAPI
 from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent, UserID
 from mautrix.util.logging import TraceLogger
 
-from acd_appservice.room_manager import RoomManager
-
-from ..agent_manager import AgentManager
+from ..config import Config
 
 
 class CommandEvent:
     log: TraceLogger = logging.getLogger("acd.cmd")
-    sender: UserID
-    room_id: RoomID | None
-    text: str | None = None
-    command_prefix: str
-    cmd: str
-    args: List[str] | None = []
-
-    agent_manager: AgentManager
-    room_manager: RoomManager
 
     def __init__(
         self,
+        intent: IntentAPI,
+        config: Config,
         cmd: str,
-        agent_manager: AgentManager,
         sender: UserID,
         room_id: RoomID,
         text: str = None,
@@ -35,11 +26,8 @@ class CommandEvent:
     ):
         self.cmd = cmd
         self.log = self.log.getChild(self.cmd)
-        self.config = agent_manager.config
-        self.intent = agent_manager.intent
-        self.agent_manager = agent_manager
-        self.room_manager = self.agent_manager.room_manager
-        self.command_prefix = self.config["bridge.command_prefix"]
+        self.intent = intent
+        self.command_prefix = config["bridge.command_prefix"]
         self.sender = sender
         self.room_id = room_id
         self.text = text

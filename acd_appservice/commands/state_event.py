@@ -3,6 +3,7 @@ from typing import Dict
 
 from mautrix.types import EventType
 
+from ..puppet import Puppet
 from .handler import command_handler
 from .typehint import CommandEvent
 
@@ -29,6 +30,11 @@ async def state_event(evt: CommandEvent) -> Dict:
         detail = "state_event command incomplete arguments"
         evt.log.error(detail)
         evt.reply(text=detail)
+        return
+
+    puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
+
+    if not puppet:
         return
 
     command_length = len(f"{evt.cmd}")
@@ -62,6 +68,6 @@ async def state_event(evt: CommandEvent) -> Dict:
     else:
         content = incoming_params.get("content")
 
-    await evt.agent_manager.signaling.send_state_event(
+    await puppet.agent_manager.signaling.send_state_event(
         room_id=room_id, event_type=event_type, content=content
     )

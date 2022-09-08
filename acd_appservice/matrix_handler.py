@@ -28,8 +28,6 @@ from mautrix.types import (
 from mautrix.util.logging import TraceLogger
 
 from acd_appservice import acd_program
-from acd_appservice.agent_manager import AgentManager
-from acd_appservice.room_manager import RoomManager
 
 from .commands.handler import command_processor
 from .commands.typehint import CommandEvent
@@ -151,10 +149,10 @@ class MatrixHandler:
                     # Cuando el cliente cambia su perfil, ya sea que se quiera conservar el viejo
                     # nombre o no, este código, se encarga de actualizar el nombre
                     # en la caché de salas, si y solo si, la sala está cacheada en el
-                    # diccionario RoomManager.ROOMS
+                    # diccionario puppet.room_manager.ROOMS
                     try:
                         content: MemberStateEventContent = evt.content
-                        RoomManager.ROOMS[evt.room_id]["name"] = content.displayname
+                        puppet.room_manager.ROOMS[evt.room_id]["name"] = content.displayname
                     except KeyError:
                         pass
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
@@ -238,8 +236,8 @@ class MatrixHandler:
 
         puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.state_key)
         self.log.debug(f"The user {puppet.intent.mxid} is trying join in the room {evt.room_id}")
-        await RoomManager.save_room(
-            room_id=evt.room_id, selected_option=None, puppet_mxid=puppet.mxid
+        await puppet.room_manager.save_room(
+            room_id=evt.room_id, selected_option=None, puppet_pk=puppet.pk
         )
         await puppet.intent.join_room(evt.room_id)
 
@@ -302,15 +300,17 @@ class MatrixHandler:
                         # Como se encontró el acd* dentro de la sala, entonces la guardamos
                         # en la tabla rooms
                         self.log.debug(f"The puppet {user_id} has already in the room {room_id}")
-                        await RoomManager.save_room(
-                            room_id=room_id, selected_option=None, puppet_mxid=puppet.mxid
+                        await puppet.room_manager.save_room(
+                            room_id=room_id, selected_option=None, puppet_pk=puppet.pk
                         )
             else:
                 return
 
         # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
         if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
-            await RoomManager.save_room(room_id=room_id, selected_option=None, puppet_mxid=user_id)
+            await puppet.room_manager.save_room(
+                room_id=room_id, selected_option=None, puppet_pk=puppet.pk
+            )
 
         if puppet.intent and puppet.intent.bot and puppet.intent.bot.mxid == user_id:
             # Si el que se unió es el bot principal, debemos sacarlo para que no dañe
@@ -318,29 +318,29 @@ class MatrixHandler:
             await puppet.intent.kick_user(room_id=room_id, user_id=user_id)
 
         # Generamos llaves para buscar en PENDING_INVITES (acd, transfer)
-        future_key = RoomManager.get_future_key(room_id=room_id, agent_id=user_id)
-        transfer_future_key = RoomManager.get_future_key(
+        future_key = puppet.room_manager.get_future_key(room_id=room_id, agent_id=user_id)
+        transfer_future_key = puppet.room_manager.get_future_key(
             room_id=room_id, agent_id=user_id, transfer=True
         )
 
         # Buscamos promesas pendientes relacionadas con el comando acd
         if (
-            future_key in AgentManager.PENDING_INVITES
-            and not AgentManager.PENDING_INVITES[future_key].done()
+            future_key in puppet.agent_manager.PENDING_INVITES
+            and not puppet.agent_manager.PENDING_INVITES[future_key].done()
         ):
             # when the agent accepts the invite, the Future is resolved and the waiting
             # timer stops
             self.log.debug(f"Resolving to True the promise [{future_key}]")
-            AgentManager.PENDING_INVITES[future_key].set_result(True)
+            puppet.agent_manager.PENDING_INVITES[future_key].set_result(True)
 
         # Buscamos promesas pendientes relacionadas con las transferencia
         if (
-            transfer_future_key in AgentManager.PENDING_INVITES
-            and not AgentManager.PENDING_INVITES[transfer_future_key].done()
+            transfer_future_key in puppet.agent_manager.PENDING_INVITES
+            and not puppet.agent_manager.PENDING_INVITES[transfer_future_key].done()
         ):
             # when the agent accepts the invite, the Future is resolved and the waiting
             # timer stops
-            AgentManager.PENDING_INVITES[transfer_future_key].set_result(True)
+            puppet.agent_manager.PENDING_INVITES[transfer_future_key].set_result(True)
 
         # If the joined user is a supervisor and the room is a customer room,
         # then send set-pl in the room
@@ -437,10 +437,11 @@ class MatrixHandler:
             fake_command = f"transfer {room_id} {user_selected_campaign}"
             args = fake_command.split()
             cmd_evt = CommandEvent(
+                intent=puppet.intent,
+                config=puppet.config,
                 cmd=args[0],
                 sender=room_agent,
                 room_id=room_id,
-                agent_manager=puppet.agent_manager,
                 text=fake_command,
                 args=args,
             )
@@ -525,10 +526,11 @@ class MatrixHandler:
                 fake_command = f"transfer {room_id} {user_selected_campaign}"
                 args = fake_command.split()
                 cmd_evt = CommandEvent(
+                    intent=puppet.intent,
+                    config=puppet.config,
                     cmd=args[0],
                     sender=room_agent,
                     room_id=room_id,
-                    agent_manager=puppet.agent_manager,
                     text=fake_command,
                     args=args,
                 )
@@ -612,7 +614,7 @@ class MatrixHandler:
             return
 
         # Se ignoran todas las salas que hayan sido agregadas a la lista negra
-        if RoomManager.in_blacklist_rooms(room_id=room_id):
+        if puppet.room_manager.in_blacklist_rooms(room_id=room_id):
             return
 
         # Dado un user_id obtenemos el número y buscamos que el número no sea uno de los ya
@@ -626,7 +628,7 @@ class MatrixHandler:
                 await puppet.intent.send_text(
                     room_id=room_id, text=self.config["utils.message_bot_war"]
                 )
-                RoomManager.put_in_blacklist_rooms(room_id=room_id)
+                puppet.room_manager.put_in_blacklist_rooms(room_id=room_id)
                 return
 
         # Ignore messages from whatsapp bots
@@ -640,10 +642,11 @@ class MatrixHandler:
         if is_command and not await puppet.room_manager.is_customer_room(room_id=room_id):
             args = text.split()
             command_event = CommandEvent(
+                intent=puppet.intent,
+                config=puppet.config,
                 cmd=args[0],
                 sender=sender,
                 room_id=room_id,
-                agent_manager=puppet.agent_manager,
                 text=text,
                 args=args,
             )
@@ -651,7 +654,7 @@ class MatrixHandler:
             return
 
         # Checking if the room is a control room.
-        if await RoomManager.is_a_control_room(room_id=room_id):
+        if await puppet.is_a_control_room(room_id=room_id):
             return
 
         # ignore messages other than commands from menu bot

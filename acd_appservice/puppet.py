@@ -11,10 +11,10 @@ from mautrix.types import ContentURI, RoomID, SyncToken, UserID
 from mautrix.util.simple_template import SimpleTemplate
 from yarl import URL
 
-from . import agent_manager as agent_m
-from . import room_manager as room_m
+from .agent_manager import AgentManager
 from .config import Config
 from .db import Puppet as DBPuppet
+from .room_manager import RoomManager
 
 if TYPE_CHECKING:
     from .__main__ import ACDAppService
@@ -34,6 +34,8 @@ class Puppet(DBPuppet, BasePuppet):
 
     default_mxid_intent: IntentAPI
     default_mxid: UserID
+
+    CONTROL_ROOMS: List[RoomID] = []
 
     # Sala de control del puppet
     control_room_id: RoomID
@@ -80,19 +82,25 @@ class Puppet(DBPuppet, BasePuppet):
         self.default_mxid_intent = self.az.intent.user(self.default_mxid)
         # Refresca el intent de cada marioneta
         self.intent = self._fresh_intent()
-        self.room_manager = room_m.RoomManager(config=self.config, intent=self.intent)
-        self.agent_manager = agent_m.AgentManager(
-            intent=self.intent, room_manager=self.room_manager
+        self.room_manager = RoomManager(
+            puppet_pk=self.pk,
+            control_room_id=self.control_room_id,
+            config=self.config,
+            intent=self.intent,
         )
-        self.agent_manager.puppet_pk = self.pk
+        self.agent_manager = AgentManager(
+            puppet_pk=self.pk,
+            control_room_id=self.control_room_id,
+            intent=self.intent,
+            config=self.config,
+            room_manager=self.room_manager,
+        )
 
         if not self.get_tasks_by_name(self.custom_mxid):
             asyncio.create_task(self.agent_manager.process_pending_rooms(), name=self.custom_mxid)
         else:
             self.log.debug(f"The task process_pending_rooms.{self.custom_mxid} already exists")
 
-        self.agent_manager.control_room_id = control_room_id
-        self.room_manager.control_room_id = control_room_id
         self._add_to_cache()
 
     def get_tasks_by_name(self, task_name: UserID):
@@ -157,7 +165,7 @@ class Puppet(DBPuppet, BasePuppet):
             A list of rooms that the puppet is in.
 
         """
-        db_joined_rooms = await room_m.RoomManager.get_puppet_rooms(fk_puppet=self.pk)
+        db_joined_rooms = await RoomManager.get_puppet_rooms(puppet_pk=self.pk)
         matrix_joined_rooms = await self.intent.get_joined_rooms()
         if not matrix_joined_rooms:
             return
@@ -166,8 +174,8 @@ class Puppet(DBPuppet, BasePuppet):
         # it adds it to the database.
         for mx_joined_room in matrix_joined_rooms:
             if not mx_joined_room in db_joined_rooms:
-                await room_m.RoomManager.save_room(
-                    room_id=mx_joined_room, selected_option=None, puppet_mxid=self.custom_mxid
+                await RoomManager.save_room(
+                    room_id=mx_joined_room, selected_option=None, puppet_pk=self.pk
                 )
 
     async def sync_puppet_account(self):
@@ -379,7 +387,7 @@ class Puppet(DBPuppet, BasePuppet):
         puppet: Puppet = None
 
         try:
-            room = await room_m.RoomManager.get_room(room_id)
+            room = await RoomManager.get_room(room_id)
             if not (room and room.fk_puppet):
                 return
 
@@ -426,6 +434,54 @@ class Puppet(DBPuppet, BasePuppet):
             return
 
         return all_puppets
+
+    @classmethod
+    async def is_a_control_room(cls, room_id: RoomID) -> bool:
+        """If the room ID is in the list of control rooms,
+        or if the room ID is in the list of control room IDs,
+        then the room is a control room
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to check.
+
+        Returns
+        -------
+            A list of room IDs.
+
+        """
+        if room_id in cls.CONTROL_ROOMS:
+            return True
+
+        if room_id in await cls.get_control_room_ids():
+            return True
+
+        return False
+
+    @classmethod
+    async def get_control_room_ids(cls) -> List[RoomID]:
+        """This function is used to get the list of control rooms from the Puppet
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            A list of room ids
+
+        """
+        try:
+            control_room_ids = await super().get_control_room_ids()
+        except Exception as e:
+            cls.log.exception(e)
+            return []
+
+        if not control_room_ids:
+            return []
+
+        cls.CONTROL_ROOMS = control_room_ids
+        return control_room_ids
 
     async def is_another_puppet(self, phone: str) -> bool:
         """It checks if the phone number is in the by_phone dictionary.

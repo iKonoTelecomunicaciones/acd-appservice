@@ -6,6 +6,7 @@ from typing import Dict
 from markdown import markdown
 
 from ..http_client import ProvisionBridge, client
+from ..puppet import Puppet
 from ..signaling import Signaling
 from .handler import command_handler
 from .typehint import CommandEvent
@@ -47,8 +48,11 @@ async def pm(evt: CommandEvent) -> Dict:
     phone_number: str = data.get("phone_number")
     template_message = data.get("template_message")
     template_name = data.get("template_name")
-    bridge_cmd_prefix = data.get("bridge") or evt.config["bridges.mautrix.prefix"]
-    # TODO eliminar  `or self.config["bridges.mautrix.prefix"]` cuando todos los clientes tengan el front actualizado
+
+    puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
+
+    if not puppet:
+        return
 
     # A dict that will be sent to the frontend.
     return_params = {
@@ -64,14 +68,11 @@ async def pm(evt: CommandEvent) -> Dict:
     agent_displayname = None
 
     # Checking if the phone number is a number and if the template name and message are not empty.
-    bridge = await evt.room_manager.get_bridge_by_cmd_prefix(cmd_prefix=bridge_cmd_prefix)
 
     if not phone_number.isdigit():
         return_params["reply"] = "You must specify a valid phone number with country prefix."
     if not template_name or not template_message:
         return_params["reply"] = "You must specify a template name and message"
-    if not bridge:
-        return_params["reply"] = "You must specify a bridge available"
 
     # Checking if the phone number starts with a plus sign, if not, it adds it.
     phone_number = phone_number if phone_number.startswith("+") else f"+{phone_number}"
@@ -79,13 +80,15 @@ async def pm(evt: CommandEvent) -> Dict:
     # Sending a message to the frontend.
     if return_params.get("reply"):
         cmd_front_msg = (
-            f"{evt.config['acd.frontend_command_prefix']} {evt.cmd} {json.dumps(return_params)}"
+            f"{puppet.config['acd.frontend_command_prefix']} {evt.cmd} {json.dumps(return_params)}"
         )
         await evt.reply(text=cmd_front_msg)
         return {"data": return_params, "status": 422}
 
     # Sending a message to the customer.
-    bridge_connector = ProvisionBridge(session=client.session, config=evt.config, bridge=bridge)
+    bridge_connector = ProvisionBridge(
+        session=client.session, config=puppet.config, bridge=puppet.bridge
+    )
     status, data = await bridge_connector.pm(user_id=evt.intent.mxid, phone=phone_number)
 
     if not status in [200, 201]:
@@ -102,7 +105,7 @@ async def pm(evt: CommandEvent) -> Dict:
     customer_room_id = data.get("room_id")
     agent_id = None
     if customer_room_id:
-        agent_id = await evt.agent_manager.get_room_agent(room_id=customer_room_id)
+        agent_id = await puppet.agent_manager.get_room_agent(room_id=customer_room_id)
 
         # Checking if the agent is already in the room, if it is, it returns a message to the frontend.
         if agent_id and agent_id != evt.sender:
@@ -112,20 +115,20 @@ async def pm(evt: CommandEvent) -> Dict:
             ] = "The agent <agent_displayname> is already in room with [number]"
         else:
             # If the agent is already in the room, it returns a message to the frontend.
-            await evt.agent_manager.signaling.set_chat_status(
+            await puppet.agent_manager.signaling.set_chat_status(
                 room_id=customer_room_id, status=Signaling.FOLLOWUP, agent=evt.sender
             )
             if agent_id == evt.sender:
                 return_params["reply"] = "You are already in room with [number], message was sent."
             else:
                 # Joining the agent to the room.
-                await evt.agent_manager.force_join_agent(
+                await puppet.agent_manager.force_join_agent(
                     room_id=data.get("room_id"), agent_id=evt.sender
                 )
 
             agent_displayname = await evt.intent.get_displayname(user_id=evt.sender)
 
-            if evt.config[f"bridges.{bridge}.send_template_command"]:
+            if puppet.config[f"bridges.{puppet.bridge}.send_template_command"]:
                 await bridge_connector.gupshup_template(
                     user_id=evt.intent.mxid, room_id=data.get("room_id"), template=template_message
                 )
@@ -147,7 +150,7 @@ async def pm(evt: CommandEvent) -> Dict:
 
     if data.get("error"):
         phone_is_not_on_whatsapp = re.match(
-            evt.config["bridges.mautrix.notice_messages.phone_is_not_on_whatsapp"],
+            puppet.config["bridges.mautrix.notice_messages.phone_is_not_on_whatsapp"],
             data.get("error"),
         )
         # Checking if the phone number is on whatsapp.
@@ -166,7 +169,7 @@ async def pm(evt: CommandEvent) -> Dict:
     if not return_params.get("reply"):
         # the room is marked as followup and campaign from previous room state
         # is not kept
-        await evt.agent_manager.signaling.set_chat_status(
+        await puppet.agent_manager.signaling.set_chat_status(
             room_id=customer_room_id,
             status=Signaling.FOLLOWUP,
             agent=evt.sender,
@@ -174,18 +177,16 @@ async def pm(evt: CommandEvent) -> Dict:
             keep_campaign=False,
         )
         # clear campaign in the ik.chat.campaign_selection state event
-        await evt.agent_manager.signaling.set_selected_campaign(
+        await puppet.agent_manager.signaling.set_selected_campaign(
             room_id=customer_room_id, campaign_room_id=None
         )
-        if evt.config["acd.supervisors_to_invite.invite"]:
-            asyncio.create_task(
-                evt.agent_manager.room_manager.invite_supervisors(room_id=customer_room_id)
-            )
+        if puppet.config["acd.supervisors_to_invite.invite"]:
+            asyncio.create_task(puppet.room_manager.invite_supervisors(room_id=customer_room_id))
 
         # kick menu bot
         evt.log.debug(f"Kicking the menubot out of the room {customer_room_id}")
         try:
-            await evt.agent_manager.room_manager.menubot_leaves(
+            await puppet.room_manager.menubot_leaves(
                 room_id=customer_room_id,
                 reason=f"{evt.sender} pm existing room {customer_room_id}",
             )
@@ -196,7 +197,7 @@ async def pm(evt: CommandEvent) -> Dict:
 
     # Sending a message to the frontend.
     cmd_front_msg = (
-        f"{evt.config['acd.frontend_command_prefix']} {evt.cmd} {json.dumps(return_params)}"
+        f"{puppet.config['acd.frontend_command_prefix']} {evt.cmd} {json.dumps(return_params)}"
     )
     await evt.reply(text=cmd_front_msg)
 

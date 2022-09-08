@@ -77,7 +77,7 @@ async def command_processor(cmd_evt: CommandEvent):
     cmd_evt.log.debug(f"Incoming command is :: {cmd_evt.args}")
 
     if cmd_evt.cmd == "help":
-        await cmd_evt.reply(make_help_text(command_prefix=cmd_evt.config["bridge.command_prefix"]))
+        await cmd_evt.reply(make_help_text(command_prefix=cmd_evt.command_prefix))
     elif cmd_evt.cmd == "version":
         await cmd_evt.reply(text=f"ACD AS :: v{VERSION}")
     elif cmd_evt.cmd in command_handlers:
