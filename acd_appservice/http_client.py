@@ -18,17 +18,6 @@ class BaseClass:
     session: ClientSession
 
 
-class HTTPClient(BaseClass):
-    def __init__(self):
-        self.session = None
-
-    async def init_session(self):
-        try:
-            self.session = ClientSession()
-        except Exception as e:
-            self.log.exception(f"Error creating aiohttp session: {e}")
-
-
 class IkonoAPIClient(BaseClass):
     def __init__(self, session: ClientSession, config: Config, user_id: UserID):
         self.session = session
@@ -105,7 +94,7 @@ class IkonoAPIClient(BaseClass):
 
 
 class ProvisionBridge(BaseClass):
-    def __init__(self, session: ClientSession, config: Config, bridge: str = "mautrix"):
+    def __init__(self, config: Config, session: ClientSession = None, bridge: str = "mautrix"):
         self.session = session
         self.config = config
         self.bridge = bridge
@@ -400,6 +389,3 @@ class ProvisionBridge(BaseClass):
             self.log.error(await response.text())
 
         return data
-
-
-client = HTTPClient()

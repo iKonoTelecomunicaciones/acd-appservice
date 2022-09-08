@@ -25,7 +25,7 @@ from .. import VERSION
 from ..commands.handler import command_processor
 from ..commands.typehint import CommandEvent
 from ..config import Config
-from ..http_client import HTTPClient, ProvisionBridge
+from ..http_client import ProvisionBridge
 from ..message import Message
 from ..puppet import Puppet
 from . import SUPPORTED_MESSAGE_TYPES
@@ -52,7 +52,6 @@ class ProvisioningAPI:
     log: TraceLogger = logging.getLogger("acd.provisioning")
     app: web.Application
     config: Config
-    client: HTTPClient
 
     def __init__(self) -> None:
         self.app = web.Application()
@@ -330,7 +329,7 @@ class ProvisioningAPI:
             return web.json_response(**USER_DOESNOT_EXIST)
 
         # Creamos una conector con el bridge
-        bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
+        bridge_connector = ProvisionBridge(session=puppet.intent.api.session, config=self.config)
         # Creamos un WebSocket para conectarnos con el bridge
         await bridge_connector.mautrix_ws_connect(puppet=puppet, ws_customer=ws_customer)
 
@@ -376,7 +375,7 @@ class ProvisioningAPI:
             return web.json_response(**USER_DOESNOT_EXIST)
 
         # Creamos una conector con el bridge
-        bridge_connector = ProvisionBridge(session=self.client.session, config=self.config)
+        bridge_connector = ProvisionBridge(session=puppet.intent.api.session, config=self.config)
         # Creamos un WebSocket para conectarnos con el bridge
         return web.json_response(
             **await bridge_connector.mautrix_ws_connect(puppet=puppet, easy_mode=True)
@@ -435,7 +434,7 @@ class ProvisioningAPI:
             return web.json_response(**USER_DOESNOT_EXIST)
 
         bridge_connector = ProvisionBridge(
-            session=self.client.session, config=self.config, bridge=puppet.bridge
+            session=puppet.intent.api.session, config=self.config, bridge=puppet.bridge
         )
 
         response = await bridge_connector.instagram_login(
@@ -508,7 +507,7 @@ class ProvisioningAPI:
             return web.json_response(**USER_DOESNOT_EXIST)
 
         bridge_connector = ProvisionBridge(
-            session=self.client.session, config=self.config, bridge=puppet.bridge
+            session=puppet.intent.api.session, config=self.config, bridge=puppet.bridge
         )
 
         status, data = await bridge_connector.gupshup_register_app(
@@ -570,7 +569,7 @@ class ProvisioningAPI:
             return web.json_response(**USER_DOESNOT_EXIST)
 
         bridge_connector = ProvisionBridge(
-            session=self.client.session, config=self.config, bridge=puppet.bridge
+            session=puppet.intent.api.session, config=self.config, bridge=puppet.bridge
         )
 
         response = await bridge_connector.instagram_challenge(
@@ -1317,7 +1316,7 @@ class ProvisioningAPI:
 
         # Creamos una conector con el bridge
         bridge_connector = ProvisionBridge(
-            session=self.client.session, config=self.config, bridge=bridge
+            session=puppet.intent.api.session, config=self.config, bridge=bridge
         )
 
         status, response = await bridge_connector.pm(user_id=puppet.custom_mxid, phone=phone)
