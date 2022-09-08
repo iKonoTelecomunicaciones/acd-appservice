@@ -387,165 +387,6 @@ class MatrixHandler:
             text = text[len(prefix) + 1 :].lstrip()
         return is_command, text
 
-    async def process_offline_selection(self, room_id: RoomID, msg: str):
-        """If the user selects option 1, the bot will transfer the user to another agent
-        in the same campaign. If the user selects option 2,
-        the bot will kick the current offline agent and show the main menu
-
-        Parameters
-        ----------
-        room_id : RoomID
-            The room ID of the room where the user is.
-        msg : str
-            The message that the user sent.
-        intent : IntentAPI
-            IntentAPI
-
-        Returns
-        -------
-            The return value is a boolean.
-        """
-        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
-        if not puppet:
-            self.log.warning(f"I can't get an puppet for the room {room_id}")
-            return
-
-        offline_menu_option = msg.split()[0]
-        room_agent = await puppet.agent_manager.get_room_agent(room_id=room_id)
-        if offline_menu_option == "1":
-            # user selected transfer to another agent in same campaign
-
-            # first, check if that campaign has online agents
-            user_selected_campaign = await puppet.room_manager.get_campaign_of_room(
-                room_id=room_id
-            )
-
-            if not user_selected_campaign:
-                # this can happen if the database is deleted
-                user_selected_campaign = puppet.control_room_id
-
-            campaign_has_online_agent = await puppet.agent_manager.get_online_agent_in_room(
-                room_id=user_selected_campaign
-            )
-            if not campaign_has_online_agent:
-                msg = self.config["acd.no_agents_for_transfer"]
-                if msg:
-                    await puppet.intent.send_text(room_id=room_id, text=msg)
-                return True
-
-            self.log.debug(f"Transferring to {user_selected_campaign}")
-            fake_command = f"transfer {room_id} {user_selected_campaign}"
-            args = fake_command.split()
-            cmd_evt = CommandEvent(
-                intent=puppet.intent,
-                config=puppet.config,
-                cmd=args[0],
-                sender=room_agent,
-                room_id=room_id,
-                text=fake_command,
-                args=args,
-            )
-            await command_processor(cmd_evt=cmd_evt)
-
-        elif offline_menu_option == "2":
-            # user selected kick current offline agent and see the main menu
-            await puppet.room_manager.user_leaves(
-                room_id=room_id,
-                user_id=room_agent,
-                reason=self.config["acd.offline_menu_user_selection"],
-            )
-            await puppet.agent_manager.signaling.set_chat_status(room_id, Signaling.OPEN)
-            # clear campaign in the ik.chat.campaign_selection state event
-            await puppet.agent_manager.signaling.set_selected_campaign(
-                room_id=room_id, campaign_room_id=None
-            )
-
-            menubot_id = await puppet.room_manager.get_menubot_id()
-            await puppet.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)
-
-        else:
-            # if user enters an invalid option, shows offline menu again
-            return False
-
-        return True
-
-    async def process_offline_agent(
-        self, room_id: RoomID, room_agent: UserID, last_active_ago: int
-    ):
-        """If the agent is offline, the bot will send a message to the user and then either
-        transfer the user to another agent in the same campaign or put the user in the offline menu
-
-        Parameters
-        ----------
-        room_id : RoomID
-            The room ID of the room where the agent is offline.
-        room_agent : UserID
-            The user ID of the agent who is offline
-        last_active_ago : int
-            The time in milliseconds since the agent was last active in the room.
-        intent : IntentAPI
-            IntentAPI
-
-        Returns
-        -------
-            The return value of the function is the return value of the last expression
-            evaluated in the function.
-
-        """
-        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
-
-        if not puppet:
-            self.log.warning(f"I can't get an puppet for the room {room_id}")
-            return
-
-        action = self.config["acd.offline_agent_action"]
-        self.log.debug(f"Agent {room_agent} OFFLINE in {room_id} --> {action}")
-        offline_agent_timeout = self.config["acd.offline_agent_timeout"]
-        self.log.debug(
-            f"last_active_ago: {last_active_ago} / 1000 -- "
-            f"offline_agent_timeout: {offline_agent_timeout}"
-        )
-
-        if not last_active_ago or last_active_ago / 1000 >= offline_agent_timeout:
-            agent_displayname = await puppet.intent.get_displayname(user_id=room_agent)
-            msg = self.config["acd.offline_agent_message"].format(agentname=agent_displayname)
-            if msg:
-                await puppet.intent.send_text(room_id=room_id, text=msg)
-
-            if action == "keep":
-                return
-            elif action == "transfer":
-                # transfer to another agent in same campaign
-                user_selected_campaign = await puppet.room_manager.get_campaign_of_room(
-                    room_id=room_id
-                )
-                if not user_selected_campaign:
-                    # this can happen if the database is deleted
-                    user_selected_campaign = puppet.control_room_id
-                self.log.debug(f"Transferring to {user_selected_campaign}")
-                fake_command = f"transfer {room_id} {user_selected_campaign}"
-                args = fake_command.split()
-                cmd_evt = CommandEvent(
-                    intent=puppet.intent,
-                    config=puppet.config,
-                    cmd=args[0],
-                    sender=room_agent,
-                    room_id=room_id,
-                    text=fake_command,
-                    args=args,
-                )
-                await command_processor(cmd_evt=cmd_evt)
-
-            elif action == "menu":
-                puppet.room_manager.put_in_offline_menu(room_id)
-                menu = (
-                    f"Puedes esperar hasta que {agent_displayname} "
-                    f"esté disponible o enviar:<br><br>"
-                    f"<b>1.</b> Para ser atendido por otra persona de la misma área.<br>"
-                    f"<b>2.</b> Para ver el menú.<br>"
-                )
-                await puppet.intent.send_text(room_id=room_id, html=menu)
-
     async def handle_notice(
         self, room_id: RoomID, sender: UserID, message: MessageEventContent, event_id: EventID
     ) -> None:
@@ -706,7 +547,7 @@ class MatrixHandler:
             # the user entered the offline agent menu and selected some option
             if puppet.room_manager.in_offline_menu(room_id):
                 puppet.room_manager.pull_from_offline_menu(room_id)
-                valid_option = await self.process_offline_selection(
+                valid_option = await puppet.agent_manager.process_offline_selection(
                     room_id=room_id, msg=message.body
                 )
                 if valid_option:
@@ -727,7 +568,7 @@ class MatrixHandler:
 
                 presence = await puppet.room_manager.get_user_presence(user_id=room_agent)
                 if presence and presence.presence != PresenceState.ONLINE:
-                    await self.process_offline_agent(
+                    await puppet.agent_manager.process_offline_agent(
                         room_id=room_id,
                         room_agent=room_agent,
                         last_active_ago=presence.last_active_ago,
