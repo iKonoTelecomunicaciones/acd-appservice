@@ -34,7 +34,12 @@ async def template(evt: CommandEvent) -> Dict:
 
     # Remove 'template' word and unify json template_data
     template_data = " ".join(evt.args[1:])
+
     puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
+
+    if not puppet:
+        return
+
     try:
         incoming_params = json.loads(template_data)
     except Exception:
@@ -52,16 +57,14 @@ async def template(evt: CommandEvent) -> Dict:
         await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
         return
 
-    bridge = await evt.room_manager.get_room_bridge(room_id=room_id)
-
     if not template_name or not template_message:
         msg = "You must specify a template name and message"
         await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
         return
 
-    if evt.config[f"bridges.{bridge}.send_template_command"]:
+    if puppet.config[f"bridges.{puppet.bridge}.send_template_command"]:
         bridge_connector = ProvisionBridge(
-            session=client.session, config=evt.config, bridge=bridge
+            session=client.session, config=puppet.config, bridge=puppet.bridge
         )
 
         # TODO Si otro bridge debe enviar templates, hacer generico este metodo (gupshup_template)

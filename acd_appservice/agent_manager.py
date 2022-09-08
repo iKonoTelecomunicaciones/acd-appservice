@@ -11,6 +11,7 @@ from mautrix.errors.base import IntentError
 from mautrix.types import Member, PresenceState, RoomAlias, RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
+from .config import Config
 from .room_manager import RoomManager
 from .signaling import Signaling
 from .util.business_hours import BusinessHour
@@ -18,24 +19,28 @@ from .util.business_hours import BusinessHour
 
 class AgentManager:
     log: TraceLogger = logging.getLogger("acd.agent_manager")
-    intent: IntentAPI
-    room_manager: RoomManager
     # last invited agent per control room (i.e. campaigns)
     CURRENT_AGENT = {}
 
     # Dict of Future objects used to get notified when an agent accepts an invite
     PENDING_INVITES: dict[str, Future] = {}
 
-    control_room_id: RoomID | None = None
-    puppet_pk: int | None = None
-
-    def __init__(self, intent: IntentAPI, room_manager: RoomManager) -> None:
+    def __init__(
+        self,
+        puppet_pk: int,
+        control_room_id: RoomID,
+        intent: IntentAPI,
+        config: Config,
+        room_manager: RoomManager,
+    ) -> None:
         self.intent = intent
-        self.config = room_manager.config
-        self.room_manager = room_manager
+        self.config = config
+        self.puppet_pk = puppet_pk
+        self.control_room_id = control_room_id
         self.signaling = Signaling(intent=self.intent, config=self.config)
         self.business_hours = BusinessHour(intent=self.intent, config=self.config)
         self.log = self.log.getChild(self.intent.mxid)
+        self.room_manager = room_manager
 
     async def process_distribution(
         self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
@@ -72,7 +77,7 @@ class AgentManager:
             await RoomManager.save_pending_room(
                 room_id=customer_room_id,
                 selected_option=campaign_room_id,
-                puppet_mxid=self.intent.mxid,
+                puppet_pk=self.puppet_pk,
             )
             return
 
@@ -125,7 +130,7 @@ class AgentManager:
                 continue
 
             self.log.debug("Searching for pending rooms...")
-            customer_room_ids = await RoomManager.get_pending_rooms(fk_puppet=self.puppet_pk)
+            customer_room_ids = await RoomManager.get_pending_rooms(puppet_pk=self.puppet_pk)
 
             if len(customer_room_ids) > 0:
                 last_campaign_room_id = None
@@ -292,7 +297,7 @@ class AgentManager:
                     await RoomManager.save_pending_room(
                         room_id=customer_room_id,
                         selected_option=campaign_room_id,
-                        puppet_mxid=self.intent.mxid,
+                        puppet_pk=self.puppet_pk,
                     )
 
                 RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
@@ -461,7 +466,7 @@ class AgentManager:
             await RoomManager.save_room(
                 room_id=customer_room_id,
                 selected_option=campaign_room_id,
-                puppet_mxid=self.intent.mxid,
+                puppet_pk=self.puppet_pk,
                 change_selected_option=True if campaign_room_id else False,
             )
             self.log.debug(f"Removing room [{customer_room_id}] from pending list")

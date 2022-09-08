@@ -20,7 +20,7 @@ async def room_manager_mock(mocker):
 
     config.load()
 
-    return RoomManager(config=config)
+    return RoomManager(puppet_pk=14, control_room_id="!asvqgqpHdym:matrix.org", config=config)
 
 
 @pytest_asyncio.fixture

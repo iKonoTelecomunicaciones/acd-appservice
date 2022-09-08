@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from typing import cast
 
-from mautrix.bridge import async_getter_lock
 from mautrix.types import EventID, RoomID, UserID
 from mautrix.util.logging import TraceLogger
 

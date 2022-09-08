@@ -153,10 +153,7 @@ homeserver:
 ...
     domain: dominio_cliente.com
 ...
-appservice:
-...
-    puppet_password: contraseña_segura
-...
+
 bridge:
 ...
     # Para invitar al admin a las salas de control
@@ -201,7 +198,7 @@ bridges:
 ```bash
 docker run --rm -v $(pwd):/data ikonoim/acd-appservice:stable
 ```
-- Copiar el `registration.yaml` en la ruta `/var/data/dominio_cliente.com/synapse`
+- Entrar al nodo donde está instalado el cliente y copiar el `registration.yaml` en la ruta `/var/data/dominio_cliente.com/synapse`
 ```bash
 cp registration.yaml /var/data/dominio_cliente.com/synapse/registration-acd-as.yaml
 ```
@@ -216,7 +213,7 @@ vim /var/data/dominio_cliente.com/synapse/homeserver.yaml
 app_service_config_files:
   - /data/registration-acd-as.yaml
 ```
-- Eliminar el servicio del synapse `dominio_clientecom-synapse`
+- Reiniciar el servicio del synapse `dominio_clientecom-synapse`
 ```bash
 docker service rm dominio_clientecom-synapse
 ```
@@ -272,8 +269,8 @@ curl -X POST -d '{"user_email":"acd1@dominio_cliente.com", "menubot_id":"@menubo
 - NOTA: la contraseña de estos usuarios esta en el config `puppet_password`
 
 - Si la sala de control ya existía se debe salir el `@acd:dominio_cliente.com` de esta sala y de todas las salas en las que se encuentre (debe quedar sin salas).
-- Se debe invitar a al `acd*` a las salas de colas, de control y hacerlo admin.
-- Invitar al menubot y a los agentes a la nueva sala de control
+- Se debe invitar a al `acd*` a las salas de colas y hacerlo admin.
+- Invitar al menubot y a los agentes a las nuevas salas de control
 
 
 ## ACD Modo API:
