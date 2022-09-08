@@ -7,7 +7,7 @@ from .acd_program import ACD
 from .config import Config
 from .db import init as init_db
 from .db import upgrade_table
-from .http_client import ProvisionBridge, client
+from .http_client import ProvisionBridge
 from .matrix_handler import MatrixHandler
 from .puppet import Puppet
 from .web.provisioning_api import ProvisioningAPI
@@ -53,9 +53,6 @@ class ACDAppService(ACD):
         self.provisioning_api = ProvisioningAPI()
         # Le damos acceso del archivo de configuración a la API
         self.provisioning_api.config = self.config
-        self.provisioning_api.client = client
-        await self.provisioning_api.client.init_session()
-        self.provisioning_api.client.config = self.config
         # Usan la app de aiohttp, creamos una subaplicacion especifica para la API
         self.az.app.add_subapp(api_route, self.provisioning_api.app)
 
@@ -64,7 +61,6 @@ class ACDAppService(ACD):
 
         self.matrix.config = self.config
 
-        self.add_shutdown_actions(self.provisioning_api.client.session.close())
         asyncio.create_task(self.checking_whatsapp_connection())
 
     def prepare_stop(self) -> None:
@@ -80,14 +76,13 @@ class ACDAppService(ACD):
 
     async def checking_whatsapp_connection(self):
         """This function checks if the puppet is connected to WhatsApp"""
-        bridge_connector = ProvisionBridge(
-            session=self.provisioning_api.client.session, config=self.config
-        )
+        bridge_connector = ProvisionBridge(config=self.config)
         while True:
             try:
                 all_puppets = await Puppet.get_puppets_from_mautrix()
                 for puppet_id in all_puppets:
                     puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_id)
+                    bridge_connector.session = puppet.intent.api.session
                     response = await bridge_connector.mautrix_ping(user_id=puppet_id)
                     # Checking if the puppet is connected to WhatsApp.
                     if (

@@ -1,7 +1,7 @@
 import json
 from typing import Dict
 
-from ..http_client import ProvisionBridge, client
+from ..http_client import ProvisionBridge
 from ..puppet import Puppet
 from .handler import command_handler
 from .typehint import CommandEvent
@@ -64,7 +64,7 @@ async def template(evt: CommandEvent) -> Dict:
 
     if puppet.config[f"bridges.{puppet.bridge}.send_template_command"]:
         bridge_connector = ProvisionBridge(
-            session=client.session, config=puppet.config, bridge=puppet.bridge
+            session=evt.intent.api.session, config=puppet.config, bridge=puppet.bridge
         )
 
         # TODO Si otro bridge debe enviar templates, hacer generico este metodo (gupshup_template)

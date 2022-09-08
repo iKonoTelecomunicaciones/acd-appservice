@@ -7,7 +7,7 @@ from mautrix.appservice import IntentAPI
 from mautrix.util.logging import TraceLogger
 
 from ..config import Config
-from ..http_client import IkonoAPIClient, client
+from ..http_client import IkonoAPIClient
 
 
 class BusinessHour:
@@ -18,7 +18,7 @@ class BusinessHour:
         self.intent = intent
         self.config = config
         self.ikono_client = IkonoAPIClient(
-            session=client.session, config=config, user_id=self.intent.mxid
+            session=intent.api.session, config=config, user_id=self.intent.mxid
         )
 
     async def is_not_business_hour(self) -> bool:
