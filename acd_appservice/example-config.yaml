@@ -114,17 +114,27 @@ acd:
     voice_call:
         call_message: "Incoming call"
         no_voice_call: "Hola! Te informamos que no atendemos llamadas de WhatsApp. Por favor envíanos un mensaje para comunicarte con nosotros."
-    # Action to take when user sends message and assigned agent is offline
-    # - keep: no action, keep agent in room and no message is shown
-    # - transfer: if agent is offline more than x secs, it is kicked out and someone new is invited
-    # - menu: if agent is offline more than x secs, the customer is presented a menu of options
-    offline_agent_action: menu
-    # agent offline time in seconds to take an action if the customer sends a message
-    offline_agent_timeout: 0
-    # message to show when agent is offline longer than offline_agent_timeout
-    offline_agent_message: "{agentname} no está disponible en este momento."
-    # User requested to see the menu
-    offline_menu_user_selection: El usuario solicitó ver el menú
+    #offline messages and actions
+    offline:
+        # Action to take when user sends message and assigned agent is offline
+        # - keep: no action, keep agent in room and no message is shown
+        # - transfer: if agent is offline more than x secs, it is kicked out and someone new is invited
+        # - menu: if agent is offline more than x secs, the customer is presented a menu of options
+        agent_action: menu
+        # agent offline time in seconds to take an action if the customer sends a message
+        agent_timeout: 0
+        # message to show when agent is offline longer than offline_agent_timeout
+        agent_message: "{agentname} no está disponible en este momento."
+        # User requested to see the menu
+        menu_user_selection: El usuario solicitó ver el menú
+        # The offline menu that will be display to the client
+        menu:
+            header: "Puedes esperar hasta que {agentname} esté disponible o enviar:<br><br>"
+            options:
+                "1":
+                    text: "Para ser atendido por otra persona de la misma área."
+                "2":
+                    text: "Para ver el menú."
     # message to show to the user if 'menu' action is active, and the user selects to be transferred
     # to another agent, but no sagent is available
     no_agents_for_transfer: "No hay agentes disponibles para la transferencia."

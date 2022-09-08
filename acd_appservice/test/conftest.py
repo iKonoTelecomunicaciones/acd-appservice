@@ -1,16 +1,13 @@
 import pytest
 import pytest_asyncio
 
-from acd_appservice.puppet import Puppet
 from acd_appservice.room_manager import RoomManager
 
 from ..config import Config
 
 
 @pytest_asyncio.fixture
-async def room_manager_mock(mocker):
-
-    mocker.patch.object(Puppet, "get_customer_room_puppet", return_value="pytest")
+async def room_manager_mock():
 
     config = Config(
         path="acd_appservice/example-config.yaml",
