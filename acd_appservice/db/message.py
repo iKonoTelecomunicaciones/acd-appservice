@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Dict
+from typing import TYPE_CHECKING, ClassVar
 
-import asyncpg
 from attr import dataclass
 from mautrix.types import EventID, RoomID, UserID
 from mautrix.util.async_db import Database
