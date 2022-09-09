@@ -487,14 +487,14 @@ class ProvisioningAPI:
         if not request.body_exists:
             return web.json_response(**NOT_DATA)
 
-        data = await request.json()
-        user_email = data.get("user_email")
+        gupshup_data = await request.json()
+        user_email = gupshup_data.get("user_email")
 
         gs_app_data = {
-            "gs_app_name": data.get("gs_app_name"),
-            "gs_app_phone": data.get("gs_app_phone"),
-            "api_key": data.get("api_key"),
-            "app_id": data.get("app_id"),
+            "gs_app_name": gupshup_data.get("gs_app_name"),
+            "gs_app_phone": gupshup_data.get("gs_app_phone"),
+            "api_key": gupshup_data.get("api_key"),
+            "app_id": gupshup_data.get("app_id"),
         }
 
         error_result = await self.validate_email(user_email=user_email)
@@ -515,7 +515,7 @@ class ProvisioningAPI:
         )
 
         if status in [200, 201]:
-            puppet.phone = data.get("gs_app_phone")
+            puppet.phone = gupshup_data.get("gs_app_phone")
             await puppet.save()
 
         return web.json_response(status=status, data=data)
