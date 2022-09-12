@@ -273,17 +273,119 @@ curl -X POST -d '{"user_email":"acd1@dominio_cliente.com", "menubot_id":"@menubo
 - Invitar al menubot y a los agentes a las nuevas salas de control
 
 
-## ACD Modo API:
+# iKono Chat API
+
+#### Registrar una cuenta
+
+Endpoint: `provision/v1/create_user`
+
+Metodo: `POST`
+
+Datos requeridos:
+
+    user_email: foo@foo.com.co
+
+Ejemplo:
+
+```curl
+curl -X POST -d '{"user_email":"foo@foo.com.co"}' -H "Content-Type: application/json" https://sender.z.ikono.im/provision/v1/create_user
+```
+
+#### Respuestas:
+##### 1 -  El usuario ha sido creado
+
+Status: `201`
+
+Respuesta:
+
+    {
+        "user_id" : "@foo:foo.com.co",
+        "control_room_id" : "!foo:foo.com.co",
+        "email" : "foo@foo.com.co"
+    }
+
+##### 2 -  Email invalido
+
+Status: `400`
+
+Respuesta:
+
+    {"error": "Not a valid email"}
+
+##### 3 -  Usuario ya registrado
+
+Status: `422`
+
+Respuesta:
+
+    {"error": "User already exists"}
+
+---
+
+#### Conectate con WhatsApp
+
+Genera un código QR para un usuario existente con el fin de vincular el número de WhatsApp escaneando el código QR con el teléfono móvil.
+Esto crea un `WebSocket`, si
+no te conectas a tiempo, la conexión terminará por `timeout`.
+
+**NOTA**: Tu conexión con el `WebSocket` te permitirá recibir información relacionada con un inicio de sesión de WhatsApp, te enviará un Qr en text, este código lo debes convertir en una imagen y cuando escanees el Qr el te enviara la información de login y luego terminará la conexión.
+
+**NOTA**: Si deseas escanear el qr sin usar este endpoint, comunícate con soporte de iKono Chat:  soporte@ikono.com.co - [WhasApp Soporte Ikono](https://wa.me/573148901850)
+
+
+Endpoint: `/provision/v1/mautrix/ws_link_phone?user_email=foo@foo.com.co`
+
+Metodo: `GET`
+
+##### 1 -  Qr generado
+
+Respuesta:
+
+    data:
+        code: "2@Y0SYKO62z8tZXp9KDf4w8D/4qLioopgFtT3Bc2aSdt6Jdmg4DZlM1..."
+        timeout: 60
+    status: 200
+
+##### 2 -  Login exitoso
+
+Respuesta:
+
+    data:
+        jid: "573123456789.0:65@s.whatsapp.net"
+        phone: "+573123456789"
+        success: true
+    status: 201
+
+##### 3 -  Tiempo de login superado
+
+    data:
+        success: false
+        error: "QR code scan timed out. Please try again."
+        errcode: "login timed out"
+    status: 422
+
+#### 4 - El usuario no existe
+
+Status: `404`
+
+Respuesta:
+
+    {"error": "User doesn't exist"}
+
+---
 
 #### Envia un mensaje
 
 Endpoint: `/provision/v1/mautrix/send_message`
+
 Metodo: `POST`
+
 Datos requeridos:
-- `user_email`: foo@foo.com.co
-- `phone`: 573123456789
-- `msg_type`: text
-- `message`: Hola Mundo!!
+
+    user_email: foo@foo.com.co
+    phone: 573123456789
+    msg_type: text
+    message: Hola Mundo!!
 
 Ejemplo:
 
@@ -294,9 +396,11 @@ curl -X POST -d '{"user_email":"foo@foo.com.co", "phone":"573123456789", "msg_ty
 **NOTA**:  Actualmente, solo se pueden enviar mensajes tipo `text`
 **NOTA**:  El campo `phone` debe tener el formato del pais
 
-##### Respuestas:
-###### 1 -  El mensaje ha sido enviado correctamente
+#### Respuestas:
+##### 1 -  El mensaje ha sido enviado correctamente
+
 Status: `201`
+
 Respuesta:
 
     {
@@ -305,8 +409,10 @@ Respuesta:
       "room_id": "!JJJPEfigBmkDBIvWvF:sender.ikono.im"
     }
 
-##### 2 - El número no existe en WhatsApp
+#### 2 - El número no existe en WhatsApp
+
 Status: `404`
+
 Respuesta:
 
     {
@@ -315,23 +421,28 @@ Respuesta:
 	  "errcode": "not on whatsapp"
 	}
 
-##### 3 - Parametros faltantes
+#### 3 - Parametros faltantes
+
 Status: `422`
+
 Respuesta:
 
 	{
 	  "error": "Please provide required variables"
 	}
 
-##### 4 - Error interno
+#### 4 - Error interno
+
 Status: `500`
+
 En este caso comunícate con soporte de iKono Chat:  soporte@ikono.com.co - [WhatsApp Soporte Ikono](https://wa.me/573148901850)
 
 ---
----
 
 #### Verificación de lectura
+
 Endpoint: `/provision/v1/read_check?event_id=xyz_123`
+
 Metodo: `GET`
 
 Ejemplo:
@@ -340,8 +451,10 @@ Ejemplo:
 curl --location --request GET 'https://sender.z.ikono.im/provision/v1/read_check?event_id=$ZuC98SlYtdWPoKPaUeHnTO3eLJL5fVGr3vpuHOoevBk'
 ```
 
-##### 1 -  Lectura del mensaje
+#### 1 -  Lectura del mensaje
+
 Status: `200`
+
 Respuesta:
 
 	{
@@ -354,22 +467,28 @@ Respuesta:
 	  "was_read": true
 	}
 
-##### 2 - Mensaje no encontrado
+#### 2 - Mensaje no encontrado
+
 Status: `404`
+
 Respuesta:
 
     {
 	    "error": "Message not found"
 	}
 
-##### 3 - Parametros faltantes
+#### 3 - Parametros faltantes
+
 Status: `422`
+
 Respuesta:
 
 	{
 	  "error": "Please provide required variables"
 	}
 
-##### 4 - Error interno
+#### 4 - Error interno
+
 Status: `500`
+
 En este caso comunícate con soporte de iKono Chat:  soporte@ikono.com.co - [WhasApp Soporte Ikono](https://wa.me/573148901850)
