@@ -8,15 +8,17 @@ from mautrix.util.logging import TraceLogger
 
 from ..config import Config
 from ..http_client import IkonoAPIClient
+from ..room_manager import RoomManager
 
 
 class BusinessHour:
     log: TraceLogger = logging.getLogger("acd.business_hour")
     HOLIDAY_INFO = {}
 
-    def __init__(self, intent: IntentAPI, config: Config) -> None:
+    def __init__(self, intent: IntentAPI, config: Config, room_manager: RoomManager) -> None:
         self.intent = intent
         self.config = config
+        self.room_manager = room_manager
         self.ikono_client = IkonoAPIClient(
             session=intent.api.session, config=config, user_id=self.intent.mxid
         )
@@ -87,4 +89,6 @@ class BusinessHour:
         """
         if self.config["utils.business_hours.business_hours_message"]:
             business_hour_message = self.config["utils.business_hours.business_hours_message"]
-            await self.intent.send_text(room_id=room_id, text=business_hour_message)
+            await self.room_manager.send_formatted_message(
+                room_id=room_id, msg=business_hour_message
+            )

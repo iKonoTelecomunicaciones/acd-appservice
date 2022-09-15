@@ -257,6 +257,7 @@ ikono_api:
   base_url: "https://api.ikono.im"
   login_url: "/v1/auth/token"
   holidays_url: "/v1/holidays"
+  password: ""
 
 
 logging:

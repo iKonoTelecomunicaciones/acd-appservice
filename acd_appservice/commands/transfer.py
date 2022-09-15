@@ -126,7 +126,7 @@ async def transfer_user(evt: CommandEvent) -> str:
         msg = f"El agente {target_agent_id} ya está en la sala."
         await evt.intent.send_notice(room_id=customer_room_id, text=msg)
     else:
-        presence_response = await puppet.room_manager.get_user_presence(user_id=target_agent_id)
+        presence_response = await puppet.agent_manager.get_agent_presence(agent_id=target_agent_id)
         evt.log.debug(
             f"PRESENCE RESPONSE: "
             f"[{target_agent_id}] -> [{presence_response.presence if presence_response else None}]"
