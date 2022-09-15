@@ -146,6 +146,12 @@ acd:
         template_data: []
         language: "es"
 
+    # Action to take when we need to that some agent get out of a room
+    # - leave: it makes an identity assertion of an agent to made it leave the room
+    # NOTA: The namespaces should be correctly configured to user leave option
+    # - kick: it makes that the room admin kick the agent from the room
+    leave_or_kick: 'leave'
+
 
 # ACD will send below commands to interact with any WA bridge
 bridges:

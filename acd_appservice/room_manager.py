@@ -715,19 +715,22 @@ class RoomManager:
             The reason for leaving the room.
 
         """
-
         try:
-            data = {}
-            if reason:
-                data["reason"] = reason
+            if self.config["acd.leave_or_kick"] == "leave":
+                data = {}
+                if reason:
+                    data["reason"] = reason
 
-            await self.intent.api.session.post(
-                url=f"{self.intent.api.base_url}/_matrix/client/v3/rooms/{room_id}/leave",
-                headers={"Authorization": f"Bearer {self.intent.api.token}"},
-                json=data,
-                params={"user_id": user_id},
-            )
-            self.log.debug(f"User {user_id} has left the room {room_id}")
+                await self.intent.api.session.post(
+                    url=f"{self.intent.api.base_url}/_matrix/client/v3/rooms/{room_id}/leave",
+                    headers={"Authorization": f"Bearer {self.intent.api.token}"},
+                    json=data,
+                    params={"user_id": user_id},
+                )
+                self.log.debug(f"User {user_id} has left the room {room_id}")
+            elif self.config["acd.leave_or_kick"] == "kick":
+                self.log.debug(f"User {user_id} has been kicked from the room {room_id}")
+                await self.intent.kick_user(room_id=room_id, user_id=user_id, reason=reason)
         except Exception as e:
             self.log.exception(e)
 
