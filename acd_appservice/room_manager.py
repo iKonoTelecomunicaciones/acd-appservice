@@ -604,29 +604,6 @@ class RoomManager:
 
         return emoji_number
 
-    async def get_user_presence(self, user_id: UserID) -> PresenceEventContent:
-        """This function will return the presence of a user
-
-        Parameters
-        ----------
-        user_id : UserID
-            The user ID of the user you want to check the presence of.
-
-        Returns
-        -------
-            PresenceEventContent
-
-        """
-        self.log.debug(f"Checking presence for....... [{user_id}]")
-        response = None
-        try:
-            response = await self.intent.get_presence(user_id=user_id)
-            self.log.debug(f"Presence for....... [{user_id}] is [{response.presence}]")
-        except IntentError as e:
-            self.log.exception(e)
-
-        return response
-
     async def is_in_mobile_device(self, user_id: UserID) -> bool:
         """It checks if the user is in a mobile device
 

@@ -566,7 +566,7 @@ class MatrixHandler:
                     )
                     return
 
-                presence = await puppet.room_manager.get_user_presence(user_id=room_agent)
+                presence = await puppet.agent_manager.get_agent_presence(agent_id=room_agent)
                 if presence and presence.presence != PresenceState.ONLINE:
                     await puppet.agent_manager.process_offline_agent(
                         room_id=room_id,

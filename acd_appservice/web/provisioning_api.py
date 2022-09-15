@@ -9,7 +9,7 @@ from typing import Dict, List
 
 import aiohttp_cors
 from aiohttp import web
-from aiohttp_swagger3 import SwaggerDocs, SwaggerUiSettings
+from aiohttp_swagger3 import SwaggerDocs, SwaggerInfo, SwaggerUiSettings
 from markdown import markdown
 from mautrix.types import (
     Format,
@@ -57,8 +57,10 @@ class ProvisioningAPI:
         self.app = web.Application()
         swagger = SwaggerDocs(
             self.app,
-            title="ACD AppService documentation",
-            version=VERSION,
+            info=SwaggerInfo(
+                title="ACD AppService documentation",
+                version=VERSION,
+            ),
             components=f"acd_appservice/web/components.yaml",
             swagger_ui_settings=SwaggerUiSettings(
                 path="/docs",

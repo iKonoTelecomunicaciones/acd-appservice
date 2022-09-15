@@ -75,7 +75,7 @@ class Config(BaseBridgeConfig):
         for acd_namespace in acd_namespaces:
             users.append(
                 {
-                    "exclusive": True,
+                    "exclusive": False,
                     "regex": re.escape(f"@{acd_namespace}:{homeserver}").replace(regex_ph, ".*"),
                 }
             )

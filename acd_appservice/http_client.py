@@ -38,7 +38,7 @@ class IkonoAPIClient(BaseClass):
         login_url = self.config["ikono_api.login_url"]
         data = {
             "username": self.user_id,
-            "password": self.config["appservice.puppet_password"],
+            "password": self.config["ikono_api.password"],
         }
         url = f"{base_url}{login_url}"
         try:

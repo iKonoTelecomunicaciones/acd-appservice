@@ -40,7 +40,9 @@ class AgentManager:
         self.puppet_pk = puppet_pk
         self.control_room_id = control_room_id
         self.signaling = Signaling(intent=self.intent, config=self.config)
-        self.business_hours = BusinessHour(intent=self.intent, config=self.config)
+        self.business_hours = BusinessHour(
+            intent=self.intent.bot, config=self.config, room_manager=room_manager
+        )
         self.log = self.log.getChild(self.intent.mxid)
         self.room_manager = room_manager
 
@@ -120,7 +122,6 @@ class AgentManager:
         check if there are online agents in the campaign room, if there are,
         assign the agent to the pending room
         """
-
         while True:
 
             # Stop process pending rooms if the conversation is not within the business hour
@@ -188,7 +189,6 @@ class AgentManager:
             else:
                 self.log.debug("There's no pending rooms")
 
-            self.log.debug("\n")
             await sleep(self.config["acd.search_pending_rooms_interval"])
 
     async def loop_agents(
@@ -259,7 +259,7 @@ class AgentManager:
                 break
 
             if agent_id != transfer_author:
-                presence_response = await self.room_manager.get_user_presence(user_id=agent_id)
+                presence_response = await self.get_agent_presence(agent_id=agent_id)
                 self.log.debug(
                     f"PRESENCE RESPONSE: "
                     f"[{agent_id}] -> [{presence_response.presence if presence_response else None}]"
@@ -322,7 +322,7 @@ class AgentManager:
             The next agent in line.
 
         """
-        members = await self.intent.get_joined_members(room_id)
+        members = await self.intent.bot.get_joined_members(room_id)
         # print([member.user_id for member in members])
         if members:
             # remove bots from member list
@@ -709,6 +709,29 @@ class AgentManager:
 
         return None
 
+    async def get_agent_presence(self, agent_id: UserID) -> PresenceState:
+        """Returns the presence state of the agent with the given ID
+
+        Parameters
+        ----------
+        agent_id : UserID
+            The ID of the agent you want to get the presence of.
+
+        Returns
+        -------
+            PresenceState
+
+        """
+        self.log.debug(f"Checking presence for....... [{agent_id}]")
+        response = None
+        try:
+            response = await self.intent.bot.get_presence(agent_id)
+            self.log.debug(f"Presence for....... [{agent_id}] is [{response.presence}]")
+        except Exception as e:
+            self.log.exception(e)
+
+        return response
+
     async def get_online_agent_in_room(self, room_id: RoomID) -> UserID:
         """ "Return online agent from room_id."
 
@@ -728,7 +751,7 @@ class AgentManager:
             return None
 
         for agent_id in agents:
-            presence_response = await self.intent.get_presence(agent_id)
+            presence_response = await self.get_agent_presence(agent_id=agent_id)
             if presence_response and presence_response.presence == PresenceState.ONLINE:
                 return agent_id
 
@@ -749,7 +772,7 @@ class AgentManager:
         """
         members = None
         try:
-            members = await self.intent.get_joined_members(room_id=room_id)
+            members = await self.intent.bot.get_joined_members(room_id=room_id)
         except IntentError as e:
             self.log.error(e)
 

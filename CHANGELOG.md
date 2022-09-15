@@ -1,6 +1,6 @@
 # v0.1.8 (2022-31-08)
 - ➕ ADD FEATURE: Ahora puedes enviar mensajes vía gupshup con este endpoint `/v1/gupshup/send_message`
-- ➕ ADD FEATURE: Ahora puedes crear lineas con gupshup con este endpoint `/v1/gupshup/register`
+- ➕ ADD FEATURE: Ahora puedes crear líneas con gupshup con este endpoint `/v1/gupshup/register`
 - ➕ ADD FEATURE: Este ACD soporta el bridge de gupshup
 - 🔃 CODE REFACTORING: Cambios en los endpoints
     - `/v1/whatsapp/send_message` -> `/v1/mautrix/send_message`
@@ -12,7 +12,7 @@
 
 - 🐛 BUG FIX: El evento join llegaba antes del invite, las salas no inicializaban bien
 - 🐛 BUG FIX: La puppet_password se actualizaba sola al reiniciar el servicio
-- ➖ SUB CODE: Se elimina condigo repetido
+- ➖ SUB CODE: Se elimina código repetido
 
 # v0.1.6 (2022-22-08)
 
