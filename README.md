@@ -54,7 +54,7 @@ provisioning del nuevo acd:
 ```curl
 curl -X POST -d '{"user_email":"acd1@dominio_cliente.com", "control_room_id":"!foo:dominio_cliente.com"}' -H "Content-Type: application/json" https://cliente.z.ikono.im/provision/v1/create_user
 ```
-- Ahora debería unir al nuevo usuario acd1 en las salas donde este el acd viejo
+- Invitar el acd1 a todas las salas de clientes. No invitarlo a las salas de colas. Para esto se usa el script.
 
 <br>
 
@@ -65,7 +65,9 @@ curl -X POST -d '{"user_email":"acd1@dominio_cliente.com", "control_room_id":"!f
 <br>
 
 - Deberá iniciar sesión con el acd1 en la sala de control, hacer `!wa login` y escanear el nuevo qr, el acd1 debería ser el nuevo anfitrión de todas las salas del acd viejo.
-- Ahora que ya tenemos al acd1 en las salas y conectado a WhatsApp, podemos sacar al acd viejo de todas las salas donde él se encuentre, absolutamente todas.
+
+- Ahora que ya tenemos al acd1 en las salas de clientes y conectado a WhatsApp, podemos sacar al acd viejo de todas las salas de clientes. Dejar el acd viejo en las salas de colas.
+
 - Se debe ingresar a la base de datos del bridge, en la tabla `portal` debemos ejecutar el siguiente comando.
 ```sql
 UPDATE portal SET relay_user_id = '@acd1:dominio_cliente.com' WHERE relay_user_id = '@acd:dominio_cliente.com';
@@ -201,6 +203,15 @@ ikono_api:
 ```bash
 docker run --rm -v $(pwd):/data ikonoim/acd-appservice:stable
 ```
+
+- Agregar a los namespaces del `registration.yaml` las dos siguientes secciones:
+```yaml
+    - exclusive: false
+      regex: '@menubot:campesachevrolet\.co'
+    - exclusive: false
+      regex: '@supervisor:campesachevrolet\.co'
+```
+
 - Entrar al nodo donde está instalado el cliente y copiar el `registration.yaml` en la ruta `/var/data/dominio_cliente.com/synapse`
 ```bash
 cp registration.yaml /var/data/dominio_cliente.com/synapse/registration-acd-as.yaml
