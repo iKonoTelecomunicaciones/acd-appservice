@@ -207,9 +207,9 @@ docker run --rm -v $(pwd):/data ikonoim/acd-appservice:stable
 - Agregar a los namespaces del `registration.yaml` las dos siguientes secciones:
 ```yaml
     - exclusive: false
-      regex: '@menubot:campesachevrolet\.co'
+      regex: '@menubot:dominio_cliente\.com'
     - exclusive: false
-      regex: '@supervisor:campesachevrolet\.co'
+      regex: '@supervisor:dominio_cliente\.com'
 ```
 
 - Entrar al nodo donde está instalado el cliente y copiar el `registration.yaml` en la ruta `/var/data/dominio_cliente.com/synapse`
