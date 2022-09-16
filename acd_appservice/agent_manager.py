@@ -483,7 +483,7 @@ class AgentManager:
 
             # transfer_author can be a supervisor or admin when an open chat is transferred.
             if transfer_author is not None and self.is_agent(transfer_author):
-                await self.room_manager.user_leaves(
+                await self.room_manager.remove_user_from_room(
                     room_id=customer_room_id,
                     user_id=transfer_author,
                     reason=self.config["acd.transfer_message"].format(agentname=agent_displayname),
@@ -876,7 +876,7 @@ class AgentManager:
 
         elif offline_menu_option == "2":
             # user selected kick current offline agent and see the main menu
-            await self.room_manager.user_leaves(
+            await self.room_manager.remove_user_from_room(
                 room_id=room_id,
                 user_id=room_agent,
                 reason=self.config["acd.offline.menu_user_selection"],

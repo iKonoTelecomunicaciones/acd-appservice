@@ -698,11 +698,13 @@ class RoomManager:
             try:
 
                 self.log.debug(f"Menubot [{menubot_id}] is leaving the room {room_id}")
-                await self.user_leaves(room_id=room_id, user_id=menubot_id, reason=reason)
+                await self.remove_user_from_room(
+                    room_id=room_id, user_id=menubot_id, reason=reason
+                )
             except Exception as e:
                 self.log.error(str(e))
 
-    async def user_leaves(self, room_id: RoomID, user_id: UserID, reason: str = None):
+    async def remove_user_from_room(self, room_id: RoomID, user_id: UserID, reason: str = None):
         """It sends a request to the homeserver to leave a room
 
         Parameters
@@ -716,7 +718,7 @@ class RoomManager:
 
         """
         try:
-            if self.config["acd.leave_or_kick"] == "leave":
+            if self.config["acd.remove_method"] == "leave":
                 data = {}
                 if reason:
                     data["reason"] = reason
@@ -728,7 +730,7 @@ class RoomManager:
                     params={"user_id": user_id},
                 )
                 self.log.debug(f"User {user_id} has left the room {room_id}")
-            elif self.config["acd.leave_or_kick"] == "kick":
+            elif self.config["acd.remove_method"] == "kick":
                 self.log.debug(f"User {user_id} has been kicked from the room {room_id}")
                 await self.intent.kick_user(room_id=room_id, user_id=user_id, reason=reason)
         except Exception as e:
