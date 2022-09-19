@@ -64,14 +64,15 @@ curl -X POST -d '{"user_email":"acd1@dominio_cliente.com", "control_room_id":"!f
 
 <br>
 
-- Deberá iniciar sesión con el acd1 en la sala de control, hacer `!wa login` y escanear el nuevo qr, el acd1 debería ser el nuevo anfitrión de todas las salas del acd viejo.
+- Ahora que ya tenemos al acd1 en las salas de clientes, debemos sacar al acd viejo de todas las salas de clientes. Dejar el acd viejo en las salas de colas.
 
-- Ahora que ya tenemos al acd1 en las salas de clientes y conectado a WhatsApp, podemos sacar al acd viejo de todas las salas de clientes. Dejar el acd viejo en las salas de colas.
-
-- Se debe ingresar a la base de datos del bridge, en la tabla `portal` debemos ejecutar el siguiente comando.
+- Ingresar a la base de datos del bridge, `\c mautrix_whatsapp` y ejecutar el siguiente comando:
 ```sql
 UPDATE portal SET relay_user_id = '@acd1:dominio_cliente.com' WHERE relay_user_id = '@acd:dominio_cliente.com';
 ```
+
+- Ejecutar `!acd br_cmd !wa login` en la sala de control del acd1 y escanear el nuevo qr, el acd1 debería ser el nuevo anfitrión de todas las salas del acd viejo.
+
 - En teoría esto es todo para empezar a operar 😜.
 <br>
 
@@ -235,7 +236,7 @@ docker service rm dominio_clientecom-synapse
 ```bash
 cd /mnt/shared/matrix/dominio_cliente.com/
 ```
-- Agregar a la sección `bots` del `menubot_config.yaml` el listado de puppets según la cantidad de lineas que tenga el cliente
+- Agregar a la sección `bots` del `menubot_config.yaml` el listado de puppets según la cantidad de lineas que tenga el cliente, y agrgar la url del acd para las peticiones de las salas de control
 ```yaml
 ...
 bots:
@@ -244,6 +245,9 @@ bots:
   - "@acd2:dominio_cliente.com"
   ...
 ...
+# Endpoint base de la provisioning del acd-as
+acd_as:
+  base_url: "http://acd-as:29601/provision"
 ```
 - Eliminar el servicio del menubot `dominio_clientecom-menubot`
 - Reiniciar los servicios:
