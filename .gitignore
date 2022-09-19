@@ -8,10 +8,6 @@ __pycache__
 *.log*
 *.db
 *.json
+*logs
+*media_store
 *schemas*
-acd
-synapse
-whatsapp
-gupshup
-instagram
-menubot
