@@ -1,0 +1,12 @@
+id: whatsapp
+url: http://whatsapp:29318
+as_token: UicBsn9e2ZHNSc0op1TFoLfmWMWtdsJ30uOrHFmrtSEv8oyXHcG55GE1Yi8jTKiV
+hs_token: 1D4bw8VYaqlvR7RBXfMU1Odm8ZNEvg7pr93QqyGQMDLn6FJshyLJt5hV4jLscZWA
+sender_localpart: gRmQGqPnyTqHLVevT2Q6JbVFlNitbF8t
+rate_limited: false
+namespaces:
+    users:
+        - regex: ^@whatsappbot:darknet$
+          exclusive: true
+        - regex: ^@mxwa_[0-9]+:darknet$
+          exclusive: true
