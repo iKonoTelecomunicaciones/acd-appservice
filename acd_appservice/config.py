@@ -50,6 +50,7 @@ class Config(BaseBridgeConfig):
         copy_dict("acd.offline")
         copy("acd.no_agents_for_transfer")
         copy_dict("acd.resolve_chat")
+        copy("acd.remove_method")
 
     @property
     def namespaces(self) -> dict[str, list[dict[str, Any]]]:

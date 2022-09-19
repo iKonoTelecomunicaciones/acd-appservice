@@ -57,13 +57,13 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     try:
         if agent_id:
-            await puppet.room_manager.user_leaves(
+            await puppet.room_manager.remove_user_from_room(
                 room_id=room_id, user_id=agent_id, reason=puppet.config["acd.resolve_chat.notice"]
             )
         supervisors = puppet.config["acd.supervisors_to_invite.invitees"]
         if supervisors:
             for supervisor_id in supervisors:
-                await puppet.room_manager.user_leaves(
+                await puppet.room_manager.remove_user_from_room(
                     room_id=room_id,
                     user_id=supervisor_id,
                     reason=puppet.config["acd.resolve_chat.notice"],
