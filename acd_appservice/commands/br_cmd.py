@@ -25,7 +25,7 @@ async def br_cmd(evt: CommandEvent) -> Dict:
     if len(evt.args) < 3:
         detail = f"{evt.cmd} command incomplete arguments"
         evt.log.error(detail)
-        evt.reply(text=detail)
+        await evt.reply(text=detail)
         return
 
     command = " ".join(evt.args[1:])

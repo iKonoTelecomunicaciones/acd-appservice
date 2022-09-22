@@ -30,7 +30,7 @@ async def resolve(evt: CommandEvent) -> Dict:
     if len(evt.args) < 3:
         detail = "Incomplete arguments for <code>resolve_chat</code> command"
         evt.log.error(detail)
-        evt.reply(text=detail)
+        await evt.reply(text=detail)
         return
 
     room_id = evt.args[1]

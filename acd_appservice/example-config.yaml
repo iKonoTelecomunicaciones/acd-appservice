@@ -63,8 +63,18 @@ bridge:
         enabled: true
         # The prefix to use in the provisioning API endpoints.
         prefix: /provision
-        # Admin of the rooms created by provisioning
-        admin: "@admin:dominio_cliente.com"
+
+    # Room used by acd* to distribute a chats and interact with a bridge
+    puppet_control_room:
+        name: CONTROL ROOM
+        topic: Puppet control room
+
+        # These guests will be room admins
+        invitees:
+            - "@admin:dominio_cliente.com"
+            - "@supervisor1:dominio_cliente.com"
+
+
 
 acd:
     # User domain spaces you want to manipulate

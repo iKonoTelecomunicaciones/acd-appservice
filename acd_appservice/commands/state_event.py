@@ -29,7 +29,7 @@ async def state_event(evt: CommandEvent) -> Dict:
     if len(evt.args) <= 1:
         detail = "state_event command incomplete arguments"
         evt.log.error(detail)
-        evt.reply(text=detail)
+        await evt.reply(text=detail)
         return
 
     puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)

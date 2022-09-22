@@ -25,8 +25,7 @@ class Config(BaseBridgeConfig):
         copy("utils.message_bot_war")
         copy_dict("ikono_api")
         copy("bridge.command_prefix")
-        copy("bridge.provisioning.admin")
-        copy("appservice.email")
+        copy_dict("bridge.puppet_control_room")
         copy("appservice.puppet_password")
         if base["appservice.puppet_password"] == "generate":
             base["appservice.puppet_password"] = self._new_token()

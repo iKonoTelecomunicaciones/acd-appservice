@@ -28,6 +28,7 @@ from ..config import Config
 from ..http_client import ProvisionBridge
 from ..message import Message
 from ..puppet import Puppet
+from ..util import Util
 from . import SUPPORTED_MESSAGE_TYPES
 from .error_responses import (
     BRIDGE_INVALID,
@@ -51,10 +52,11 @@ class ProvisioningAPI:
 
     log: TraceLogger = logging.getLogger("acd.provisioning")
     app: web.Application
-    config: Config
 
-    def __init__(self) -> None:
+    def __init__(self, config: Config) -> None:
         self.app = web.Application()
+        self.config = config
+        self.util = Util(config=config)
         swagger = SwaggerDocs(
             self.app,
             info=SwaggerInfo(
@@ -153,6 +155,52 @@ class ProvisioningAPI:
     async def options(self, _: web.Request):
         return web.Response(status=200, headers=self._headers)
 
+    async def _resolve_identifier(self, request: web.Request) -> Puppet | None:
+        """It takes a request, and returns a puppet if the request is valid
+
+        Parameters
+        ----------
+        request : web.Request
+            web.Request
+
+        Returns
+        -------
+            A puppet object
+
+        """
+
+        data = {}
+        if request.body_exists:
+            data = await request.json()
+
+        user: str = (
+            request.rel_url.query.get("user_email")
+            or request.rel_url.query.get("user_id")
+            or data.get("user_email")
+            or data.get("user_id")
+        )
+
+        if not user:
+            raise web.HTTPBadRequest(text='{"error": "Invalid Authorization"}')
+
+        user = user.lower().strip()
+
+        puppet = await Puppet.get_by_custom_mxid(user)
+
+        # Checking if the received puppet identifier is an email address.
+        # If it is, it will get the puppet by email.
+        # If not, it will raise an error.
+        if not puppet:
+            if self.util.is_email(email=user):
+                puppet = await Puppet.get_by_email(user)
+            else:
+                raise web.HTTPNotAcceptable(text=f"{INVALID_EMAIL}")
+
+        if not puppet:
+            raise web.HTTPBadRequest(text="{'error': 'User doesn't exist'}")
+
+        return puppet
+
     async def create_user(self, request: web.Request) -> web.Response:
         """
         Receives a user_email and creates a user in the User table and its respective puppet
@@ -162,7 +210,7 @@ class ProvisioningAPI:
             - ACD API
 
         requestBody:
-          required: true
+          required: false
           description: A json with `user_email`
           content:
             application/json:
@@ -170,6 +218,8 @@ class ProvisioningAPI:
                 type: object
                 properties:
                   user_email:
+                    type: string
+                  user_id:
                     type: string
                 example:
                     user_email: "@acd1:somewhere.com"
@@ -185,17 +235,19 @@ class ProvisioningAPI:
                 $ref: '#/components/responses/ErrorData'
         """
 
-        if not request.body_exists:
-            return web.json_response(**NOT_DATA)
+        data = {}
+        email = ""
+        puppet = None
 
-        data = await request.json()
+        if request.body_exists:
+            data = await request.json()
+            email = data.get("user_email")
 
-        error_result = await self.validate_email(user_email=data.get("user_email"))
-
-        if error_result:
-            return web.json_response(**error_result)
-
-        email = data.get("user_email").lower()
+        try:
+            puppet = await self._resolve_identifier(request=request)
+        except web.HTTPBadRequest:
+            # The puppet does not exit, continue to create a puppet
+            pass
 
         # Si llega sala de control es porque estamos haciendo la migración de un acd viejo
         control_room_id: RoomID = data.get("control_room_id")
@@ -206,25 +258,22 @@ class ProvisioningAPI:
         # gupshup
         bridge: str = data.get("bridge") or "mautrix"
 
-        # Obtenemos el puppet de este email si existe
-        puppet = await Puppet.get_by_email(email)
-
-        if email != self.config["appservice.email"] and not puppet:
+        if not puppet:
             # Si no existe creamos un puppet para este email
 
             # Primero obtenemos el siguiente puppet
             next_puppet = await Puppet.get_next_puppet()
+
             if next_puppet is None:
                 return web.json_response(**SERVER_ERROR)
             try:
                 # Creamos el puppet con el siguiente pk
                 puppet: Puppet = await Puppet.get_by_pk(pk=next_puppet, email=email)
+
                 puppet.email = email
-                # Obtenemos el mxid correspondiente para este puppet @acd*:localhost
-                puppet.custom_mxid = Puppet.get_mxid_from_id(puppet.pk)
-                await puppet.save()
                 # Inicializamos el intent de este puppet
                 puppet.intent = puppet._fresh_intent()
+                await puppet.save()
                 # Guardamos el puppet para poder utilizarlo en otras partes del código
                 # Sincronizamos las salas del puppet, si es que ya existía en Matrix
                 # sin que nosotros nos diéramos cuenta
@@ -236,22 +285,27 @@ class ProvisioningAPI:
                     # ya que para crear una sala se necesita la pk del puppet (para usarla como fk)
                     invitees = [
                         self.config[f"bridges.{bridge}.mxid"],
-                        self.config["bridge.provisioning.admin"],
                     ]
+
+                    power_level_content = PowerLevelStateEventContent(
+                        users={
+                            puppet.mxid: 100,
+                        }
+                    )
+
+                    for user_id in self.config["bridge.puppet_control_room.invitees"]:
+                        invitees.append(user_id)
+                        power_level_content.users[user_id] = 100
+
                     if menubot_id:
                         invitees.append(menubot_id)
 
                     control_room_id = await puppet.intent.create_room(
-                        name=f"CONTROL ROOM ({puppet.email})",
-                        topic="Control room",
+                        name=f"{self.config[f'bridge.puppet_control_room.name']}({puppet.email or puppet.custom_mxid})",
+                        topic=f"{self.config[f'bridge.puppet_control_room.topic']}",
                         invitees=invitees,
                     )
-                    power_level_content = PowerLevelStateEventContent(
-                        users={
-                            puppet.custom_mxid: 100,
-                            self.config["bridge.provisioning.admin"]: 100,
-                        }
-                    )
+
                     await puppet.intent.set_power_levels(
                         room_id=control_room_id, content=power_level_content
                     )
@@ -299,7 +353,7 @@ class ProvisioningAPI:
           name: user_email
           schema:
             type: string
-          required: true
+          required: false
           description: user_email address previously created
 
         responses:
@@ -319,16 +373,7 @@ class ProvisioningAPI:
 
         await ws_customer.prepare(request)
 
-        user_email = request.rel_url.query.get("user_email")
-
-        error_result = await self.validate_email(user_email=user_email)
-
-        if error_result:
-            return web.json_response(**error_result)
-
-        puppet: Puppet = await Puppet.get_by_email(user_email)
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
+        puppet = await self._resolve_identifier(request=request)
 
         # Creamos una conector con el bridge
         bridge_connector = ProvisionBridge(session=puppet.intent.api.session, config=self.config)
@@ -351,7 +396,7 @@ class ProvisioningAPI:
           name: user_email
           schema:
             type: string
-          required: true
+          required: false
           description: user_email address previously created
 
         responses:
@@ -365,16 +410,7 @@ class ProvisioningAPI:
                 $ref: '#/components/responses/QrNoGenerated'
         """
 
-        user_email = request.rel_url.query.get("user_email")
-
-        error_result = await self.validate_email(user_email=user_email)
-
-        if error_result:
-            return web.json_response(**error_result)
-
-        puppet: Puppet = await Puppet.get_by_email(user_email)
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
+        puppet = await self._resolve_identifier(request=request)
 
         # Creamos una conector con el bridge
         bridge_connector = ProvisionBridge(session=puppet.intent.api.session, config=self.config)
@@ -393,7 +429,7 @@ class ProvisioningAPI:
             - Instagram
 
         requestBody:
-          required: true
+          required: false
           description: A json with `user_email`
           content:
             application/json:
@@ -401,6 +437,8 @@ class ProvisioningAPI:
                 type: object
                 properties:
                   user_email:
+                    type: string
+                  user_id:
                     type: string
                   username:
                     type: string
@@ -422,18 +460,10 @@ class ProvisioningAPI:
             return web.json_response(**NOT_DATA)
 
         data = await request.json()
-        user_email = data.get("user_email")
         username = data.get("username")
         password = data.get("password")
 
-        error_result = await self.validate_email(user_email=user_email)
-
-        if error_result:
-            return web.json_response(**error_result)
-
-        puppet: Puppet = await Puppet.get_by_email(user_email)
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
+        puppet = await self._resolve_identifier(request=request)
 
         bridge_connector = ProvisionBridge(
             session=puppet.intent.api.session, config=self.config, bridge=puppet.bridge
@@ -455,7 +485,7 @@ class ProvisioningAPI:
             - Gupshup
 
         requestBody:
-          required: true
+          required: false
           description: A json with `user_email`
           content:
             application/json:
@@ -463,6 +493,8 @@ class ProvisioningAPI:
                 type: object
                 properties:
                   user_email:
+                    type: string
+                  user_id:
                     type: string
                   gs_app_name:
                     type: string
@@ -490,7 +522,6 @@ class ProvisioningAPI:
             return web.json_response(**NOT_DATA)
 
         gupshup_data = await request.json()
-        user_email = gupshup_data.get("user_email")
 
         gs_app_data = {
             "gs_app_name": gupshup_data.get("gs_app_name"),
@@ -499,14 +530,7 @@ class ProvisioningAPI:
             "app_id": gupshup_data.get("app_id"),
         }
 
-        error_result = await self.validate_email(user_email=user_email)
-
-        if error_result:
-            return web.json_response(**error_result)
-
-        puppet: Puppet = await Puppet.get_by_email(user_email)
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
+        puppet = await self._resolve_identifier(request=request)
 
         bridge_connector = ProvisionBridge(
             session=puppet.intent.api.session, config=self.config, bridge=puppet.bridge
@@ -532,7 +556,7 @@ class ProvisioningAPI:
             - Instagram
 
         requestBody:
-          required: true
+          required: false
           description: A json with `user_email`
           content:
             application/json:
@@ -540,6 +564,8 @@ class ProvisioningAPI:
                 type: object
                 properties:
                   user_email:
+                    type: string
+                  user_id:
                     type: string
                   code:
                     type: string
@@ -558,17 +584,9 @@ class ProvisioningAPI:
             return web.json_response(**NOT_DATA)
 
         data = await request.json()
-        user_email = data.get("user_email")
         code = data.get("code")
 
-        error_result = await self.validate_email(user_email=user_email)
-
-        if error_result:
-            return web.json_response(**error_result)
-
-        puppet: Puppet = await Puppet.get_by_email(user_email)
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
+        puppet = await self._resolve_identifier(request=request)
 
         bridge_connector = ProvisionBridge(
             session=puppet.intent.api.session, config=self.config, bridge=puppet.bridge
@@ -592,7 +610,7 @@ class ProvisioningAPI:
           name: event_id
           schema:
             type: string
-          required: true
+          required: false
           description: message sent
 
         responses:
@@ -669,7 +687,7 @@ class ProvisioningAPI:
         }
         return web.json_response(data=data)
 
-    async def get_control_rooms(self, request: web.Request) -> web.Response:
+    async def get_control_rooms(self) -> web.Response:
         """
         ---
         summary:        Get the acd control rooms.
@@ -702,7 +720,7 @@ class ProvisioningAPI:
             - Commands
 
         requestBody:
-          required: true
+          required: false
           description: A json with `user_email`
           content:
             application/json:
@@ -743,26 +761,21 @@ class ProvisioningAPI:
             data.get("customer_phone")
             and data.get("template_message")
             and data.get("template_name")
-            and (data.get("user_email") or data.get("company_phone"))
+            and (data.get("user_email") or data.get("company_phone") or data.get("user_id"))
             and data.get("agent_id")
         ):
             return web.json_response(**REQUIRED_VARIABLES)
 
-        if data.get("user_email"):
-            email = data.get("user_email").lower()
-            error_result = await self.validate_email(user_email=email)
-            if error_result:
-                return web.json_response(**error_result)
-
-            puppet: Puppet = await Puppet.get_by_email(email)
-            if not puppet:
-                return web.json_response(**USER_DOESNOT_EXIST)
+        puppet = None
 
         if data.get("company_phone"):
             company_phone = data.get("company_phone").replace("+", "")
             puppet: Puppet = await Puppet.get_by_phone(company_phone)
-            if not puppet:
-                return web.json_response(**USER_DOESNOT_EXIST)
+
+        puppet = puppet or await self._resolve_identifier(request=request)
+
+        if not puppet:
+            return web.json_response(**USER_DOESNOT_EXIST)
 
         incoming_params = {
             "phone_number": data.get("customer_phone"),
@@ -796,7 +809,7 @@ class ProvisioningAPI:
             - Commands
 
         requestBody:
-          required: true
+          required: false
           description: A json with `user_email`
           content:
             application/json:
@@ -865,7 +878,7 @@ class ProvisioningAPI:
             - Commands
 
         requestBody:
-          required: true
+          required: false
           description: A json with `user_email`
           content:
             application/json:
@@ -972,7 +985,7 @@ class ProvisioningAPI:
             - Commands
 
         requestBody:
-          required: true
+          required: false
           description: A json with `user_email`
           content:
             application/json:
@@ -1050,7 +1063,7 @@ class ProvisioningAPI:
             - Commands
 
         requestBody:
-          required: true
+          required: false
           description: A json with `user_email`
           content:
             application/json:
@@ -1117,7 +1130,7 @@ class ProvisioningAPI:
             - Commands
 
         requestBody:
-          required: true
+          required: false
           description: A json with `user_email`
           content:
             application/json:
@@ -1177,7 +1190,7 @@ class ProvisioningAPI:
             - Commands
 
         requestBody:
-          required: true
+          required: false
           description: A json with `user_email`
           content:
             application/json:
@@ -1240,7 +1253,7 @@ class ProvisioningAPI:
             - ACD API
 
         requestBody:
-          required: true
+          required: false
           description: A json with `phone`, `message`, `msg_type` (only supports [`text`]), `user_email`
           content:
             application/json:
@@ -1254,6 +1267,8 @@ class ProvisioningAPI:
                   msg_type:
                     type: string
                   user_email:
+                    type: string
+                  user_id:
                     type: string
                 example:
                     phone: "573123456789"
@@ -1282,28 +1297,19 @@ class ProvisioningAPI:
 
         data: Dict = await request.json()
         data = await request.json()
+
         if not (
             data.get("phone")
             and data.get("message")
             and data.get("msg_type")
-            and data.get("user_email")
+            and (data.get("user_email") or data.get("user_id"))
         ):
             return web.json_response(**REQUIRED_VARIABLES)
 
         if not data.get("msg_type") in SUPPORTED_MESSAGE_TYPES:
             return web.json_response(**MESSAGE_TYPE_NOT_SUPPORTED)
 
-        email = data.get("user_email").lower()
-
-        error_result = await self.validate_email(user_email=email)
-
-        if error_result:
-            return web.json_response(**error_result)
-
-        # Obtenemos el puppet de este email si existe
-        puppet: Puppet = await Puppet.get_by_email(email)
-        if not puppet:
-            return web.json_response(**USER_DOESNOT_EXIST)
+        puppet = await self._resolve_identifier(request=request)
 
         if puppet.bridge != bridge:
             return web.json_response(**BRIDGE_INVALID)
@@ -1385,26 +1391,6 @@ class ProvisioningAPI:
             status=201,
         )
 
-    async def validate_email(self, user_email: str) -> Dict:
-        """It checks if the email is valid
-
-        Parameters
-        ----------
-        user_email : str
-            The email address to validate.
-
-        Returns
-        -------
-            A dictionary with a key of "error" "
-
-        """
-        if not user_email:
-            return NOT_EMAIL
-
-        email = user_email.lower()
-        if not re.match(self.config["utils.regex_email"], email):
-            return INVALID_EMAIL
-
     # async def unlink_phone(self, request: web.Request) -> web.Response:
     #     """
     #     Given a user_email send a `!wa logout` bridge command to close Whatsapp communication
@@ -1414,7 +1400,7 @@ class ProvisioningAPI:
     #         - users
 
     #     requestBody:
-    #       required: true
+    #       required: false
     #       description: A json with `user_email`
     #       content:
     #         application/json:

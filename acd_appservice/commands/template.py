@@ -29,7 +29,7 @@ async def template(evt: CommandEvent) -> Dict:
     if len(evt.args) <= 1:
         detail = "Incomplete arguments for <code>template</code> command"
         evt.log.error(detail)
-        evt.reply(text=detail)
+        await evt.reply(text=detail)
         return
 
     # Remove 'template' word and unify json template_data

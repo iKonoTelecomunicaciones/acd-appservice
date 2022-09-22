@@ -75,11 +75,12 @@ class Puppet(DBPuppet, BasePuppet):
         )
         # Aquí colocamos, a nombre de que puppet mostraremos los logs,
         # ya sea usando el mxid o el email
-        self.log = self.log.getChild(custom_mxid if custom_mxid else email)
         # IMPORTANTE: A cada marioneta de le genera un intent para poder enviar eventos a nombre
         # de esas marionetas
-        self.default_mxid = self.get_mxid_from_id(pk)
-        self.default_mxid_intent = self.az.intent.user(self.default_mxid)
+        self.custom_mxid = self.get_mxid_from_id(pk)
+        if custom_mxid or email:
+            self.log = self.log.getChild(custom_mxid or email)
+        self.default_mxid_intent = self.az.intent.user(self.custom_mxid)
         # Refresca el intent de cada marioneta
         self.intent = self._fresh_intent()
         self.room_manager = RoomManager(
@@ -187,10 +188,12 @@ class Puppet(DBPuppet, BasePuppet):
 
         data = {
             "password": self.config["appservice.puppet_password"],
-            "threepids": [
-                {"medium": "email", "address": self.email},
-            ],
         }
+
+        if self.email:
+            data["threepids"] = [
+                {"medium": "email", "address": self.email},
+            ]
 
         try:
             api = self.intent.bot.api if self.intent.bot else self.intent.api
