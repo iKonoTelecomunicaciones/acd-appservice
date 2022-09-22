@@ -65,7 +65,7 @@ class Puppet:
             "UPDATE puppet SET email=$1, phone=$2, bridge=$3, photo_id=$4, photo_mxc=$5, name_set=$6,"
             "                  avatar_set=$7, is_registered=$8, custom_mxid=$9, access_token=$10,"
             "                  next_batch=$11, base_url=$12, control_room_id=$13 "
-            "WHERE email=$1"
+            "WHERE custom_mxid=$9"
         )
         await self.db.execute(q, *self._values)
 

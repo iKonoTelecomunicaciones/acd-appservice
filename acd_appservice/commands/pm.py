@@ -37,7 +37,7 @@ async def pm(evt: CommandEvent) -> Dict:
     if len(evt.args) < 1:
         detail = "pm command incomplete arguments"
         evt.log.error(detail)
-        evt.reply(text=detail)
+        await evt.reply(text=detail)
         return
 
     # Getting the arguments of the command.

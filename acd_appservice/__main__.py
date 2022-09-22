@@ -50,9 +50,7 @@ class ACDAppService(ACD):
         # Definimos la ruta por la que se podrá acceder a la API
         api_route = self.config["bridge.provisioning.prefix"]
         # Creamos la instancia de ProvisioningAPI para luego crear una subapp
-        self.provisioning_api = ProvisioningAPI()
-        # Le damos acceso del archivo de configuración a la API
-        self.provisioning_api.config = self.config
+        self.provisioning_api = ProvisioningAPI(config=self.config)
         # Usan la app de aiohttp, creamos una subaplicacion especifica para la API
         self.az.app.add_subapp(api_route, self.provisioning_api.app)
 

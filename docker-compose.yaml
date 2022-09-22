@@ -85,7 +85,7 @@ services:
     depends_on:
       - postgres
       - synapse
-    entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="." /opt/acd-appservice/docker-run.sh
+    # entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="." /opt/acd-appservice/docker-run.sh
     ports:
       - 29601:29601
 

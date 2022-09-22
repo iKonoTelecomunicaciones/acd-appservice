@@ -184,8 +184,9 @@ class MatrixHandler:
             return
 
         for event_id in evt.content:
-
-            for user_id in evt.content.get(event_id).get(ReceiptType.READ):
+            for user_id in evt.content.get(event_id).get(ReceiptType.READ) or evt.content.get(
+                event_id
+            ).get(ReceiptType.READ_PRIVATE):
                 username_regex = self.config["utils.username_regex"]
                 user_prefix = re.search(username_regex, user_id)
                 message = await Message.get_by_event_id(event_id=event_id)

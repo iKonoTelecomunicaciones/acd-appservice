@@ -28,7 +28,7 @@ async def transfer(evt: CommandEvent) -> str:
     if len(evt.args) < 2:
         detail = f"{evt.cmd} command incomplete arguments"
         evt.log.error(detail)
-        evt.reply(text=detail)
+        await evt.reply(text=detail)
         return
 
     customer_room_id = evt.args[1]
@@ -92,7 +92,7 @@ async def transfer_user(evt: CommandEvent) -> str:
     if len(evt.args) < 2:
         detail = f"{evt.cmd} command incomplete arguments"
         evt.log.error(detail)
-        evt.reply(text=detail)
+        await evt.reply(text=detail)
         return
 
     customer_room_id = evt.args[1]

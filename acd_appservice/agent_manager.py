@@ -16,7 +16,7 @@ from .commands.typehint import CommandEvent
 from .config import Config
 from .room_manager import RoomManager
 from .signaling import Signaling
-from .util.business_hours import BusinessHour
+from .util import BusinessHour
 
 
 class AgentManager:
