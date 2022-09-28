@@ -17,4 +17,10 @@ if [ ! -f /data/registration.yaml ]; then
 	exit
 fi
 
+
+if [ "$1" = "dev" ]; then
+	pip install -r requirements-dev.txt
+    watchmedo auto-restart --recursive --pattern="*.py" --directory="." /opt/acd-appservice/docker-run.sh
+fi
+
 exec python3 -m acd_appservice -c /data/config.yaml
