@@ -2,14 +2,26 @@ from __future__ import annotations
 
 import re
 import time
-from typing import Any
+from typing import Any, NamedTuple
 
 from mautrix.bridge.config import BaseBridgeConfig
-from mautrix.util.config import ConfigUpdateHelper
+from mautrix.client import Client
+from mautrix.types import UserID
+from mautrix.util.config import ConfigUpdateHelper, ForbiddenDefault, ForbiddenKey
+
+Permissions = NamedTuple("Permissions", user=bool, admin=bool, level=str)
 
 
 class Config(BaseBridgeConfig):
     """Esta en una instancia del archivo config.yaml (uso el patrón singleton, para no tener muchas instancias)"""
+
+    @property
+    def forbidden_defaults(self) -> list[ForbiddenDefault]:
+        return [
+            *super().forbidden_defaults,
+            ForbiddenDefault("appservice.database", "postgres://username:password@hostname/db"),
+            ForbiddenDefault("bridge.permissions", ForbiddenKey("example.com")),
+        ]
 
     def do_update(self, helper: ConfigUpdateHelper) -> None:
         # Se deben poner los campos que no deben cambiar
@@ -50,6 +62,8 @@ class Config(BaseBridgeConfig):
         copy("acd.no_agents_for_transfer")
         copy_dict("acd.resolve_chat")
         copy("acd.remove_method")
+
+        copy_dict("bridge.permissions")
 
     @property
     def namespaces(self) -> dict[str, list[dict[str, Any]]]:
@@ -97,3 +111,20 @@ class Config(BaseBridgeConfig):
             if alias_format
             else [],
         }
+
+    def _get_permissions(self, key: str) -> Permissions:
+        level = self["bridge.permissions"].get(key, "")
+        admin = level == "admin"
+        user = level == "user" or admin
+        return Permissions(user, admin, level)
+
+    def get_permissions(self, mxid: UserID) -> Permissions:
+        permissions = self["bridge.permissions"]
+        if mxid in permissions:
+            return self._get_permissions(mxid)
+
+        _, homeserver = Client.parse_user_id(mxid)
+        if homeserver in permissions:
+            return self._get_permissions(homeserver)
+
+        return self._get_permissions("*")

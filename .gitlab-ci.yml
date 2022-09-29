@@ -29,8 +29,15 @@ build-push-image:
   before_script:
     - echo "$DOCKER_HUB_PASSWORD" | docker login docker.io --username $DOCKER_HUB_USERNAME --password-stdin
   script:
-    - docker build -t $ACD_IMAGE .
-    - docker push $ACD_IMAGE
+
+    # Testing
+    - docker build -t $ACD_IMAGE:$TAG_TESTING .
+    - docker push $ACD_IMAGE:$TAG_TESTING
+
+    # Dev
+    - docker build -t $ACD_IMAGE:$TAG_DEV .
+    - docker push $ACD_IMAGE:$TAG_DEV
+
   only:
     - master
 

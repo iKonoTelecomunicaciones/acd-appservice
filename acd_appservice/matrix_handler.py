@@ -4,6 +4,7 @@ import asyncio
 import logging
 import re
 
+from markdown import markdown
 from mautrix.appservice import AppService
 from mautrix.bridge import config
 from mautrix.errors import MExclusive, MForbidden, MUnknownToken
@@ -35,6 +36,7 @@ from .http_client import ProvisionBridge
 from .message import Message
 from .puppet import Puppet
 from .signaling import Signaling
+from .user import User
 
 
 class MatrixHandler:
@@ -167,6 +169,50 @@ class MatrixHandler:
         elif evt.type.is_ephemeral and isinstance(evt, (ReceiptEvent)):
             await self.handle_ephemeral_event(evt)
 
+    async def send_welcome_message(self, room_id: RoomID, inviter: User) -> None:
+        """If the user who invited the bot to the room doesn't have a management room set,
+        set it to the current room and send a notice to the room
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room the user is in.
+        inviter : User
+            The user who invited the bot to the room.
+
+        """
+        if not inviter.management_room:
+            inviter.management_room = room_id
+            await inviter.update()
+            await self.az.intent.send_notice(
+                room_id=room_id, html="This room has been marked as your ACD management room."
+            )
+        else:
+            await self.az.intent.send_notice(
+                room_id=room_id,
+                html=markdown(
+                    f"The room `{inviter.management_room}` "
+                    "has already been configured as ACD management room, "
+                    "if you want to change admin room, "
+                    f"send `{self.config['bridge.command_prefix']} set-admin-room` command."
+                ),
+            )
+
+    async def send_goodbye_message(self, room_id: RoomID) -> None:
+        """This function is called when a user is not an admin and tries to join the room
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to send the message to.
+
+        """
+        detail = markdown(
+            "You are not a `ACD admin` check the `bridge.permissionsin` the config file."
+        )
+        await self.az.intent.send_notice(room_id=room_id, html=detail)
+        await self.az.intent.leave_room(room_id=room_id)
+
     async def handle_ephemeral_event(self, evt: ReceiptEvent) -> None:
         """It takes a receipt event, checks if it's a read receipt,
         and if it is, it updates the message in the database to reflect that it was read
@@ -217,6 +263,16 @@ class MatrixHandler:
         """
 
         self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
+
+        user: User = await User.get_by_mxid(evt.sender)
+
+        if self.az.bot_mxid == evt.state_key:
+            if user and user.is_admin:
+                await self.send_welcome_message(room_id=evt.room_id, inviter=user)
+            else:
+                await self.send_goodbye_message(room_id=evt.room_id)
+
+            return
 
         # Verificamos que el usuario que se va a unir sea un acd*
         # y que no haya otro puppet en la sala

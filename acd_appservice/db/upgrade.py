@@ -63,3 +63,13 @@ async def upgrade_v1(conn: Connection) -> None:
         was_read            BOOLEAN NOT NULL DEFAULT false
         )"""
     )
+
+
+@upgrade_table.register(description="Table user")
+async def upgrade_v2(conn: Connection) -> None:
+    await conn.execute(
+        """CREATE TABLE "user" (
+        mxid            TEXT PRIMARY KEY,
+        management_room  TEXT
+        )"""
+    )
