@@ -10,6 +10,7 @@ from .db import upgrade_table
 from .http_client import ProvisionBridge
 from .matrix_handler import MatrixHandler
 from .puppet import Puppet
+from .user import User
 from .web.provisioning_api import ProvisioningAPI
 
 
@@ -44,6 +45,7 @@ class ACDAppService(ACD):
     async def start(self) -> None:
         # Se cargan las acciones iniciales que deberán ser ejecutadas
         self.add_startup_actions(Puppet.init_cls(self))
+        User.init_cls(self)
         # Se sincronizan las salas donde este los puppets en matrix
         # creando las salas en nuestra bd
         self.add_startup_actions(Puppet.init_joined_rooms())

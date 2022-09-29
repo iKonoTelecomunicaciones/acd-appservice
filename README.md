@@ -510,3 +510,4 @@ Respuesta:
 Status: `500`
 
 En este caso comunícate con soporte de iKono Chat:  soporte@ikono.com.co - [WhasApp Soporte Ikono](https://wa.me/573148901850)
+

@@ -76,6 +76,18 @@ bridge:
 
 
 
+    # Permissions for using the acd.
+    # Permitted values:
+    #       user - Use the acd with puppeting.
+    #      admin - Use and administrate the acd.
+    # Permitted keys:
+    #        * - All Matrix users
+    #   domain - All users on that homeserver
+    #     mxid - Specific user
+    permissions:
+        "dominio_cliente.com": "user"
+        "@admin:dominio_cliente.com": "admin"
+
 acd:
     # User domain spaces you want to manipulate
     namespaces:
