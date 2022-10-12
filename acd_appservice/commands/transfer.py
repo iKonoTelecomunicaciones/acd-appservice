@@ -70,8 +70,12 @@ async def transfer(evt: CommandEvent) -> str:
 
 @command_handler(
     name="transfer_user",
-    help_text=("Command that transfers a client from one agent to another."),
-    help_args="<_customer_room_id_> <_agent_id_>",
+    help_text=(
+        "Command that transfers a user from one agent to another, "
+        "if you send 'force' in 'yes', "
+        "the agent is always going to be assigned to the chat no matter the agent presence."
+    ),
+    help_args="<_customer_room_id_> <_agent_id_> [_force_]",
 )
 async def transfer_user(evt: CommandEvent) -> str:
     """It checks if the room is locked,if not, it locks it, checks if the sender is an agent,
@@ -97,6 +101,7 @@ async def transfer_user(evt: CommandEvent) -> str:
 
     customer_room_id = evt.args[0]
     target_agent_id = evt.args[1]
+    force = evt.args[2] if len(evt.args) > 2 else "no"
 
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
 
@@ -131,7 +136,11 @@ async def transfer_user(evt: CommandEvent) -> str:
             f"PRESENCE RESPONSE: "
             f"[{target_agent_id}] -> [{presence_response.presence if presence_response else None}]"
         )
-        if presence_response and presence_response.presence == PresenceState.ONLINE:
+        if (
+            presence_response
+            and presence_response.presence == PresenceState.ONLINE
+            or force == "yes"
+        ):
             await puppet.agent_manager.force_invite_agent(
                 room_id=customer_room_id,
                 agent_id=target_agent_id,
