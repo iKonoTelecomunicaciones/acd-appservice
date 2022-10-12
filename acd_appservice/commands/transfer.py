@@ -70,7 +70,9 @@ async def transfer(evt: CommandEvent) -> str:
 
 @command_handler(
     name="transfer_user",
-    help_text=("Command that transfers a client from one agent to another."),
+    help_text=(
+        "Command that transfers a client from one agent to another, if you send force in yes, the agent is always goin to be assigned to the chat no matter the agent presence."
+    ),
     help_args="<_customer_room_id_> <_agent_id_> [_force_]",
 )
 async def transfer_user(evt: CommandEvent) -> str:
