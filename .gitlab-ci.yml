@@ -62,12 +62,12 @@ deploy-testing:
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
   script:
     - echo ""** Bajamos la nueva imagen **""
-    - ssh $TESTING "docker pull $ACD_IMAGE"
+    - ssh $TESTING "docker pull $ACD_IMAGE:$TAG_TESTING"
     - echo "** Actualizar imagen del acd en los dominios registrados **"
     - |+
       for DOMAIN in  $DOMAINS
       do
-        ACD_SERVICE=$(ssh $TESTING "cd /mnt/shared/matrix/$DOMAIN && docker stack services $(basename $DOMAIN | tr -d '.') --format '{{.Name}}|{{.Image}}' | grep $ACD_IMAGE | cut -d '|' -f 1")
+        ACD_SERVICE=$(ssh $TESTING "cd /mnt/shared/matrix/$DOMAIN && docker stack services $(basename $DOMAIN | tr -d '.') --format '{{.Name}}|{{.Image}}' | grep $ACD_IMAGE:$TAG_TESTING | cut -d '|' -f 1")
         ssh $TESTING "cd /mnt/shared/matrix/$DOMAIN &&  if docker service ls | grep $ACD_SERVICE; then  docker service rm $ACD_SERVICE; else echo "El servicio $ACD_SERVICE NO EXISTE"; fi"
         ssh $TESTING "cd /mnt/shared/matrix/$DOMAIN && docker-compose config | docker stack deploy -c - $(basename $DOMAIN | tr -d '.')"
       done
