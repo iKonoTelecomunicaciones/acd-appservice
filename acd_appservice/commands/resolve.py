@@ -3,7 +3,8 @@ from typing import Dict
 
 from ..puppet import Puppet
 from ..signaling import Signaling
-from .handler import command_handler, command_processor
+from .handler import command_handler
+from .template import template
 from .typehint import CommandEvent
 
 
@@ -33,10 +34,10 @@ async def resolve(evt: CommandEvent) -> Dict:
         await evt.reply(text=detail)
         return
 
-    room_id = evt.args[1]
-    user_id = evt.args[2]
-    send_message = evt.args[3] if len(evt.args) > 3 else None
-    bridge = evt.args[4] if len(evt.args) > 4 else None
+    room_id = evt.args[0]
+    user_id = evt.args[1]
+    send_message = evt.args[2] if len(evt.args) > 2 else None
+    bridge = evt.args[3] if len(evt.args) > 3 else None
 
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
 
@@ -97,15 +98,18 @@ async def resolve(evt: CommandEvent) -> Dict:
                 "language": resolve_chat_params["language"],
                 "bridge": bridge,
             }
-            template_data = f"template {json.dumps(data)}"
+            template_data = f"{json.dumps(data)}"
+
             cmd_evt = CommandEvent(
                 intent=puppet.intent,
                 config=puppet.config,
-                cmd="template",
+                command="template",
                 sender=evt.sender,
                 room_id=room_id,
+                is_management=room_id == evt.sender.management_room,
                 text=template_data,
+                args=template_data.split(),
             )
-            await command_processor(cmd_evt=cmd_evt)
+            await template(cmd_evt)
 
         await puppet.intent.send_notice(room_id=room_id, text=resolve_chat_params["notice"])

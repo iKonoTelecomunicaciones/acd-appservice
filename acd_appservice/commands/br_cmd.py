@@ -22,11 +22,11 @@ async def br_cmd(evt: CommandEvent) -> Dict:
         A dictionary
 
     """
-    if len(evt.args) < 3:
-        detail = f"{evt.cmd} command incomplete arguments"
+    if len(evt.args) < 2:
+        detail = f"{evt.command} command incomplete arguments"
         evt.log.error(detail)
         await evt.reply(text=detail)
         return
 
-    command = " ".join(evt.args[1:])
+    command = " ".join(evt.args)
     await evt.intent.send_text(room_id=evt.room_id, text=command)

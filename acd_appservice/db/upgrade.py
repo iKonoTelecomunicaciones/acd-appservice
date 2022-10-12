@@ -73,3 +73,4 @@ async def upgrade_v2(conn: Connection) -> None:
         management_room  TEXT
         )"""
     )
+    await conn.execute("""ALTER TABLE puppet RENAME COLUMN photo_id TO destination""")

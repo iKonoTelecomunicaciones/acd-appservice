@@ -21,3 +21,51 @@ class Util:
 
         """
         return bool(match(self.config["utils.regex_email"], email))
+
+    @classmethod
+    def is_user_id(cls, user_id: str) -> bool:
+        """It checks if the user_id is valid matrix user_id
+
+        Parameters
+        ----------
+        user_id : str
+            The user ID to check.
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+        return user_id.startswith("@")
+
+    @classmethod
+    def is_room_id(cls, room_id: str) -> bool:
+        """It checks if the room_id is valid matrix room_id
+
+        Parameters
+        ----------
+        room_id : str
+            The room ID to check.
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+        return room_id.startswith("!")
+
+    @classmethod
+    def is_room_alias(cls, room_alias: str) -> bool:
+        """It checks if the room_alias is valid matrix room_alias
+
+        Parameters
+        ----------
+        room_alias : str
+            The room alise to check.
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+        return room_alias.startswith("#")
