@@ -30,8 +30,7 @@ from mautrix.util.logging import TraceLogger
 
 from acd_appservice import acd_program
 
-from .commands.handler import command_processor
-from .commands.typehint import CommandEvent
+from .commands.handler import CommandProcessor
 from .http_client import ProvisionBridge
 from .message import Message
 from .puppet import Puppet
@@ -44,6 +43,7 @@ class MatrixHandler:
     az: AppService
     config: config.BaseBridgeConfig
     acd_appservice: acd_program.ACD
+    commands: CommandProcessor
 
     def __init__(
         self,
@@ -53,6 +53,7 @@ class MatrixHandler:
         self.az = self.acd_appservice.az
         self.config = self.acd_appservice.config
         self.az.matrix_event_handler(self.init_handle_event)
+        self.commands = CommandProcessor(config=self.config)
 
     async def wait_for_connection(self) -> None:
         """It tries to connect to the homeserver, and if it fails,
@@ -274,12 +275,12 @@ class MatrixHandler:
 
             return
 
-        # Verificamos que el usuario que se va a unir sea un acd*
-        # y que no haya otro puppet en la sala
-        # para hacerle un auto-join
-        # NOTA: Si hay otro puppet en la sala, entonces tendremos problemas
-        # ya que no pueden haber dos usuarios acd*  en una misma sala, esto afectaría
-        # el rendimiento del software
+        # We verify that the user to be joined is an acd*.
+        # and that there is no other puppet in the room
+        # to do an auto-join
+        # NOTE: If there is another puppet in the room, then we will have problems
+        # as there can't be two acd* users in the same room, this will affect
+        # the performance of the software
         puppet_inside: Puppet = await Puppet.get_customer_room_puppet(room_id=evt.room_id)
 
         if not Puppet.get_id_from_mxid(mxid=evt.state_key) or puppet_inside:
@@ -297,16 +298,6 @@ class MatrixHandler:
             room_id=evt.room_id, selected_option=None, puppet_pk=puppet.pk
         )
         await puppet.intent.join_room(evt.room_id)
-
-    async def handle_disinvite(
-        self,
-        room_id: RoomID,
-        user_id: UserID,
-        disinvited_by: UserID,
-        reason: str,
-        event_id: EventID,
-    ) -> None:
-        pass
 
     async def handle_join(self, room_id: RoomID, user_id: UserID, event_id: EventID) -> None:
         """If the user who has joined the room is the bot, then the room is initialized
@@ -423,27 +414,6 @@ class MatrixHandler:
             if not await puppet.room_manager.initialize_room(room_id=room_id):
                 self.log.debug(f"Room {room_id} initialization has failed")
 
-    def is_command(self, message: MessageEventContent) -> tuple[bool, str]:
-        """It checks if a message starts with the command prefix, and if it does,
-        it removes the prefix and returns the message without the prefix
-
-        Parameters
-        ----------
-        message : MessageEventContent
-            The message that was sent.
-
-        Returns
-        -------
-            A tuple of a boolean and a string.
-
-        """
-        text = message.body
-        prefix = self.config["bridge.command_prefix"]
-        is_command = text.startswith(prefix)
-        if is_command:
-            text = text[len(prefix) + 1 :].lstrip()
-        return is_command, text
-
     async def handle_notice(
         self, room_id: RoomID, sender: UserID, message: MessageEventContent, event_id: EventID
     ) -> None:
@@ -477,6 +447,27 @@ class MatrixHandler:
                 puppet.phone = response.get("whatsapp").get("phone").replace("+", "")
                 await puppet.save()
 
+    def is_command(self, message: MessageEventContent) -> tuple[bool, str]:
+        """It checks if a message starts with the command prefix, and if it does,
+        it removes the prefix and returns the message without the prefix
+
+        Parameters
+        ----------
+        message : MessageEventContent
+            The message that was sent.
+
+        Returns
+        -------
+            A tuple of a boolean and a string.
+
+        """
+        text = message.body
+        prefix = self.config["bridge.command_prefix"]
+        is_command = text.startswith(prefix)
+        if is_command:
+            text = text[len(prefix) + 1 :].lstrip()
+        return is_command, text
+
     async def handle_message(
         self, room_id: RoomID, sender: UserID, message: MessageEventContent, event_id: EventID
     ) -> None:
@@ -506,6 +497,31 @@ class MatrixHandler:
         message.body = message.body.strip()
 
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+        user: User = await User.get_by_mxid(sender)
+
+        # Checking if the message is a command, and if it is,
+        # it is sending the command to the command processor.
+        is_command, text = self.is_command(message=message)
+
+        if is_command:
+
+            try:
+                command, arguments = text.split(" ", 1)
+                args = arguments.split(" ")
+            except ValueError:
+                # Not enough values to unpack, i.e. no arguments
+                command = text
+                args = []
+
+            await self.commands.handle(
+                room_id=room_id,
+                sender=user,
+                command=command,
+                args=args,
+                content=message,
+                intent=puppet.intent if puppet else self.az.intent,
+                is_management=room_id == user.management_room,
+            )
 
         if not puppet:
             self.log.warning(f"I can't get an puppet for the room {room_id}")
@@ -532,23 +548,6 @@ class MatrixHandler:
         # Ignore messages from whatsapp bots
         bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
         if bridge and sender == self.config[f"bridges.{bridge}.mxid"]:
-            return
-
-        # Checking if the message is a command, and if it is,
-        # it is sending the command to the command processor.
-        is_command, text = self.is_command(message=message)
-        if is_command and not await puppet.room_manager.is_customer_room(room_id=room_id):
-            args = text.split()
-            command_event = CommandEvent(
-                intent=puppet.intent,
-                config=puppet.config,
-                cmd=args[0],
-                sender=sender,
-                room_id=room_id,
-                text=text,
-                args=args,
-            )
-            await command_processor(cmd_evt=command_event)
             return
 
         # Checking if the room is a control room.

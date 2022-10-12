@@ -37,12 +37,8 @@ async def state_event(evt: CommandEvent) -> Dict:
     if not puppet:
         return
 
-    command_length = len(f"{evt.cmd}")
-
-    incoming_message = (evt.text[command_length:]).strip()
-
     try:
-        incoming_params = json.loads(incoming_message)
+        incoming_params = json.loads(evt.text)
     except Exception as e:
         evt.log.exception(f"Error processing incoming params, skipping message - {e}")
         return

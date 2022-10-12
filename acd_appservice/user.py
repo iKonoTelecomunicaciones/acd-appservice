@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import TYPE_CHECKING, cast
 
 from mautrix.appservice import AppService
 from mautrix.bridge import BaseUser, async_getter_lock
 from mautrix.types import RoomID, UserID
+from mautrix.util.logging import TraceLogger
 
 from .config import Config
 from .db import User as DBUser
@@ -20,6 +22,8 @@ class User(DBUser, BaseUser):
     loop: asyncio.AbstractEventLooptry_connect
     permission_level: str
 
+    log: TraceLogger = logging.getLogger("acd.user")
+
     by_mxid: dict[UserID, User] = {}
 
     def __init__(self, mxid: UserID, management_room: RoomID = None):
@@ -28,6 +32,7 @@ class User(DBUser, BaseUser):
         BaseUser.__init__(self)
         perms = self.config.get_permissions(mxid)
         self.is_whitelisted, self.is_admin, self.permission_level = perms
+        self.log = self.log.getChild(mxid)
 
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> None:

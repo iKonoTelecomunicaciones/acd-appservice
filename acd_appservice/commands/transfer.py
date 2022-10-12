@@ -26,13 +26,13 @@ async def transfer(evt: CommandEvent) -> str:
     """
 
     if len(evt.args) < 2:
-        detail = f"{evt.cmd} command incomplete arguments"
+        detail = f"{evt.command} command incomplete arguments"
         evt.log.error(detail)
         await evt.reply(text=detail)
         return
 
-    customer_room_id = evt.args[1]
-    campaign_room_id = evt.args[2]
+    customer_room_id = evt.args[0]
+    campaign_room_id = evt.args[1]
 
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
 
@@ -48,11 +48,11 @@ async def transfer(evt: CommandEvent) -> str:
 
     # Locking the room so that no other transfer can be made to the room.
     puppet.room_manager.lock_room(room_id=customer_room_id, transfer=True)
-    is_agent = puppet.agent_manager.is_agent(agent_id=evt.sender)
+    is_agent = puppet.agent_manager.is_agent(agent_id=evt.sender.mxid)
 
     # Checking if the sender is an agent, if not, it gets the agent id from the room.
     if is_agent:
-        transfer_author = evt.sender
+        transfer_author = evt.sender.mxid
     else:
         agent_id = await puppet.agent_manager.get_room_agent(room_id=customer_room_id)
         transfer_author = agent_id
@@ -63,7 +63,7 @@ async def transfer(evt: CommandEvent) -> str:
             customer_room_id=customer_room_id,
             campaign_room_id=campaign_room_id,
             agent_id=puppet.agent_manager.CURRENT_AGENT.get(campaign_room_id),
-            transfer_author=transfer_author or evt.sender,
+            transfer_author=transfer_author or evt.sender.mxid,
         )
     )
 
@@ -90,13 +90,13 @@ async def transfer_user(evt: CommandEvent) -> str:
     """
 
     if len(evt.args) < 2:
-        detail = f"{evt.cmd} command incomplete arguments"
+        detail = f"{evt.command} command incomplete arguments"
         evt.log.error(detail)
         await evt.reply(text=detail)
         return
 
-    customer_room_id = evt.args[1]
-    target_agent_id = evt.args[2]
+    customer_room_id = evt.args[0]
+    target_agent_id = evt.args[1]
 
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
 
@@ -112,7 +112,7 @@ async def transfer_user(evt: CommandEvent) -> str:
 
     # Locking the room so that no other transfer can be made to the room.
     puppet.room_manager.lock_room(room_id=customer_room_id, transfer=True)
-    is_agent = puppet.agent_manager.is_agent(agent_id=evt.sender)
+    is_agent = puppet.agent_manager.is_agent(agent_id=evt.sender.mxid)
 
     # Checking if the sender is an agent, if not, it gets the agent id from the room.
     if is_agent:

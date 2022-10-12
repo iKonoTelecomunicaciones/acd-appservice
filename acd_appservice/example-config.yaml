@@ -75,7 +75,6 @@ bridge:
             - "@supervisor1:dominio_cliente.com"
 
 
-
     # Permissions for using the acd.
     # Permitted values:
     #       user - Use the acd with puppeting.

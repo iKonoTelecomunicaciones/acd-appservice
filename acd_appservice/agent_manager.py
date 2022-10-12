@@ -11,11 +11,11 @@ from mautrix.errors.base import IntentError
 from mautrix.types import Member, PresenceState, RoomAlias, RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
-from .commands.handler import command_processor
-from .commands.typehint import CommandEvent
+from .commands.handler import CommandProcessor
 from .config import Config
 from .room_manager import RoomManager
 from .signaling import Signaling
+from .user import User
 from .util import BusinessHour
 
 
@@ -45,6 +45,7 @@ class AgentManager:
         )
         self.log = self.log.getChild(self.intent.mxid)
         self.room_manager = room_manager
+        self.commands = CommandProcessor(config=self.config)
 
     async def process_distribution(
         self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
@@ -861,18 +862,17 @@ class AgentManager:
                 return True
 
             self.log.debug(f"Transferring to {user_selected_campaign}")
-            fake_command = f"transfer {room_id} {user_selected_campaign}"
-            args = fake_command.split()
-            cmd_evt = CommandEvent(
-                intent=self.intent,
-                config=self.config,
-                cmd=args[0],
-                sender=room_agent,
+
+            user: User = await User.get_by_mxid(room_agent)
+
+            await self.commands.handle(
                 room_id=room_id,
-                text=fake_command,
-                args=args,
+                sender=user,
+                command="transfer",
+                args=f"{room_id} {user_selected_campaign}".split(),
+                intent=self.intent,
+                is_management=room_id == user.management_room,
             )
-            await command_processor(cmd_evt=cmd_evt)
 
         elif offline_menu_option == "2":
             # user selected kick current offline agent and see the main menu
@@ -941,18 +941,17 @@ class AgentManager:
                     # this can happen if the database is deleted
                     user_selected_campaign = self.control_room_id
                 self.log.debug(f"Transferring to {user_selected_campaign}")
-                fake_command = f"transfer {room_id} {user_selected_campaign}"
-                args = fake_command.split()
-                cmd_evt = CommandEvent(
-                    intent=self.intent,
-                    config=self.config,
-                    cmd=args[0],
-                    sender=room_agent,
+
+                user: User = await User.get_by_mxid(room_agent)
+
+                await self.commands.handle(
                     room_id=room_id,
-                    text=fake_command,
-                    args=args,
+                    sender=user,
+                    command="transfer",
+                    args=f"{room_id} {user_selected_campaign}".split(),
+                    intent=self.intent,
+                    is_management=room_id == user.management_room,
                 )
-                await command_processor(cmd_evt=cmd_evt)
 
             elif action == "menu":
                 self.room_manager.put_in_offline_menu(room_id)

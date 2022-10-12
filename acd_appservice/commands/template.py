@@ -26,14 +26,11 @@ async def template(evt: CommandEvent) -> Dict:
 
     """
     # Checking if the command has arguments.
-    if len(evt.args) <= 1:
+    if not evt.args:
         detail = "Incomplete arguments for <code>template</code> command"
-        evt.log.error(detail)
         await evt.reply(text=detail)
+        evt.log.error(detail)
         return
-
-    # Remove 'template' word and unify json template_data
-    template_data = " ".join(evt.args[1:])
 
     puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
 
@@ -41,10 +38,11 @@ async def template(evt: CommandEvent) -> Dict:
         return
 
     try:
-        incoming_params = json.loads(template_data)
-    except Exception:
-        msg = "Error processing incoming params, skipping message"
-        await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
+        evt.log.debug(evt.text)
+        incoming_params = json.loads(evt.text)
+    except Exception as e:
+        await evt.reply(text=e)
+        evt.log.trace(e)
         return
 
     room_id = incoming_params.get("room_id")
@@ -54,12 +52,14 @@ async def template(evt: CommandEvent) -> Dict:
     # Validating incoming params
     if not room_id:
         msg = "You must specify a room ID"
-        await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
+        await evt.reply(text=msg)
+        evt.log.error(msg)
         return
 
     if not template_name or not template_message:
         msg = "You must specify a template name and message"
-        await evt.intent.send_text(room_id=puppet.control_room_id, text=msg)
+        await evt.reply(text=msg)
+        evt.log.error(msg)
         return
 
     if puppet.config[f"bridges.{puppet.bridge}.send_template_command"]:

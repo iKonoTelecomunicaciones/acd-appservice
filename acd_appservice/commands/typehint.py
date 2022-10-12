@@ -1,35 +1,42 @@
 from __future__ import annotations
 
 import logging
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from markdown import markdown
 from mautrix.appservice import IntentAPI
-from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent, UserID
+from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent
 from mautrix.util.logging import TraceLogger
 
 from ..config import Config
+from ..user import User
+
+if TYPE_CHECKING:
+    from ..__main__ import ACDAppService
 
 
-class CommandEvent:
+class BaseCommandEvent:
     log: TraceLogger = logging.getLogger("acd.cmd")
 
     def __init__(
         self,
-        intent: IntentAPI,
+        sender: User,
         config: Config,
-        cmd: str,
-        sender: UserID,
-        room_id: RoomID,
+        command: str,
+        is_management: bool,
+        intent: IntentAPI = None,
+        room_id: RoomID = None,
         text: str = None,
         args: List[str] = None,
     ):
-        self.cmd = cmd
-        self.log = self.log.getChild(self.cmd)
+        self.command = command
+        self.log = self.log.getChild(self.command)
         self.intent = intent
+        self.config = config
         self.command_prefix = config["bridge.command_prefix"]
         self.sender = sender
         self.room_id = room_id
+        self.is_management = is_management
         self.text = text
         self.args = args
 
@@ -58,3 +65,8 @@ class CommandEvent:
             )
         except Exception as e:
             self.log.exception(e)
+
+
+class CommandEvent(BaseCommandEvent):
+    bridge: "ACDAppService"
+    sender: "User"

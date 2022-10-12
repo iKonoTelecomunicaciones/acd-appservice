@@ -41,10 +41,9 @@ async def pm(evt: CommandEvent) -> Dict:
         return
 
     # Getting the arguments of the command.
-    incoming_params = (evt.text[len(evt.cmd) :]).strip()
-
     # Getting the phone number, template message and template name from the incoming parameters.
-    data: dict = json.loads(incoming_params)
+    data: dict = json.loads(evt.text)
+
     phone_number: str = data.get("phone_number")
     template_message = data.get("template_message")
     template_name = data.get("template_name")
@@ -56,7 +55,7 @@ async def pm(evt: CommandEvent) -> Dict:
 
     # A dict that will be sent to the frontend.
     return_params = {
-        "sender_id": evt.sender,
+        "sender_id": evt.sender.mxid,
         "phone_number": None,
         "room_id": None,
         "agent_displayname": None,
@@ -79,9 +78,7 @@ async def pm(evt: CommandEvent) -> Dict:
 
     # Sending a message to the frontend.
     if return_params.get("reply"):
-        cmd_front_msg = (
-            f"{puppet.config['acd.frontend_command_prefix']} {evt.cmd} {json.dumps(return_params)}"
-        )
+        cmd_front_msg = f"{puppet.config['acd.frontend_command_prefix']} {evt.command} {json.dumps(return_params)}"
         await evt.reply(text=cmd_front_msg)
         return {"data": return_params, "status": 422}
 
@@ -108,7 +105,7 @@ async def pm(evt: CommandEvent) -> Dict:
         agent_id = await puppet.agent_manager.get_room_agent(room_id=customer_room_id)
 
         # Checking if the agent is already in the room, if it is, it returns a message to the frontend.
-        if agent_id and agent_id != evt.sender:
+        if agent_id and agent_id != evt.sender.mxid:
             agent_displayname = await evt.intent.get_displayname(user_id=agent_id)
             return_params[
                 "reply"
@@ -116,17 +113,17 @@ async def pm(evt: CommandEvent) -> Dict:
         else:
             # If the agent is already in the room, it returns a message to the frontend.
             await puppet.agent_manager.signaling.set_chat_status(
-                room_id=customer_room_id, status=Signaling.FOLLOWUP, agent=evt.sender
+                room_id=customer_room_id, status=Signaling.FOLLOWUP, agent=evt.sender.mxid
             )
-            if agent_id == evt.sender:
+            if agent_id == evt.sender.mxid:
                 return_params["reply"] = "You are already in room with [number], message was sent."
             else:
                 # Joining the agent to the room.
                 await puppet.agent_manager.force_join_agent(
-                    room_id=data.get("room_id"), agent_id=evt.sender
+                    room_id=data.get("room_id"), agent_id=evt.sender.mxid
                 )
 
-            agent_displayname = await evt.intent.get_displayname(user_id=evt.sender)
+            agent_displayname = await evt.intent.get_displayname(user_id=evt.sender.mxid)
 
             if puppet.config[f"bridges.{puppet.bridge}.send_template_command"]:
                 await bridge_connector.gupshup_template(
@@ -140,10 +137,12 @@ async def pm(evt: CommandEvent) -> Dict:
                 )
 
     # Setting the return_params dict with the sender_id, phone_number, room_id and agent_displayname.
-    return_params["sender_id"] = evt.sender
+    return_params["sender_id"] = evt.sender.mxid
     return_params["phone_number"] = phone_number
     # Cuando ya hay otro agente en la sala, se debe enviar room_id en None
-    return_params["room_id"] = None if agent_id and agent_id != evt.sender else data.get("room_id")
+    return_params["room_id"] = (
+        None if agent_id and agent_id != evt.sender.mxid else data.get("room_id")
+    )
     return_params["agent_displayname"] = agent_displayname if agent_displayname else None
 
     error = None
@@ -172,7 +171,7 @@ async def pm(evt: CommandEvent) -> Dict:
         await puppet.agent_manager.signaling.set_chat_status(
             room_id=customer_room_id,
             status=Signaling.FOLLOWUP,
-            agent=evt.sender,
+            agent=evt.sender.mxid,
             campaign_room_id=None,
             keep_campaign=False,
         )
@@ -188,7 +187,7 @@ async def pm(evt: CommandEvent) -> Dict:
         try:
             await puppet.room_manager.menubot_leaves(
                 room_id=customer_room_id,
-                reason=f"{evt.sender} pm existing room {customer_room_id}",
+                reason=f"{evt.sender.mxid} pm existing room {customer_room_id}",
             )
         except Exception as e:
             evt.log.exception(e)
@@ -197,7 +196,7 @@ async def pm(evt: CommandEvent) -> Dict:
 
     # Sending a message to the frontend.
     cmd_front_msg = (
-        f"{puppet.config['acd.frontend_command_prefix']} {evt.cmd} {json.dumps(return_params)}"
+        f"{puppet.config['acd.frontend_command_prefix']} {evt.command} {json.dumps(return_params)}"
     )
     await evt.reply(text=cmd_front_msg)
 
