@@ -628,9 +628,12 @@ async def transfer_user(request: web.Request) -> web.Response:
                             type: string
                         target_agent_id:
                             type: string
+                        force:
+                            type: string
                     example:
                         customer_room_id: "!duOWDQQCshKjQvbyoh:darknet"
                         target_agent_id: "@agente1:darknet"
+                        force: "yes"
 
     responses:
         '200':
@@ -659,6 +662,8 @@ async def transfer_user(request: web.Request) -> web.Response:
         return web.json_response(**USER_DOESNOT_EXIST)
 
     args = [customer_room_id, target_agent_id]
+    if data.get("force"):
+        args.append(data.get("force"))
 
     # Creating a fake command event and passing it to the command processor.
     fake_cmd_event = CommandEvent(
