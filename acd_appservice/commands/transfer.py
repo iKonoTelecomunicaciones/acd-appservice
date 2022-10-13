@@ -121,7 +121,7 @@ async def transfer_user(evt: CommandEvent) -> str:
 
     # Checking if the sender is an agent, if not, it gets the agent id from the room.
     if is_agent:
-        transfer_author = evt.sender
+        transfer_author = evt.sender.mxid
     else:
         agent_id = await puppet.agent_manager.get_room_agent(room_id=customer_room_id)
         transfer_author = agent_id
@@ -144,7 +144,7 @@ async def transfer_user(evt: CommandEvent) -> str:
             await puppet.agent_manager.force_invite_agent(
                 room_id=customer_room_id,
                 agent_id=target_agent_id,
-                transfer_author=transfer_author or evt.sender,
+                transfer_author=transfer_author or evt.sender.mxid,
             )
         else:
             msg = f"El agente {target_agent_id} no está disponible."
