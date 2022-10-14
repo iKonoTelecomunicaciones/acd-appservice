@@ -199,6 +199,75 @@ components:
         event_id: "$PHtug6AByEXtMcJR-TvZ9lR6DgixA9nvyPNroyppSV8"
         room_id: "!CzCDxtfIpIshzruJBR:darknet"
 
+    BridgesStatusSuccessful:
+      type: object
+      properties:
+        bridge_status:
+          type: array
+          items:
+            type: object
+            properties:
+              admin:
+                type: boolean
+              mxid:
+                type: string
+              relay_whitelisted:
+                type: boolean
+              whatsapp:
+                type: object
+                properties:
+                  conn:
+                    type: object
+                    properties:
+                      is_connected:
+                        type: boolean
+                      is_logged_in:
+                        type: boolean
+                  device:
+                    type: integer
+                  has_session:
+                    type: boolean
+                  jid:
+                    type: string
+                  management_room:
+                    type: string
+                  phone:
+                    type: string
+                  platform:
+                    type: string
+              whitelisted:
+                    type: boolean
+      example:
+        bridges_status:
+          - admin: true
+            mxid: "@acd1:darknet"
+            relay_whitelisted: true
+            whatsapp:
+              conn:
+                is_connected: true
+                is_logged_in: true
+              device: 49
+              has_session: true
+              jid: 5730000000.0:49@s.whatsapp.net
+              management_room: "!qygKFQLVCpfPLjEWqc:darknet"
+              phone: "+5730000000"
+              platform: smba
+            whitelisted: true
+          - admin: true
+            mxid: "@acd2:darknet"
+            relay_whitelisted: true
+            whatsapp:
+              conn:
+                is_connected: true
+                is_logged_in: true
+              device: 25
+              has_session: true
+              jid: 573001290000.0:25@s.whatsapp.net
+              management_room: "!pCJFIiZUmWnuigitTT:darknet"
+              phone: "+573001290000"
+              platform: smba
+            whitelisted: true
+
   # Respuestas de la API
   responses:
     UserCreated:
@@ -298,3 +367,10 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+
+    BridgesStatus:
+      description: Bridges status.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BridgesStatusSuccessful'

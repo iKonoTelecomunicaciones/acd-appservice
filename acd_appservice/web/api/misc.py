@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from aiohttp import web
 
+from acd_appservice.http_client import ProvisionBridge
+
 from ...puppet import Puppet
 from ..base import routes
 from ..error_responses import NOT_DATA, REQUIRED_VARIABLES, USER_DOESNOT_EXIST
@@ -86,3 +88,51 @@ async def get_control_rooms() -> web.Response:
         return web.json_response(**NOT_DATA)
 
     return web.json_response(data={"control_room_ids": control_room_ids})
+
+
+@routes.post("/v1/get_bridges_status")
+async def get_bridges_status(request: web.Request) -> web.Response:
+
+    """
+    ---
+    summary:        Given a list of puppets, get his bridges status.
+    tags:
+        - Mis
+
+    requestBody:
+        required: true
+        description: A json with `puppet_list`
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        puppet_list:
+                            type: array
+                            items:
+                                type: string
+                    example:
+                        puppet_list: ["@acd1:localhost", "@acd2:localhost"]
+
+
+    responses:
+        '200':
+            $ref: '#/components/responses/BridgesStatus'
+    """
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    data = await request.json()
+
+    bridges_status = []
+
+    for puppet in data.get("puppet_list"):
+        puppet: Puppet = await Puppet.get_puppet_by_mxid(puppet)
+        bridge_conector = ProvisionBridge(
+            config=puppet.config, session=puppet.intent.api.session, bridge=puppet.bridge
+        )
+        status = await bridge_conector.mautrix_ping(puppet.mxid)
+        bridges_status.append(status)
+
+    return web.json_response(data={"bridges_status": bridges_status})
