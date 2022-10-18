@@ -128,7 +128,11 @@ async def get_bridges_status(request: web.Request) -> web.Response:
     bridges_status = []
 
     for puppet in data.get("puppet_list"):
-        puppet: Puppet = await Puppet.get_puppet_by_mxid(puppet)
+        puppet: Puppet = await Puppet.get_puppet_by_mxid(customer_mxid=puppet, create=False)
+
+        if not puppet:
+            continue
+
         bridge_conector = ProvisionBridge(
             config=puppet.config, session=puppet.intent.api.session, bridge=puppet.bridge
         )

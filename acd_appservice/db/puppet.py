@@ -52,10 +52,14 @@ class Puppet:
             self.control_room_id,
         )
 
+    _columns = (
+        "email, phone, bridge, destination, photo_mxc, name_set, avatar_set, is_registered,"
+        "custom_mxid, access_token, next_batch, base_url, control_room_id"
+    )
+
     async def insert(self) -> None:
         q = (
-            "INSERT INTO puppet (email, phone, bridge, destination, photo_mxc, name_set, avatar_set,"
-            "                    is_registered, custom_mxid, access_token, next_batch, base_url, control_room_id) "
+            f"INSERT INTO puppet ({self._columns}) "
             "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
         )
         await self.db.execute(q, *self._values)
@@ -79,11 +83,7 @@ class Puppet:
     @classmethod
     @property
     def query(cls) -> str:
-        return (
-            "SELECT pk, email, phone, bridge, destination, photo_mxc, name_set, avatar_set,"
-            "is_registered, custom_mxid, access_token, next_batch, base_url, control_room_id "
-            "FROM puppet WHERE"
-        )
+        return f"SELECT pk, {cls._columns} FROM puppet WHERE"
 
     @classmethod
     async def get_by_pk(cls, pk: int) -> Puppet | None:
