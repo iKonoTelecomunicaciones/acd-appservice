@@ -131,7 +131,7 @@ class CommandProcessor:
         command: str,
         args: list[str],
         is_management: bool,
-        content: MessageEventContent,
+        content: MessageEventContent = None,
         intent: IntentAPI = None,
         room_id: RoomID = "",
     ) -> None:
@@ -166,7 +166,7 @@ class CommandProcessor:
             sender=sender,
             command=command,
             args=args,
-            text=content.body.strip(),
+            text=content.body.strip() if content else "",
             is_management=is_management,
         )
 

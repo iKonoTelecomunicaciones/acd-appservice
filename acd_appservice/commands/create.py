@@ -56,6 +56,8 @@ async def create(evt: CommandEvent) -> Puppet:
 
     if not next_puppet:
         evt.reply("We have not been able to create the `acd*`")
+        return
+
     try:
         # We create the puppet with the following pk
         puppet: Puppet = await Puppet.get_by_pk(pk=next_puppet)
