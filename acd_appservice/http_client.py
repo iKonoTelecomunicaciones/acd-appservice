@@ -206,7 +206,7 @@ class ProvisionBridge(BaseClass):
         """
         try:
             response = await self.session.post(
-                url=f"{self.url_base}{self.endpoints['pm']}{phone}",
+                url=f"{self.url_base}{self.endpoints['pm']}/{phone}",
                 headers=self.headers,
                 params={"user_id": user_id},
             )
