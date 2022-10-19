@@ -9,6 +9,7 @@ from mautrix.types import Format, MessageType, TextMessageEventContent
 
 from ...http_client import ProvisionBridge
 from ...message import Message
+from ...puppet import Puppet
 from .. import SUPPORTED_MESSAGE_TYPES
 from ..base import _resolve_puppet_identifier, _resolve_user_identifier, routes
 from ..error_responses import (
@@ -19,6 +20,7 @@ from ..error_responses import (
     NOT_DATA,
     REQUIRED_VARIABLES,
     SERVER_ERROR,
+    USER_DOESNOT_EXIST,
 )
 
 
@@ -449,7 +451,7 @@ async def read_check(request: web.Request) -> web.Response:
     ---
     summary:        Check if a message has been read
     tags:
-        - Mis
+        - Bridge
 
     parameters:
     - in: query
@@ -478,3 +480,107 @@ async def read_check(request: web.Request) -> web.Response:
         return web.json_response(**MESSAGE_NOT_FOUND)
 
     return web.json_response(data=message.__dict__)
+
+
+@routes.post("/v1/get_bridges_status")
+async def get_bridges_status(request: web.Request) -> web.Response:
+
+    """
+    ---
+    summary:        Given a list of puppets, get his bridges status.
+    tags:
+        - Bridge
+
+    requestBody:
+        required: true
+        description: A json with `puppet_list`
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        puppet_list:
+                            type: array
+                            items:
+                                type: string
+                    example:
+                        puppet_list: ["@acd1:localhost", "@acd2:localhost"]
+
+
+    responses:
+        '200':
+            $ref: '#/components/responses/BridgesStatus'
+    """
+
+    await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    data = await request.json()
+
+    bridges_status = []
+
+    for puppet_mxid in data.get("puppet_list"):
+        puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
+
+        if not puppet:
+            continue
+
+        bridge_conector = ProvisionBridge(
+            config=puppet.config, session=puppet.intent.api.session, bridge=puppet.bridge
+        )
+        status = await bridge_conector.mautrix_ping(puppet.mxid)
+        bridges_status.append(status)
+
+    return web.json_response(data={"bridges_status": bridges_status})
+
+
+@routes.post("/v1/logout")
+async def logout(request: web.Request) -> web.Response:
+
+    """
+    ---
+    summary:        Close connection of a previously logged-in bridge
+    tags:
+        - Bridge
+
+    requestBody:
+        required: true
+        description: A json with disconnection status
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        success:
+                            type: boolean
+                        status:
+                            type: string
+                    example:
+                        success: true
+                        status: "Logged out successfully."
+
+
+    responses:
+        '200':
+            $ref: '#/components/responses/Logout'
+        '404':
+            $ref: '#/components/responses/LogoutFail'
+    """
+
+    await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    puppet = await _resolve_puppet_identifier(request=request)
+
+    if not puppet:
+        return web.json_response(**USER_DOESNOT_EXIST)
+
+    bridge_conector = ProvisionBridge(
+        config=puppet.config, session=puppet.intent.api.session, bridge=puppet.bridge
+    )
+    status, response = await bridge_conector.logout(user_id=puppet.mxid)
+    return web.json_response(data=response, status=status)

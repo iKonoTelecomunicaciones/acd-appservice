@@ -28,23 +28,33 @@ class Config(BaseBridgeConfig):
         # esto hace que cuando actualicemos en config.yaml
         super().do_update(helper)
         copy, copy_dict, base = helper
+
+        # Bridge
         copy("bridge.bot_user_id")
         copy("bridge.prefix")
         copy("bridge.invitees_to_rooms")
         copy("bridge.username_template")
-        copy_dict("utils")
-        copy_dict("utils.business_hours")
-        copy("utils.message_bot_war")
-        copy_dict("ikono_api")
         copy("bridge.command_prefix")
         copy_dict("bridge.puppet_control_room")
+        copy_dict("bridge.permissions")
+
+        # AppService
         copy("appservice.puppet_password")
         if base["appservice.puppet_password"] == "generate":
             base["appservice.puppet_password"] = self._new_token()
-        copy_dict("bridges.mautrix")
-        copy_dict("bridges.instagram")
-        copy_dict("bridges.gupshup")
-        copy_dict("bridges.plugin")
+
+        # Bridges
+        copy("bridges.mautrix.mxid")
+        copy("bridges.mautrix.provisioning.url_base")
+        copy("bridges.mautrix.provisioning.shared_secret")
+        copy("bridges.instagram.mxid")
+        copy("bridges.instagram.provisioning.url_base")
+        copy("bridges.instagram.provisioning.shared_secret")
+        copy("bridges.gupshup.mxid")
+        copy("bridges.gupshup.provisioning.url_base")
+        copy("bridges.gupshup.provisioning.shared_secret")
+
+        # ACD
         copy("acd.namespaces")
         copy("acd.keep_room_name")
         copy("acd.numbers_in_rooms")
@@ -63,7 +73,13 @@ class Config(BaseBridgeConfig):
         copy_dict("acd.resolve_chat")
         copy("acd.remove_method")
 
-        copy_dict("bridge.permissions")
+        # Utils
+        copy_dict("utils")
+        copy_dict("utils.business_hours")
+        copy("utils.message_bot_war")
+
+        # Third-party APIs
+        copy_dict("ikono_api")
 
     @property
     def namespaces(self) -> dict[str, list[dict[str, Any]]]:

@@ -197,6 +197,11 @@ bridges:
     provisioning:
         url_base: "http://mautrix-whatsapp:29318/_matrix/provision"
         shared_secret: ""
+        endpoints:
+            login: "/v1/login"
+            pm: "/v1/pm"
+            logout: "/v1/logout"
+            ping: "/v1/ping"
 
   instagram:
     # Instagram UserID
@@ -215,6 +220,10 @@ bridges:
     provisioning:
         url_base: "http://mautrix-instagram:29320/_matrix/provision"
         shared_secret: ""
+        endpoints:
+            login: "/v1/api/login"
+            checkpoint: "/v1/api/login/checkpoint"
+            logout: "/v1/api/logout"
 
   gupshup:
     # Gupshup UserID
@@ -233,6 +242,9 @@ bridges:
     provisioning:
         url_base: "http://gupshup-matrix:29322/_matrix/provision"
         shared_secret: ""
+        endpoints:
+            template: "/v1/template"
+            register_app: "/v1/register_app"
 
   plugin:
     # Prefix to be listened by bridge
