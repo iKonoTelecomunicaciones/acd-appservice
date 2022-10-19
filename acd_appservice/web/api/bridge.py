@@ -547,20 +547,16 @@ async def logout(request: web.Request) -> web.Response:
 
     requestBody:
         required: true
-        description: A json with disconnection status
+        description: A json with user to unlog
         content:
             application/json:
                 schema:
                     type: object
                     properties:
-                        success:
-                            type: boolean
-                        status:
+                        user_id:
                             type: string
                     example:
-                        success: true
-                        status: "Logged out successfully."
-
+                        user_id: "@acd1:example.com"
 
     responses:
         '200':
