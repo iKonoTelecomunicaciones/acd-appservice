@@ -199,6 +199,31 @@ components:
         event_id: "$PHtug6AByEXtMcJR-TvZ9lR6DgixA9nvyPNroyppSV8"
         room_id: "!CzCDxtfIpIshzruJBR:darknet"
 
+    LogoutSuccessful:
+      type: object
+      properties:
+        success:
+            type: boolean
+        status:
+            type: string
+      example:
+        success: true
+        status: "Logged out successfully."
+
+    BadLogout:
+      type: object
+      properties:
+        success:
+            type: boolean
+        error:
+            type: string
+        errcode:
+            type: string
+      example:
+        success: false
+        error: "You're not logged in"
+        errcode: "not logged in"
+
     BridgesStatusSuccessful:
       type: object
       properties:
@@ -374,3 +399,17 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/BridgesStatusSuccessful'
+
+    Logout:
+      description: Successful logout.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/LogoutSuccessful'
+
+    LogoutFail:
+      description: Bad logout.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BadLogout'
