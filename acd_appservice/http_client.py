@@ -413,7 +413,7 @@ class ProvisionBridge(BaseClass):
             )
         except Exception as e:
             self.log.error(e)
-            return {"error": str(e)}
+            return 500, {"error": str(e)}
 
         data = await response.json()
         if not response.status in [200, 201]:
