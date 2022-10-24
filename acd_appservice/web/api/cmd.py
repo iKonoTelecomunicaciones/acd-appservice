@@ -339,6 +339,7 @@ async def bulk_resolve(request: web.Request) -> web.Response:
     list_room_ids = [room_ids[i : i + room_block] for i in range(0, len(room_ids), room_block)]
     for room_ids in list_room_ids:
         tasks = []
+        user.log.info(f"Rooms to be resolved: {room_ids}")
         for room_id in room_ids:
             # Obtenemos el puppet de este email si existe
             puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
@@ -380,8 +381,11 @@ async def bulk_resolve(request: web.Request) -> web.Response:
 
             task = asyncio.create_task(cmd_resolve(fake_cmd_event))
             tasks.append(task)
-
-        await asyncio.gather(*tasks)
+        try:
+            await asyncio.gather(*tasks)
+        except Exception as e:
+            user.log.error(e)
+            continue
 
     return web.json_response(text="ok")
 
