@@ -365,6 +365,13 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
 
+    RequiredVariables:
+      description: Please provide required variables.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
     ErrorData:
       description: The request was well formed but could not be followed due to semantic errors.
       content:
