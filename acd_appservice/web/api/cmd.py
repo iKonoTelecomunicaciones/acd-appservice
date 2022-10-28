@@ -7,6 +7,7 @@ from typing import Dict, List
 from aiohttp import web
 from mautrix.types import RoomID
 
+from ...commands import acd as cmd_acd
 from ...commands import create as cmd_create
 from ...commands import pm as cmd_pm
 from ...commands import resolve as cmd_resolve
@@ -676,4 +677,80 @@ async def transfer_user(request: web.Request) -> web.Response:
     )
 
     await cmd_transfer_user(fake_cmd_event)
+    return web.json_response()
+
+
+@routes.post("/v1/cmd/acd")
+async def acd(request: web.Request) -> web.Response:
+    """
+    ---
+    summary: Command that allows to distribute the chat of a client.
+
+    description: Command that allows to distribute the chat of a client, optionally a campaign room and a joining message can be given.
+
+    tags:
+        - Commands
+
+    requestBody:
+        required: true
+        description: A JSON with `customer_room_id`, `campaign_room_id` and `joined_message`. The customer_room_id is required.
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        customer_room_id:
+                            type: string
+                        campaign_room_id:
+                            type: string
+                        joined_message:
+                            type: string
+                    required:
+                        - customer_room_id
+                    example:
+                        customer_room_id: "!duOWDQQCshKjQvbyoh:example.com"
+                        campaign_room_id: "!TXMsaIzbeURlKPeCxJ:example.com"
+                        joined_message: "{agentname} has joined the chat."
+
+    responses:
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '404':
+            $ref: '#/components/responses/NotExist'
+        '422':
+            $ref: '#/components/responses/RequiredVariables'
+    """
+
+    user = await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    data: Dict = await request.json()
+
+    if not data.get("customer_room_id"):
+        return web.json_response(**REQUIRED_VARIABLES)
+
+    customer_room_id = data.get("customer_room_id")
+    campaign_room_id = data.get("campaign_room_id") or ""
+    joined_message = data.get("joined_message") or ""
+
+    # Get the puppet from customer_room_id if exists
+    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+    if not puppet:
+        return web.json_response(**USER_DOESNOT_EXIST)
+
+    args = [customer_room_id, campaign_room_id, joined_message]
+
+    # Creating a fake command event and passing it to the command processor.
+    fake_cmd_event = CommandEvent(
+        sender=user,
+        config=get_config(),
+        command="acd",
+        is_management=False,
+        intent=puppet.intent,
+        args=args,
+    )
+
+    await cmd_acd(fake_cmd_event)
     return web.json_response()
