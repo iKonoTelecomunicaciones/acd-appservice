@@ -710,7 +710,7 @@ async def acd(request: web.Request) -> web.Response:
                     example:
                         customer_room_id: "!duOWDQQCshKjQvbyoh:example.com"
                         campaign_room_id: "!TXMsaIzbeURlKPeCxJ:example.com"
-                        joined_message: "{agentname} se ha unido al chat."
+                        joined_message: "{agentname} has joined the chat."
 
     responses:
         '400':
@@ -728,16 +728,12 @@ async def acd(request: web.Request) -> web.Response:
 
     data: Dict = await request.json()
 
-    if not (data.get("customer_room_id")):
+    if not data.get("customer_room_id"):
         return web.json_response(**REQUIRED_VARIABLES)
 
     customer_room_id = data.get("customer_room_id")
-    campaign_room_id = ""
-    joined_message = ""
-    if data.get("campaign_room_id"):
-        campaign_room_id = data.get("campaign_room_id")
-    if data.get("joined_message"):
-        joined_message = data.get("joined_message")
+    campaign_room_id = data.get("campaign_room_id") or ""
+    joined_message = data.get("joined_message") or ""
 
     # Get the puppet from customer_room_id if exists
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
