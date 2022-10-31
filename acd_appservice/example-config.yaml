@@ -224,6 +224,7 @@ bridges:
             login: "/v1/api/login"
             checkpoint: "/v1/api/login/checkpoint"
             logout: "/v1/api/logout"
+            ping: "/v1/api/whoami"
 
   gupshup:
     # Gupshup UserID
