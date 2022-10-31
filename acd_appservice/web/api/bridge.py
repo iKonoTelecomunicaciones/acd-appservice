@@ -524,13 +524,13 @@ async def get_bridges_status(request: web.Request) -> web.Response:
     for puppet_mxid in data.get("puppet_list"):
         puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
 
-        if not puppet:
+        if not puppet or puppet.bridge == "gupshup":
             continue
 
         bridge_conector = ProvisionBridge(
             config=puppet.config, session=puppet.intent.api.session, bridge=puppet.bridge
         )
-        status = await bridge_conector.mautrix_ping(puppet.mxid)
+        status = await bridge_conector.ping(puppet.mxid)
         bridges_status.append(status)
 
     return web.json_response(data={"bridges_status": bridges_status})

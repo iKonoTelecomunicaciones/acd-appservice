@@ -289,7 +289,7 @@ class ProvisionBridge(BaseClass):
 
         return response.status, data
 
-    async def mautrix_ping(self, user_id: UserID) -> Dict:
+    async def ping(self, user_id: UserID) -> Dict:
         """It sends a ping to the user with the given user_id.
 
         Parameters
