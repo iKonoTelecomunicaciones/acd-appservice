@@ -5,7 +5,7 @@ import json
 from typing import Dict, List
 
 from aiohttp import web
-from mautrix.types import RoomID
+from mautrix.types import RoomID, UserID
 
 from ...commands import acd as cmd_acd
 from ...commands import create as cmd_create
@@ -17,6 +17,7 @@ from ...commands import transfer as cmd_transfer
 from ...commands import transfer_user as cmd_transfer_user
 from ...commands.typehint import CommandEvent
 from ...puppet import Puppet
+from ...user import User
 from ..base import _resolve_puppet_identifier, _resolve_user_identifier, get_config, routes
 from ..error_responses import (
     BRIDGE_INVALID,
@@ -329,16 +330,35 @@ async def bulk_resolve(request: web.Request) -> web.Response:
     user_id = data.get("user_id")
     send_message = data.get("send_message")
 
-    # Creamos una lista de tareas vacías que vamos a llenar con cada uno de los comandos
-    # de resolución y luego los ejecutaremos al mismo tiempo
-    # de esta manera podremos resolver muchas salas a la vez y poder tener un buen rendimiento
+    # We create a list of empty tasks that we are going to fill with each one of the commands
+    # resolution commands and then execute them at the same time.
+    # in this way we will be able to solve many rooms at the same time and have a good performance.
 
-    # Debemos definir de a cuantas salas vamos a resolver
+    # We have to define how many rooms we are going to solve
     room_block = get_config()["utils.room_blocks"]
 
-    # Dividimos las salas en sublistas y cada sublista de longitud room_block
-    list_room_ids = [room_ids[i : i + room_block] for i in range(0, len(room_ids), room_block)]
-    for room_ids in list_room_ids:
+    # Split the rooms into sub-lists and each sub-list of length room_block
+    room_ids_blocks: List[List[RoomID]] = [
+        room_ids[i : i + room_block] for i in range(0, len(room_ids), room_block)
+    ]
+
+    asyncio.create_task(
+        _bulk_resolve(
+            puppet=Puppet,
+            user=user,
+            room_ids=room_ids_blocks,
+            user_id=user_id,
+            send_message=send_message,
+        )
+    )
+
+    return web.json_response(text="ok")
+
+
+async def _bulk_resolve(
+    puppet: Puppet, user: User, room_ids: List[RoomID], user_id: UserID, send_message: str
+):
+    for room_ids in room_ids:
         tasks = []
         user.log.info(f"Rooms to be resolved: {room_ids}")
         for room_id in room_ids:
@@ -387,8 +407,6 @@ async def bulk_resolve(request: web.Request) -> web.Response:
         except Exception as e:
             user.log.error(e)
             continue
-
-    return web.json_response(text="ok")
 
 
 @routes.post("/v1/cmd/state_event")
