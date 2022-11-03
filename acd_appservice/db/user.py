@@ -15,6 +15,7 @@ class User:
     db: ClassVar[Database] = fake_db
 
     mxid: UserID
+    id: int | None = None
     management_room: RoomID | None = None
 
     _columns = "mxid, management_room"
@@ -37,7 +38,7 @@ class User:
 
     @classmethod
     async def get_by_mxid(cls, user_id: UserID) -> User | None:
-        q = f'SELECT {cls._columns} FROM "user" WHERE mxid=$1'
+        q = f'SELECT id, {cls._columns} FROM "user" WHERE mxid=$1'
         row = await cls.db.fetchrow(q, user_id)
         if not row:
             return None

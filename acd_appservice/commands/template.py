@@ -73,4 +73,4 @@ async def template(evt: CommandEvent) -> Dict:
         )
     else:
         # If there's no send_template_command the message send directly to client
-        await evt.intent.send_text(room_id=room_id, text=template_message)
+        await puppet.room_manager.send_formatted_message(room_id=room_id, msg=template_message)
