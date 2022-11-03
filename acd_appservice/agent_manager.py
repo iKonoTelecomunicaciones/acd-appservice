@@ -227,13 +227,17 @@ class AgentManager:
 
         transfer = True if transfer_author else False
 
+        # Trying to find an agent to invite to the room.
         while True:
             agent_id = await self.get_next_agent(agent_id, campaign_room_id)
             if not agent_id:
                 self.log.info(f"NO AGENTS IN ROOM [{campaign_room_id}]")
 
                 if transfer_author:
-                    msg = f"La sala destino no tiene agentes."
+                    msg = (
+                        f"The room [{customer_room_id}] tried to be transferred to "
+                        f"[{campaign_room_id}] but it has no agents"
+                    )
                     await self.intent.send_notice(room_id=customer_room_id, text=msg)
                 else:
                     await self.show_no_agents_message(
@@ -306,7 +310,7 @@ class AgentManager:
                 RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
                 break
 
-            self.log.debug(f"agent count: [{agent_count}] online_agents: [{online_agents}]")
+            self.log.debug(f"Agent count: [{agent_count}] online_agents: [{online_agents}]")
 
     async def get_next_agent(self, agent_id: UserID, room_id: RoomID) -> UserID:
         """It takes a room ID and an agent ID, and returns the next agent in the room
@@ -323,7 +327,12 @@ class AgentManager:
             The next agent in line.
 
         """
-        members = await self.intent.bot.get_joined_members(room_id)
+        try:
+            members = await self.intent.bot.get_joined_members(room_id)
+        except Exception as e:
+            self.log.error(e)
+            return
+
         # print([member.user_id for member in members])
         if members:
             # remove bots from member list
@@ -331,7 +340,7 @@ class AgentManager:
 
             # if members is empty after bots removed, return None
             if not members:
-                return None
+                return
 
             # if not reference agent, return first one
             if not agent_id:
@@ -349,7 +358,7 @@ class AgentManager:
             # if member is not in the room anymore, return first agent
             return members[0]
 
-        return None
+        return
 
     async def force_invite_agent(
         self,
@@ -976,7 +985,7 @@ class AgentManager:
         menu = self.config["acd.offline.menu.header"].format(agentname=agent_displayname)
         menu_options = self.config["acd.offline.menu.options"]
         for key, value in menu_options.items():
-            menu = menu + f"<b>{key}</b>. "
-            menu = menu + f"{value['text']}<br>"
+            menu += f"<b>{key}</b>. "
+            menu += f"{value['text']}<br>"
 
         await self.room_manager.send_formatted_message(room_id=room_id, msg=menu)

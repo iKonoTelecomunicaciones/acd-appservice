@@ -84,8 +84,8 @@ bridge:
     #   domain - All users on that homeserver
     #     mxid - Specific user
     permissions:
-        "dominio_cliente.com": "user"
         "@admin:dominio_cliente.com": "admin"
+        "@supervisor:dominio_cliente.com": "admin"
 
 acd:
     # User domain spaces you want to manipulate
@@ -99,11 +99,11 @@ acd:
     # Regex to extract user id guest from matrix user ID
     username_regex_guest: "^@(?P<number>[0-9]{1,}):.+$"
     # Feature for naming customer rooms
-    keep_room_name: false
+    keep_room_name: true
     # Features for naming rooms by company_phone
     # Si quieres que las salas se actualicen cada vez que el cliente
     # cambie de nombre, entonces deber tener keep_room_name en true y numbers_in_rooms en true
-    numbers_in_rooms: true
+    numbers_in_rooms: false
     # Prefix for identification of agent user
     agent_prefix: "@agent"
     # Prefix for identification of supervisor user
@@ -141,7 +141,7 @@ acd:
         # - keep: no action, keep agent in room and no message is shown
         # - transfer: if agent is offline more than x secs, it is kicked out and someone new is invited
         # - menu: if agent is offline more than x secs, the customer is presented a menu of options
-        agent_action: menu
+        agent_action: keep
         # agent offline time in seconds to take an action if the customer sends a message
         agent_timeout: 0
         # message to show when agent is offline longer than offline_agent_timeout
@@ -224,6 +224,7 @@ bridges:
             login: "/v1/api/login"
             checkpoint: "/v1/api/login/checkpoint"
             logout: "/v1/api/logout"
+            ping: "/v1/api/whoami"
 
   gupshup:
     # Gupshup UserID
@@ -240,11 +241,12 @@ bridges:
     set_relay: "set-relay"
     # Settings for provisioning API
     provisioning:
-        url_base: "http://gupshup-matrix:29322/_matrix/provision"
+        url_base: "http://gupshup:29324/_matrix/provision"
         shared_secret: ""
         endpoints:
             template: "/v1/template"
             register_app: "/v1/register_app"
+            pm: "/v1/pm"
 
   plugin:
     # Prefix to be listened by bridge

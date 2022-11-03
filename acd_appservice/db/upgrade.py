@@ -69,8 +69,9 @@ async def upgrade_v1(conn: Connection) -> None:
 async def upgrade_v2(conn: Connection) -> None:
     await conn.execute(
         """CREATE TABLE "user" (
-        mxid            TEXT PRIMARY KEY,
-        management_room  TEXT
+        id                  SERIAL PRIMARY KEY,
+        mxid                TEXT UNIQUE,
+        management_room     TEXT
         )"""
     )
     await conn.execute("""ALTER TABLE puppet RENAME COLUMN photo_id TO destination""")

@@ -83,7 +83,7 @@ class ACDAppService(ACD):
                 for puppet_id in all_puppets:
                     puppet: Puppet = await Puppet.get_by_custom_mxid(puppet_id)
                     bridge_connector.session = puppet.intent.api.session
-                    response = await bridge_connector.mautrix_ping(user_id=puppet_id)
+                    response = await bridge_connector.ping(user_id=puppet_id)
                     # Checking if the puppet is connected to WhatsApp.
                     if (
                         not response.get("error")
