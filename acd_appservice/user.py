@@ -19,16 +19,16 @@ if TYPE_CHECKING:
 class User(DBUser, BaseUser):
     config: Config
     az: AppService
-    loop: asyncio.AbstractEventLooptry_connect
+    loop: asyncio.AbstractEventLoop
     permission_level: str
 
     log: TraceLogger = logging.getLogger("acd.user")
 
     by_mxid: dict[UserID, User] = {}
 
-    def __init__(self, mxid: UserID, management_room: RoomID = None):
+    def __init__(self, mxid: UserID, management_room: RoomID = None, id: int = None):
         self.mxid = mxid
-        super().__init__(mxid=mxid, management_room=management_room)
+        super().__init__(id=id, mxid=mxid, management_room=management_room)
         BaseUser.__init__(self)
         perms = self.config.get_permissions(mxid)
         self.is_whitelisted, self.is_admin, self.permission_level = perms
@@ -70,6 +70,7 @@ class User(DBUser, BaseUser):
         if create:
             user = cls(mxid)
             await user.insert()
+            user = await super().get_by_mxid(mxid)
             user._add_to_cache()
             return user
 
