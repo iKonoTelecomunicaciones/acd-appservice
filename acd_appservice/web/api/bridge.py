@@ -485,32 +485,31 @@ async def read_check(request: web.Request) -> web.Response:
 @routes.post("/v1/get_bridges_status")
 async def get_bridges_status(request: web.Request) -> web.Response:
 
-    """
-    ---
-    summary:        Given a list of puppets, get his bridges status.
-    tags:
-        - Bridge
+    # """
+    # ---
+    # summary:        Given a list of puppets, get his bridges status.
+    # tags:
+    #     - Bridge
 
-    requestBody:
-        required: true
-        description: A json with `puppet_list`
-        content:
-            application/json:
-                schema:
-                    type: object
-                    properties:
-                        puppet_list:
-                            type: array
-                            items:
-                                type: string
-                    example:
-                        puppet_list: ["@acd1:localhost", "@acd2:localhost"]
+    # requestBody:
+    #     required: false
+    #     description: A json with `puppet_list`
+    #     content:
+    #         application/json:
+    #             schema:
+    #                 type: object
+    #                 properties:
+    #                     puppet_list:
+    #                         type: array
+    #                         items:
+    #                             type: string
+    #                 example:
+    #                     puppet_list: ["@acd1:localhost", "@acd2:localhost"]
 
-
-    responses:
-        '200':
-            $ref: '#/components/responses/BridgesStatus'
-    """
+    # responses:
+    #     '200':
+    #         $ref: '#/components/responses/BridgesStatus'
+    # """
 
     await _resolve_user_identifier(request=request)
 

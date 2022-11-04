@@ -72,7 +72,7 @@ bridge:
         # These guests will be room admins
         invitees:
             - "@admin:dominio_cliente.com"
-            - "@supervisor1:dominio_cliente.com"
+            - "@supervisor:dominio_cliente.com"
 
 
     # Permissions for using the acd.

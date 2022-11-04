@@ -5,7 +5,7 @@ import json
 from typing import Dict, List
 
 from aiohttp import web
-from mautrix.types import RoomID, UserID
+from mautrix.types import RoomID
 
 from ...commands import acd as cmd_acd
 from ...commands import create as cmd_create
@@ -17,7 +17,6 @@ from ...commands import transfer as cmd_transfer
 from ...commands import transfer_user as cmd_transfer_user
 from ...commands.typehint import CommandEvent
 from ...puppet import Puppet
-from ...user import User
 from ..base import _resolve_puppet_identifier, _resolve_user_identifier, get_config, routes
 from ..error_responses import (
     BRIDGE_INVALID,
@@ -353,60 +352,6 @@ async def bulk_resolve(request: web.Request) -> web.Response:
     )
 
     return web.json_response(text="ok")
-
-
-async def _bulk_resolve(
-    puppet: Puppet, user: User, room_ids: List[RoomID], user_id: UserID, send_message: str
-):
-    for room_ids in room_ids:
-        tasks = []
-        user.log.info(f"Rooms to be resolved: {room_ids}")
-        for room_id in room_ids:
-            # Obtenemos el puppet de este email si existe
-            puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
-            if not puppet:
-                # Si esta sala no tiene puppet entonces pasamos a la siguiente
-                # la sala sin puppet no será resuelta.
-                user.log.warning(
-                    f"The room {room_id} has not been resolved because the puppet was not found"
-                )
-                continue
-
-            # Obtenemos el bridge de la sala dado el room_id
-            bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
-
-            if not bridge:
-                # Si esta sala no tiene bridge entonces pasamos a la siguiente
-                # la sala sin bridge no será resuelta.
-                user.log.warning(
-                    f"The room {room_id} has not been resolved because I didn't found the bridge"
-                )
-                continue
-
-            # Con el bridge obtenido, podremos sacar su prefijo y así luego en el comando
-            # resolve podremos enviar un template si así lo queremos
-            bridge_prefix = puppet.config[f"bridges.{bridge}.prefix"]
-
-            args = [room_id, user_id, send_message, bridge_prefix]
-
-            # Creating a fake command event and passing it to the command processor.
-
-            fake_cmd_event = CommandEvent(
-                sender=user,
-                config=get_config(),
-                command="resolve",
-                is_management=False,
-                intent=puppet.intent,
-                args=args,
-            )
-
-            task = asyncio.create_task(cmd_resolve(fake_cmd_event))
-            tasks.append(task)
-        try:
-            await asyncio.gather(*tasks)
-        except Exception as e:
-            user.log.error(e)
-            continue
 
 
 @routes.post("/v1/cmd/state_event")
