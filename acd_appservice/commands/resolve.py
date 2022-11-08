@@ -185,6 +185,7 @@ class BulkResolve:
                     next_window += self.TW_DELTA
 
                 future_time = next_window - chat_epoch
+                self.log.debug(f"### llega aqui {future_time}")
 
                 # Con el bridge obtenido, podremos sacar su prefijo y así luego en el comando
                 # resolve podremos enviar un template si así lo queremos
@@ -193,6 +194,8 @@ class BulkResolve:
                 args = [room_id, user_id, send_message, bridge_prefix]
 
                 # Creating a fake command event and passing it to the command processor.
+
+                self.log.debug(f"### llega aqui {args}")
 
                 fake_cmd_event = CommandEvent(
                     sender=user,
