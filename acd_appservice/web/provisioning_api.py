@@ -26,7 +26,7 @@ class ProvisioningAPI:
     ) -> None:
         self.app = web.Application()
         self.loop = loop
-        set_config(config, bulk_resolve=bulk_resolve)
+        set_config(config=config, bulk_resolve=bulk_resolve)
 
         swagger = SwaggerDocs(
             self.app,

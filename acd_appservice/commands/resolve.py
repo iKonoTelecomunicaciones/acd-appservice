@@ -145,11 +145,14 @@ class BulkResolve:
         self, room_ids: List[RoomID], user: User, user_id: UserID, send_message: str
     ):
 
+        self.log.debug(f"### llega aqui {room_ids}")
+        self.log.debug(f"### llega aqui {self.NRPW}")
         room_ids_blocks: List[List[RoomID]] = [
             room_ids[i : i + self.NRPW] for i in range(0, len(room_ids), self.NRPW)
         ]
 
         chat_epoch = time()
+        future_time = None
 
         for room_ids in room_ids_blocks:
             tasks = []
@@ -202,6 +205,10 @@ class BulkResolve:
 
                 task = asyncio.create_task(resolve(fake_cmd_event))
                 tasks.append(task)
+
+            if not future_time:
+                future_time = time()
+
             try:
                 self.loop.call_later(future_time, asyncio.gather(*tasks))
             except Exception as e:

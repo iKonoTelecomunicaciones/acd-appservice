@@ -70,6 +70,3 @@ class Util:
 
         """
         return room_alias.startswith("#")
-
-    async def schedule_task(self, loop: AbstractEventLoop, future: float, task: function):
-        loop.call_later(future, task)

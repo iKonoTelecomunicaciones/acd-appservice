@@ -27,6 +27,10 @@ def set_config(config: Config, bulk_resolve: BulkResolve) -> None:
     _bulk_resolve = bulk_resolve
 
 
+def get_bulk_resolve() -> BulkResolve:
+    return _bulk_resolve
+
+
 def get_config() -> Config:
     return _config
 
