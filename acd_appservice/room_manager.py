@@ -466,7 +466,7 @@ class RoomManager:
             A string
 
         """
-        return f"trasnfer-{room_id}-{agent_id}" if transfer else f"{room_id}-{agent_id}"
+        return f"transfer-{room_id}-{agent_id}" if transfer else f"{room_id}-{agent_id}"
 
     @classmethod
     def put_in_offline_menu(cls, room_id):

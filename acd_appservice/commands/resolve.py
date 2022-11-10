@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from datetime import datetime
 from time import time
 from typing import Dict, List
 
@@ -36,6 +37,7 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     """
     # Checking if the command has arguments.
+
     if len(evt.args) < 3:
         detail = "Incomplete arguments for <code>resolve_chat</code> command"
         evt.log.error(detail)
@@ -46,6 +48,10 @@ async def resolve(evt: CommandEvent) -> Dict:
     user_id = evt.args[1]
     send_message = evt.args[2] if len(evt.args) > 2 else None
     bridge = evt.args[3] if len(evt.args) > 3 else None
+
+    evt.log.debug(
+        f"The user {user_id} is resolving the room {room_id}, send_message? // {send_message} "
+    )
 
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
 
@@ -125,39 +131,40 @@ async def resolve(evt: CommandEvent) -> Dict:
 
 class BulkResolve:
 
-    TW_DELTA: float  # Time window (sec)
-    NRPW: float  # Number of rooms per time window
-
-    next_window: float
-
     loop: asyncio.AbstractEventLoop
     log: TraceLogger = logging.getLogger("acd.bulk_resolve")
+
+    main_room_ids_blocks: List[RoomID] = []
+    jesus_has_his_hand_up = False
 
     def __init__(self, loop: asyncio.AbstractEventLoop, config: Config) -> None:
 
         self.loop = loop
         self.config = config
-
-        self.TW_DELTA = config["acd.bulk_resolve.time_window"]
-        self.NRPW = config["acd.bulk_resolve.number_rooms_per_tw"]
+        self.room_bloks = self.config["acd.bulk_resolve.room_blocks"]
 
     async def resolve(
         self, room_ids: List[RoomID], user: User, user_id: UserID, send_message: str
     ):
+        self.log.debug(f"Starting bulk resolve of {len(room_ids)} rooms")
 
-        self.log.debug(f"### llega aqui {room_ids}")
-        self.log.debug(f"### llega aqui {self.NRPW}")
         room_ids_blocks: List[List[RoomID]] = [
-            room_ids[i : i + self.NRPW] for i in range(0, len(room_ids), self.NRPW)
+            room_ids[i : i + self.room_bloks] for i in range(0, len(room_ids), self.room_bloks)
         ]
+        self.main_room_ids_blocks += room_ids_blocks
 
-        chat_epoch = time()
-        future_time = None
+        if self.jesus_has_his_hand_up:
+            self.log.debug(f"##############")
+            self.log.debug(f"##############")
+            self.log.debug(f"jesus tells you to stop")
+            self.log.debug(f"##############")
+            self.log.debug(f"##############")
+            return
 
-        for room_ids in room_ids_blocks:
+        for room_ids_to_resolve in self.main_room_ids_blocks:
             tasks = []
-            self.log.info(f"Rooms to be resolved: {room_ids}")
-            for room_id in room_ids:
+            self.log.info(f"Rooms to be resolved: {len(room_ids_to_resolve)}")
+            for room_id in room_ids_to_resolve:
                 # Obtenemos el puppet de este email si existe
                 puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
                 if not puppet:
@@ -179,14 +186,6 @@ class BulkResolve:
                     )
                     continue
 
-                if chat_epoch - next_window > self.TW_DELTA:
-                    next_window = chat_epoch
-                else:
-                    next_window += self.TW_DELTA
-
-                future_time = next_window - chat_epoch
-                self.log.debug(f"### llega aqui {future_time}")
-
                 # Con el bridge obtenido, podremos sacar su prefijo y así luego en el comando
                 # resolve podremos enviar un template si así lo queremos
                 bridge_prefix = puppet.config[f"bridges.{bridge}.prefix"]
@@ -194,8 +193,6 @@ class BulkResolve:
                 args = [room_id, user_id, send_message, bridge_prefix]
 
                 # Creating a fake command event and passing it to the command processor.
-
-                self.log.debug(f"### llega aqui {args}")
 
                 fake_cmd_event = CommandEvent(
                     sender=user,
@@ -206,14 +203,14 @@ class BulkResolve:
                     args=args,
                 )
 
-                task = asyncio.create_task(resolve(fake_cmd_event))
-                tasks.append(task)
-
-            if not future_time:
-                future_time = time()
+                tasks.append(resolve(fake_cmd_event))
 
             try:
-                self.loop.call_later(future_time, asyncio.gather(*tasks))
+                self.jesus_has_his_hand_up = True
+                await asyncio.gather(*tasks)
             except Exception as e:
                 self.log.error(e)
                 continue
+
+        self.jesus_has_his_hand_up = False
+        self.main_room_ids_blocks = []

@@ -173,11 +173,9 @@ acd:
     # - kick: it makes that the room admin kick the agent from the room
     remove_method: 'leave'
 
-
+    # Allows you to define how many groups of rooms can be solved in bulk resolve
     bulk_resolve:
-        time_window: 0.5
-        number_rooms_per_tw: 5
-
+        room_blocks: 5
 
 # ACD will send below commands to interact with any WA bridge
 bridges:
