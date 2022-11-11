@@ -1,9 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
-from datetime import datetime
-from time import time
-from typing import Dict, List
+from typing import Any, Dict, List, OrderedDict
 
 from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
@@ -134,65 +134,84 @@ class BulkResolve:
     loop: asyncio.AbstractEventLoop
     log: TraceLogger = logging.getLogger("acd.bulk_resolve")
 
-    main_room_ids_blocks: List[RoomID] = []
-    jesus_has_his_hand_up = False
+    room_ids = set()
+
+    active_resolve = False
 
     def __init__(self, loop: asyncio.AbstractEventLoop, config: Config) -> None:
 
         self.loop = loop
         self.config = config
-        self.room_bloks = self.config["acd.bulk_resolve.room_blocks"]
+        self.block_size = self.config["acd.bulk_resolve.block_size"]
 
     async def resolve(
-        self, room_ids: List[RoomID], user: User, user_id: UserID, send_message: str
+        self, new_room_ids: List[RoomID], user: User, user_id: UserID, send_message: str
     ):
-        self.log.debug(f"Starting bulk resolve of {len(room_ids)} rooms")
+        """It resolves all the rooms in the `room_ids` set, in blocks of `block_size` rooms
 
-        room_ids_blocks: List[List[RoomID]] = [
-            room_ids[i : i + self.room_bloks] for i in range(0, len(room_ids), self.room_bloks)
-        ]
-        self.main_room_ids_blocks += room_ids_blocks
+        Parameters
+        ----------
+        new_room_ids : List[RoomID]
+            List[RoomID]
+        user : User
+            The user that will be used to send the message.
+        user_id : UserID
+            The user ID of the user who will send the message.
+        send_message : str
+            The message to be sent to the room.
 
-        if self.jesus_has_his_hand_up:
-            self.log.debug(f"##############")
-            self.log.debug(f"##############")
-            self.log.debug(f"jesus tells you to stop")
-            self.log.debug(f"##############")
-            self.log.debug(f"##############")
+        Returns
+        -------
+            A list of rooms to be resolved.
+
+        """
+
+        # Adding the new rooms to the set of rooms to be resolved.
+        self.room_ids |= set(new_room_ids)
+
+        self.log.info(
+            f"Starting bulk resolve of {len(new_room_ids)} rooms, "
+            f"current rooms {len(self.room_ids)}"
+        )
+
+        if self.active_resolve:
+            self.log.debug(
+                f"Rooms have been enqueued {len(new_room_ids)}, "
+                "as there is an active bulk resolution"
+            )
             return
 
-        for room_ids_to_resolve in self.main_room_ids_blocks:
+        self.active_resolve = True
+
+        # Resolving the rooms in bulk.
+        while len(self.room_ids) > 0:
             tasks = []
-            self.log.info(f"Rooms to be resolved: {len(room_ids_to_resolve)}")
-            for room_id in room_ids_to_resolve:
-                # Obtenemos el puppet de este email si existe
+
+            rooms_to_resolve = list(self.room_ids)[0 : self.block_size]
+            self.log.info(
+                f"Rooms to be resolved: {len(rooms_to_resolve)}, current rooms {len(self.room_ids)}"
+            )
+
+            for room_id in rooms_to_resolve:
+                self.room_ids.remove(room_id)
                 puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
                 if not puppet:
-                    # Si esta sala no tiene puppet entonces pasamos a la siguiente
-                    # la sala sin puppet no será resuelta.
                     self.log.warning(
                         f"The room {room_id} has not been resolved because the puppet was not found"
                     )
                     continue
 
-                # Obtenemos el bridge de la sala dado el room_id
                 bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
 
                 if not bridge:
-                    # Si esta sala no tiene bridge entonces pasamos a la siguiente
-                    # la sala sin bridge no será resuelta.
                     self.log.warning(
                         f"The room {room_id} has not been resolved because I didn't found the bridge"
                     )
                     continue
 
-                # Con el bridge obtenido, podremos sacar su prefijo y así luego en el comando
-                # resolve podremos enviar un template si así lo queremos
                 bridge_prefix = puppet.config[f"bridges.{bridge}.prefix"]
 
                 args = [room_id, user_id, send_message, bridge_prefix]
-
-                # Creating a fake command event and passing it to the command processor.
 
                 fake_cmd_event = CommandEvent(
                     sender=user,
@@ -206,11 +225,9 @@ class BulkResolve:
                 tasks.append(resolve(fake_cmd_event))
 
             try:
-                self.jesus_has_his_hand_up = True
                 await asyncio.gather(*tasks)
             except Exception as e:
                 self.log.error(e)
                 continue
 
-        self.jesus_has_his_hand_up = False
-        self.main_room_ids_blocks = []
+        self.active_resolve = False

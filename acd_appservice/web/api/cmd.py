@@ -57,7 +57,7 @@ async def create(request: web.Request) -> web.Response:
               example:
                   user_email: "@acd1:somewhere.com"
                   control_room_id: "!foo:somewhere.com"
-                  menubot_id: "nobody@somewhere.com"
+                  destination: "nobody@somewhere.com"
                   bridge: "mautrix"
     responses:
         '201':
@@ -337,7 +337,7 @@ async def bulk_resolve(request: web.Request) -> web.Response:
 
     asyncio.create_task(
         get_bulk_resolve().resolve(
-            room_ids=room_ids, user=user, user_id=user_id, send_message=send_message
+            new_room_ids=room_ids, user=user, user_id=user_id, send_message=send_message
         )
     )
 
