@@ -1,4 +1,3 @@
-from asyncio import AbstractEventLoop
 from re import match
 
 from ..config import Config
