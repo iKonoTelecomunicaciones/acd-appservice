@@ -72,7 +72,7 @@ bridge:
         # These guests will be room admins
         invitees:
             - "@admin:dominio_cliente.com"
-            - "@supervisor1:dominio_cliente.com"
+            - "@supervisor:dominio_cliente.com"
 
 
     # Permissions for using the acd.
@@ -173,6 +173,9 @@ acd:
     # - kick: it makes that the room admin kick the agent from the room
     remove_method: 'leave'
 
+    # Allows you to define how many groups of rooms can be solved in bulk resolve
+    bulk_resolve:
+        block_size: 5
 
 # ACD will send below commands to interact with any WA bridge
 bridges:
@@ -257,8 +260,6 @@ bridges:
     send_template_command: ""
 
 utils:
-    # Allows you to define how many groups of rooms can be solved in bulk resolve
-    room_blocks: 5
     # Whatsapp connection timeout (seconds)
     wait_ping_time: 7200
     # regex to email match

@@ -17,7 +17,13 @@ from ...commands import transfer as cmd_transfer
 from ...commands import transfer_user as cmd_transfer_user
 from ...commands.typehint import CommandEvent
 from ...puppet import Puppet
-from ..base import _resolve_puppet_identifier, _resolve_user_identifier, get_config, routes
+from ..base import (
+    _resolve_puppet_identifier,
+    _resolve_user_identifier,
+    get_bulk_resolve,
+    get_config,
+    routes,
+)
 from ..error_responses import (
     BRIDGE_INVALID,
     NOT_DATA,
@@ -51,7 +57,7 @@ async def create(request: web.Request) -> web.Response:
               example:
                   user_email: "@acd1:somewhere.com"
                   control_room_id: "!foo:somewhere.com"
-                  menubot_id: "nobody@somewhere.com"
+                  destination: "nobody@somewhere.com"
                   bridge: "mautrix"
     responses:
         '201':
@@ -329,60 +335,11 @@ async def bulk_resolve(request: web.Request) -> web.Response:
     user_id = data.get("user_id")
     send_message = data.get("send_message")
 
-    # Creamos una lista de tareas vacías que vamos a llenar con cada uno de los comandos
-    # de resolución y luego los ejecutaremos al mismo tiempo
-    # de esta manera podremos resolver muchas salas a la vez y poder tener un buen rendimiento
-
-    # Debemos definir de a cuantas salas vamos a resolver
-    room_block = get_config()["utils.room_blocks"]
-
-    # Dividimos las salas en sublistas y cada sublista de longitud room_block
-    list_room_ids = [room_ids[i : i + room_block] for i in range(0, len(room_ids), room_block)]
-    for room_ids in list_room_ids:
-        tasks = []
-        for room_id in room_ids:
-            # Obtenemos el puppet de este email si existe
-            puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
-            if not puppet:
-                # Si esta sala no tiene puppet entonces pasamos a la siguiente
-                # la sala sin puppet no será resuelta.
-                user.log.warning(
-                    f"The room {room_id} has not been resolved because the puppet was not found"
-                )
-                continue
-
-            # Obtenemos el bridge de la sala dado el room_id
-            bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
-
-            if not bridge:
-                # Si esta sala no tiene bridge entonces pasamos a la siguiente
-                # la sala sin bridge no será resuelta.
-                user.log.warning(
-                    f"The room {room_id} has not been resolved because I didn't found the bridge"
-                )
-                continue
-
-            # Con el bridge obtenido, podremos sacar su prefijo y así luego en el comando
-            # resolve podremos enviar un template si así lo queremos
-            bridge_prefix = puppet.config[f"bridges.{bridge}.prefix"]
-
-            args = [room_id, user_id, send_message, bridge_prefix]
-
-            # Creating a fake command event and passing it to the command processor.
-
-            fake_cmd_event = CommandEvent(
-                sender=user,
-                config=get_config(),
-                command="resolve",
-                is_management=False,
-                intent=puppet.intent,
-                args=args,
-            )
-
-            task = asyncio.create_task(cmd_resolve(fake_cmd_event))
-            tasks.append(task)
-
-        await asyncio.gather(*tasks)
+    asyncio.create_task(
+        get_bulk_resolve().resolve(
+            new_room_ids=room_ids, user=user, user_id=user_id, send_message=send_message
+        )
+    )
 
     return web.json_response(text="ok")
 

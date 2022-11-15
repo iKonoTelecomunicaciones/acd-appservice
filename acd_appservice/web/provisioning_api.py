@@ -9,9 +9,10 @@ from aiohttp_swagger3 import SwaggerDocs, SwaggerInfo, SwaggerUiSettings
 from mautrix.util.logging import TraceLogger
 
 from .. import VERSION
+from ..commands.resolve import BulkResolve
 from ..config import Config
 from . import api
-from .base import base_path_doc, routes, set_config
+from .base import routes, set_config
 
 
 class ProvisioningAPI:
@@ -20,10 +21,12 @@ class ProvisioningAPI:
     log: TraceLogger = logging.getLogger("acd.provisioning")
     app: web.Application
 
-    def __init__(self, config: Config, loop: asyncio.AbstractEventLoop) -> None:
+    def __init__(
+        self, config: Config, loop: asyncio.AbstractEventLoop, bulk_resolve: BulkResolve
+    ) -> None:
         self.app = web.Application()
         self.loop = loop
-        set_config(config)
+        set_config(config=config, bulk_resolve=bulk_resolve)
 
         swagger = SwaggerDocs(
             self.app,
@@ -31,7 +34,7 @@ class ProvisioningAPI:
                 title="ACD AppService documentation",
                 version=VERSION,
             ),
-            components=f"{base_path_doc}/components.yaml",
+            components=f"acd_appservice/web/api/components.yaml",
             swagger_ui_settings=SwaggerUiSettings(
                 path="/docs",
                 layout="BaseLayout",

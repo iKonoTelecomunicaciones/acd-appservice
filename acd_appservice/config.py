@@ -72,6 +72,7 @@ class Config(BaseBridgeConfig):
         copy("acd.no_agents_for_transfer")
         copy_dict("acd.resolve_chat")
         copy("acd.remove_method")
+        copy("acd.bulk_resolve.block_size")
 
         # Utils
         copy_dict("utils")
