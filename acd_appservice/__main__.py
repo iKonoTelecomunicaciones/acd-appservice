@@ -4,6 +4,7 @@ from mautrix.types import UserID
 
 from . import VERSION
 from .acd_program import ACD
+from .commands.resolve import BulkResolve
 from .config import Config
 from .db import init as init_db
 from .db import upgrade_table
@@ -52,7 +53,11 @@ class ACDAppService(ACD):
         # Definimos la ruta por la que se podrá acceder a la API
         api_route = self.config["bridge.provisioning.prefix"]
         # Creamos la instancia de ProvisioningAPI para luego crear una subapp
-        self.provisioning_api = ProvisioningAPI(config=self.config, loop=self.loop)
+        self.provisioning_api = ProvisioningAPI(
+            config=self.config,
+            loop=self.loop,
+            bulk_resolve=BulkResolve(loop=self.loop, config=self.config),
+        )
         # Usan la app de aiohttp, creamos una subaplicacion especifica para la API
         self.az.app.add_subapp(api_route, self.provisioning_api.app)
 
