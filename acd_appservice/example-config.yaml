@@ -172,6 +172,7 @@ acd:
     # - leave: it makes an identity assertion of an agent to make it leave the room
     # - kick: it makes that the room admin kick the agent from the room
     remove_method: 'leave'
+    available_agents_room: "!PjgOHubuTvAlzPVTCr:dominio_cliente.com"
 
 
 # ACD will send below commands to interact with any WA bridge
