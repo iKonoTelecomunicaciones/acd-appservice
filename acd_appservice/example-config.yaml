@@ -172,6 +172,8 @@ acd:
     # - leave: it makes an identity assertion of an agent to make it leave the room
     # - kick: it makes that the room admin kick the agent from the room
     remove_method: 'leave'
+
+    # Use it to distribute chat when acd doesn't have the campaign selected by customer
     available_agents_room: "!PjgOHubuTvAlzPVTCr:dominio_cliente.com"
 
     # Allows you to define how many groups of rooms can be solved in bulk resolve
