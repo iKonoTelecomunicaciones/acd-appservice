@@ -101,7 +101,9 @@ class AgentManager:
             # if a campaign is provided, the loop is done over the agents of that campaign.
             # if campaign is None, the loop is done over the control room
 
-            target_room_id = campaign_room_id if campaign_room_id else self.control_room_id
+            target_room_id = (
+                campaign_room_id if campaign_room_id else self.config["acd.available_agents_room"]
+            )
 
             # a task is created to not block asyncio loop
             create_task(
@@ -858,7 +860,7 @@ class AgentManager:
 
             if not user_selected_campaign:
                 # this can happen if the database is deleted
-                user_selected_campaign = self.control_room_id
+                user_selected_campaign = self.config["acd.available_agents_room"]
 
             # check if that campaign has online agents
             campaign_has_online_agent = await self.get_online_agent_in_room(
@@ -948,7 +950,7 @@ class AgentManager:
                 )
                 if not user_selected_campaign:
                     # this can happen if the database is deleted
-                    user_selected_campaign = self.control_room_id
+                    user_selected_campaign = self.config["acd.available_agents_room"]
                 self.log.debug(f"Transferring to {user_selected_campaign}")
 
                 user: User = await User.get_by_mxid(room_agent)
