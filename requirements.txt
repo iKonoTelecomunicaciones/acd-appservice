@@ -7,3 +7,4 @@ aiohttp-swagger3==0.7.2
 aiohttp-cors==0.7.0
 Markdown==3.4.1
 pytz==2022.1
+beautifulsoup4==4.11.1

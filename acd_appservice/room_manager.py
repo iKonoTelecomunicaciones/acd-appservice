@@ -14,7 +14,6 @@ from mautrix.types import (
     Format,
     JoinRule,
     MessageType,
-    PresenceEventContent,
     RoomDirectoryVisibility,
     RoomID,
     TextMessageEventContent,
@@ -24,6 +23,7 @@ from mautrix.util.logging import TraceLogger
 
 from .config import Config
 from .db import Room
+from .util import Util
 
 
 class RoomManager:
@@ -264,6 +264,12 @@ class RoomManager:
             format=Format.HTML,
             formatted_body=html,
         )
+
+        # Remove markdown and html tags if bridge not support formatted messages
+        bridge_room = await self.get_room_bridge(room_id=room_id)
+        if not self.config[f"bridges.{bridge_room}.format_messages"]:
+            new_body = Util.md_to_text(content.get("body"))
+            content["body"] = new_body if new_body else msg
 
         await self.intent.send_message(
             room_id=room_id,

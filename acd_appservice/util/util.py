@@ -1,5 +1,7 @@
 from re import match
 
+from bs4 import BeautifulSoup
+
 from ..config import Config
 
 
@@ -69,3 +71,26 @@ class Util:
 
         """
         return room_alias.startswith("#")
+
+    @classmethod
+    def md_to_text(cls, formatted_text: str) -> str:
+        """Get a message and remove the formats html and markdown.
+
+        Parameters
+        ----------
+        formatted_text
+            The formatted_text to be unformatted
+
+        Returns
+        -------
+        plain_text
+            The plain_text, formatted_text otherwise.
+        """
+
+        if formatted_text:
+            formatted_text = formatted_text.replace("<br>", "\n")
+            formatted_text = formatted_text.replace("**", "")
+            plain_text = BeautifulSoup(formatted_text, features="html.parser").text
+            return plain_text
+        else:
+            return formatted_text
