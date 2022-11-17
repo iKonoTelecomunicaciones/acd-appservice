@@ -196,6 +196,8 @@ bridges:
     postfix_template: "(WA)"
     set_relay: "set-relay"
     set_permissions: "set-pl {mxid} {power_level}"
+    # Bridge support formated messages
+    format_messages: true
     notice_messages:
       # When I can't create a chat with WhatsApp
         phone_is_not_on_whatsapp: "^The server said \\+(?P<phone_number>[0-9]+) is not on WhatsApp$"
@@ -222,6 +224,8 @@ bridges:
     postfix_template: "(IG)"
     set_permissions: "set-pl {mxid} {power_level}"
     set_relay: "set-relay"
+    # Bridge support formated messages
+    format_messages: false
     # Settings for provisioning API
     provisioning:
         url_base: "http://mautrix-instagram:29320/_matrix/provision"
@@ -245,6 +249,8 @@ bridges:
     postfix_template: "(GS)"
     set_permissions: "set-pl {mxid} {power_level}"
     set_relay: "set-relay"
+    # Bridge support formated messages
+    format_messages: true
     # Settings for provisioning API
     provisioning:
         url_base: "http://gupshup:29324/_matrix/provision"

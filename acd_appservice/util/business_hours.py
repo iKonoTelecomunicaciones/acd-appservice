@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import logging
 from datetime import datetime
-from typing import List
+from typing import TYPE_CHECKING, List
 
 import pytz
 from mautrix.appservice import IntentAPI
@@ -8,7 +10,9 @@ from mautrix.util.logging import TraceLogger
 
 from ..config import Config
 from ..http_client import IkonoAPIClient
-from ..room_manager import RoomManager
+
+if TYPE_CHECKING:
+    from ..room_manager import RoomManager
 
 
 class BusinessHour:

@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 
 from aiohttp import ClientSession, WSMsgType
 from aiohttp.web import WebSocketResponse
 from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
-from . import puppet as pu
 from .config import Config
+
+if TYPE_CHECKING:
+    from . import puppet as pu
 
 
 class BaseClass:
