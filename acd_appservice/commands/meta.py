@@ -19,11 +19,19 @@ def make_help_text(command_prefix: str) -> str:
         A string with the help text for all the commands.
 
     """
-    text = "# Description of commands \n"
+    text = (
+        "# Description of commands\n"
+        "If you want to know more information about each command, "
+        f"send **{command_prefix}** _cmd_ help"
+    )
+
+    text += 2 * "\n"
 
     for cmd in command_handlers:
+        if cmd == "unknown_command":
+            continue
 
-        text = f"{text} * **{command_prefix}** {command_handlers[cmd].help} \n"
+        text += f"- **{command_prefix}** {cmd} {command_handlers[cmd].help}"
 
     return text
 

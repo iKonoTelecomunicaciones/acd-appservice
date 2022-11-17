@@ -1,22 +1,30 @@
-import pytest
 import pytest_asyncio
 
-from acd_appservice.room_manager import RoomManager
-
 from ..config import Config
+from ..room_manager import RoomManager
+from ..util import Util
 
 
 @pytest_asyncio.fixture
-async def room_manager_mock():
-
-    config = Config(
+async def config():
+    _config = Config(
         path="acd_appservice/example-config.yaml",
         registration_path="registration.yaml",
         base_path=".",
     )
 
-    config.load()
+    _config.load()
 
+    return _config
+
+
+@pytest_asyncio.fixture
+async def util(config: Config):
+    return Util(config=config)
+
+
+@pytest_asyncio.fixture
+async def room_manager_mock(config: Config):
     return RoomManager(puppet_pk=14, control_room_id="!asvqgqpHdym:matrix.org", config=config)
 
 

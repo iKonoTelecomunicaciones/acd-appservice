@@ -883,12 +883,13 @@ class RoomManager:
             await asyncio.sleep(2)
 
     async def invite_supervisors(self, room_id: RoomID) -> None:
-        """It tries to invite the menubot to the room, and if it fails, it waits a couple of seconds and tries again
+        """Invite supervisors to the room, and if it fails,
+        it waits a couple of seconds and tries again.
 
         Parameters
         ----------
         room_id : RoomID
-            The room ID of the room you want to invite the menubot to.
+            The room ID of the room to invite supervisors to.
 
         """
 

@@ -3,7 +3,7 @@ import pytest
 from mautrix.types import RoomID
 from pytest_mock import MockerFixture
 
-from acd_appservice import room_manager
+from ..room_manager import RoomManager
 
 nest_asyncio.apply()
 
@@ -13,7 +13,7 @@ class TestRoomManager:
     async def test_is_mautrix_customer_room(
         self,
         mocker: MockerFixture,
-        room_manager_mock: room_manager.RoomManager,
+        room_manager_mock: RoomManager,
         get_room_info_mock,
     ):
         """
@@ -21,9 +21,7 @@ class TestRoomManager:
         """
         room_creator = "@mxwa_573123456789:matrix.org"
 
-        mocker.patch.object(
-            room_manager.RoomManager, "get_room_creator", return_value=room_creator
-        )
+        mocker.patch.object(RoomManager, "get_room_creator", return_value=room_creator)
 
         room_manager_mock.intent = None
         result = await room_manager_mock.is_customer_room(
@@ -34,7 +32,7 @@ class TestRoomManager:
     async def test_is_not_customer_room(
         self,
         mocker: MockerFixture,
-        room_manager_mock: room_manager.RoomManager,
+        room_manager_mock: RoomManager,
         get_room_info_mock,
     ):
         """
@@ -42,9 +40,7 @@ class TestRoomManager:
         """
         room_creator = "@supervisor:matrix.org"
 
-        mocker.patch.object(
-            room_manager.RoomManager, "get_room_creator", return_value=room_creator
-        )
+        mocker.patch.object(RoomManager, "get_room_creator", return_value=room_creator)
 
         room_manager_mock.intent = None
         result = await room_manager_mock.is_customer_room(
@@ -55,7 +51,7 @@ class TestRoomManager:
     async def test_is_instagram_customer_room(
         self,
         mocker: MockerFixture,
-        room_manager_mock: room_manager.RoomManager,
+        room_manager_mock: RoomManager,
         get_room_info_mock,
     ):
         """
@@ -63,9 +59,7 @@ class TestRoomManager:
         """
         room_creator = "@ig_6546846652:matrix.org"
 
-        mocker.patch.object(
-            room_manager.RoomManager, "get_room_creator", return_value=room_creator
-        )
+        mocker.patch.object(RoomManager, "get_room_creator", return_value=room_creator)
 
         room_manager_mock.intent = None
         result = await room_manager_mock.is_customer_room(
@@ -76,7 +70,7 @@ class TestRoomManager:
     async def test_is_gupshup_customer_room(
         self,
         mocker: MockerFixture,
-        room_manager_mock: room_manager.RoomManager,
+        room_manager_mock: RoomManager,
         get_room_info_mock,
     ):
         """
@@ -84,9 +78,7 @@ class TestRoomManager:
         """
         room_creator = "@gswa_573123456789:matrix.org"
 
-        mocker.patch.object(
-            room_manager.RoomManager, "get_room_creator", return_value=room_creator
-        )
+        mocker.patch.object(RoomManager, "get_room_creator", return_value=room_creator)
 
         room_manager_mock.intent = None
         result = await room_manager_mock.is_customer_room(
@@ -97,7 +89,7 @@ class TestRoomManager:
     async def test_get_room_mautrix_bridge(
         self,
         mocker: MockerFixture,
-        room_manager_mock: room_manager.RoomManager,
+        room_manager_mock: RoomManager,
         get_room_info_mock,
     ):
         """
@@ -105,9 +97,7 @@ class TestRoomManager:
         """
         room_creator = "@mxwa_573123456789:matrix.org"
 
-        mocker.patch.object(
-            room_manager.RoomManager, "get_room_creator", return_value=room_creator
-        )
+        mocker.patch.object(RoomManager, "get_room_creator", return_value=room_creator)
         room_manager_mock.intent = None
         result = await room_manager_mock.get_room_bridge(
             room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
@@ -117,7 +107,7 @@ class TestRoomManager:
 
     async def test_get_bridge_by_cmd_prefix(
         self,
-        room_manager_mock: room_manager.RoomManager,
+        room_manager_mock: RoomManager,
         get_room_info_mock,
     ):
         """
@@ -134,7 +124,7 @@ class TestRoomManager:
     async def test_get_room_instagram_bridge(
         self,
         mocker: MockerFixture,
-        room_manager_mock: room_manager.RoomManager,
+        room_manager_mock: RoomManager,
         get_room_info_mock,
     ):
         """
@@ -142,9 +132,7 @@ class TestRoomManager:
         """
         room_creator = "@ig_6546846652:matrix.org"
 
-        mocker.patch.object(
-            room_manager.RoomManager, "get_room_creator", return_value=room_creator
-        )
+        mocker.patch.object(RoomManager, "get_room_creator", return_value=room_creator)
         room_manager_mock.intent = None
         result = await room_manager_mock.get_room_bridge(
             room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
@@ -155,7 +143,7 @@ class TestRoomManager:
     async def test_get_room_gupshup_bridge(
         self,
         mocker: MockerFixture,
-        room_manager_mock: room_manager.RoomManager,
+        room_manager_mock: RoomManager,
         get_room_info_mock,
     ):
         """
@@ -163,9 +151,7 @@ class TestRoomManager:
         """
         room_creator = "@gswa_573123456789:matrix.org"
 
-        mocker.patch.object(
-            room_manager.RoomManager, "get_room_creator", return_value=room_creator
-        )
+        mocker.patch.object(RoomManager, "get_room_creator", return_value=room_creator)
         room_manager_mock.intent = None
         result = await room_manager_mock.get_room_bridge(
             room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
@@ -176,7 +162,7 @@ class TestRoomManager:
     async def test_not_get_room_bridge(
         self,
         mocker: MockerFixture,
-        room_manager_mock: room_manager.RoomManager,
+        room_manager_mock: RoomManager,
         get_room_info_mock,
     ):
         """
@@ -184,10 +170,8 @@ class TestRoomManager:
         """
         room_creator = "@agente:matrix.org"
 
-        mocker.patch.object(
-            room_manager.RoomManager, "get_room_creator", return_value=room_creator
-        )
-        mocker.patch.object(room_manager.RoomManager, "is_guest_room", return_value=False)
+        mocker.patch.object(RoomManager, "get_room_creator", return_value=room_creator)
+        mocker.patch.object(RoomManager, "is_guest_room", return_value=False)
 
         room_manager_mock.intent = None
         result = await room_manager_mock.get_room_bridge(
@@ -197,14 +181,14 @@ class TestRoomManager:
         assert result == None
 
     async def test_is_mx_whatsapp_status_broadcast(
-        self, mocker: MockerFixture, room_manager_mock: room_manager.RoomManager
+        self, mocker: MockerFixture, room_manager_mock: RoomManager
     ):
         """
         True if the room is whatsapp_status_broadcast, False otherwise.
         """
         room_name = "WhatsApp Status Broadcast"
 
-        mocker.patch.object(room_manager.RoomManager, "get_room_name", return_value=room_name)
+        mocker.patch.object(RoomManager, "get_room_name", return_value=room_name)
         room_manager_mock.intent = None
         result = await room_manager_mock.is_mx_whatsapp_status_broadcast(
             room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
@@ -213,30 +197,26 @@ class TestRoomManager:
         assert result == True
 
     async def test_is_not_mx_whatsapp_status_broadcast(
-        self, mocker: MockerFixture, room_manager_mock: room_manager.RoomManager
+        self, mocker: MockerFixture, room_manager_mock: RoomManager
     ):
         """
         True if the room is whatsapp_status_broadcast, False otherwise.
         """
         room_name = "SALA DE CONTROL"
 
-        mocker.patch.object(room_manager.RoomManager, "get_room_name", return_value=room_name)
+        mocker.patch.object(RoomManager, "get_room_name", return_value=room_name)
         room_manager_mock.intent = None
         result = await room_manager_mock.is_mx_whatsapp_status_broadcast(
             room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
         )
         assert result == False
 
-    async def test_get_update_name(
-        self, mocker: MockerFixture, room_manager_mock: room_manager.RoomManager
-    ):
+    async def test_get_update_name(self, mocker: MockerFixture, room_manager_mock: RoomManager):
         """
         Returns the updated name of a client's room.
         """
         new_room_name = "Alejandro Herrera (WA) (573058790293)"
-        mocker.patch.object(
-            room_manager.RoomManager, "create_room_name", return_value=new_room_name
-        )
+        mocker.patch.object(RoomManager, "create_room_name", return_value=new_room_name)
         room_manager_mock.intent = None
         result = await room_manager_mock.get_update_name(creator="@mxwa_573058790293")
         assert result == "Alejandro Herrera (573058790293)"

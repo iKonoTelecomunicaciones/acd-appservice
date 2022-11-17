@@ -20,7 +20,7 @@ from .typehint import CommandEvent
 @command_handler(
     name="resolve",
     help_text=("Command resolving a chat, ejecting the supervisor and the agent"),
-    help_args="<_room_id_> <_user_id_> <_send_message_> <_bridge_>",
+    help_args="<_room_id_> <_user_id_> <_send_message_> [_bridge_]",
 )
 async def resolve(evt: CommandEvent) -> Dict:
     """It kicks the agent and menubot from the chat,
@@ -37,17 +37,16 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     """
     # Checking if the command has arguments.
-
-    if len(evt.args) < 3:
+    if len(evt.args_list) < 3:
         detail = "Incomplete arguments for <code>resolve_chat</code> command"
         evt.log.error(detail)
         await evt.reply(text=detail)
         return
 
-    room_id = evt.args[0]
-    user_id = evt.args[1]
-    send_message = evt.args[2] if len(evt.args) > 2 else None
-    bridge = evt.args[3] if len(evt.args) > 3 else None
+    room_id = evt.args_list[0]
+    user_id = evt.args_list[1]
+    send_message = evt.args_list[2] if len(evt.args_list) > 2 else None
+    bridge = evt.args_list[3] if len(evt.args_list) > 3 else None
 
     evt.log.debug(
         f"The user {user_id} is resolving the room {room_id}, send_message? // {send_message} "
@@ -122,7 +121,7 @@ async def resolve(evt: CommandEvent) -> Dict:
                 room_id=room_id,
                 is_management=room_id == evt.sender.management_room,
                 text=template_data,
-                args=template_data.split(),
+                args_list=template_data.split(),
             )
             await template(cmd_evt)
 

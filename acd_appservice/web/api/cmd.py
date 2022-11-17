@@ -21,6 +21,7 @@ from ..base import (
     _resolve_puppet_identifier,
     _resolve_user_identifier,
     get_bulk_resolve,
+    get_commands,
     get_config,
     routes,
 )
@@ -87,7 +88,7 @@ async def create(request: web.Request) -> web.Response:
         email = data.get("user_email")
 
     fake_cmd_event = CommandEvent(
-        sender=user, config=get_config(), command="create", is_management=True, args=args
+        sender=user, config=get_config(), command="create", is_management=True, args_list=args
     )
 
     puppet = await cmd_create(fake_cmd_event)
@@ -197,7 +198,7 @@ async def pm(request: web.Request) -> web.Response:
             is_management=False,
             intent=puppet.intent,
             text=data_cmd,
-            args=data_cmd.split(),
+            args_list=data_cmd.split(),
         )
 
         result = await cmd_pm(fake_cmd_event)
@@ -230,8 +231,8 @@ async def resolve(request: web.Request) -> web.Response:
                         send_message:
                             type: string
                     example:
-                        room_id: "!gKEsOPrixwrrMFCQCJ:darknet"
-                        user_id: "@acd_1:darknet"
+                        room_id: "!gKEsOPrixwrrMFCQCJ:foo.com"
+                        user_id: "@acd_1:foo.com"
                         send_message: "yes"
 
     responses:
@@ -275,7 +276,7 @@ async def resolve(request: web.Request) -> web.Response:
         command="resolve",
         is_management=False,
         intent=puppet.intent,
-        args=args,
+        args_list=args,
     )
 
     await cmd_resolve(fake_cmd_event)
@@ -306,12 +307,12 @@ async def bulk_resolve(request: web.Request) -> web.Response:
                             type: string
                     example:
                         "room_ids": [
-                            "!GmkrVrscIseYrhpTSz:darknet",
-                            "!dsardsfasddcshpTSz:darknet",
-                            "!GmkrVrssetrhtrsdfz:darknet",
-                            "!GnjyuikfdvdfrhpTSz:darknet"
+                            "!GmkrVrscIseYrhpTSz:foo.com",
+                            "!dsardsfasddcshpTSz:foo.com",
+                            "!GmkrVrssetrhtrsdfz:foo.com",
+                            "!GnjyuikfdvdfrhpTSz:foo.com"
                             ]
-                        "user_id": "@supervisor:darknet"
+                        "user_id": "@supervisor:foo.com"
                         "send_message": "no"
 
 
@@ -365,7 +366,7 @@ async def state_event(request: web.Request) -> web.Response:
                         event_type:
                             type: string
                     example:
-                        room_id: "!gKEsOPrixwrrMFCQCJ:darknet"
+                        room_id: "!gKEsOPrixwrrMFCQCJ:foo.com"
                         event_type: "ik.chat.tag"
                         tags: [
                                 {
@@ -421,7 +422,7 @@ async def state_event(request: web.Request) -> web.Response:
         command="state_event",
         is_management=False,
         intent=puppet.intent,
-        args=text_incoming_params.split(),
+        args_list=text_incoming_params.split(),
         text=text_incoming_params,
     )
 
@@ -453,7 +454,7 @@ async def template(request: web.Request) -> web.Response:
                         template_message:
                             type: string
                     example:
-                        room_id: "!duOWDQQCshKjQvbyoh:darknet"
+                        room_id: "!duOWDQQCshKjQvbyoh:foo.com"
                         template_name: "hola"
                         template_message: "Hola iKono!!"
 
@@ -494,7 +495,7 @@ async def template(request: web.Request) -> web.Response:
         command="template",
         is_management=False,
         intent=puppet.intent,
-        args=text_incoming_params.split(),
+        args_list=text_incoming_params.split(),
         text=text_incoming_params,
     )
 
@@ -523,8 +524,8 @@ async def transfer(request: web.Request) -> web.Response:
                         campaign_room_id:
                             type: string
                     example:
-                        customer_room_id: "!duOWDQQCshKjQvbyoh:darknet"
-                        campaign_room_id: "!TXMsaIzbeURlKPeCxJ:darknet"
+                        customer_room_id: "!duOWDQQCshKjQvbyoh:foo.com"
+                        campaign_room_id: "!TXMsaIzbeURlKPeCxJ:foo.com"
 
     responses:
         '400':
@@ -559,7 +560,7 @@ async def transfer(request: web.Request) -> web.Response:
         command="transfer",
         is_management=False,
         intent=puppet.intent,
-        args=args,
+        args_list=args,
     )
 
     await cmd_transfer(fake_cmd_event)
@@ -589,8 +590,8 @@ async def transfer_user(request: web.Request) -> web.Response:
                         force:
                             type: string
                     example:
-                        customer_room_id: "!duOWDQQCshKjQvbyoh:darknet"
-                        target_agent_id: "@agente1:darknet"
+                        customer_room_id: "!duOWDQQCshKjQvbyoh:foo.com"
+                        target_agent_id: "@agente1:foo.com"
                         force: "yes"
 
     responses:
@@ -630,11 +631,76 @@ async def transfer_user(request: web.Request) -> web.Response:
         command="transfer_user",
         is_management=False,
         intent=puppet.intent,
-        args=args,
+        args_list=args,
     )
 
     await cmd_transfer_user(fake_cmd_event)
     return web.json_response()
+
+
+@routes.post("/v1/cmd/queue")
+async def queue(request: web.Request) -> web.Response:
+    """
+    ---
+    summary:    Command that create a queue. A queue is a matrix room containing agents that will
+                be used for chat distribution. `invitees` is a comma-separated list of user_ids.
+    tags:
+        - Commands
+
+    requestBody:
+        required: false
+        description: A json with `user_email`
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        action:
+                            type: string
+                        name:
+                            type: string
+                    example:
+                        action: "create"
+                        name: "My favourite queue"
+                        invitees: ["@agent1:foo.com", "@agent2:foo.com"]
+
+    responses:
+        '200':
+            $ref: '#/components/responses/QueueSuccessful'
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '422':
+            $ref: '#/components/responses/NotExist'
+    """
+    user = await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    data: Dict = await request.json()
+
+    if not (data.get("name") and data.get("action")):
+        return web.json_response(**REQUIRED_VARIABLES)
+
+    action = data.get("action")
+    name = data.get("name")
+
+    invitees = None
+
+    if data.get("invitees"):
+        invitees: List = data.get("invitees")
+        invitees: str = ",".join(invitees)
+
+    args = [action, name, invitees]
+
+    # Creating a fake command event and passing it to the command processor.
+    result: Dict = await get_commands().handle(
+        sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
+    )
+
+    return web.json_response(
+        data=result, status=result.get("status") if result.get("status") == 500 else 200
+    )
 
 
 @routes.post("/v1/cmd/acd")
@@ -706,7 +772,7 @@ async def acd(request: web.Request) -> web.Response:
         command="acd",
         is_management=False,
         intent=puppet.intent,
-        args=args,
+        args_list=args,
     )
 
     await cmd_acd(fake_cmd_event)

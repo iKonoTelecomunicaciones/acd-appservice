@@ -5,7 +5,7 @@ from typing import Dict
 
 from markdown import markdown
 
-from ..http_client import ProvisionBridge
+from ..client import ProvisionBridge
 from ..puppet import Puppet
 from ..signaling import Signaling
 from .handler import command_handler
@@ -34,7 +34,7 @@ async def pm(evt: CommandEvent) -> Dict:
     """
 
     # Checking if the command has arguments.
-    if len(evt.args) < 1:
+    if len(evt.args_list) < 1:
         detail = "pm command incomplete arguments"
         evt.log.error(detail)
         await evt.reply(text=detail)

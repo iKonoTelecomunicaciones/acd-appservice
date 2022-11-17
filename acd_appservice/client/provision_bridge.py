@@ -1,105 +1,24 @@
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING, Dict, Optional
 
 from aiohttp import ClientSession, WSMsgType
 from aiohttp.web import WebSocketResponse
 from mautrix.types import RoomID, UserID
-from mautrix.util.logging import TraceLogger
 
-from .config import Config
+from ..config import Config
+from .base import Base
 
 if TYPE_CHECKING:
-    from . import puppet as pu
+    from ..puppet import Puppet
 
 
-class BaseClass:
-    log: TraceLogger = logging.getLogger("acd.http")
-    config: Config
-    session: ClientSession
-
-
-class IkonoAPIClient(BaseClass):
-    def __init__(self, session: ClientSession, config: Config, user_id: UserID):
-        self.session = session
-        self.config = config
-        self.user_id = user_id
-        self.api_token = None
-
-    async def get_api_token(self):
-        """It gets an access token from the API
-
-        Returns
-        -------
-            The return value is a list of dictionaries.
-
-        """
-
-        base_url = self.config["ikono_api.base_url"]
-        login_url = self.config["ikono_api.login_url"]
-        data = {
-            "username": self.user_id,
-            "password": self.config["ikono_api.password"],
-        }
-        url = f"{base_url}{login_url}"
-        try:
-            async with self.session.post(url, data=data) as response:
-                if response.status != 200:
-                    self.log.error(
-                        f"Failed to get api access token {self.user_id}: {await response.text()}"
-                    )
-                    return False
-                response_json = await response.json()
-        except Exception as e:
-            self.log.error(f"Error getting api access token: {e}")
-            return False
-
-        self.api_token = response_json.get("access_token")
-        return True
-
-    async def get_request(self, url: str, data: dict = None):
-        """It makes a GET request to the url provided.
-
-        Parameters
-        ----------
-        url : str
-            The URL to make the request to.
-        data : dict
-            The data to send to the server.
-
-        Returns
-        -------
-            The status code and the response in json format.
-
-        """
-
-        self.log.debug(f"GET {url}")
-        headers = {
-            "Authorization": f"Bearer {self.api_token}",
-        }
-
-        try:
-            async with self.session.get(url, headers=headers, data=data) as response:
-                if response.status == 401:
-                    self.log.debug("TOKEN viejo... Refrescando...")
-                    await self.get_api_token()
-                    headers = {"Authorization": f"Bearer {self.api_token}"}
-                    async with self.session.get(url, headers=headers, data=data) as response:
-                        response_json = await response.json()
-                else:
-                    response_json = await response.json()
-                return response.status, response_json
-        except Exception as e:
-            self.log.error(f"Error in GET {url} : {e}")
-            return (500, None)
-
-
-class ProvisionBridge(BaseClass):
+class ProvisionBridge(Base):
     def __init__(self, config: Config, session: ClientSession = None, bridge: str = "mautrix"):
         self.session = session
         self.config = config
         self.bridge = bridge
+        self.log = self.log.getChild(f"provision_bridge.{bridge}")
         self.endpoints: Dict[str, str] = config[f"bridges.{bridge}.provisioning.endpoints"]
 
     @property
@@ -114,7 +33,7 @@ class ProvisionBridge(BaseClass):
 
     async def mautrix_ws_connect(
         self,
-        puppet: pu.Puppet,
+        puppet: Puppet,
         ws_customer: Optional[WebSocketResponse] = None,
         easy_mode: bool = False,
     ):
@@ -122,7 +41,7 @@ class ProvisionBridge(BaseClass):
 
         Parameters
         ----------
-        puppet : pu.Puppet
+        puppet : Puppet
             The puppet of the user requesting the qr.
         ws_customer : Optional[WebSocketResponse]
             The websocket connection to the client.

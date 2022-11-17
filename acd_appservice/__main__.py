@@ -4,11 +4,11 @@ from mautrix.types import UserID
 
 from . import VERSION
 from .acd_program import ACD
+from .client import ProvisionBridge
 from .commands.resolve import BulkResolve
 from .config import Config
 from .db import init as init_db
 from .db import upgrade_table
-from .http_client import ProvisionBridge
 from .matrix_handler import MatrixHandler
 from .puppet import Puppet
 from .user import User

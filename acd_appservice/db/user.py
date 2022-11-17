@@ -16,7 +16,9 @@ class User:
 
     mxid: UserID
     id: int | None = None
-    management_room: RoomID | None = None
+    management_room: RoomID | None = None  # if is admin
+
+    # max_chats: int = 0
 
     _columns = "mxid, management_room"
 
