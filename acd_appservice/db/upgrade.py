@@ -75,3 +75,32 @@ async def upgrade_v2(conn: Connection) -> None:
         )"""
     )
     await conn.execute("""ALTER TABLE puppet RENAME COLUMN photo_id TO destination""")
+
+
+@upgrade_table.register(description="Table queue and queue_membership")
+async def upgrade_v3(conn: Connection) -> None:
+    await conn.execute(
+        """CREATE TABLE queue (
+        id          SERIAL PRIMARY KEY,
+        name        TEXT,
+        room_id     TEXT NOT NULL
+        )"""
+    )
+    await conn.execute(
+        """CREATE TABLE queue_membership (
+        id            SERIAL PRIMARY KEY,
+        fk_user       INT NOT NULL,
+        fk_queue      INT NOT NULL,
+        creation_ts   BIGINT,
+        UNIQUE (fk_user, fk_queue)
+        )"""
+    )
+    await conn.execute(
+        'ALTER TABLE queue_membership ADD CONSTRAINT FK_user_queue_membership FOREIGN KEY (fk_user) references "user" (id)'
+    )
+    await conn.execute(
+        "ALTER TABLE queue_membership ADD CONSTRAINT FK_queue_queue_membership FOREIGN KEY (fk_queue) references queue (id)"
+    )
+    await conn.execute("CREATE INDEX idx_queue_room_id ON queue(room_id)")
+    await conn.execute("CREATE INDEX idx_queue_membership_user ON queue_membership(fk_user)")
+    await conn.execute("CREATE INDEX idx_queue_membership_queue ON queue_membership(fk_queue)")

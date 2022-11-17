@@ -39,16 +39,16 @@ async def create(evt: CommandEvent) -> Puppet:
     control_room_id = ""
     puppet = None
 
-    if len(evt.args) >= 1:
+    if len(evt.args_list) >= 1:
 
-        bridge = evt.args[0]
+        bridge = evt.args_list[0]
         bridge_bot = evt.config[f"bridges.{bridge}.mxid"]
 
-        if len(evt.args) >= 2:
-            destination = evt.args[1]  # Could be a user_id, room_id or a room_alias
+        if len(evt.args_list) >= 2:
+            destination = evt.args_list[1]  # Could be a user_id, room_id or a room_alias
 
-        if len(evt.args) >= 3:
-            control_room_id = evt.args[2]  # An existing room that you want to reuse
+        if len(evt.args_list) >= 3:
+            control_room_id = evt.args_list[2]  # An existing room that you want to reuse
 
     # We get the following puppet available in the bd
     next_puppet = await Puppet.get_next_puppet()

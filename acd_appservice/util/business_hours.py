@@ -8,8 +8,8 @@ import pytz
 from mautrix.appservice import IntentAPI
 from mautrix.util.logging import TraceLogger
 
+from ..client import IkonoAPI
 from ..config import Config
-from ..http_client import IkonoAPIClient
 
 if TYPE_CHECKING:
     from ..room_manager import RoomManager
@@ -23,7 +23,7 @@ class BusinessHour:
         self.intent = intent
         self.config = config
         self.room_manager = room_manager
-        self.ikono_client = IkonoAPIClient(
+        self.ikono_api = IkonoAPI(
             session=intent.api.session, config=config, user_id=self.intent.mxid
         )
 
@@ -75,7 +75,7 @@ class BusinessHour:
             base_url = self.config["ikono_api.base_url"]
             holidays_url = self.config["ikono_api.holidays_url"]
             url = f"{base_url}{holidays_url}?holiday_date={now.strftime('%Y-%m-%d')}"
-            response_status, holiday = await self.ikono_client.get_request(url)
+            response_status, holiday = await self.ikono_api.get_request(url)
 
             self.HOLIDAY_INFO["today"] = now.strftime("%Y-%m-%d")
             self.HOLIDAY_INFO["is_holiday"] = False if response_status != 200 else True

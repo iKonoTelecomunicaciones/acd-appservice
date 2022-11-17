@@ -171,7 +171,22 @@ acd:
     # NOTE: The namespaces must be properly configured to use the 'leave' option
     # - leave: it makes an identity assertion of an agent to make it leave the room
     # - kick: it makes that the room admin kick the agent from the room
-    remove_method: 'leave'
+    remove_method: "leave"
+
+    queues:
+        topic: "Queue"
+        # Does the ACD have to `invite` users to the queue or do a forced `join`?
+        # You can only force `join` users from your own server.
+        # Possible fields:
+        # invite: Invite users to the queue room
+        # join: Forces users to join the queue
+        user_add_method: "invite"
+        # Should the queues created by the ACD be `public` or `private`?
+        visibility: "private"
+        # This will always be invited even if you have `user_add_method` in `join`.
+        invitees:
+            - "@admin:dominio_cliente.com"
+            - "@supervisor:dominio_cliente.com"
 
     # Use it to distribute chat when acd doesn't have the campaign selected by customer
     available_agents_room: "!PjgOHubuTvAlzPVTCr:dominio_cliente.com"

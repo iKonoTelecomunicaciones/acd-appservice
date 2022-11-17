@@ -1,7 +1,7 @@
 import json
 from typing import Dict
 
-from ..http_client import ProvisionBridge
+from ..client import ProvisionBridge
 from ..puppet import Puppet
 from .handler import command_handler
 from .typehint import CommandEvent
@@ -26,7 +26,7 @@ async def template(evt: CommandEvent) -> Dict:
 
     """
     # Checking if the command has arguments.
-    if not evt.args:
+    if not evt.args_list:
         detail = "Incomplete arguments for <code>template</code> command"
         await evt.reply(text=detail)
         evt.log.error(detail)
@@ -47,7 +47,7 @@ async def template(evt: CommandEvent) -> Dict:
 
     room_id = incoming_params.get("room_id")
     template_name = incoming_params.get("template_name")
-    template_message = incoming_params.get("template_message")
+    template_message: str = incoming_params.get("template_message")
 
     # Validating incoming params
     if not room_id:

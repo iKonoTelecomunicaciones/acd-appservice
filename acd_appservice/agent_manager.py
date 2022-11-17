@@ -880,7 +880,7 @@ class AgentManager:
                 room_id=room_id,
                 sender=user,
                 command="transfer",
-                args=f"{room_id} {user_selected_campaign}".split(),
+                args_list=f"{room_id} {user_selected_campaign}".split(),
                 intent=self.intent,
                 is_management=room_id == user.management_room,
             )
@@ -959,7 +959,7 @@ class AgentManager:
                     room_id=room_id,
                     sender=user,
                     command="transfer",
-                    args=f"{room_id} {user_selected_campaign}".split(),
+                    args_list=f"{room_id} {user_selected_campaign}".split(),
                     intent=self.intent,
                     is_management=room_id == user.management_room,
                 )

@@ -125,8 +125,8 @@ components:
           $ref: '#/components/schemas/MessageOk'
       example:
           event_id: "$viRb6Wrnt2_25VbfjGhT-MVS9M2V52ILe6Pe-KTr4C4"
-          room_id: "!JkbrMXRBOmnqacLMep:darknet"
-          sender: "@acd_1:darknet"
+          room_id: "!JkbrMXRBOmnqacLMep:foo.com"
+          sender: "@acd_1:foo.com"
           receiver: "+573123456789"
           timestamp_send: 1654877677916
           timestamp_read: 1654877699166
@@ -138,7 +138,7 @@ components:
         data:
           $ref: '#/components/schemas/ControlRoom'
       example:
-          room_id: "!JkbrMXRBOmnqacLMep:darknet"
+          room_id: "!JkbrMXRBOmnqacLMep:foo.com"
 
     QrDataFail:
       type: object
@@ -162,10 +162,10 @@ components:
         status:
           type: integer
       example:
-          sender_id: "@agente1:darknet"
+          sender_id: "@agente1:foo.com"
           customer_phone: "+573123456789"
           company_phone: "+57398765432"
-          room_id: "!jIqZOpixKgUIplraWg:darknet"
+          room_id: "!jIqZOpixKgUIplraWg:foo.com"
           agent_displayname: "agente1"
           reply: "You are already in room with [number], message was sent."
           status: 200
@@ -178,12 +178,26 @@ components:
         status:
           type: integer
       example:
-          sender_id: "@agente1:darknet"
+          sender_id: "@agente1:foo.com"
           phone_number: "+57305879"
           room_id: null
           agent_displayname: null
           reply: "The server said [number] is not on WhatsApp"
           status: 422
+
+    QueueOk:
+      type: object
+      properties:
+        id:
+          type: integer
+        room_id:
+          type: string
+        name:
+          type: string
+      example:
+          id: 5
+          room_id: "!HwBQhttNpkKFfuzUpl:foo.com"
+          name: "My favourite queue"
 
     SendMessageSuccessful:
       type: object
@@ -197,7 +211,7 @@ components:
       example:
         detail: "The message has been sent (probably)"
         event_id: "$PHtug6AByEXtMcJR-TvZ9lR6DgixA9nvyPNroyppSV8"
-        room_id: "!CzCDxtfIpIshzruJBR:darknet"
+        room_id: "!CzCDxtfIpIshzruJBR:foo.com"
 
     LogoutSuccessful:
       type: object
@@ -265,7 +279,7 @@ components:
       example:
         bridges_status:
           - admin: true
-            mxid: "@acd1:darknet"
+            mxid: "@acd1:foo.com"
             relay_whitelisted: true
             whatsapp:
               conn:
@@ -274,12 +288,12 @@ components:
               device: 49
               has_session: true
               jid: 5730000000.0:49@s.whatsapp.net
-              management_room: "!qygKFQLVCpfPLjEWqc:darknet"
+              management_room: "!qygKFQLVCpfPLjEWqc:foo.com"
               phone: "+5730000000"
               platform: smba
             whitelisted: true
           - admin: true
-            mxid: "@acd2:darknet"
+            mxid: "@acd2:foo.com"
             relay_whitelisted: true
             whatsapp:
               conn:
@@ -288,7 +302,7 @@ components:
               device: 25
               has_session: true
               jid: 573001290000.0:25@s.whatsapp.net
-              management_room: "!pCJFIiZUmWnuigitTT:darknet"
+              management_room: "!pCJFIiZUmWnuigitTT:foo.com"
               phone: "+573001290000"
               platform: smba
             whitelisted: true
@@ -308,6 +322,13 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/PmOk'
+
+    QueueSuccessful:
+      description: Queue successful.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/QueueOk'
 
     QrGenerated:
       description: QR has been generated.

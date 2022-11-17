@@ -1,11 +1,14 @@
 from re import match
 
 from bs4 import BeautifulSoup
+from mautrix.types import RoomAlias, RoomID, UserID
 
 from ..config import Config
 
 
 class Util:
+    _main_matrix_regex = "[\\w-]+:[\\w.-]"
+
     def __init__(self, config: Config):
         self.config = config
 
@@ -25,7 +28,7 @@ class Util:
         return bool(match(self.config["utils.regex_email"], email))
 
     @classmethod
-    def is_user_id(cls, user_id: str) -> bool:
+    def is_user_id(cls, user_id: UserID) -> bool:
         """It checks if the user_id is valid matrix user_id
 
         Parameters
@@ -38,10 +41,10 @@ class Util:
             A boolean value.
 
         """
-        return user_id.startswith("@")
+        return bool(match(f"^@{cls._main_matrix_regex}+$", user_id))
 
     @classmethod
-    def is_room_id(cls, room_id: str) -> bool:
+    def is_room_id(cls, room_id: RoomID) -> bool:
         """It checks if the room_id is valid matrix room_id
 
         Parameters
@@ -54,10 +57,10 @@ class Util:
             A boolean value.
 
         """
-        return room_id.startswith("!")
+        return bool(match(f"^!{cls._main_matrix_regex}+$", room_id))
 
     @classmethod
-    def is_room_alias(cls, room_alias: str) -> bool:
+    def is_room_alias(cls, room_alias: RoomAlias) -> bool:
         """It checks if the room_alias is valid matrix room_alias
 
         Parameters
@@ -70,7 +73,7 @@ class Util:
             A boolean value.
 
         """
-        return room_alias.startswith("#")
+        return bool(match(f"^#{cls._main_matrix_regex}+$", room_alias))
 
     @classmethod
     def md_to_text(cls, formatted_text: str) -> str:

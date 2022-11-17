@@ -26,7 +26,7 @@ async def state_event(evt: CommandEvent) -> Dict:
         A dictionary
 
     """
-    if len(evt.args) <= 1:
+    if len(evt.args_list) <= 1:
         detail = "state_event command incomplete arguments"
         evt.log.error(detail)
         await evt.reply(text=detail)

@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from datetime import datetime
+from shlex import split
 
 from markdown import markdown
 from mautrix.appservice import AppService
@@ -29,13 +31,17 @@ from mautrix.types import (
 from mautrix.util.logging import TraceLogger
 
 from acd_appservice import acd_program
+from acd_appservice.commands.typehint import CommandEvent
 
+from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
-from .http_client import ProvisionBridge
 from .message import Message
 from .puppet import Puppet
+from .queue import Queue
+from .queue_membership import QueueMembership as UserMembership
 from .signaling import Signaling
 from .user import User
+from .util import Util
 
 
 class MatrixHandler:
@@ -318,6 +324,21 @@ class MatrixHandler:
         """
         self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
 
+        user: User = await User.get_by_mxid(user_id)
+
+        # Checking if the user is already in the queue. If they are,
+        # it updates their creation_ts to the current time.
+        is_queue: Queue = await Queue.get_by_room_id(room_id=room_id, create=False)
+
+        if is_queue:
+
+            user_membership: UserMembership = await UserMembership.get_by_queue_and_user(
+                user.id, is_queue.id
+            )
+            user_membership.creation_ts = datetime.timestamp(datetime.utcnow())
+            await user_membership.save()
+            return
+
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
 
         if not puppet:
@@ -507,7 +528,7 @@ class MatrixHandler:
 
             try:
                 command, arguments = text.split(" ", 1)
-                args = arguments.split(" ")
+                args = split(arguments)
             except ValueError:
                 # Not enough values to unpack, i.e. no arguments
                 command = text
@@ -517,7 +538,7 @@ class MatrixHandler:
                 room_id=room_id,
                 sender=user,
                 command=command,
-                args=args,
+                args_list=args,
                 content=message,
                 intent=puppet.intent if puppet else self.az.intent,
                 is_management=room_id == user.management_room,
@@ -661,11 +682,49 @@ class MatrixHandler:
                     room_id=room_id, campaign_room_id=None
                 )
 
-                # invite menubot to show menu
-                # this is done with create_task because with no official API set-pl can take
-                # a while so several invite attempts are made without blocking
-                menubot_id = await puppet.room_manager.get_menubot_id()
-                if menubot_id:
-                    asyncio.create_task(
-                        puppet.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)
-                    )
+            if puppet.destination:
+                if await self.process_destination(customer_room_id=room_id):
+                    return
+
+            # invite menubot to show menu
+            # this is done with create_task because with no official API set-pl can take
+            # a while so several invite attempts are made without blocking
+            menubot_id = await puppet.room_manager.get_menubot_id()
+            if menubot_id:
+                asyncio.create_task(
+                    puppet.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)
+                )
+
+    async def process_destination(self, customer_room_id: RoomID) -> bool:
+        """Distribute the chat using puppet destination, destination can be a user_id or room_id
+
+        Parameters
+        ----------
+        customer_room_id : RoomID
+            The room ID of the room that the user is in.
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+
+        if not puppet:
+            return False
+
+        user: User = await User.get_by_mxid(puppet.custom_mxid)
+
+        # If destination exists, distribute chat using it.
+        # Destination can be user_id or room_id.
+        if not Util.is_room_id(puppet.destination) and not Util.is_user_id(puppet.destination):
+            self.log.debug(f"Wrong destination for room id {customer_room_id}")
+            return False
+
+        args = [customer_room_id, puppet.destination]
+        command = "acd" if Util.is_room_id(puppet.destination) else "transfer_user"
+        await self.commands.handle(
+            sender=user, command=command, args_list=args, is_management=False, intent=puppet.intent
+        )
+
+        return True

@@ -7,7 +7,7 @@ from aiohttp import web
 from markdown import markdown
 from mautrix.types import Format, MessageType, TextMessageEventContent
 
-from ...http_client import ProvisionBridge
+from ...client import ProvisionBridge
 from ...message import Message
 from ...puppet import Puppet
 from .. import SUPPORTED_MESSAGE_TYPES

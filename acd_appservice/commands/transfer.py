@@ -1,10 +1,10 @@
 import asyncio
 
-from mautrix.types import PresenceState, RoomID, UserID
+from mautrix.types import PresenceState
 
 from ..puppet import Puppet
 from .handler import command_handler
-from .typehint import CommandEvent
+from .typehint import CommandArg, CommandEvent
 
 
 @command_handler(
@@ -25,14 +25,14 @@ async def transfer(evt: CommandEvent) -> str:
         Incoming CommandEvent
     """
 
-    if len(evt.args) < 2:
+    if len(evt.args_list) < 2:
         detail = f"{evt.command} command incomplete arguments"
         evt.log.error(detail)
         await evt.reply(text=detail)
         return
 
-    customer_room_id: RoomID = evt.args[0]
-    campaign_room_id: RoomID = evt.args[1]
+    customer_room_id = evt.args_list[0]
+    campaign_room_id = evt.args_list[1]
 
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
 
@@ -68,14 +68,36 @@ async def transfer(evt: CommandEvent) -> str:
     )
 
 
+customer_room_id = CommandArg(
+    name="customer_room_id",
+    help_text="Customer room_id to be transferred",
+    is_required=True,
+    example="!ldjkfnasdasdasdasdas:foo.com",
+)
+
+agent_id = CommandArg(
+    name="agent_id",
+    help_text="Agent to which the chat is distributed",
+    is_required=True,
+    example="@agent1:foo.com",
+)
+
+force = CommandArg(
+    name="force",
+    help_text="It's a flag that is used to decide if check the agent presence or join directly to room",
+    is_required=False,
+    example="`yes` | `no`",
+)
+
+
 @command_handler(
     name="transfer_user",
     help_text=(
         "Command that transfers a user from one agent to another, "
-        "if you send 'force' in 'yes', "
+        "if you send `force` in `yes`, "
         "the agent is always going to be assigned to the chat no matter the agent presence."
     ),
-    help_args="<_customer_room_id_> <_agent_id_> [_force_]",
+    help_args=[customer_room_id, agent_id, force],
 )
 async def transfer_user(evt: CommandEvent) -> str:
     """It checks if the room is locked,if not, it locks it, checks if the sender is an agent,
@@ -93,61 +115,60 @@ async def transfer_user(evt: CommandEvent) -> str:
 
     """
 
-    if len(evt.args) < 2:
+    if not evt.args_list:
         detail = f"{evt.command} command incomplete arguments"
         evt.log.error(detail)
         await evt.reply(text=detail)
         return
 
-    customer_room_id: RoomID = evt.args[0]
-    target_agent_id: UserID = evt.args[1]
-    force = evt.args[2] if len(evt.args) > 2 else "no"
-
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=evt.args.customer_room_id)
+    evt.args.force = evt.args.force or "no"
 
     if not puppet:
         return
 
     # Checking if the room is locked, if it is, it returns.
-    if puppet.room_manager.is_room_locked(room_id=customer_room_id, transfer=True):
-        evt.log.debug(f"Room: {customer_room_id} LOCKED by Transfer user")
+    if puppet.room_manager.is_room_locked(room_id=evt.args.customer_room_id, transfer=True):
+        evt.log.debug(f"Room: {evt.args.customer_room_id} LOCKED by Transfer user")
         return
 
-    evt.log.debug(f"INIT TRANSFER for {customer_room_id} to AGENT {target_agent_id}")
+    evt.log.debug(f"INIT TRANSFER for {evt.args.customer_room_id} to AGENT {evt.args.agent_id}")
 
     # Locking the room so that no other transfer can be made to the room.
-    puppet.room_manager.lock_room(room_id=customer_room_id, transfer=True)
+    puppet.room_manager.lock_room(room_id=evt.args.customer_room_id, transfer=True)
     is_agent = puppet.agent_manager.is_agent(agent_id=evt.sender.mxid)
 
     # Checking if the sender is an agent, if not, it gets the agent id from the room.
     if is_agent:
         transfer_author = evt.sender.mxid
     else:
-        agent_id = await puppet.agent_manager.get_room_agent(room_id=customer_room_id)
+        agent_id = await puppet.agent_manager.get_room_agent(room_id=evt.args.customer_room_id)
         transfer_author = agent_id
 
     # Checking if the agent is already in the room, if so, it sends a message to the room.
-    if transfer_author == target_agent_id:
-        msg = f"The {target_agent_id} agent is already in the room {customer_room_id}"
-        await evt.intent.send_notice(room_id=customer_room_id, text=msg)
+    if transfer_author == evt.args.agent_id:
+        msg = f"The {evt.args.agent_id} agent is already in the room {evt.args.customer_room_id}"
+        await evt.intent.send_notice(room_id=evt.args.customer_room_id, text=msg)
     else:
-        presence_response = await puppet.agent_manager.get_agent_presence(agent_id=target_agent_id)
+        presence_response = await puppet.agent_manager.get_agent_presence(
+            agent_id=evt.args.agent_id
+        )
         evt.log.debug(
             f"PRESENCE RESPONSE: "
-            f"[{target_agent_id}] -> [{presence_response.presence if presence_response else None}]"
+            f"[{evt.args.agent_id}] -> [{presence_response.presence if presence_response else None}]"
         )
         if (
             presence_response
             and presence_response.presence == PresenceState.ONLINE
-            or force == "yes"
+            or evt.args.force == "yes"
         ):
             await puppet.agent_manager.force_invite_agent(
-                room_id=customer_room_id,
-                agent_id=target_agent_id,
+                room_id=evt.args.customer_room_id,
+                agent_id=evt.args.agent_id,
                 transfer_author=transfer_author or evt.sender.mxid,
             )
         else:
-            msg = f"Agent {target_agent_id} is not available"
-            await evt.intent.send_notice(room_id=customer_room_id, text=msg)
+            msg = f"Agent {evt.args.agent_id} is not available"
+            await evt.intent.send_notice(room_id=evt.args.customer_room_id, text=msg)
 
-    puppet.room_manager.unlock_room(room_id=customer_room_id, transfer=True)
+    puppet.room_manager.unlock_room(room_id=evt.args.customer_room_id, transfer=True)

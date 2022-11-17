@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Any, List
 
+from attr import dataclass
 from markdown import markdown
 from mautrix.appservice import IntentAPI
 from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent
@@ -24,10 +25,11 @@ class BaseCommandEvent:
         config: Config,
         command: str,
         is_management: bool,
+        args: ArgParser = None,
         intent: IntentAPI = None,
         room_id: RoomID = None,
         text: str = None,
-        args: List[str] = None,
+        args_list: List[str] = None,
     ):
         self.command = command
         self.log = self.log.getChild(self.command)
@@ -38,6 +40,7 @@ class BaseCommandEvent:
         self.room_id = room_id
         self.is_management = is_management
         self.text = text
+        self.args_list = args_list
         self.args = args
 
     async def reply(self, text: str) -> None:
@@ -68,5 +71,30 @@ class BaseCommandEvent:
 
 
 class CommandEvent(BaseCommandEvent):
-    bridge: "ACDAppService"
+    program: "ACDAppService"
     sender: "User"
+
+
+@dataclass
+class CommandArg:
+    name: str
+    help_text: str
+    example: str
+    default: Any = None
+    is_required: bool = False
+
+    @property
+    def _name(self) -> str:
+        return f"<_{self.name}_>" if self.is_required else f"[_{self.name}_]"
+
+    @property
+    def detail(self) -> str:
+        return (
+            f"**{self.name}**: {self.help_text}\n\n"
+            f"\t**is_required**: {self.is_required}\n\n"
+            f"\t**example**: {self.example}\n\n"
+        )
+
+
+class ArgParser:
+    pass

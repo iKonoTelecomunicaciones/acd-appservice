@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from aiohttp import web
 
+from ..commands.handler import CommandProcessor
 from ..commands.resolve import BulkResolve
 from ..config import Config
 from ..puppet import Puppet
@@ -11,6 +12,7 @@ from .error_responses import INVALID_EMAIL
 
 _config: Config | None = None
 _util: Util | None = None
+_commands: CommandProcessor | None = None
 _bulk_resolve: BulkResolve | None = None
 
 routes: web.RouteTableDef = web.RouteTableDef()
@@ -21,10 +23,17 @@ base_path_doc = "acd_appservice/web/api"
 def set_config(config: Config, bulk_resolve: BulkResolve) -> None:
     global _config
     global _util
+    global _commands
     global _bulk_resolve
+
     _util = Util(config=config)
     _config = config
+    _commands = CommandProcessor(config=config)
     _bulk_resolve = bulk_resolve
+
+
+def get_commands() -> CommandProcessor:
+    return _commands
 
 
 def get_bulk_resolve() -> BulkResolve:
