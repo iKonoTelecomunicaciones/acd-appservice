@@ -1,6 +1,7 @@
 from .acd import acd
 from .br_cmd import br_cmd
 from .create import create
+from .member import member
 from .meta import help_cmd, unknown_command, version
 from .pm import pm
 from .queue import queue

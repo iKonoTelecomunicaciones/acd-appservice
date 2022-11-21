@@ -335,7 +335,10 @@ class MatrixHandler:
             user_membership: UserMembership = await UserMembership.get_by_queue_and_user(
                 user.id, is_queue.id
             )
+
             user_membership.creation_ts = datetime.timestamp(datetime.utcnow())
+            user_membership.state_ts = datetime.timestamp(datetime.utcnow())
+            user_membership.pause_ts = datetime.timestamp(datetime.utcnow())
             await user_membership.save()
             return
 
