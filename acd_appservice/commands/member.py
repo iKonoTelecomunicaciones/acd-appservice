@@ -41,7 +41,7 @@ async def member(evt: CommandEvent) -> Dict:
     -------
         {
             detail: str
-            room_id: roomID
+            room_id: RoomID
             error_code: int
         }
 

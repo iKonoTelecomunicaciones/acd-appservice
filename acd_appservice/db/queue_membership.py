@@ -100,7 +100,7 @@ class QueueMembership:
         return cls._from_row(row)
 
     @classmethod
-    async def get_user_memberships(cls, fk_user: int) -> List[dict]:
+    async def get_user_memberships(cls, fk_user: int) -> List[dict] | None:
         """Get all user memberships
 
         Parameters
