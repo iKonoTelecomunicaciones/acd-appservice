@@ -15,8 +15,8 @@ class QueueMembership(DBMembership):
     fk_user: int
     fk_queue: int
     creation_ts: int
-    state_ts: int = 0
-    pause_ts: int = 0
+    state_ts: int | None = None
+    pause_ts: int | None = None
     pause_reason: str | None = None
     state: str = QueueMembershipState.Offline.value
     paused: bool = False
@@ -31,8 +31,8 @@ class QueueMembership(DBMembership):
         fk_user: int,
         fk_queue: int,
         creation_ts: int,
-        state_ts: int = 0,
-        pause_ts: int = 0,
+        state_ts: int | None = None,
+        pause_ts: int | None = None,
         pause_reason: str | None = None,
         state: str = QueueMembershipState.Offline.value,
         paused: bool = False,

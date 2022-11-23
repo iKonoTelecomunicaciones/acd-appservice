@@ -11,7 +11,7 @@ from .typehint import CommandEvent
 
 action = CommandArg(
     name="action",
-    help_text="Operation taken by the agent",
+    help_text="Agent operation",
     is_required=True,
     example="`login | logout | pause | unpause`",
 )
@@ -24,8 +24,28 @@ agent = CommandArg(
 )
 
 
-@command_handler(name="member", help_text="Make agent operations", help_args=[action, agent])
+@command_handler(
+    name="member",
+    help_text="Agent operations like login, logout, pause, unpause",
+    help_args=[action, agent],
+)
 async def member(evt: CommandEvent) -> Dict:
+    """Agent operations like login, logout, pause, unpause
+
+    Parameters
+    ----------
+    evt : CommandEvent
+        CommandEvent
+
+    Returns
+    -------
+        {
+            detail: str
+            room_id: roomID
+            error_code: int
+        }
+
+    """
 
     actions = ["login", "logout", "pause", "unpause"]
     if not evt.args.action in actions:
@@ -64,15 +84,27 @@ async def member(evt: CommandEvent) -> Dict:
         }
 
     if evt.args.action == "login" or evt.args.action == "logout":
-        membership.state = (
+        state = (
             QueueMembershipState.Online.value
             if evt.args.action == "login"
             else QueueMembershipState.Offline.value
         )
+
+        if membership.state == state:
+            msg = f"Agent is already {state}"
+            await evt.intent.send_notice(room_id=evt.room_id, text=msg)
+            evt.log.debug(msg)
+            return {
+                "detail": msg,
+                "room_id": evt.room_id,
+                "error_code": 422,
+            }
+
+        membership.state = state
         membership.state_ts = datetime.timestamp(datetime.utcnow())
         await membership.save()
 
-    msg = f"Agent operation `{evt.args.action}` was successfully"
+    msg = f"Agent operation `{evt.args.action}` was successful"
     await evt.intent.send_notice(room_id=evt.room_id, text=msg)
     return {
         "detail": msg,

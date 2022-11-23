@@ -5,7 +5,7 @@ import json
 from typing import Dict, List
 
 from aiohttp import web
-from mautrix.types import RoomID
+from mautrix.types import RoomID, UserID
 
 from ...commands import acd as cmd_acd
 from ...commands import create as cmd_create
@@ -28,7 +28,7 @@ from ..base import (
     routes,
 )
 from ..error_responses import (
-    AGENT_HAVENT_QUEUES,
+    AGENT_DOESNOT_HAVE_QUEUES,
     BRIDGE_INVALID,
     INVALID_ACTION,
     NOT_DATA,
@@ -787,14 +787,14 @@ async def acd(request: web.Request) -> web.Response:
 async def member(request: web.Request) -> web.Response:
     """
     ---
-    summary:    Command that create a queue. A queue is a matrix room containing agents that will
-                be used for chat distribution. `invitees` is a comma-separated list of user_ids.
+    summary: Agent operations like login, logout, pause, unpause
+
     tags:
         - Commands
 
     requestBody:
         required: false
-        description: A json with `action` and optional `list of agents`
+        description: A json with `action`, `agent` and optional `list of queues`
         content:
             application/json:
                 schema:
@@ -804,7 +804,7 @@ async def member(request: web.Request) -> web.Response:
                             type: string
                         agent:
                             type: string
-                        queue:
+                        queues:
                             type: array
                             items:
                                 type: string
@@ -837,16 +837,19 @@ async def member(request: web.Request) -> web.Response:
         return web.json_response(**INVALID_ACTION)
 
     action: str = data.get("action")
-    agent = data.get("agent")
+    agent: UserID = data.get("agent")
     agent_user: User = await User.get_by_mxid(mxid=agent, create=False)
-    queues: List[RoomID] = (
-        data.get("queues")
-        if data.get("queues")
-        else await QueueMembership.get_assign_queues(agent_user.id)
-    )
+    queues: List[RoomID] = data.get("queues")
+
+    # If queues are None get all rooms where agent is assigning
+    if not data.get("queues"):
+        queues = [
+            membership.get("room_id")
+            for membership in await QueueMembership.get_user_memberships(agent_user.id)
+        ]
 
     if not queues:
-        return web.json_response(**AGENT_HAVENT_QUEUES)
+        return web.json_response(**AGENT_DOESNOT_HAVE_QUEUES)
 
     args = [action, agent]
     action_responses = []
@@ -858,7 +861,7 @@ async def member(request: web.Request) -> web.Response:
             args_list=args,
             intent=user.az.intent,
             is_management=False,
-            room_id=queue if type(queue) == str else queue.get("room_id"),
+            room_id=queue,
         )
 
         action_responses.append(response)

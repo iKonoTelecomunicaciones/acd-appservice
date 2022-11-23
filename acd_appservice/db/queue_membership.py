@@ -34,8 +34,8 @@ class QueueMembership:
     fk_user: int
     fk_queue: int
     creation_ts: int  # Date of queue_membership creation
-    state_ts: int = 0  # Last change of state
-    pause_ts: int = 0  # Last pause record
+    state_ts: int | None = None  # Last change of state
+    pause_ts: int | None = None  # Last pause record
     pause_reason: str = None
     state: str = QueueMembershipState.Offline.value
     paused: bool = False
@@ -64,15 +64,35 @@ class QueueMembership:
         return cls(**row)
 
     async def insert(self) -> None:
-        q = f"INSERT INTO queue_membership ({self._columns}) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);"
+        q = f"""INSERT INTO queue_membership ({self._columns})
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8);"""
         await self.db.execute(q, *self._values)
 
     async def update(self) -> None:
-        q = "UPDATE queue_membership SET creation_ts=$3, state_ts=$4, pause_ts=$5, pause_reason=$6, state=$7, paused=$8 WHERE fk_user=$1 AND fk_queue=$2;"
+        q = """UPDATE queue_membership
+        SET creation_ts=$3, state_ts=$4, pause_ts=$5, pause_reason=$6,
+        state=$7, paused=$8 WHERE fk_user=$1 AND fk_queue=$2;"""
         await self.db.execute(q, *self._values)
 
     @classmethod
     async def get_by_queue_and_user(cls, fk_user: int, fk_queue: int) -> QueueMembership | None:
+        """Get a queue membership by user and queue."
+
+        Parameters
+        ----------
+        cls
+            The class that the method is being called on.
+        fk_user : int
+            int
+        fk_queue : int
+            int
+
+        Returns
+        -------
+            A QueueMembership object
+
+        """
+
         q = f"SELECT id, {cls._columns} FROM queue_membership WHERE fk_user=$1 AND fk_queue=$2;"
         row = await cls.db.fetchrow(q, fk_user, fk_queue)
         if not row:
@@ -80,9 +100,26 @@ class QueueMembership:
         return cls._from_row(row)
 
     @classmethod
-    async def get_assign_queues(cls, fk_user: int) -> List[RoomID]:
-        q = f"SELECT room_id FROM queue JOIN queue_membership on queue_membership.fk_queue = queue.id where queue_membership.fk_user = $1;"
+    async def get_user_memberships(cls, fk_user: int) -> List[dict]:
+        """Get all user memberships
+
+        Parameters
+        ----------
+        cls
+            The class that the method is being called on.
+        fk_user : int
+            The user's ID
+
+        Returns
+        -------
+            A list of dictionaries.
+
+        """
+
+        q = """SELECT queue.room_id, queue_membership.*
+        FROM queue JOIN queue_membership ON queue_membership.fk_queue = queue.id
+        WHERE queue_membership.fk_user = $1;"""
         row = await cls.db.fetch(q, fk_user)
         if not row:
             return None
-        return list(row)
+        return row

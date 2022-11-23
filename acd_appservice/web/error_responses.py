@@ -69,7 +69,7 @@ BRIDGE_INVALID = {
     "status": 422,
 }
 
-AGENT_HAVENT_QUEUES = {
+AGENT_DOESNOT_HAVE_QUEUES = {
     "data": {"error": "Agent does not belong to any existing queue"},
     "status": 406,
 }

@@ -87,8 +87,6 @@ async def upgrade_v3(conn: Connection) -> None:
         )"""
     )
 
-    await conn.execute("CREATE TYPE queuemembershipstate AS ENUM ('online', 'offline');")
-
     await conn.execute(
         """CREATE TABLE queue_membership (
         id            SERIAL PRIMARY KEY,
@@ -98,7 +96,7 @@ async def upgrade_v3(conn: Connection) -> None:
         state_ts      BIGINT,
         pause_ts      BIGINT,
         pause_reason  TEXT,
-        state         queuemembershipstate,
+        state         TEXT,
         paused        BOOLEAN,
         UNIQUE (fk_user, fk_queue)
         )"""
