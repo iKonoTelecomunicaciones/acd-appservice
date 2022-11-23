@@ -6,8 +6,6 @@ from typing import Dict, List
 
 from aiohttp import web
 from mautrix.types import RoomID
-from ...queue_membership import QueueMembership
-from ...user import User
 
 from ...commands import acd as cmd_acd
 from ...commands import create as cmd_create
@@ -19,6 +17,8 @@ from ...commands import transfer as cmd_transfer
 from ...commands import transfer_user as cmd_transfer_user
 from ...commands.typehint import CommandEvent
 from ...puppet import Puppet
+from ...queue_membership import QueueMembership
+from ...user import User
 from ..base import (
     _resolve_puppet_identifier,
     _resolve_user_identifier,
@@ -28,13 +28,13 @@ from ..base import (
     routes,
 )
 from ..error_responses import (
+    AGENT_HAVENT_QUEUES,
     BRIDGE_INVALID,
     INVALID_ACTION,
     NOT_DATA,
     REQUIRED_VARIABLES,
     SERVER_ERROR,
     USER_DOESNOT_EXIST,
-    AGENT_HAVENT_QUEUES,
 )
 
 

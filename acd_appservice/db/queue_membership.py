@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, List
 
 from attr import dataclass
-
 from mautrix.types import RoomID
 from mautrix.util.async_db import Database
 
