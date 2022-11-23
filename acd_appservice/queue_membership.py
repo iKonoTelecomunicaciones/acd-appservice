@@ -18,7 +18,7 @@ class QueueMembership(DBMembership):
     state_ts: int = 0
     pause_ts: int = 0
     pause_reason: str | None = None
-    state: QueueMembershipState = QueueMembershipState.Offline.value
+    state: str = QueueMembershipState.Offline.value
     paused: bool = False
 
     log: TraceLogger = logging.getLogger("acd.queue_membership")

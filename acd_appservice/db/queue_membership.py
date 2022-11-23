@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, List
 
 from attr import dataclass
 
-# from mautrix.types import RoomID
+from mautrix.types import RoomID
 from mautrix.util.async_db import Database
 
 fake_db = Database.create("") if TYPE_CHECKING else None
@@ -79,3 +79,11 @@ class QueueMembership:
         if not row:
             return None
         return cls._from_row(row)
+
+    @classmethod
+    async def get_assign_queues(cls, fk_user: int) -> List[RoomID]:
+        q = f"SELECT room_id FROM queue JOIN queue_membership on queue_membership.fk_queue = queue.id where queue_membership.fk_user = $1;"
+        row = await cls.db.fetch(q, fk_user)
+        if not row:
+            return None
+        return list(row)

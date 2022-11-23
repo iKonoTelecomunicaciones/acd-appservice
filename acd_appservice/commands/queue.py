@@ -92,6 +92,11 @@ async def queue(evt: CommandEvent) -> Dict:
             await evt.reply(f"Error: {str(e)}")
             return {"error": str(e), "status": 500}
 
+        # Creating a new queue object and saving it to the database.
+        queue: Queue = await Queue.get_by_room_id(room_id=room_id)
+        queue.name = evt.args.name
+        await queue.save()
+
         # Forcing the invitees to join the room.
         if evt.config["acd.queues.user_add_method"] == "join":
             for invitee in invitees:
@@ -104,8 +109,4 @@ async def queue(evt: CommandEvent) -> Dict:
                 except Exception as e:
                     evt.log.warning(e)
 
-        # Creating a new queue object and saving it to the database.
-        queue: Queue = await Queue.get_by_room_id(room_id=room_id)
-        queue.name = evt.args.name
-        await queue.save()
         return queue.__dict__

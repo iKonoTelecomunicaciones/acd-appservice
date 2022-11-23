@@ -6,6 +6,8 @@ from typing import Dict, List
 
 from aiohttp import web
 from mautrix.types import RoomID
+from ...queue_membership import QueueMembership
+from ...user import User
 
 from ...commands import acd as cmd_acd
 from ...commands import create as cmd_create
@@ -27,10 +29,12 @@ from ..base import (
 )
 from ..error_responses import (
     BRIDGE_INVALID,
+    INVALID_ACTION,
     NOT_DATA,
     REQUIRED_VARIABLES,
     SERVER_ERROR,
     USER_DOESNOT_EXIST,
+    AGENT_HAVENT_QUEUES,
 )
 
 
@@ -777,3 +781,86 @@ async def acd(request: web.Request) -> web.Response:
 
     await cmd_acd(fake_cmd_event)
     return web.json_response()
+
+
+@routes.post("/v1/cmd/member")
+async def member(request: web.Request) -> web.Response:
+    """
+    ---
+    summary:    Command that create a queue. A queue is a matrix room containing agents that will
+                be used for chat distribution. `invitees` is a comma-separated list of user_ids.
+    tags:
+        - Commands
+
+    requestBody:
+        required: false
+        description: A json with `action` and optional `list of agents`
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        action:
+                            type: string
+                        agent:
+                            type: string
+                        queue:
+                            type: array
+                            items:
+                                type: string
+                    example:
+                        action: login | logout | pause | unpuase
+                        agent: "@agent1:localhost"
+                        queues: ["@sdkjfkyasdvbcnnskf:localhost", "@sdkjfkyasdvbcnnskf:localhost"]
+
+    responses:
+        '200':
+            $ref: '#/components/responses/AgentOperationSuccess'
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '422':
+            $ref: '#/components/responses/RequiredVariables'
+    """
+
+    user = await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    data: Dict = await request.json()
+
+    if not data.get("action") or not data.get("agent"):
+        return web.json_response(**REQUIRED_VARIABLES)
+
+    actions = ["login", "logout", "pause", "unpause"]
+    if not data.get("action") in actions:
+        return web.json_response(**INVALID_ACTION)
+
+    action: str = data.get("action")
+    agent = data.get("agent")
+    agent_user: User = await User.get_by_mxid(mxid=agent, create=False)
+    queues: List[RoomID] = (
+        data.get("queues")
+        if data.get("queues")
+        else await QueueMembership.get_assign_queues(agent_user.id)
+    )
+
+    if not queues:
+        return web.json_response(**AGENT_HAVENT_QUEUES)
+
+    args = [action, agent]
+    action_responses = []
+    for queue in queues:
+        # Creating a fake command event and passing it to the command processor.
+        response = await get_commands().handle(
+            sender=user,
+            command="member",
+            args_list=args,
+            intent=user.az.intent,
+            is_management=False,
+            room_id=queue if type(queue) == str else queue.get("room_id"),
+        )
+
+        action_responses.append(response)
+
+    return web.json_response(data={"agent_operation_responses": action_responses}, status=200)
