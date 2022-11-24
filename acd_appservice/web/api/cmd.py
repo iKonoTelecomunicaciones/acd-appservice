@@ -864,6 +864,8 @@ async def member(request: web.Request) -> web.Response:
             is_management=False,
             room_id=queue,
         )
+        # If the operation fails in at least one of the queues,
+        # the endpoint returns the last error code
         if response.get("status") != 200:
             status = response.get("status")
         action_responses.append(response)
