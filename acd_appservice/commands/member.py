@@ -41,9 +41,9 @@ async def member(evt: CommandEvent) -> Dict:
     -------
         {
             data: {
-                detail: str
-                room_id: RoomID
-            }
+                detail: str,
+                room_id: RoomID,
+            },
             status: int
         }
 
@@ -70,17 +70,17 @@ async def member(evt: CommandEvent) -> Dict:
         msg = f"You are unable to use agent operation `{evt.args.action}` over other agents"
         await evt.reply(text=msg)
         evt.log.warning(msg)
-        json_response.data.detail = msg
-        json_response.status = 403
+        json_response.get("data")["detail"] = msg
+        json_response["status"] = 403
         return json_response
 
-    # Verify that admin do not try to do an agent operation for him
+    # Verify that admin do not try to do an agent operation for himself
     elif evt.sender.is_admin and not agent_id:
         msg = f"Admin user can not use agent operation `{evt.args.action}`"
         await evt.reply(text=msg)
         evt.log.warning(msg)
-        json_response.data.detail = msg
-        json_response.status = 403
+        json_response.get("data")["detail"] = msg
+        json_response["status"] = 403
         return json_response
 
     if not agent_id:
@@ -92,8 +92,8 @@ async def member(evt: CommandEvent) -> Dict:
         msg = f"Agent {agent_id} or queue {evt.room_id} does not exists"
         await evt.reply(text=msg)
         evt.log.error(msg)
-        json_response.data.detail = msg
-        json_response.status = 422
+        json_response.get("data")["detail"] = msg
+        json_response["status"] = 422
         return json_response
 
     membership: QueueMembership = await QueueMembership.get_by_queue_and_user(
@@ -104,8 +104,8 @@ async def member(evt: CommandEvent) -> Dict:
         msg = f"User {agent_id} is not member of the room {evt.room_id}"
         await evt.reply(text=msg)
         evt.log.warning(msg)
-        json_response.data.detail = msg
-        json_response.status = 422
+        json_response.get("data")["detail"] = msg
+        json_response["status"] = 422
         return json_response
 
     if evt.args.action == "login" or evt.args.action == "logout":
@@ -119,8 +119,8 @@ async def member(evt: CommandEvent) -> Dict:
             msg = f"Agent is already {state}"
             await evt.reply(text=msg)
             evt.log.warning(msg)
-            json_response.data.detail = msg
-            json_response.status = 422
+            json_response.get("data")["detail"] = msg
+            json_response["status"] = 422
             return json_response
 
         membership.state = state
@@ -129,6 +129,6 @@ async def member(evt: CommandEvent) -> Dict:
 
     msg = f"Agent operation `{evt.args.action}` was successful"
     await evt.reply(text=msg)
-    json_response.data.detail = msg
-    json_response.status = 200
+    json_response.get("data")["detail"] = msg
+    json_response["status"] = 200
     return json_response

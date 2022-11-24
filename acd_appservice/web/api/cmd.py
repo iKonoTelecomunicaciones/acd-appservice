@@ -853,6 +853,7 @@ async def member(request: web.Request) -> web.Response:
 
     args = [action, agent]
     action_responses = []
+    status = 200
     for queue in queues:
         # Creating a fake command event and passing it to the command processor.
         response = await get_commands().handle(
@@ -863,7 +864,8 @@ async def member(request: web.Request) -> web.Response:
             is_management=False,
             room_id=queue,
         )
-
+        if response.get("status") != 200:
+            status = response.get("status")
         action_responses.append(response)
 
-    return web.json_response(data={"agent_operation_responses": action_responses}, status=200)
+    return web.json_response(data={"agent_operation_responses": action_responses}, status=status)
