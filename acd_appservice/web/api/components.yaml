@@ -307,6 +307,29 @@ components:
               platform: smba
             whitelisted: true
 
+    AgentOperation:
+      type: object
+      properties:
+        agent_operation_success:
+          type: array
+          items:
+            type: object
+            properties:
+              detail:
+                type: string
+              room_id:
+                type: string
+              error_code:
+                type: integer
+      example:
+        agent_operation_response:
+          - detail: "Agent login successfully"
+            room_id: "!dshfjkjhuuakkcnal:localhost"
+            error_code: 200
+          - detail: "User {agent_id} is not member of the room {evt.room_id}"
+            room_id: "!dshfjkjhuuakkcnal:localhost"
+            error_code: 422
+
   # Respuestas de la API
   responses:
     UserCreated:
@@ -441,3 +464,10 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/BadLogout'
+    
+    AgentOperationSuccess:
+      description: "Agent operation success"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AgentOperation'

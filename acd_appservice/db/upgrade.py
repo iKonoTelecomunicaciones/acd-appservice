@@ -86,12 +86,18 @@ async def upgrade_v3(conn: Connection) -> None:
         room_id     TEXT NOT NULL
         )"""
     )
+
     await conn.execute(
         """CREATE TABLE queue_membership (
         id            SERIAL PRIMARY KEY,
         fk_user       INT NOT NULL,
         fk_queue      INT NOT NULL,
         creation_ts   BIGINT,
+        state_ts      BIGINT,
+        pause_ts      BIGINT,
+        pause_reason  TEXT,
+        state         TEXT,
+        paused        BOOLEAN,
         UNIQUE (fk_user, fk_queue)
         )"""
     )

@@ -5,7 +5,7 @@ import json
 from typing import Dict, List
 
 from aiohttp import web
-from mautrix.types import RoomID
+from mautrix.types import RoomID, UserID
 
 from ...commands import acd as cmd_acd
 from ...commands import create as cmd_create
@@ -17,6 +17,8 @@ from ...commands import transfer as cmd_transfer
 from ...commands import transfer_user as cmd_transfer_user
 from ...commands.typehint import CommandEvent
 from ...puppet import Puppet
+from ...queue_membership import QueueMembership
+from ...user import User
 from ..base import (
     _resolve_puppet_identifier,
     _resolve_user_identifier,
@@ -26,7 +28,9 @@ from ..base import (
     routes,
 )
 from ..error_responses import (
+    AGENT_DOESNOT_HAVE_QUEUES,
     BRIDGE_INVALID,
+    INVALID_ACTION,
     NOT_DATA,
     REQUIRED_VARIABLES,
     SERVER_ERROR,
@@ -777,3 +781,93 @@ async def acd(request: web.Request) -> web.Response:
 
     await cmd_acd(fake_cmd_event)
     return web.json_response()
+
+
+@routes.post("/v1/cmd/member")
+async def member(request: web.Request) -> web.Response:
+    """
+    ---
+    summary: Agent operations like login, logout, pause, unpause
+
+    tags:
+        - Commands
+
+    requestBody:
+        required: false
+        description: A json with `action`, `agent` and optional `list of queues`
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        action:
+                            type: string
+                        agent:
+                            type: string
+                        queues:
+                            type: array
+                            items:
+                                type: string
+                    example:
+                        action: login | logout | pause | unpuase
+                        agent: "@agent1:localhost"
+                        queues: ["@sdkjfkyasdvbcnnskf:localhost", "@sdkjfkyasdvbcnnskf:localhost"]
+
+    responses:
+        '200':
+            $ref: '#/components/responses/AgentOperationSuccess'
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '422':
+            $ref: '#/components/responses/RequiredVariables'
+    """
+
+    user = await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    data: Dict = await request.json()
+
+    if not data.get("action") or not data.get("agent"):
+        return web.json_response(**REQUIRED_VARIABLES)
+
+    actions = ["login", "logout", "pause", "unpause"]
+    if not data.get("action") in actions:
+        return web.json_response(**INVALID_ACTION)
+
+    action: str = data.get("action")
+    agent: UserID = data.get("agent")
+    agent_user: User = await User.get_by_mxid(mxid=agent, create=False)
+    queues: List[RoomID] = data.get("queues")
+
+    # If queues are None get all rooms where agent is assigning
+    if not data.get("queues"):
+        queues = [
+            membership.get("room_id")
+            for membership in await QueueMembership.get_user_memberships(agent_user.id)
+        ]
+
+    if not queues:
+        return web.json_response(**AGENT_DOESNOT_HAVE_QUEUES)
+
+    args = [action, agent]
+    action_responses = []
+    status = 200
+    for queue in queues:
+        # Creating a fake command event and passing it to the command processor.
+        response = await get_commands().handle(
+            sender=user,
+            command="member",
+            args_list=args,
+            intent=user.az.intent,
+            is_management=False,
+            room_id=queue,
+        )
+        # If the operation fails in at least one of the queues,
+        # the endpoint returns the last error code
+        if response.get("status") != 200:
+            status = response.get("status")
+        action_responses.append(response)
+
+    return web.json_response(data={"agent_operation_responses": action_responses}, status=status)

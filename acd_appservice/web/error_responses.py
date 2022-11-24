@@ -68,3 +68,13 @@ BRIDGE_INVALID = {
     "data": {"error": "Bridge invalid"},
     "status": 422,
 }
+
+AGENT_DOESNOT_HAVE_QUEUES = {
+    "data": {"error": "Agent does not belong to any existing queue"},
+    "status": 406,
+}
+
+INVALID_ACTION = {
+    "data": {"error": "The provided action is invalid"},
+    "status": 422,
+}

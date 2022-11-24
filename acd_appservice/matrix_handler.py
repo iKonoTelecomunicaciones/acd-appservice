@@ -335,8 +335,6 @@ class MatrixHandler:
             user_membership: UserMembership = await UserMembership.get_by_queue_and_user(
                 user.id, is_queue.id
             )
-            user_membership.creation_ts = datetime.timestamp(datetime.utcnow())
-            await user_membership.save()
             return
 
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
