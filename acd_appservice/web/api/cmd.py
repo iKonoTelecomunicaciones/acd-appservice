@@ -653,7 +653,7 @@ async def queue(request: web.Request) -> web.Response:
 
     requestBody:
         required: false
-        description: A json with `user_email`
+        description: A json with `action`, `name`, `invitees` and optional `description`
         content:
             application/json:
                 schema:
@@ -663,10 +663,17 @@ async def queue(request: web.Request) -> web.Response:
                             type: string
                         name:
                             type: string
+                        invitees:
+                            type: array
+                            items:
+                                type: string
+                        description:
+                            type: string
                     example:
                         action: "create"
                         name: "My favourite queue"
                         invitees: ["@agent1:foo.com", "@agent2:foo.com"]
+                        description: "It is a queue to distribute chats"
 
     responses:
         '200':
@@ -695,7 +702,9 @@ async def queue(request: web.Request) -> web.Response:
         invitees: List = data.get("invitees")
         invitees: str = ",".join(invitees)
 
-    args = [action, name, invitees]
+    description: str = data.get("description") if data.get("description") else ""
+
+    args = [action, name, invitees, description]
 
     # Creating a fake command event and passing it to the command processor.
     result: Dict = await get_commands().handle(

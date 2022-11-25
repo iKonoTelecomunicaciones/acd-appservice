@@ -83,7 +83,8 @@ async def upgrade_v3(conn: Connection) -> None:
         """CREATE TABLE queue (
         id          SERIAL PRIMARY KEY,
         name        TEXT,
-        room_id     TEXT NOT NULL
+        room_id     TEXT NOT NULL,
+        description TEXT
         )"""
     )
 

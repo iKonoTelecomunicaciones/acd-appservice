@@ -21,8 +21,15 @@ name = CommandArg(
 invitees = CommandArg(
     name="invitees",
     help_text="Invitees to the queue",
-    is_required=False,
+    is_required=True,
     example="`@user1:foo.com,@user2:foo.com,@user3:foo.com,...`",
+)
+
+description = CommandArg(
+    name="description",
+    help_text="Short description about queue",
+    is_required=False,
+    example='"It is a queue to distribute chats"',
 )
 
 
@@ -35,7 +42,7 @@ invitees = CommandArg(
         "for chat distribution. `invitees` is a comma-separated list of user_ids."
     ),
     help_args=[action],
-    help_sub_args=[name, invitees],
+    help_sub_args=[name, invitees, description],
 )
 async def queue(evt: CommandEvent) -> Dict:
     """It creates a room, sets the visibility, invites the users,
@@ -95,6 +102,7 @@ async def queue(evt: CommandEvent) -> Dict:
         # Creating a new queue object and saving it to the database.
         queue: Queue = await Queue.get_by_room_id(room_id=room_id)
         queue.name = evt.args.name
+        queue.description = evt.args.description if evt.args.description else None
         await queue.save()
 
         # Forcing the invitees to join the room.

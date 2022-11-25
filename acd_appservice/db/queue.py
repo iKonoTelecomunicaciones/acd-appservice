@@ -17,29 +17,27 @@ class Queue:
     id: int | None
     room_id: RoomID
     name: str | None = ""
+    description: str | None = None
 
     # strategy: str = "roundrobin"
     # timeout: int = 0  # in sec
 
-    _columns = "room_id, name"
+    _columns = "room_id, name, description"
 
     @property
     def _values(self):
-        return (
-            self.room_id,
-            self.name,
-        )
+        return (self.room_id, self.name, self.description)
 
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> Queue:
         return cls(**row)
 
     async def insert(self) -> None:
-        q = "INSERT INTO queue (room_id, name) VALUES ($1, $2)"
+        q = f"INSERT INTO queue ({self._columns}) VALUES ($1, $2, $3)"
         await self.db.execute(q, *self._values)
 
     async def update(self) -> None:
-        q = "UPDATE queue SET name=$2 WHERE room_id=$1"
+        q = "UPDATE queue SET name=$2, description=$3 WHERE room_id=$1"
         await self.db.execute(q, *self._values)
 
     @classmethod

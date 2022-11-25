@@ -13,14 +13,17 @@ class Queue(DBQueue):
 
     room_id: RoomID
     name: str = ""
+    description: str | None = None
 
     log: TraceLogger = logging.getLogger("acd.queue")
 
     by_id: dict[int, Queue] = {}
     by_room_id: dict[RoomID, Queue] = {}
 
-    def __init__(self, room_id: RoomID, name: str = "", id: int = None):
-        super().__init__(id=id, name=name, room_id=room_id)
+    def __init__(
+        self, room_id: RoomID, name: str = "", description: str | None = None, id: int = None
+    ):
+        super().__init__(id=id, name=name, room_id=room_id, description=description)
         self.log = self.log.getChild(room_id)
 
     def _add_to_cache(self) -> None:
