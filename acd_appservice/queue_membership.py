@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime as dt
 from typing import cast
 
 from mautrix.util.logging import TraceLogger
@@ -14,9 +14,9 @@ class QueueMembership(DBMembership):
 
     fk_user: int
     fk_queue: int
-    creation_ts: int
-    state_ts: int | None = None
-    pause_ts: int | None = None
+    creation_date: int
+    state_date: int | None = None
+    pause_date: int | None = None
     pause_reason: str | None = None
     state: str = QueueMembershipState.Offline.value
     paused: bool = False
@@ -30,9 +30,9 @@ class QueueMembership(DBMembership):
         self,
         fk_user: int,
         fk_queue: int,
-        creation_ts: int,
-        state_ts: int | None = None,
-        pause_ts: int | None = None,
+        creation_date: int,
+        state_date: int | None = None,
+        pause_date: int | None = None,
         pause_reason: str | None = None,
         state: str = QueueMembershipState.Offline.value,
         paused: bool = False,
@@ -42,13 +42,17 @@ class QueueMembership(DBMembership):
             id=id,
             fk_user=fk_user,
             fk_queue=fk_queue,
-            creation_ts=creation_ts,
-            state_ts=state_ts,
-            pause_ts=pause_ts,
+            creation_date=creation_date,
+            state_date=state_date,
+            pause_date=pause_date,
             pause_reason=pause_reason,
             state=state,
             paused=paused,
         )
+
+    @classmethod
+    def now(cls) -> str:
+        return dt.utcnow()
 
     async def save(self) -> None:
         self._add_to_cache()
@@ -74,7 +78,7 @@ class QueueMembership(DBMembership):
             return queue_membership
 
         if create:
-            queue_membership = cls(fk_user, fk_queue, datetime.timestamp(datetime.utcnow()))
+            queue_membership = cls(fk_user, fk_queue, cls.now())
             await queue_membership.insert()
             queue_membership._add_to_cache()
             return queue_membership

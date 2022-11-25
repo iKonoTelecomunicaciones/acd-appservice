@@ -37,7 +37,7 @@ from .commands.handler import CommandProcessor
 from .message import Message
 from .puppet import Puppet
 from .queue import Queue
-from .queue_membership import QueueMembership as UserMembership
+from .queue_membership import QueueMembership
 from .signaling import Signaling
 from .user import User
 from .util import Util
@@ -325,14 +325,12 @@ class MatrixHandler:
         user: User = await User.get_by_mxid(user_id)
 
         # Checking if the user is already in the queue. If they are,
-        # it updates their creation_ts to the current time.
+        # it updates their creation_date to the current time.
         is_queue: Queue = await Queue.get_by_room_id(room_id=room_id, create=False)
 
         if is_queue:
 
-            user_membership: UserMembership = await UserMembership.get_by_queue_and_user(
-                user.id, is_queue.id
-            )
+            await QueueMembership.get_by_queue_and_user(user.id, is_queue.id)
             return
 
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
