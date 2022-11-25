@@ -1,13 +1,19 @@
 from typing import Dict
 
-from .handler import command_handler
-from .typehint import CommandEvent
+from .handler import CommandArg, CommandEvent, command_handler
+
+cmd = CommandArg(
+    name="cmd",
+    help_text="Command that will be forwarded for the acd* that listens to it.",
+    is_required=True,
+    example="!wa help",
+)
 
 
 @command_handler(
     name="br_cmd",
-    help_text=("Command that sends a state event to matrix"),
-    help_args="<_bridge_command_>",
+    help_text=("This command works as an echo"),
+    help_args=[cmd],
 )
 async def br_cmd(evt: CommandEvent) -> Dict:
     """It takes the command arguments, joins them together, and sends them to the room
@@ -22,11 +28,5 @@ async def br_cmd(evt: CommandEvent) -> Dict:
         A dictionary
 
     """
-    if len(evt.args_list) < 2:
-        detail = f"{evt.command} command incomplete arguments"
-        evt.log.error(detail)
-        await evt.reply(text=detail)
-        return
-
     command = " ".join(evt.args_list)
     await evt.intent.send_text(room_id=evt.room_id, text=command)

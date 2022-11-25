@@ -4,8 +4,7 @@ from mautrix.api import Method, SynapseAdminPath
 from mautrix.types import RoomDirectoryVisibility, UserID
 
 from ..queue import Queue
-from .handler import CommandArg, command_handler
-from .typehint import CommandEvent
+from .handler import CommandArg, CommandEvent, command_handler
 
 action = CommandArg(
     name="action",
@@ -64,13 +63,10 @@ async def queue(evt: CommandEvent) -> Dict:
     visibility = RoomDirectoryVisibility.PRIVATE
     queue = None
 
+    json_response = {"data": None, "status": 0}
+
     # Creating a queue.
     if evt.args.action == "create":
-        # Checking if the name is not specified. If it is not, it will return an error.
-        if not evt.args.name:
-            detail = "You have to specify `name`"
-            await evt.reply(detail)
-            return {"error": detail, "status": 500}
 
         # Checking if the invitees are specified.
         # If they are, it will split them by comma and strip them.
@@ -103,7 +99,9 @@ async def queue(evt: CommandEvent) -> Dict:
         except Exception as e:
             evt.log.error(e)
             await evt.reply(f"Error: {str(e)}")
-            return {"error": str(e), "status": 500}
+            json_response["data"] = {"error": str(e)}
+            json_response["status"] = 500
+            return json_response
 
         # Creating a new queue object and saving it to the database.
         queue: Queue = await Queue.get_by_room_id(room_id=room_id)
@@ -123,4 +121,9 @@ async def queue(evt: CommandEvent) -> Dict:
                 except Exception as e:
                     evt.log.warning(e)
 
-        return queue.__dict__
+        json_response["data"] = {
+            "name": queue.name,
+            "room_id": queue.room_id,
+        }
+        json_response["status"] = 200
+        return json_response

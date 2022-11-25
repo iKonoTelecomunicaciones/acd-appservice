@@ -30,6 +30,7 @@ def set_config(config: Config, bulk_resolve: BulkResolve) -> None:
     _config = config
     _commands = CommandProcessor(config=config)
     _bulk_resolve = bulk_resolve
+    bulk_resolve.commands = _commands
 
 
 def get_commands() -> CommandProcessor:
@@ -93,30 +94,21 @@ async def _resolve_puppet_identifier(request: web.Request) -> Puppet | None:
     if request.body_exists:
         data = await request.json()
 
-    puppet_mxid: str = (
-        request.rel_url.query.get("user_email")
-        or request.rel_url.query.get("user_id")
-        or data.get("user_email")
-        or data.get("user_id")
-    )
+    if data.get("company_phone"):
+        puppet = await Puppet.get_by_phone(data.get("company_phone"))
 
-    if not puppet_mxid:
-        raise web.HTTPBadRequest(text='{"error": "Invalid Authorization"}')
-
-    puppet_mxid = puppet_mxid.lower().strip()
-
-    puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
-
-    # Checking if the received puppet identifier is an email address.
-    # If it is, it will get the puppet by email.
-    # If not, it will raise an error.
-    if not puppet:
+    if request.rel_url.query.get("user_email") or data.get("user_email"):
         if _util.is_email(email=puppet_mxid):
             puppet = await Puppet.get_by_email(puppet_mxid)
         else:
             raise web.HTTPNotAcceptable(text=f"{INVALID_EMAIL}")
 
+    if request.rel_url.query.get("user_id") or data.get("user_id"):
+        puppet = await Puppet.get_by_custom_mxid(
+            request.rel_url.query.get("user_id") or data.get("user_id")
+        )
+
     if not puppet:
-        raise web.HTTPBadRequest(text="{'error': 'User doesn't exist'}")
+        raise web.HTTPBadRequest(text='{"error": "Invalid Authorization"}')
 
     return puppet

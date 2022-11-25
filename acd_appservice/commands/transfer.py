@@ -3,14 +3,27 @@ import asyncio
 from mautrix.types import PresenceState
 
 from ..puppet import Puppet
-from .handler import command_handler
-from .typehint import CommandArg, CommandEvent
+from .handler import CommandArg, CommandEvent, command_handler
+
+customer_room_id = CommandArg(
+    name="customer_room_id",
+    help_text="Customer room_id to be transferred",
+    is_required=True,
+    example="`!foo:foo.com`",
+)
+
+campaign_room_id = CommandArg(
+    name="campaign_room_id",
+    help_text="Campaign room_id  where the customer will be transferred",
+    is_required=True,
+    example="`!foo:foo.com`",
+)
 
 
 @command_handler(
     name="transfer",
     help_text=("Command that transfers a client to an campaign_room."),
-    help_args="<_customer_room_id_> <_campaign_room_id_>",
+    help_args=[customer_room_id, campaign_room_id],
 )
 async def transfer(evt: CommandEvent) -> str:
     """The function is called when the `transfer` command is called.
@@ -25,55 +38,41 @@ async def transfer(evt: CommandEvent) -> str:
         Incoming CommandEvent
     """
 
-    if len(evt.args_list) < 2:
-        detail = f"{evt.command} command incomplete arguments"
-        evt.log.error(detail)
-        await evt.reply(text=detail)
-        return
-
-    customer_room_id = evt.args_list[0]
-    campaign_room_id = evt.args_list[1]
-
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=evt.args.customer_room_id)
 
     if not puppet:
         return
 
     # Checking if the room is locked, if it is, it returns.
-    if puppet.room_manager.is_room_locked(room_id=customer_room_id, transfer=True):
-        evt.log.debug(f"Room: {customer_room_id} LOCKED by Transfer room")
+    if puppet.room_manager.is_room_locked(room_id=evt.args.customer_room_id, transfer=True):
+        evt.log.debug(f"Room: {evt.args.customer_room_id} LOCKED by Transfer room")
         return
 
-    evt.log.debug(f"INIT TRANSFER for {customer_room_id} to ROOM {campaign_room_id}")
+    evt.log.debug(
+        f"INIT TRANSFER for {evt.args.customer_room_id} to ROOM {evt.args.campaign_room_id}"
+    )
 
     # Locking the room so that no other transfer can be made to the room.
-    puppet.room_manager.lock_room(room_id=customer_room_id, transfer=True)
+    puppet.room_manager.lock_room(room_id=evt.args.customer_room_id, transfer=True)
     is_agent = puppet.agent_manager.is_agent(agent_id=evt.sender.mxid)
 
     # Checking if the sender is an agent, if not, it gets the agent id from the room.
     if is_agent:
         transfer_author = evt.sender.mxid
     else:
-        agent_id = await puppet.agent_manager.get_room_agent(room_id=customer_room_id)
+        agent_id = await puppet.agent_manager.get_room_agent(room_id=evt.args.customer_room_id)
         transfer_author = agent_id
 
     # Creating a task that will be executed in the background.
     asyncio.create_task(
         puppet.agent_manager.loop_agents(
-            customer_room_id=customer_room_id,
-            campaign_room_id=campaign_room_id,
-            agent_id=puppet.agent_manager.CURRENT_AGENT.get(campaign_room_id),
+            customer_room_id=evt.args.customer_room_id,
+            campaign_room_id=evt.args.campaign_room_id,
+            agent_id=puppet.agent_manager.CURRENT_AGENT.get(evt.args.campaign_room_id),
             transfer_author=transfer_author or evt.sender.mxid,
         )
     )
 
-
-customer_room_id = CommandArg(
-    name="customer_room_id",
-    help_text="Customer room_id to be transferred",
-    is_required=True,
-    example="!ldjkfnasdasdasdasdas:foo.com",
-)
 
 agent_id = CommandArg(
     name="agent_id",
@@ -114,12 +113,6 @@ async def transfer_user(evt: CommandEvent) -> str:
         Incoming CommandEvent
 
     """
-
-    if not evt.args_list:
-        detail = f"{evt.command} command incomplete arguments"
-        evt.log.error(detail)
-        await evt.reply(text=detail)
-        return
 
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=evt.args.customer_room_id)
     evt.args.force = evt.args.force or "no"

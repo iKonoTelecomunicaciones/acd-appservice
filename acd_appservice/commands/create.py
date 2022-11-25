@@ -2,8 +2,28 @@ from mautrix.types import PowerLevelStateEventContent
 
 from ..puppet import Puppet
 from ..util import Util
-from .handler import command_handler
-from .typehint import CommandEvent
+from .handler import CommandArg, CommandEvent, command_handler
+
+bridge = CommandArg(
+    name="bridge",
+    help_text="Bridge bot that will be invited to the control room if you want it",
+    is_required=False,
+    example="`mautrix`| `instagram` | `gupshup`",
+)
+
+destination = CommandArg(
+    name="destination",
+    help_text="Method to distribution of new chats",
+    is_required=False,
+    example="`@user_id:foo.com`| `!foo:foo.com`",
+)
+
+control_room_id = CommandArg(
+    name="control_room_id",
+    help_text="If you already have a room created, send this field and it will be marked as a control room.",
+    is_required=False,
+    example="`!foo:foo.com`",
+)
 
 
 @command_handler(
@@ -17,7 +37,7 @@ from .typehint import CommandEvent
         "If you send `destination`, then the distribution of new chats related to this acd* "
         "will be done following this method. This field can be a room_id or a user_id."
     ),
-    help_args="[_bridge_] [_destination_] [_control_room_id_]",
+    help_args=[bridge, destination, control_room_id],
 )
 async def create(evt: CommandEvent) -> Puppet:
     """We create a puppet, we create a control room, we invite the puppet,
@@ -34,21 +54,7 @@ async def create(evt: CommandEvent) -> Puppet:
 
     """
 
-    bridge = ""
-    destination = ""
-    control_room_id = ""
     puppet = None
-
-    if len(evt.args_list) >= 1:
-
-        bridge = evt.args_list[0]
-        bridge_bot = evt.config[f"bridges.{bridge}.mxid"]
-
-        if len(evt.args_list) >= 2:
-            destination = evt.args_list[1]  # Could be a user_id, room_id or a room_alias
-
-        if len(evt.args_list) >= 3:
-            control_room_id = evt.args_list[2]  # An existing room that you want to reuse
 
     # We get the following puppet available in the bd
     next_puppet = await Puppet.get_next_puppet()
@@ -70,18 +76,21 @@ async def create(evt: CommandEvent) -> Puppet:
         # without us realising it
         await puppet.sync_joined_rooms_in_db()
 
-        if destination:
-            if Util.is_user_id(destination):
-                invitees.append(destination)
+        if evt.args.destination:
+            if Util.is_user_id(evt.args.destination):
+                invitees.append(evt.args.destination)
             else:
-                if Util.is_room_alias(destination) or Util.is_room_id(destination):
-                    await evt.intent.bot.join_room(room_id_or_alias=destination)
+                if Util.is_room_alias(evt.args.destination) or Util.is_room_id(
+                    evt.args.destination
+                ):
+                    await evt.intent.bot.join_room(room_id_or_alias=evt.args.destination)
 
-            puppet.destination = destination
+            puppet.destination = evt.args.destination
 
-        if bridge:
+        if evt.args.bridge:
             # Register the bridge the puppet belongs to
-            puppet.bridge = bridge
+            bridge_bot = evt.config[f"bridges.{evt.args.bridge}.mxid"]
+            puppet.bridge = evt.args.bridge
             invitees.append(bridge_bot)
 
         power_level_content = PowerLevelStateEventContent(
@@ -100,19 +109,19 @@ async def create(evt: CommandEvent) -> Puppet:
         await evt.reply(f"The users {invitees} will be invited")
 
         # If no control room has been sent, then we create a
-        if not control_room_id:
+        if not evt.args.control_room_id:
 
-            control_room_id = await puppet.intent.create_room(
+            evt.args.control_room_id = await puppet.intent.create_room(
                 name=f"{evt.config[f'bridge.puppet_control_room.name']}({puppet.email or puppet.custom_mxid})",
                 topic=f"{evt.config[f'bridge.puppet_control_room.topic']}",
                 invitees=invitees,
             )
 
             await puppet.intent.set_power_levels(
-                room_id=control_room_id, content=power_level_content
+                room_id=evt.args.control_room_id, content=power_level_content
             )
 
-        puppet.control_room_id = control_room_id
+        puppet.control_room_id = evt.args.control_room_id
 
         # Now if we store the control room in the puppet.control_room_id
         await puppet.save()
