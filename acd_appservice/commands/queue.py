@@ -27,7 +27,7 @@ invitees = CommandArg(
 
 description = CommandArg(
     name="description",
-    help_text="Short description about queue",
+    help_text="Short description about the queue",
     is_required=False,
     example='"It is a queue to distribute chats"',
     default="",
@@ -87,12 +87,17 @@ async def queue(evt: CommandEvent) -> Dict:
             visibility = RoomDirectoryVisibility.PUBLIC
 
         try:
+            topic: str = f"""
+                {evt.config['acd.queues.topic']}
+                {f' ->{evt.args.description}' if evt.args.description else ''}
+            """
+
             room_id = await evt.intent.create_room(
                 name=evt.args.name,
                 invitees=invitees
                 if evt.config["acd.queues.user_add_method"] == "invite"
                 else evt.config["acd.queues.invitees"],
-                topic=f"{evt.config['acd.queues.topic']} -> {evt.args.description}",
+                topic=topic.strip(),
                 visibility=visibility,
             )
         except Exception as e:
