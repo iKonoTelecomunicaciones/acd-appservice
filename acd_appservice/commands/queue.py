@@ -21,8 +21,16 @@ name = CommandArg(
 invitees = CommandArg(
     name="invitees",
     help_text="Invitees to the queue",
-    is_required=False,
+    is_required=True,
     example="`@user1:foo.com,@user2:foo.com,@user3:foo.com,...`",
+)
+
+description = CommandArg(
+    name="description",
+    help_text="Short description about the queue",
+    is_required=False,
+    example='"It is a queue to distribute chats"',
+    default="",
 )
 
 
@@ -35,7 +43,7 @@ invitees = CommandArg(
         "for chat distribution. `invitees` is a comma-separated list of user_ids."
     ),
     help_args=[action],
-    help_sub_args=[name, invitees],
+    help_sub_args=[name, invitees, description],
 )
 async def queue(evt: CommandEvent) -> Dict:
     """It creates a room, sets the visibility, invites the users,
@@ -79,12 +87,17 @@ async def queue(evt: CommandEvent) -> Dict:
             visibility = RoomDirectoryVisibility.PUBLIC
 
         try:
+            topic: str = f"""
+                {evt.config['acd.queues.topic']}
+                {f' ->{evt.args.description}' if evt.args.description else ''}
+            """
+
             room_id = await evt.intent.create_room(
                 name=evt.args.name,
                 invitees=invitees
                 if evt.config["acd.queues.user_add_method"] == "invite"
                 else evt.config["acd.queues.invitees"],
-                topic=evt.config["acd.queues.topic"],
+                topic=topic.strip(),
                 visibility=visibility,
             )
         except Exception as e:
@@ -95,6 +108,7 @@ async def queue(evt: CommandEvent) -> Dict:
         # Creating a new queue object and saving it to the database.
         queue: Queue = await Queue.get_by_room_id(room_id=room_id)
         queue.name = evt.args.name
+        queue.description = evt.args.description if evt.args.description else None
         await queue.save()
 
         # Forcing the invitees to join the room.
