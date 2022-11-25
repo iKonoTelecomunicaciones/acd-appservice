@@ -356,7 +356,7 @@ class CommandProcessor:
                     )
                     self.log.error(detail)
                     await evt.reply(text=detail)
-                    return {"error": detail, "status": 422}, False
+                    return {"data": {"error": detail}, "status": 422}, False
 
                 if aux_args[index].default:
                     arg_parser.__setattr__(aux_args[index].name, aux_args[index].default)
