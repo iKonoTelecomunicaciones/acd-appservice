@@ -350,7 +350,7 @@ logging:
         acd:
             level: DEBUG
         aiohttp:
-            level: INFO
+            level: DEBUG
     root:
         level: DEBUG
         handlers: [file, console]

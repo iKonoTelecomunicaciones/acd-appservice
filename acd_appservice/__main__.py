@@ -5,6 +5,7 @@ from mautrix.types import UserID
 from . import VERSION
 from .acd_program import ACD
 from .client import ProvisionBridge
+from .commands.handler import CommandProcessor
 from .commands.resolve import BulkResolve
 from .config import Config
 from .db import init as init_db
@@ -53,10 +54,12 @@ class ACDAppService(ACD):
         # Definimos la ruta por la que se podrá acceder a la API
         api_route = self.config["bridge.provisioning.prefix"]
         # Creamos la instancia de ProvisioningAPI para luego crear una subapp
+        commands = CommandProcessor(config=self.config)
+        bulk_resolve = BulkResolve(config=self.config, commands=commands)
         self.provisioning_api = ProvisioningAPI(
             config=self.config,
             loop=self.loop,
-            bulk_resolve=BulkResolve(loop=self.loop, config=self.config),
+            bulk_resolve=bulk_resolve,
         )
         # Usan la app de aiohttp, creamos una subaplicacion especifica para la API
         self.az.app.add_subapp(api_route, self.provisioning_api.app)
@@ -64,8 +67,7 @@ class ACDAppService(ACD):
         # Iniciamos la aplicación
         await super().start()
 
-        self.matrix.config = self.config
-
+        self.matrix.commands = commands
         asyncio.create_task(self.checking_whatsapp_connection())
 
     def prepare_stop(self) -> None:

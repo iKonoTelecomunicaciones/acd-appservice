@@ -31,7 +31,6 @@ from mautrix.types import (
 from mautrix.util.logging import TraceLogger
 
 from acd_appservice import acd_program
-from acd_appservice.commands.typehint import CommandEvent
 
 from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
@@ -49,7 +48,7 @@ class MatrixHandler:
     az: AppService
     config: config.BaseBridgeConfig
     acd_appservice: acd_program.ACD
-    commands: CommandProcessor
+    commands: CommandProcessor = None
 
     def __init__(
         self,
@@ -59,7 +58,6 @@ class MatrixHandler:
         self.az = self.acd_appservice.az
         self.config = self.acd_appservice.config
         self.az.matrix_event_handler(self.init_handle_event)
-        self.commands = CommandProcessor(config=self.config)
 
     async def wait_for_connection(self) -> None:
         """It tries to connect to the homeserver, and if it fails,

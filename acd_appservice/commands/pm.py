@@ -8,50 +8,51 @@ from markdown import markdown
 from ..client import ProvisionBridge
 from ..puppet import Puppet
 from ..signaling import Signaling
-from .handler import command_handler
-from .typehint import CommandEvent
+from .handler import CommandArg, CommandEvent, command_handler
+
+phone = CommandArg(
+    name="phone",
+    help_text="Number of the customer for whom the private chat is to be created",
+    is_required=True,
+    example="`573123456789` | `+573123456789`",
+)
+
+message = CommandArg(
+    name="message",
+    help_text="Message to be sent to the customer",
+    is_required=True,
+    example="Hey there!",
+)
 
 
 @command_handler(
     name="pm",
     help_text=("Command that allows send a message to a customer"),
-    help_args="<_dict_>",
+    help_args=[phone, message],
 )
 async def pm(evt: CommandEvent) -> Dict:
-    """It takes a phone number and a message, and sends the message to the phone number
+    """It sends a message to a customer, if the customer is already in a room,
+    it joins the agent to the room and sends a message to the room
 
     Parameters
     ----------
     evt : CommandEvent
-        Incoming CommandEvent
+        CommandEvent
 
     Returns
     -------
-        The return value of the command handler is a dict with two keys:
+        A dict with two keys:
         - data: The data to be sent to the frontend.
         - status: The HTTP status code to be sent to the frontend.
 
     """
 
-    # Checking if the command has arguments.
-    if len(evt.args_list) < 1:
-        detail = "pm command incomplete arguments"
-        evt.log.error(detail)
-        await evt.reply(text=detail)
-        return
-
-    # Getting the arguments of the command.
-    # Getting the phone number, template message and template name from the incoming parameters.
-    data: dict = json.loads(evt.text)
-
-    phone_number: str = data.get("phone_number")
-    template_message = data.get("template_message")
-    template_name = data.get("template_name")
-
     puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
 
     if not puppet:
         return
+
+    message = " ".join(evt.args_list[1:])
 
     # A dict that will be sent to the frontend.
     return_params = {
@@ -68,17 +69,18 @@ async def pm(evt: CommandEvent) -> Dict:
 
     # Checking if the phone number is a number and if the template name and message are not empty.
 
-    if not phone_number.isdigit():
+    if not evt.args.phone.isdigit():
         return_params["reply"] = "You must specify a valid phone number with country prefix."
-    if not template_name or not template_message:
-        return_params["reply"] = "You must specify a template name and message"
 
     # Checking if the phone number starts with a plus sign, if not, it adds it.
-    phone_number = phone_number if phone_number.startswith("+") else f"+{phone_number}"
+    phone = evt.args.phone if evt.args.phone.startswith("+") else f"+{evt.args.phone}"
 
     # Sending a message to the frontend.
     if return_params.get("reply"):
-        cmd_front_msg = f"{puppet.config['acd.frontend_command_prefix']} {evt.command} {json.dumps(return_params)}"
+        cmd_front_msg = (
+            f"{puppet.config['acd.frontend_command_prefix']} {evt.command} "
+            f"{json.dumps(return_params)}"
+        )
         await evt.reply(text=cmd_front_msg)
         return {"data": return_params, "status": 422}
 
@@ -86,7 +88,7 @@ async def pm(evt: CommandEvent) -> Dict:
     bridge_connector = ProvisionBridge(
         session=evt.intent.api.session, config=puppet.config, bridge=puppet.bridge
     )
-    status, data = await bridge_connector.pm(user_id=evt.intent.mxid, phone=phone_number)
+    status, data = await bridge_connector.pm(user_id=evt.intent.mxid, phone=phone)
 
     if not status in [200, 201]:
         evt.log.error(data)
@@ -127,18 +129,18 @@ async def pm(evt: CommandEvent) -> Dict:
 
             if puppet.config[f"bridges.{puppet.bridge}.send_template_command"]:
                 await bridge_connector.gupshup_template(
-                    user_id=evt.intent.mxid, room_id=data.get("room_id"), template=template_message
+                    user_id=evt.intent.mxid, room_id=data.get("room_id"), template=message
                 )
             else:
                 await evt.intent.send_text(
                     room_id=data.get("room_id"),
-                    text=template_message,
-                    html=markdown(template_message),
+                    text=message,
+                    html=markdown(message),
                 )
 
     # Setting the return_params dict with the sender_id, phone_number, room_id and agent_displayname.
     return_params["sender_id"] = evt.sender.mxid
-    return_params["phone_number"] = phone_number
+    return_params["phone_number"] = phone
     # Cuando ya hay otro agente en la sala, se debe enviar room_id en None
     return_params["room_id"] = (
         None if agent_id and agent_id != evt.sender.mxid else data.get("room_id")

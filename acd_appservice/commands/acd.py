@@ -1,19 +1,18 @@
 from ..puppet import Puppet
-from .handler import CommandArg, command_handler
-from .typehint import CommandEvent
+from .handler import CommandArg, CommandEvent, command_handler
 
 customer_room_id = CommandArg(
     name="customer_room_id",
     help_text="Customer room_id to be distributed",
     is_required=True,
-    example="!ldjkfnasdasdasdasdas:foo.com",
+    example="`!foo:foo.com`",
 )
 
 campaign_room_id = CommandArg(
     name="campaign_room_id",
     help_text="Campaign room_id where the customer will be distributed",
     is_required=False,
-    example="!ldjkfnasdasdasasd:foo.com",
+    example="`!foo:foo.com`",
 )
 
 joined_message = CommandArg(
@@ -42,12 +41,6 @@ async def acd(evt: CommandEvent) -> str:
         Incoming CommandEvent
 
     """
-
-    if not evt.args_list:
-        detail = f"{evt.command} command incomplete arguments"
-        evt.log.error(detail)
-        await evt.reply(text=detail)
-        return
 
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=evt.args.customer_room_id)
 

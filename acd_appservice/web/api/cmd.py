@@ -1,21 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from typing import Dict, List
 
 from aiohttp import web
 from mautrix.types import RoomID, UserID
 
-from ...commands import acd as cmd_acd
-from ...commands import create as cmd_create
-from ...commands import pm as cmd_pm
-from ...commands import resolve as cmd_resolve
-from ...commands import state_event as cmd_state_event
-from ...commands import template as cmd_template
-from ...commands import transfer as cmd_transfer
-from ...commands import transfer_user as cmd_transfer_user
-from ...commands.typehint import CommandEvent
 from ...puppet import Puppet
 from ...queue_membership import QueueMembership
 from ...user import User
@@ -24,7 +14,6 @@ from ..base import (
     _resolve_user_identifier,
     get_bulk_resolve,
     get_commands,
-    get_config,
     routes,
 )
 from ..error_responses import (
@@ -91,11 +80,13 @@ async def create(request: web.Request) -> web.Response:
 
         email = data.get("user_email")
 
-    fake_cmd_event = CommandEvent(
-        sender=user, config=get_config(), command="create", is_management=True, args_list=args
+    puppet = await get_commands().handle(
+        sender=user,
+        command="create",
+        args_list=args,
+        intent=puppet.intent,
+        is_management=True,
     )
-
-    puppet = await cmd_create(fake_cmd_event)
 
     if email:
         puppet.email = email
@@ -133,18 +124,14 @@ async def pm(request: web.Request) -> web.Response:
                     properties:
                         customer_phone:
                             type: string
+                        company_phone:
+                            type: string
                         template_message:
-                            type: string
-                        template_name:
-                            type: string
-                        agent_id:
                             type: string
                     example:
                         customer_phone: "573123456789"
                         company_phone: "57398765432"
                         template_message: "Hola iKono!!"
-                        template_name: "text"
-                        agent_id: "@agente1:somewhere.com"
 
     responses:
         '200':
@@ -163,53 +150,28 @@ async def pm(request: web.Request) -> web.Response:
 
     data: Dict = await request.json()
 
-    if not (
-        data.get("customer_phone")
-        and data.get("template_message")
-        and data.get("template_name")
-        and (data.get("user_email") or data.get("company_phone") or data.get("user_id"))
-        and data.get("agent_id")
-    ):
+    phone = data.get("customer_phone")
+    message = data.get("template_message")
+
+    if not (phone and message):
         return web.json_response(**REQUIRED_VARIABLES)
 
-    puppet = None
-
-    if data.get("company_phone"):
-        company_phone = data.get("company_phone").replace("+", "")
-        puppet: Puppet = await Puppet.get_by_phone(company_phone)
-
-    puppet = puppet or await _resolve_puppet_identifier(request=request)
+    puppet = await _resolve_puppet_identifier(request=request)
 
     if not puppet:
         return web.json_response(**USER_DOESNOT_EXIST)
 
-    incoming_params = {
-        "phone_number": data.get("customer_phone"),
-        "template_message": data.get("template_message"),
-        "template_name": data.get("template_name"),
-    }
+    args = [phone, message]
 
-    data_cmd = f"{json.dumps(incoming_params)}"
+    result = await get_commands().handle(
+        sender=user,
+        command="pm",
+        args_list=args,
+        intent=puppet.intent,
+        is_management=False,
+    )
 
-    # Creating a fake command event and passing it to the command processor.
-
-    try:
-
-        fake_cmd_event = CommandEvent(
-            sender=user,
-            config=get_config(),
-            command="pm",
-            is_management=False,
-            intent=puppet.intent,
-            text=data_cmd,
-            args_list=data_cmd.split(),
-        )
-
-        result = await cmd_pm(fake_cmd_event)
-
-        return web.json_response(**result)
-    except Exception as e:
-        return web.json_response(status=500, data={"error": str(e)})
+    return web.json_response(**result)
 
 
 @routes.post("/v1/cmd/resolve")
@@ -235,7 +197,7 @@ async def resolve(request: web.Request) -> web.Response:
                         send_message:
                             type: string
                     example:
-                        room_id: "!gKEsOPrixwrrMFCQCJ:foo.com"
+                        room_id: "!foo:foo.com"
                         user_id: "@acd_1:foo.com"
                         send_message: "yes"
 
@@ -272,18 +234,13 @@ async def resolve(request: web.Request) -> web.Response:
 
     args = [room_id, user_id, send_message, puppet.config[f"bridges.{bridge}.prefix"]]
 
-    # Creating a fake command event and passing it to the command processor.
-
-    fake_cmd_event = CommandEvent(
+    await get_commands().handle(
         sender=user,
-        config=get_config(),
         command="resolve",
-        is_management=False,
-        intent=puppet.intent,
         args_list=args,
+        intent=puppet.intent,
+        is_management=False,
     )
-
-    await cmd_resolve(fake_cmd_event)
     return web.json_response()
 
 
@@ -370,19 +327,11 @@ async def state_event(request: web.Request) -> web.Response:
                         event_type:
                             type: string
                     example:
-                        room_id: "!gKEsOPrixwrrMFCQCJ:foo.com"
-                        event_type: "ik.chat.tag"
-                        tags: [
-                                {
-                                    "id":"soporte",
-                                    "text":"soporte"
-                                },
-                                {
-                                    "id":"ventas",
-                                    "text":"ventas"
+                        room_id: "!foo:foo.com"
+                        event_type: "m.custom.event"
+                        content: {
+                                    "tags": ["tag1", "tag2", "tag3"]
                                 }
-                            ]
-
 
     responses:
         '400':
@@ -397,40 +346,27 @@ async def state_event(request: web.Request) -> web.Response:
 
     data: Dict = await request.json()
 
-    if not (data.get("room_id") and data.get("event_type")):
+    room_id = data.get("room_id")
+    event_type = data.get("event_type")
+    content = data.get("room_id")
+
+    if not (room_id and event_type):
         return web.json_response(**REQUIRED_VARIABLES)
 
-    incoming_params = {
-        "room_id": data.get("room_id"),
-        "event_type": data.get("event_type"),
-    }
-
-    # Si llega vacia la lista tags es porque se quieren limpiar los tags
-    if data.get("tags") is not None:
-        incoming_params["tags"] = data.get("tags")
-    else:
-        incoming_params["content"] = data.get("content")
-
     # Obtenemos el puppet de este email si existe
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=data.get("room_id"))
+    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
     if not puppet:
         return web.json_response(**USER_DOESNOT_EXIST)
 
-    # Creating a fake command event and passing it to the command processor.
+    args = [room_id, event_type, content]
 
-    text_incoming_params = f"{json.dumps(incoming_params)}"
-
-    fake_cmd_event = CommandEvent(
+    await get_commands().handle(
         sender=user,
-        config=get_config(),
         command="state_event",
-        is_management=False,
+        args_list=args,
         intent=puppet.intent,
-        args_list=text_incoming_params.split(),
-        text=text_incoming_params,
+        is_management=False,
     )
-
-    await cmd_state_event(fake_cmd_event)
 
     return web.json_response()
 
@@ -453,13 +389,10 @@ async def template(request: web.Request) -> web.Response:
                     properties:
                         room_id:
                             type: string
-                        template_name:
-                            type: string
                         template_message:
                             type: string
                     example:
                         room_id: "!duOWDQQCshKjQvbyoh:foo.com"
-                        template_name: "hola"
                         template_message: "Hola iKono!!"
 
     responses:
@@ -474,36 +407,21 @@ async def template(request: web.Request) -> web.Response:
         return web.json_response(**NOT_DATA)
 
     data: Dict = await request.json()
+    room_id = data.get("room_id")
+    template_message = data.get("template_message")
 
-    if not (data.get("room_id") and data.get("template_name") and data.get("template_message")):
+    if not (room_id and template_message):
         return web.json_response(**REQUIRED_VARIABLES)
 
-    incoming_params = {
-        "room_id": data.get("room_id"),
-        "template_name": data.get("template_name"),
-        "template_message": data.get("template_message"),
-    }
-
-    # Obtenemos el puppet de este email si existe
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=data.get("room_id"))
+    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
     if not puppet:
         return web.json_response(**USER_DOESNOT_EXIST)
 
-    # Creating a fake command event and passing it to the command processor.
+    args = [room_id, template_message]
 
-    text_incoming_params = f"{json.dumps(incoming_params)}"
-
-    fake_cmd_event = CommandEvent(
-        sender=user,
-        config=get_config(),
-        command="template",
-        is_management=False,
-        intent=puppet.intent,
-        args_list=text_incoming_params.split(),
-        text=text_incoming_params,
+    await get_commands().handle(
+        sender=user, command="template", args_list=args, intent=puppet.intent, is_management=False
     )
-
-    await cmd_template(fake_cmd_event)
     return web.json_response()
 
 
@@ -557,17 +475,10 @@ async def transfer(request: web.Request) -> web.Response:
 
     args = [customer_room_id, campaign_room_id]
 
-    # Creating a fake command event and passing it to the command processor.
-    fake_cmd_event = CommandEvent(
-        sender=user,
-        config=get_config(),
-        command="transfer",
-        is_management=False,
-        intent=puppet.intent,
-        args_list=args,
+    await get_commands().handle(
+        sender=user, command="transfer", args_list=args, intent=puppet.intent, is_management=False
     )
 
-    await cmd_transfer(fake_cmd_event)
     return web.json_response()
 
 
@@ -628,17 +539,13 @@ async def transfer_user(request: web.Request) -> web.Response:
     if data.get("force"):
         args.append(data.get("force"))
 
-    # Creating a fake command event and passing it to the command processor.
-    fake_cmd_event = CommandEvent(
+    await get_commands().handle(
         sender=user,
-        config=get_config(),
         command="transfer_user",
-        is_management=False,
-        intent=puppet.intent,
         args_list=args,
+        intent=puppet.intent,
+        is_management=False,
     )
-
-    await cmd_transfer_user(fake_cmd_event)
     return web.json_response()
 
 
@@ -699,14 +606,12 @@ async def queue(request: web.Request) -> web.Response:
     invitees = None
 
     if data.get("invitees"):
-        invitees: List = data.get("invitees")
-        invitees: str = ",".join(invitees)
+        invitees: str = ",".join(data.get("invitees"))
 
     description: str = data.get("description") if data.get("description") else ""
 
     args = [action, name, invitees, description]
 
-    # Creating a fake command event and passing it to the command processor.
     result: Dict = await get_commands().handle(
         sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
     )
@@ -778,17 +683,10 @@ async def acd(request: web.Request) -> web.Response:
 
     args = [customer_room_id, campaign_room_id, joined_message]
 
-    # Creating a fake command event and passing it to the command processor.
-    fake_cmd_event = CommandEvent(
-        sender=user,
-        config=get_config(),
-        command="acd",
-        is_management=False,
-        intent=puppet.intent,
-        args_list=args,
+    await get_commands().handle(
+        sender=user, command="acd", args_list=args, intent=puppet.intent, is_management=False
     )
 
-    await cmd_acd(fake_cmd_event)
     return web.json_response()
 
 

@@ -1,19 +1,48 @@
+from __future__ import annotations
+
 import json
 from typing import Dict
 
 from mautrix.types import EventType
 
 from ..puppet import Puppet
-from .handler import command_handler
-from .typehint import CommandEvent
+from .handler import CommandArg, CommandEvent, command_handler
+
+room_id = CommandArg(
+    name="room_id",
+    help_text="Room where the status event is to be sent",
+    is_required=True,
+    example="`!foo:foo.com`",
+)
+
+event_type = CommandArg(
+    name="event_type",
+    help_text="Event_type you want to send",
+    is_required=True,
+    example="`m.room.name` | `m.custom.event`",
+)
+
+content = CommandArg(
+    name="content",
+    help_text="Message to be sent to the customer",
+    is_required=True,
+    example=(
+        """
+
+        {
+            "tags": ["tag1", "tag2", "tag3"]
+        }
+        """
+    ),
+)
 
 
 @command_handler(
     name="state_event",
     help_text=("Command that sends a state event to matrix"),
-    help_args="<_dict_>",
+    help_args=[room_id, event_type, content],
 )
-async def state_event(evt: CommandEvent) -> Dict:
+async def state_event(evt: CommandEvent) -> Dict | None:
     """It receives a message from the client, parses it, and sends a state event to the room
 
     Parameters
@@ -26,44 +55,22 @@ async def state_event(evt: CommandEvent) -> Dict:
         A dictionary
 
     """
-    if len(evt.args_list) <= 1:
-        detail = "state_event command incomplete arguments"
-        evt.log.error(detail)
-        await evt.reply(text=detail)
-        return
 
     puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
 
     if not puppet:
         return
 
+    event_type = EventType.find(evt.args.event_type, EventType.Class.STATE)
+
     try:
-        incoming_params = json.loads(evt.text)
+        content = json.loads(evt.args.content)
     except Exception as e:
-        evt.log.exception(f"Error processing incoming params, skipping message - {e}")
-        return
-
-    room_id = incoming_params.get("room_id")
-    event_type = incoming_params.get("event_type")
-
-    # Validating incoming params
-    if not room_id:
-        evt.log.error(f"You must specify a room ID to process_state_event")
-        return
-
-    if not event_type:
-        evt.log.error(
-            f"You must specify a type event for the room: {room_id} - process_state_event"
-        )
-        return
-
-    # Si llega vacia la lista tags es porque se quieren limpiar los tags
-    if event_type == "ik.chat.tag" and incoming_params.get("tags") is not None:
-        event_type = EventType.find("ik.chat.tag", EventType.Class.STATE)
-        content = {"tags": incoming_params.get("tags")}
-    else:
-        content = incoming_params.get("content")
+        detail = f"Error processing content - {e}"
+        evt.log.error(detail)
+        await evt.reply(detail)
+        return {"data": {"error": detail}, "status": 500}
 
     await puppet.agent_manager.signaling.send_state_event(
-        room_id=room_id, event_type=event_type, content=content
+        room_id=evt.args.room_id, event_type=event_type, content=content
     )

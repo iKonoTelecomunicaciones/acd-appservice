@@ -1,27 +1,110 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Awaitable, Callable, Dict, List, NamedTuple, Type
+from typing import Any, Awaitable, Callable, Dict, List, NamedTuple, Tuple, Type
 
-from mautrix.types import MessageEventContent, RoomID
+from attr import dataclass
+from markdown import markdown
+from mautrix.appservice import IntentAPI
+from mautrix.types import Format, MessageEventContent, MessageType, RoomID, TextMessageEventContent
 from mautrix.util.logging import TraceLogger
 
-from ..commands.typehint import ArgParser, CommandArg, CommandEvent
 from ..config import Config
 from ..user import User
 
 command_handlers: dict[str, CommandHandler] = {}
 command_aliases: dict[str, CommandHandler] = {}
 
-from mautrix.appservice import IntentAPI
 
 HelpCacheKey = NamedTuple(
     "HelpCacheKey", is_management=bool, is_portal=bool, is_admin=bool, is_logged_in=bool
 )
 
-CommandHandlerFunc = Callable[[CommandEvent], Awaitable[Any]]
 
-log: TraceLogger = logging.getLogger("mau.commands")
+class CommandEvent:
+    log: TraceLogger = logging.getLogger("acd.cmd")
+    processor: CommandProcessor
+    sender: "User"
+
+    def __init__(
+        self,
+        processor: CommandProcessor,
+        sender: User,
+        config: Config,
+        command: str,
+        is_management: bool,
+        args: ArgParser = None,
+        intent: IntentAPI = None,
+        room_id: RoomID = None,
+        text: str = None,
+        args_list: List[str] = None,
+    ):
+        self.command = command
+        self.processor = processor
+        self.log = self.log.getChild(self.command)
+        self.intent = intent
+        self.config = config
+        self.command_prefix = config["bridge.command_prefix"]
+        self.sender = sender
+        self.room_id = room_id
+        self.is_management = is_management
+        self.text = text
+        self.args_list = args_list
+        self.args = args
+
+    async def reply(self, text: str) -> None:
+        """It sends a message to the room that the event was received from
+
+        Parameters
+        ----------
+        text : str
+            The text to send.
+
+        """
+        if not text or not self.room_id:
+            return
+
+        try:
+            # Sending a message to the room that the event was received from.
+            html = markdown(text)
+            content = TextMessageEventContent(
+                msgtype=MessageType.NOTICE, body=text, format=Format.HTML, formatted_body=html
+            )
+
+            await self.intent.send_message(
+                room_id=self.room_id,
+                content=content,
+            )
+        except Exception as e:
+            self.log.exception(e)
+
+
+@dataclass
+class CommandArg:
+    name: str
+    help_text: str
+    example: str
+    default: Any = None
+    is_required: bool = False
+
+    @property
+    def _name(self) -> str:
+        return f"<_{self.name}_>" if self.is_required else f"[_{self.name}_]"
+
+    @property
+    def detail(self) -> str:
+        return (
+            f"**{self.name}**: {self.help_text}\n\n"
+            f"\t**is_required**: {self.is_required}\n\n"
+            f"\t**example**: {self.example}\n\n"
+        )
+
+
+class ArgParser:
+    pass
+
+
+CommandHandlerFunc = Callable[[CommandEvent], Awaitable[Any]]
 
 
 class CommandHandler:
@@ -127,10 +210,12 @@ class CommandHandler:
         for cmd_arg in self._help_args:
             text += f"- {cmd_arg.detail}\n"
 
-        text += f"##### SubArgs\n\n"
+        if self._help_sub_args:
 
-        for cmd_arg in self._help_sub_args:
-            text += f"- {cmd_arg.detail}\n"
+            text += f"##### SubArgs\n\n"
+
+            for cmd_arg in self._help_sub_args:
+                text += f"- {cmd_arg.detail}\n"
 
         return text
 
@@ -191,6 +276,7 @@ class CommandProcessor:
         """
 
         evt = self.event_class(
+            processor=self,
             room_id=room_id,
             config=self.config,
             intent=intent,
@@ -214,23 +300,17 @@ class CommandProcessor:
             return
 
         if handler._help_args:
-            evt.args = self.parse_arguments(handler=handler, args=args_list)
+            evt.args, ok = await self.parse_arguments(handler=handler, args=args_list, evt=evt)
+
+            if not ok:
+                return evt.args
 
         if handler is None:
             handler = command_handlers["unknown_command"]
 
         try:
             # Trying to delete the log from the result.
-            result = await self._run_handler(handler, evt)
-
-            # If a dict with a `log` field is returned, it will be removed,
-            # this is done to connect the response of the commands with the provisioning API.
-            if result:
-                try:
-                    del result["log"]
-                except KeyError:
-                    pass
-            return result
+            return await self._run_handler(handler, evt)
 
         except Exception:
             detail = (
@@ -238,21 +318,25 @@ class CommandProcessor:
                 f"{evt.command} {' '.join(args_list)} from {sender.mxid})"
             )
             self.log.exception(detail)
-            return {"error": detail}
+            return {"data": {"error": detail}, "status": 500}
 
-    def parse_arguments(self, handler: CommandHandler, args: List) -> ArgParser:
-        """It takes the arguments from the command and puts them into an ArgParser object
+    async def parse_arguments(
+        self, handler: CommandHandler, args: List, evt: CommandEvent
+    ) -> Tuple(ArgParser, bool):
+        """This function takes the arguments passed to the command and parses them into a dictionary
 
         Parameters
         ----------
         handler : CommandHandler
-            The command handler that is being called.
+            The command handler
         args : List
-            List - The list of arguments that the user has passed in.
+            List - The list of arguments passed to the command
+        evt : CommandEvent
+            The event object that was passed to the command handler
 
         Returns
         -------
-            The ArgParser object is being returned.
+            A tuple of the ArgParser object and a boolean.
 
         """
 
@@ -263,12 +347,23 @@ class CommandProcessor:
             try:
                 arg_parser.__setattr__(aux_args[index].name, args[index])
             except IndexError:
+
+                if aux_args[index].is_required:
+                    detail = f"`{aux_args[index].name}` is a required parameter"
+                    detail += (
+                        f"\n\nUse `{self.command_prefix} {evt.command} help` "
+                        "for more information"
+                    )
+                    self.log.error(detail)
+                    await evt.reply(text=detail)
+                    return {"error": detail, "status": 422}, False
+
                 if aux_args[index].default:
                     arg_parser.__setattr__(aux_args[index].name, aux_args[index].default)
                 else:
                     arg_parser.__setattr__(aux_args[index].name, None)
 
-        return arg_parser
+        return arg_parser, True
 
 
 def command_handler(

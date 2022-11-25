@@ -6,8 +6,7 @@ from mautrix.types import UserID
 from ..queue import Queue
 from ..queue_membership import QueueMembership, QueueMembershipState
 from ..user import User
-from .handler import CommandArg, command_handler
-from .typehint import CommandEvent
+from .handler import CommandArg, CommandEvent, command_handler
 
 action = CommandArg(
     name="action",
