@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Dict
 
 from mautrix.types import UserID
@@ -132,11 +131,11 @@ async def member(evt: CommandEvent) -> Dict:
             return json_response
 
         membership.state = state
-        membership.state_ts = datetime.timestamp(datetime.utcnow())
+        membership.state_date = QueueMembership.now()
         # When action is `logout` also unpause the user and erase pause_reason
         if evt.args.action == "logout" and membership.paused:
             membership.paused = False
-            membership.pause_ts = datetime.timestamp(datetime.utcnow())
+            membership.pause_date = QueueMembership.now()
             membership.pause_reason = None
         await membership.save()
     elif evt.args.action == "pause" or evt.args.action == "unpause":
@@ -159,7 +158,7 @@ async def member(evt: CommandEvent) -> Dict:
             return json_response
 
         membership.paused = state
-        membership.pause_ts = datetime.timestamp(datetime.utcnow())
+        membership.pause_date = QueueMembership.now()
         # The position of the pause_reason argument is variable,
         # in some cases it can be in the position of the agent_id arg
         if evt.args.action == "pause":

@@ -33,9 +33,9 @@ class QueueMembership:
     id: int
     fk_user: int
     fk_queue: int
-    creation_ts: int  # Date of queue_membership creation
-    state_ts: int | None = None  # Last change of state
-    pause_ts: int | None = None  # Last pause record
+    creation_date: str  # Date of queue_membership creation
+    state_date: str | None = None  # Last change of state
+    pause_date: str | None = None  # Last pause record
     pause_reason: str = None
     state: str = QueueMembershipState.Offline.value
     paused: bool = False
@@ -49,15 +49,17 @@ class QueueMembership:
         return (
             self.fk_user,
             self.fk_queue,
-            self.creation_ts,
-            self.state_ts,
-            self.pause_ts,
+            self.creation_date,
+            self.state_date,
+            self.pause_date,
             self.pause_reason,
             self.state,
             self.paused,
         )
 
-    _columns = "fk_user, fk_queue, creation_ts, state_ts, pause_ts, pause_reason, state, paused"
+    _columns = (
+        "fk_user, fk_queue, creation_date, state_date, pause_date, pause_reason, state, paused"
+    )
 
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> QueueMembership:
@@ -70,7 +72,7 @@ class QueueMembership:
 
     async def update(self) -> None:
         q = """UPDATE queue_membership
-        SET creation_ts=$3, state_ts=$4, pause_ts=$5, pause_reason=$6,
+        SET creation_date=$3, state_date=$4, pause_date=$5, pause_reason=$6,
         state=$7, paused=$8 WHERE fk_user=$1 AND fk_queue=$2;"""
         await self.db.execute(q, *self._values)
 

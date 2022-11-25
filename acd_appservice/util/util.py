@@ -41,7 +41,7 @@ class Util:
             A boolean value.
 
         """
-        return False if not user_id else (match(f"^@{cls._main_matrix_regex}+$", user_id))
+        return False if not user_id else bool(match(f"^@{cls._main_matrix_regex}+$", user_id))
 
     @classmethod
     def is_room_id(cls, room_id: RoomID) -> bool:
