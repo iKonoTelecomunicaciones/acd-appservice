@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Dict
 
 from mautrix.types import UserID
@@ -123,7 +122,7 @@ async def member(evt: CommandEvent) -> Dict:
             return json_response
 
         membership.state = state
-        membership.state_ts = datetime.timestamp(datetime.utcnow())
+        membership.state_date = QueueMembership.now()
         await membership.save()
 
     msg = f"Agent operation `{evt.args.action}` was successful"
