@@ -30,6 +30,7 @@ description = CommandArg(
     help_text="Short description about queue",
     is_required=False,
     example='"It is a queue to distribute chats"',
+    default="",
 )
 
 
@@ -91,7 +92,7 @@ async def queue(evt: CommandEvent) -> Dict:
                 invitees=invitees
                 if evt.config["acd.queues.user_add_method"] == "invite"
                 else evt.config["acd.queues.invitees"],
-                topic=evt.config["acd.queues.topic"],
+                topic=f"{evt.config['acd.queues.topic']} -> {evt.args.description}",
                 visibility=visibility,
             )
         except Exception as e:
