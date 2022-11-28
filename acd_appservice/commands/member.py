@@ -24,7 +24,7 @@ agent_id = CommandArg(
 
 pause_reason = CommandArg(
     name="pause_reason",
-    help_text="Why you paused?",
+    help_text="Why are you going to pause?",
     is_required=False,
     example="Pause to see the sky",
 )
