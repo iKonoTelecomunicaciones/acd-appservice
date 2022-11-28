@@ -14,7 +14,6 @@ from mautrix.types import (
     Format,
     JoinRule,
     MessageType,
-    PowerLevelStateEventContent,
     RoomDirectoryVisibility,
     RoomID,
     TextMessageEventContent,
@@ -45,7 +44,12 @@ class RoomManager:
     blacklist_rooms = set()
 
     def __init__(
-        self, puppet_pk: int, control_room_id: RoomID, config: Config, intent: IntentAPI = None
+        self,
+        puppet_pk: int,
+        control_room_id: RoomID,
+        config: Config,
+        bridge: str,
+        intent: IntentAPI = None,
     ) -> None:
         self.config = config
         if not intent:
@@ -54,27 +58,26 @@ class RoomManager:
         self.log = self.log.getChild(self.intent.mxid or None)
         self.puppet_pk = puppet_pk
         self.control_room_id = control_room_id
+        self.bridge = bridge
 
     @classmethod
     def _add_to_cache(cls, room_id, room: Room) -> None:
         cls.by_room_id[room_id] = room
 
-    @property
-    def power_levels(self) -> PowerLevelStateEventContent:
-        levels = PowerLevelStateEventContent()
-        levels.events_default = 0
-        levels.ban = 99
-        levels.kick = 99
-        levels.invite = 99
-        levels.events[EventType.REACTION] = 0
-        levels.events[EventType.ROOM_NAME] = 0
-        levels.events[EventType.ROOM_AVATAR] = 0
-        levels.events[EventType.ROOM_TOPIC] = 0
-        levels.events[EventType.ROOM_TOMBSTONE] = 99
-        levels.users_default = 0
-        levels.redact = 99
+    async def set_bridge_default_power_levels(self, room_id: RoomID) -> None:
+        """It gets the power levels of the room, updates them with the power levels specified in
+        the config, and then sets the power levels of the room
 
-        return levels
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to set the power levels in.
+
+        """
+        levels = await self.intent.get_power_levels(room_id=room_id)
+        new_levels: Dict = levels.serialize()
+        new_levels.update(self.config[f"bridges.{self.bridge}.setup_rooms.power_levels"])
+        await self.intent.set_power_levels(room_id=room_id, content=new_levels)
 
     async def initialize_room(self, room_id: RoomID) -> bool:
         """Initializing a room.
@@ -108,8 +111,8 @@ class RoomManager:
                 power_level=100,
             )
             await self.send_cmd_set_relay(room_id=room_id, bridge=bridge)
-        else:
-            await self.intent.set_power_levels(room_id=room_id, content=self.power_levels)
+        if self.config[f"bridges.{self.bridge}.setup_rooms.enabled"]:
+            await self.set_bridge_default_power_levels(room_id=room_id)
 
         await asyncio.create_task(self.initial_room_setup(room_id=room_id))
 
