@@ -14,6 +14,7 @@ from mautrix.types import (
     Format,
     JoinRule,
     MessageType,
+    PowerLevelStateEventContent,
     RoomDirectoryVisibility,
     RoomID,
     TextMessageEventContent,
@@ -58,6 +59,23 @@ class RoomManager:
     def _add_to_cache(cls, room_id, room: Room) -> None:
         cls.by_room_id[room_id] = room
 
+    @property
+    def power_levels(self) -> PowerLevelStateEventContent:
+        levels = PowerLevelStateEventContent()
+        levels.events_default = 0
+        levels.ban = 99
+        levels.kick = 99
+        levels.invite = 99
+        levels.events[EventType.REACTION] = 0
+        levels.events[EventType.ROOM_NAME] = 0
+        levels.events[EventType.ROOM_AVATAR] = 0
+        levels.events[EventType.ROOM_TOPIC] = 0
+        levels.events[EventType.ROOM_TOMBSTONE] = 99
+        levels.users_default = 0
+        levels.redact = 99
+
+        return levels
+
     async def initialize_room(self, room_id: RoomID) -> bool:
         """Initializing a room.
 
@@ -91,7 +109,7 @@ class RoomManager:
             )
             await self.send_cmd_set_relay(room_id=room_id, bridge=bridge)
         else:
-            return False
+            await self.intent.set_power_levels(room_id=room_id, content=self.power_levels)
 
         await asyncio.create_task(self.initial_room_setup(room_id=room_id))
 

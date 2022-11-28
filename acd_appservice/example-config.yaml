@@ -209,14 +209,33 @@ bridges:
     send_template_command: ""
     # Postfix to identify a customer
     postfix_template: "(WA)"
-    set_relay: "set-relay"
-    set_permissions: "set-pl {mxid} {power_level}"
     # Bridge support formated messages
     format_messages: true
     notice_messages:
       # When I can't create a chat with WhatsApp
         phone_is_not_on_whatsapp: "^The server said \\+(?P<phone_number>[0-9]+) is not on WhatsApp$"
     # Settings for provisioning API
+    setup_rooms:
+        commands:
+            send_commdans: true
+            set_relay: "set-relay"
+            set_permissions: "set-pl {mxid} {power_level}"
+
+        power_levels:
+            events_default: 0
+            ban: 99
+            kick: 99
+            invite: 99
+            users_default: 0
+            redact: 99
+            events:
+                reaction: 0
+                room_name: 0
+                room_avatar: 0
+                room_topic: 0
+                room_tombstone: 99
+
+
     provisioning:
         url_base: "http://mautrix-whatsapp:29318/_matrix/provision"
         shared_secret: ""
