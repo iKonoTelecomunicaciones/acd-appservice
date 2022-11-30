@@ -213,7 +213,7 @@ class MatrixHandler:
 
         """
         detail = markdown(
-            "You are not a `ACD admin` check the `bridge.permissionsin` the config file."
+            "You are not a `ACD admin` check the `bridge.permissions`in the config file."
         )
         await self.az.intent.send_notice(room_id=room_id, html=detail)
         await self.az.intent.leave_room(room_id=room_id)
