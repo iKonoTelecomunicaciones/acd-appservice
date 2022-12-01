@@ -68,7 +68,7 @@ async def db(config: Config):
 
 
 @pytest_asyncio.fixture
-async def fake_acd_init(config: Config, db: Database):
+async def acd_init(config: Config, db: Database):
 
     for table in [User, Queue, QueueMembership]:
         table.db = db
@@ -134,7 +134,7 @@ async def processor(
 
 @pytest_asyncio.fixture
 async def admin_user(
-    fake_acd_init,
+    acd_init,
     mocker: MockerFixture,
 ) -> User:
     mocker.patch.object(
@@ -147,7 +147,7 @@ async def admin_user(
 
 @pytest_asyncio.fixture
 async def agent_user(
-    fake_acd_init,
+    acd_init,
     mocker: MockerFixture,
 ) -> User:
     mocker.patch.object(
