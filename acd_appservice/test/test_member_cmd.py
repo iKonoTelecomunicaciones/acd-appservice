@@ -1,8 +1,5 @@
-from typing import Dict
-
 import nest_asyncio
 import pytest
-from mautrix.util.async_db import Database
 
 from ..commands.handler import CommandProcessor
 from ..queue import Queue
@@ -14,7 +11,7 @@ nest_asyncio.apply()
 
 @pytest.mark.asyncio
 class TestMemberCMD:
-    async def test_member_login(self, agent_user: User, processor: CommandProcessor, queue: Dict):
+    async def test_member_login(self, agent_user: User, processor: CommandProcessor, queue: Queue, queue_membership: QueueMembership):
         """> This function tests the memeber login command
 
         Parameters
@@ -28,8 +25,6 @@ class TestMemberCMD:
 
         """
 
-        test_queue: Queue = await Queue.get_by_room_id(queue.get("data").get("room_id"))
-        await QueueMembership.get_by_queue_and_user(agent_user.id, test_queue.id)
 
         args = ["login"]
         response = await processor.handle(
@@ -37,12 +32,12 @@ class TestMemberCMD:
             command="member",
             args_list=args,
             is_management=False,
-            room_id=queue.get("data").get("room_id"),
+            room_id=queue.room_id,
         )
         assert response.get("status") == 200
 
     async def test_member_login_over_other_agent(
-        self, agent_user: User, processor: CommandProcessor, queue: Dict
+        self, agent_user: User, processor: CommandProcessor, queue: Queue, queue_membership: QueueMembership
     ):
         """> This function tests the memeber login command using agent param
 
@@ -57,8 +52,6 @@ class TestMemberCMD:
 
         """
 
-        test_queue: Queue = await Queue.get_by_room_id(queue.get("data").get("room_id"))
-        await QueueMembership.get_by_queue_and_user(agent_user.id, test_queue.id)
 
         args = ["login", "@agent2:dominio_cliente.com"]
         response = await processor.handle(
@@ -66,12 +59,12 @@ class TestMemberCMD:
             command="member",
             args_list=args,
             is_management=False,
-            room_id=queue.get("data").get("room_id"),
+            room_id=queue.room_id,
         )
         assert response.get("status") == 403
 
     async def test_member_login_already_login(
-        self, agent_user: User, processor: CommandProcessor, queue: Dict
+        self, agent_user: User, processor: CommandProcessor, queue: Queue, queue_membership: QueueMembership
     ):
 
         """> The function tests that a member can login to a queue, and that if they try to login again,
@@ -88,8 +81,6 @@ class TestMemberCMD:
 
         """
 
-        test_queue: Queue = await Queue.get_by_room_id(queue.get("data").get("room_id"))
-        await QueueMembership.get_by_queue_and_user(agent_user.id, test_queue.id)
 
         args = ["login"]
         response = await processor.handle(
@@ -97,7 +88,7 @@ class TestMemberCMD:
             command="member",
             args_list=args,
             is_management=False,
-            room_id=queue.get("data").get("room_id"),
+            room_id=queue.room_id,
         )
 
         response = await processor.handle(
@@ -105,11 +96,11 @@ class TestMemberCMD:
             command="member",
             args_list=args,
             is_management=False,
-            room_id=queue.get("data").get("room_id"),
+            room_id=queue.room_id,
         )
         assert response.get("status") == 409
 
-    async def test_member_logout(self, agent_user: User, processor: CommandProcessor, queue: Dict):
+    async def test_member_logout(self, agent_user: User, processor: CommandProcessor, queue: Queue, queue_membership: QueueMembership):
 
         """It tests the member logout command.
 
@@ -124,8 +115,6 @@ class TestMemberCMD:
 
         """
 
-        test_queue: Queue = await Queue.get_by_room_id(queue.get("data").get("room_id"))
-        await QueueMembership.get_by_queue_and_user(agent_user.id, test_queue.id)
 
         args = ["login"]
         response = await processor.handle(
@@ -133,7 +122,7 @@ class TestMemberCMD:
             command="member",
             args_list=args,
             is_management=False,
-            room_id=queue.get("data").get("room_id"),
+            room_id=queue.room_id,
         )
 
         args = ["logout"]
@@ -142,12 +131,12 @@ class TestMemberCMD:
             command="member",
             args_list=args,
             is_management=False,
-            room_id=queue.get("data").get("room_id"),
+            room_id=queue.room_id,
         )
         assert response.get("status") == 200
 
     async def test_member_logout_already_logout(
-        self, agent_user: User, processor: CommandProcessor, queue: Dict
+        self, agent_user: User, processor: CommandProcessor, queue: Queue, queue_membership: QueueMembership
     ):
 
         """> The function tests that a member can login to a queue, and that if they try to login again,
@@ -164,8 +153,6 @@ class TestMemberCMD:
 
         """
 
-        test_queue: Queue = await Queue.get_by_room_id(queue.get("data").get("room_id"))
-        await QueueMembership.get_by_queue_and_user(agent_user.id, test_queue.id)
 
         args = ["logout"]
         response = await processor.handle(
@@ -173,7 +160,7 @@ class TestMemberCMD:
             command="member",
             args_list=args,
             is_management=False,
-            room_id=queue.get("data").get("room_id"),
+            room_id=queue.room_id,
         )
 
         response = await processor.handle(
@@ -181,20 +168,18 @@ class TestMemberCMD:
             command="member",
             args_list=args,
             is_management=False,
-            room_id=queue.get("data").get("room_id"),
+            room_id=queue.room_id,
         )
         assert response.get("status") == 409
 
     async def test_member_login_by_admin(
         self,
-        db: Database,
         admin_user: User,
         agent_user: User,
         processor: CommandProcessor,
-        queue: Dict,
+        queue: Queue,
+        queue_membership: QueueMembership
     ):
-        test_queue: Queue = await Queue.get_by_room_id(queue.get("data").get("room_id"))
-        await QueueMembership.get_by_queue_and_user(agent_user.id, test_queue.id)
 
         args = ["login", agent_user.mxid]
         response = await processor.handle(
@@ -202,6 +187,6 @@ class TestMemberCMD:
             command="member",
             args_list=args,
             is_management=False,
-            room_id=queue.get("data").get("room_id"),
+            room_id=queue.room_id,
         )
         assert response.get("status") == 200

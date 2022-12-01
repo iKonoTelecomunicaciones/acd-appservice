@@ -2,7 +2,6 @@ import os
 import random
 import string
 import time
-from typing import Dict
 
 import asyncpg
 import pytest
@@ -53,17 +52,17 @@ async def db(config: Config):
 
     test_db_args["server_settings"] = {"search_path": schema_name}
 
-    database_connection = Database.create(
+    database = Database.create(
         test_db_url,
         upgrade_table=upgrade_table,
         db_args=test_db_args,
     )
 
-    await database_connection.start()
+    await database.start()
 
-    yield database_connection
+    yield database
 
-    await database_connection.stop()
+    await database.stop()
     await conn.execute(f"DROP SCHEMA {schema_name} CASCADE")
     await conn.close()
 
@@ -135,36 +134,53 @@ async def processor(
 
 @pytest_asyncio.fixture
 async def admin_user(
-    db: Database,
     fake_acd_init,
+    mocker: MockerFixture,
 ) -> User:
+    mocker.patch.object(
+        User,
+        "get_by_mxid",
+        return_value=User(mxid="@admin:dominio_cliente.com", id=int(time.time())),
+    )
     return await User.get_by_mxid("@admin:dominio_cliente.com")
 
 
 @pytest_asyncio.fixture
 async def agent_user(
-    db: Database,
     fake_acd_init,
+    mocker: MockerFixture,
 ) -> User:
-    x = random.randint(0, 1000)
-    return await User.get_by_mxid(f"@agent{x}:dominio_cliente.com")
+    mocker.patch.object(
+        User,
+        "get_by_mxid",
+        return_value=User(mxid="@agent1:dominio_cliente.com", id=int(time.time())),
+    )
+    return await User.get_by_mxid("@agent1:dominio_cliente.com")
 
 
 @pytest_asyncio.fixture
 async def queue(
-    agent_user: User,
-    processor: CommandProcessor,
-    admin_user: User,
-    intent: IntentAPI,
-):
-
-    args = ["create", f"queue", agent_user.mxid, f"Test queue"]
-    result: Dict = await processor.handle(
-        sender=admin_user,
-        command="queue",
-        args_list=args,
-        intent=intent,
-        is_management=True,
+    mocker: MockerFixture,
+) -> Queue:
+    mocker.patch.object(
+        Queue,
+        "get_by_room_id",
+        return_value=Queue(id=int(time.time()), room_id="!foo:foo.com", name="test"),
     )
+    return await Queue.get_by_room_id("!foo:foo.com")
 
-    return result
+
+@pytest_asyncio.fixture
+async def queue_membership(
+    agent_user: User,
+    queue: Queue,
+    mocker: MockerFixture,
+) -> Queue:
+    mocker.patch.object(
+        QueueMembership,
+        "get_by_queue_and_user",
+        return_value=QueueMembership(
+            fk_user=agent_user.id, fk_queue=queue.id, creation_date=QueueMembership.now()
+        ),
+    )
+    return await QueueMembership.get_by_queue_and_user(fk_user=agent_user.id, fk_queue=queue.id)
