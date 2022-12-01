@@ -25,7 +25,9 @@ async def util(config: Config):
 
 @pytest_asyncio.fixture
 async def room_manager_mock(config: Config):
-    return RoomManager(puppet_pk=14, control_room_id="!asvqgqpHdym:matrix.org", config=config)
+    return RoomManager(
+        puppet_pk=14, control_room_id="!asvqgqpHdym:matrix.org", config=config, bridge="mautrix"
+    )
 
 
 @pytest_asyncio.fixture
