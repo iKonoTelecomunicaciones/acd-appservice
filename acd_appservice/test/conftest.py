@@ -132,7 +132,7 @@ async def processor(
     return CommandProcessor(config=config)
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def admin_user(
     acd_init,
     mocker: MockerFixture,
@@ -145,7 +145,7 @@ async def admin_user(
     return await User.get_by_mxid("@admin:dominio_cliente.com")
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def agent_user(
     acd_init,
     mocker: MockerFixture,
