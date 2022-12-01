@@ -46,7 +46,6 @@ class TestMemberCMD:
         agent_user: User,
         processor: CommandProcessor,
         queue: Queue,
-        queue_membership: QueueMembership,
     ):
         """> This function tests the memeber login command using agent param
 
