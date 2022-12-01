@@ -11,7 +11,13 @@ nest_asyncio.apply()
 
 @pytest.mark.asyncio
 class TestMemberCMD:
-    async def test_member_login(self, agent_user: User, processor: CommandProcessor, queue: Queue, queue_membership: QueueMembership):
+    async def test_member_login(
+        self,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
         """> This function tests the memeber login command
 
         Parameters
@@ -25,7 +31,6 @@ class TestMemberCMD:
 
         """
 
-
         args = ["login"]
         response = await processor.handle(
             sender=agent_user,
@@ -37,7 +42,11 @@ class TestMemberCMD:
         assert response.get("status") == 200
 
     async def test_member_login_over_other_agent(
-        self, agent_user: User, processor: CommandProcessor, queue: Queue, queue_membership: QueueMembership
+        self,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
     ):
         """> This function tests the memeber login command using agent param
 
@@ -52,7 +61,6 @@ class TestMemberCMD:
 
         """
 
-
         args = ["login", "@agent2:dominio_cliente.com"]
         response = await processor.handle(
             sender=agent_user,
@@ -64,7 +72,11 @@ class TestMemberCMD:
         assert response.get("status") == 403
 
     async def test_member_login_already_login(
-        self, agent_user: User, processor: CommandProcessor, queue: Queue, queue_membership: QueueMembership
+        self,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
     ):
 
         """> The function tests that a member can login to a queue, and that if they try to login again,
@@ -80,7 +92,6 @@ class TestMemberCMD:
             A list of queue that the user is a member of.
 
         """
-
 
         args = ["login"]
         response = await processor.handle(
@@ -100,7 +111,13 @@ class TestMemberCMD:
         )
         assert response.get("status") == 409
 
-    async def test_member_logout(self, agent_user: User, processor: CommandProcessor, queue: Queue, queue_membership: QueueMembership):
+    async def test_member_logout(
+        self,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
 
         """It tests the member logout command.
 
@@ -114,7 +131,6 @@ class TestMemberCMD:
             A list of queue that the user is a member of.
 
         """
-
 
         args = ["login"]
         response = await processor.handle(
@@ -136,7 +152,11 @@ class TestMemberCMD:
         assert response.get("status") == 200
 
     async def test_member_logout_already_logout(
-        self, agent_user: User, processor: CommandProcessor, queue: Queue, queue_membership: QueueMembership
+        self,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
     ):
 
         """> The function tests that a member can login to a queue, and that if they try to login again,
@@ -152,7 +172,6 @@ class TestMemberCMD:
             A list of queue that the user is a member of.
 
         """
-
 
         args = ["logout"]
         response = await processor.handle(
@@ -178,7 +197,7 @@ class TestMemberCMD:
         agent_user: User,
         processor: CommandProcessor,
         queue: Queue,
-        queue_membership: QueueMembership
+        queue_membership: QueueMembership,
     ):
 
         args = ["login", agent_user.mxid]
