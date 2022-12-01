@@ -209,3 +209,68 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
         assert response.get("status") == 200
+
+    async def test_member_login_by_admin_agent_already_login(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        args = ["login", agent_user.mxid]
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 409
+
+    async def test_member_login_admin_can_not_login(
+        self,
+        admin_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        args = ["login"]
+
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 403
+
+    async def test_member_login_by_admin_membership_does_not_exist(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+    ):
+
+        args = ["login", agent_user.mxid]
+
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 422
