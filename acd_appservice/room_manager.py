@@ -111,8 +111,6 @@ class RoomManager:
                 power_level=100,
             )
             await self.send_cmd_set_relay(room_id=room_id, bridge=bridge)
-        if self.config[f"bridges.{self.bridge}.setup_rooms.enabled"]:
-            await self.set_bridge_default_power_levels(room_id=room_id)
 
         await asyncio.create_task(self.initial_room_setup(room_id=room_id))
 
@@ -137,6 +135,8 @@ class RoomManager:
         for attempt in range(0, 10):
             self.log.debug(f"Attempt # {attempt} of room configuration")
             try:
+                if self.config[f"bridges.{self.bridge}.setup_rooms.enabled"]:
+                    await self.set_bridge_default_power_levels(room_id=room_id)
                 await self.intent.set_room_directory_visibility(
                     room_id=room_id, visibility=RoomDirectoryVisibility.PUBLIC
                 )
