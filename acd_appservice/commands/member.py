@@ -127,7 +127,7 @@ async def member(evt: CommandEvent) -> Dict:
             await evt.reply(text=msg)
             evt.log.warning(msg)
             json_response.get("data")["detail"] = msg
-            json_response["status"] = 422
+            json_response["status"] = 409
             return json_response
 
         membership.state = state
@@ -154,7 +154,7 @@ async def member(evt: CommandEvent) -> Dict:
             await evt.reply(text=msg)
             evt.log.warning(msg)
             json_response.get("data")["detail"] = msg
-            json_response["status"] = 422
+            json_response["status"] = 409
             return json_response
 
         membership.paused = state

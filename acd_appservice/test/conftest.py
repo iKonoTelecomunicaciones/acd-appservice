@@ -2,7 +2,7 @@ import os
 import random
 import string
 import time
-from typing import Dict, List
+from typing import Dict
 
 import asyncpg
 import pytest
@@ -127,7 +127,6 @@ async def intent(
 @pytest_asyncio.fixture
 async def processor(
     config: Config,
-    intent: IntentAPI,
     mocker: MockerFixture,
 ) -> CommandProcessor:
     mocker.patch.object(CommandEvent, "reply", return_value="")
@@ -136,42 +135,36 @@ async def processor(
 
 @pytest_asyncio.fixture
 async def admin_user(
+    db: Database,
     fake_acd_init,
-    intent: IntentAPI,
 ) -> User:
     return await User.get_by_mxid("@admin:dominio_cliente.com")
 
 
 @pytest_asyncio.fixture
 async def agent_user(
+    db: Database,
     fake_acd_init,
-    intent: IntentAPI,
 ) -> User:
-    return await User.get_by_mxid("@agent1:dominio_cliente.com")
+    x = random.randint(0, 1000)
+    return await User.get_by_mxid(f"@agent{x}:dominio_cliente.com")
 
 
 @pytest_asyncio.fixture
-async def queues(
-    db: Database,
+async def queue(
     agent_user: User,
     processor: CommandProcessor,
     admin_user: User,
     intent: IntentAPI,
 ):
 
-    queues: List = []
-    for x in range(3):
-        args = ["create", f"queue {x}", agent_user.mxid, f"Test queue {x}"]
-        result: Dict = await processor.handle(
-            sender=admin_user,
-            command="queue",
-            args_list=args,
-            intent=intent,
-            is_management=True,
-        )
+    args = ["create", f"queue", agent_user.mxid, f"Test queue"]
+    result: Dict = await processor.handle(
+        sender=admin_user,
+        command="queue",
+        args_list=args,
+        intent=intent,
+        is_management=True,
+    )
 
-        test_queue: Queue = await Queue.get_by_room_id(result.get("data").get("room_id"))
-        await QueueMembership.get_by_queue_and_user(agent_user.id, test_queue.id)
-        queues.append(result.get("data"))
-
-    return queues
+    return result
