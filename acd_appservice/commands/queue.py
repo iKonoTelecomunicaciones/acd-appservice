@@ -85,7 +85,7 @@ async def queue(evt: CommandEvent) -> Dict:
         try:
             topic: str = f"""
                 {evt.config['acd.queues.topic']}
-                {f' -> {evt.args.description}' if evt.args.description else ''}
+                {f' -> {str(evt.args.description).strip()}' if evt.args.description else ''}
             """
 
             room_id = await evt.intent.create_room(
