@@ -47,7 +47,8 @@ class TestMemberCMD:
         processor: CommandProcessor,
         queue: Queue,
     ):
-        """> This function tests the memeber login command using agent param
+        """> This function tests the member login command,
+        sending in agent parameter an agent different to me.
 
         Parameters
         ----------
@@ -123,7 +124,7 @@ class TestMemberCMD:
         Parameters
         ----------
         agent_user : User
-            This is the user that will be used to login and logout.
+            This is the user that will be used to logout.
         processor : CommandProcessor
             CommandProcessor
         queue : Dict
@@ -158,8 +159,8 @@ class TestMemberCMD:
         queue_membership: QueueMembership,
     ):
 
-        """> The function tests that a member can login to a queue, and that if they try to login again,
-        they get a message saying they are already logged in
+        """> The function tests that a member can logout to a queue, and that if they try to logout again,
+        they get a message saying they are already logged out.
 
         Parameters
         ----------
@@ -199,6 +200,23 @@ class TestMemberCMD:
         queue_membership: QueueMembership,
     ):
 
+        """Tests that an admin can log in a member
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        agent_user : User
+            User - this is the user that will be logged in
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Queue
+            Queue - this is the queue object that the command is being run in
+        queue_membership : QueueMembership
+            QueueMembership
+
+        """
+
         args = ["login", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
@@ -217,6 +235,23 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
+
+        """Test admin try to log in an agent again.
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        agent_user : User
+            User - this is the user that will be logged in
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Queue
+            Queue,
+        queue_membership : QueueMembership
+            QueueMembership
+
+        """
 
         args = ["login", agent_user.mxid]
         response = await processor.handle(
@@ -244,6 +279,21 @@ class TestMemberCMD:
         queue_membership: QueueMembership,
     ):
 
+        """> An admin user can not login to a queue
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        processor : CommandProcessor
+            The command processor that will be used to handle the command.
+        queue : Queue
+            The queue object that the user is trying to join
+        queue_membership : QueueMembership
+            The queue membership object that the user is trying to login to.
+
+        """
+
         args = ["login"]
 
         response = await processor.handle(
@@ -263,8 +313,950 @@ class TestMemberCMD:
         queue: Queue,
     ):
 
+        """>This function tests that an admin user cannot login a member that is not in the queue
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        agent_user : User
+            User - this is the user that will be logged in
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Queue
+            Queue - this is the queue that the command is being run in
+
+        """
+
         args = ["login", agent_user.mxid]
 
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 422
+
+    async def test_member_logout_by_admin(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """Tests that an admin can log out a member
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        agent_user : User
+            User - this is the user that will be logged out
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Queue
+            Queue - this is the queue object that the command is being run in
+        queue_membership : QueueMembership
+            QueueMembership
+
+        """
+
+        args = ["login", agent_user.mxid]
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["logout", agent_user.mxid]
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 200
+
+    async def test_member_logout_by_admin_agent_already_logout(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """Test admin try to log out an agent again.
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        agent_user : User
+            User - this is the user that will be logged out
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Queue
+            Queue,
+        queue_membership : QueueMembership
+            QueueMembership
+
+        """
+
+        args = ["logout", agent_user.mxid]
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 409
+
+    async def test_member_logout_admin_can_not_logout(
+        self,
+        admin_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """> An admin user can not logout to a queue
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        processor : CommandProcessor
+            The command processor that will be used to handle the command.
+        queue : Queue
+            The queue object that the user is trying to join
+        queue_membership : QueueMembership
+            The queue membership object that the user is trying to logout to.
+
+        """
+
+        args = ["logout"]
+
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 403
+
+    async def test_member_logout_by_admin_membership_does_not_exist(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+    ):
+
+        """>This function tests that an admin user cannot logout a member that is not in the queue
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        agent_user : User
+            User - this is the user that will be logged out
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Queue
+            Queue - this is the queue that the command is being run in
+
+        """
+
+        args = ["logout", agent_user.mxid]
+
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 422
+
+    async def test_member_pause(
+        self,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+        """> This function tests the memeber pause command
+
+        Parameters
+        ----------
+        agent_user : User
+            This is the user that will be used to send the command.
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Dict
+            A list of queue that the user is a member of.
+
+        """
+
+        args = ["login"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["pause", "LUNCH"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 200
+
+    async def test_member_pause_without_login(
+        self,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+        """> This function tests memeber cannot pause if member is not logged in.
+
+        Parameters
+        ----------
+        agent_user : User
+            This is the user that will be used to send the command.
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Dict
+            A list of queue that the user is a member of.
+
+        """
+
+        args = ["pause", "LUNCH"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 422
+
+    async def test_member_pause_over_other_agent(
+        self,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+    ):
+        """> This function tests the member pause command,
+        sending in agent parameter an agent different to me.
+
+        Parameters
+        ----------
+        agent_user : User
+            This is the user that will be used to send the command.
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Dict
+            A list of queue that the user is a member of.
+
+        """
+
+        args = ["login"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["pause", "@agent2:dominio_cliente.com", "LUNCH"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 403
+
+    async def test_member_pause_already_pause(
+        self,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """> The function tests that a member can pause to a queue, and that if they try to pause again,
+        they get a message saying they are already logged in
+
+        Parameters
+        ----------
+        agent_user : User
+            This is the user that will be used to send the command.
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Dict
+            A list of queue that the user is a member of.
+
+        """
+
+        args = ["login"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["pause", "LUNCH"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 409
+
+    async def test_member_unpause(
+        self,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """It tests the member unpause command.
+
+        Parameters
+        ----------
+        agent_user : User
+            This is the user that will be used to unpause.
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Dict
+            A list of queue that the user is a member of.
+
+        """
+
+        args = ["login"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["pause"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["unpause"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 200
+
+    async def test_member_unpause_without_login(
+        self,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """It tests member cannot unpause if member is not logged in.
+
+        Parameters
+        ----------
+        agent_user : User
+            This is the user that will be used to unpause.
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Dict
+            A list of queue that the user is a member of.
+
+        """
+
+        args = ["pause"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["unpause"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 422
+
+    async def test_member_unpause_already_unpause(
+        self,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """> The function tests that a member can unpause to a queue, and that if they try to unpause again,
+        they get a message saying they are already unpaused.
+
+        Parameters
+        ----------
+        agent_user : User
+            This is the user that will be used to send the command.
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Dict
+            A list of queue that the user is a member of.
+
+        """
+
+        args = ["login"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["pause"]
+        await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["unpause"]
+        await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 409
+
+    async def test_member_pause_by_admin(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """Tests that an admin can pause a member
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        agent_user : User
+            User - this is the user that will be logged in
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Queue
+            Queue - this is the queue object that the command is being run in
+        queue_membership : QueueMembership
+            QueueMembership
+
+        """
+
+        args = ["login"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["pause", agent_user.mxid, "LUNCH"]
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 200
+
+    async def test_member_pause_by_admin_without_login(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """Tests that an admin cannot pause a member if member is not logged in
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        agent_user : User
+            User - this is the user that will be logged in
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Queue
+            Queue - this is the queue object that the command is being run in
+        queue_membership : QueueMembership
+            QueueMembership
+
+        """
+
+        args = ["pause", agent_user.mxid, "LUNCH"]
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 422
+
+    async def test_member_pause_by_admin_agent_already_pause(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """Test admin try to pause an agent again.
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        agent_user : User
+            User - this is the user that will be logged in
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Queue
+            Queue,
+        queue_membership : QueueMembership
+            QueueMembership
+
+        """
+
+        args = ["login"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["pause", agent_user.mxid, "LUNCH"]
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 409
+
+    async def test_member_pause_admin_can_not_pause(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """> An admin user can not pause to a queue
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        processor : CommandProcessor
+            The command processor that will be used to handle the command.
+        queue : Queue
+            The queue object that the user is trying to join
+        queue_membership : QueueMembership
+            The queue membership object that the user is trying to pause.
+
+        """
+
+        args = ["login"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["pause", "LUNCH"]
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 403
+
+    async def test_member_pause_by_admin_membership_does_not_exist(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+    ):
+
+        """>This function tests that an admin user cannot pause a member that is not in the queue
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        agent_user : User
+            User - this is the user that will be paused
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Queue
+            Queue - this is the queue that the command is being run in
+
+        """
+
+        args = ["login"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["pause", agent_user.mxid, "LUNCH"]
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 422
+
+    async def test_member_unpause_by_admin_whitout_login(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """Tests that an admin cannot unpause a member if member is not logged in
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        agent_user : User
+            User - this is the user that will be unpause
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Queue
+            Queue - this is the queue object that the command is being run in
+        queue_membership : QueueMembership
+            QueueMembership
+
+        """
+
+        args = ["pause"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["unpause", agent_user.mxid]
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 422
+
+    async def test_member_unpause_by_admin(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """Tests that an admin can unpause a member
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        agent_user : User
+            User - this is the user that will be unpause
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Queue
+            Queue - this is the queue object that the command is being run in
+        queue_membership : QueueMembership
+            QueueMembership
+
+        """
+
+        args = ["login"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["pause"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["unpause", agent_user.mxid]
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 200
+
+    async def test_member_unpause_by_admin_agent_already_unpause(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """Test admin try unpause an agent again.
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        agent_user : User
+            User - this is the user that will be unpaused
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Queue
+            Queue,
+        queue_membership : QueueMembership
+            QueueMembership
+
+        """
+
+        args = ["login"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["pause", agent_user.mxid]
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["unpause", agent_user.mxid]
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 409
+
+    async def test_member_unpause_admin_can_not_unpause(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+        queue_membership: QueueMembership,
+    ):
+
+        """> An admin user can not unpause to a queue
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        processor : CommandProcessor
+            The command processor that will be used to handle the command.
+        queue : Queue
+            The queue object that the user is trying to join
+        queue_membership : QueueMembership
+            The queue membership object that the user is trying to unpaused.
+
+        """
+
+        args = ["login"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["unpause"]
+
+        response = await processor.handle(
+            sender=admin_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+        assert response.get("status") == 403
+
+    async def test_member_logout_by_admin_membership_does_not_exist(
+        self,
+        admin_user: User,
+        agent_user: User,
+        processor: CommandProcessor,
+        queue: Queue,
+    ):
+
+        """>This function tests that an admin user cannot unpause a member that is not in the queue
+
+        Parameters
+        ----------
+        admin_user : User
+            User,
+        agent_user : User
+            User - this is the user that will be unpaused
+        processor : CommandProcessor
+            CommandProcessor
+        queue : Queue
+            Queue - this is the queue that the command is being run in
+
+        """
+
+        args = ["login"]
+        response = await processor.handle(
+            sender=agent_user,
+            command="member",
+            args_list=args,
+            is_management=False,
+            room_id=queue.room_id,
+        )
+
+        args = ["unpause", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
             command="member",
