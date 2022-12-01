@@ -84,7 +84,6 @@ async def create(request: web.Request) -> web.Response:
         sender=user,
         command="create",
         args_list=args,
-        intent=puppet.intent,
         is_management=True,
     )
 
