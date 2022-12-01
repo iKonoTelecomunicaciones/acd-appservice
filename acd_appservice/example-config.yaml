@@ -216,7 +216,6 @@ bridges:
     notice_messages:
       # When I can't create a chat with WhatsApp
         phone_is_not_on_whatsapp: "^The server said \\+(?P<phone_number>[0-9]+) is not on WhatsApp$"
-    # Settings for provisioning API
     # If you are already a room administrator, configure your power levels.
     setup_rooms:
         # if enabled, these power levels will be configured at room initialization.
@@ -228,6 +227,7 @@ bridges:
             kick: 99
             ban: 99
             redact: 99
+    # Settings for provisioning API
     provisioning:
         url_base: "http://mautrix-whatsapp:29318/_matrix/provision"
         shared_secret: ""
@@ -252,7 +252,6 @@ bridges:
     set_relay: "set-relay"
     # Bridge support formated messages
     format_messages: false
-    # Settings for provisioning API
     # If you are already a room administrator, configure your power levels.
     setup_rooms:
         # if enabled, these power levels will be configured at room initialization.
@@ -265,6 +264,7 @@ bridges:
             ban: 99
             redact: 99
 
+    # Settings for provisioning API
     provisioning:
         url_base: "http://mautrix-instagram:29320/_matrix/provision"
         shared_secret: ""
@@ -289,7 +289,6 @@ bridges:
     set_relay: "set-relay"
     # Bridge support formated messages
     format_messages: true
-    # Settings for provisioning API
     # If you are already a room administrator, configure your power levels.
     setup_rooms:
         # if enabled, these power levels will be configured at room initialization.
@@ -302,6 +301,7 @@ bridges:
             ban: 99
             redact: 99
 
+    # Settings for provisioning API
     provisioning:
         url_base: "http://gupshup:29324/_matrix/provision"
         shared_secret: ""
@@ -310,7 +310,7 @@ bridges:
             register_app: "/v1/register_app"
             pm: "/v1/pm"
 
-  plugin:
+  chatterbox:
     # Prefix to be listened by bridge
     prefix: "!plg"
     # Prefix for users created
@@ -318,7 +318,7 @@ bridges:
     # If you are already a room administrator, configure your power levels.
     setup_rooms:
         # if enabled, these power levels will be configured at room initialization.
-        enabled: false
+        enabled: true
         power_levels:
             events_default: 0
             invite: 99

@@ -88,6 +88,7 @@ class Puppet(DBPuppet, BasePuppet):
             control_room_id=self.control_room_id,
             config=self.config,
             intent=self.intent,
+            bridge=self.bridge,
         )
         self.agent_manager = AgentManager(
             puppet_pk=self.pk,

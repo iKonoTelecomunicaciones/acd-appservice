@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from datetime import datetime
 from shlex import split
 
 from markdown import markdown
@@ -412,7 +411,7 @@ class MatrixHandler:
                 return
 
             bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
-            if bridge and bridge in self.config["bridges"] and bridge != "plugin":
+            if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
                 await puppet.room_manager.send_cmd_set_pl(
                     room_id=room_id,
                     bridge=bridge,

@@ -103,7 +103,7 @@ class RoomManager:
             return False
 
         bridge = await self.get_room_bridge(room_id=room_id)
-        if bridge and bridge in self.config["bridges"] and bridge != "plugin":
+        if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
             await self.send_cmd_set_pl(
                 room_id=room_id,
                 bridge=bridge,
@@ -960,8 +960,8 @@ class RoomManager:
                     return bridge
 
         if await self.is_guest_room(room_id=room_id):
-            self.ROOMS[room_id]["bridge"] = "plugin"
-            return "plugin"
+            self.ROOMS[room_id]["bridge"] = "chatterbox"
+            return "chatterbox"
 
         return None
 

@@ -61,8 +61,8 @@ class Config(BaseBridgeConfig):
         copy("bridges.gupshup.setup_rooms.enabled")
         copy_dict("bridges.gupshup.setup_rooms.power_levels")
 
-        copy("bridges.plugin.setup_rooms.enabled")
-        copy_dict("bridges.plugin.setup_rooms.power_levels")
+        copy("bridges.chatterbox.setup_rooms.enabled")
+        copy_dict("bridges.chatterbox.setup_rooms.power_levels")
 
         # ACD
         copy("acd.namespaces")
