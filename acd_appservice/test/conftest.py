@@ -119,7 +119,7 @@ async def intent(
     mocker.patch.object(
         IntentAPI, "create_room", return_value="!asjfhjkvvkjktgasd:dominio_cliente.com"
     )
-    mocker.patch.object(IntentAPI, "send_message", return_value="")
+    mocker.patch.object(IntentAPI, "send_message")
     return IntentAPI
 
 
@@ -128,11 +128,11 @@ async def processor(
     config: Config,
     mocker: MockerFixture,
 ) -> CommandProcessor:
-    mocker.patch.object(CommandEvent, "reply", return_value="")
+    mocker.patch.object(CommandEvent, "reply")
     return CommandProcessor(config=config)
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture
 async def admin_user(
     acd_init,
     mocker: MockerFixture,
@@ -145,7 +145,7 @@ async def admin_user(
     return await User.get_by_mxid("@admin:dominio_cliente.com")
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture
 async def agent_user(
     acd_init,
     mocker: MockerFixture,
