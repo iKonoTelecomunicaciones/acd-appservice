@@ -18,7 +18,7 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-        """> This function tests the memeber login command
+        """> This function tests the member login command
 
         Parameters
         ----------
@@ -507,7 +507,7 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-        """> This function tests the memeber pause command
+        """> This function tests the member pause command
 
         Parameters
         ----------
@@ -548,7 +548,7 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-        """> This function tests memeber cannot pause if member is not logged in.
+        """> This function tests member cannot pause if member is not logged in.
 
         Parameters
         ----------
@@ -1028,7 +1028,7 @@ class TestMemberCMD:
         )
         assert response.get("status") == 422
 
-    async def test_member_unpause_by_admin_whitout_login(
+    async def test_member_unpause_by_admin_without_login(
         self,
         admin_user: User,
         agent_user: User,
