@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, List
 
 from attr import dataclass
-from mautrix.types import RoomID
 from mautrix.util.async_db import Database
 
 fake_db = Database.create("") if TYPE_CHECKING else None
@@ -67,14 +66,18 @@ class QueueMembership:
 
     async def insert(self) -> None:
         q = f"""INSERT INTO queue_membership ({self._columns})
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8);"""
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"""
         await self.db.execute(q, *self._values)
 
     async def update(self) -> None:
         q = """UPDATE queue_membership
         SET creation_date=$3, state_date=$4, pause_date=$5, pause_reason=$6,
-        state=$7, paused=$8 WHERE fk_user=$1 AND fk_queue=$2;"""
+        state=$7, paused=$8 WHERE fk_user=$1 AND fk_queue=$2"""
         await self.db.execute(q, *self._values)
+
+    async def delete(self) -> None:
+        q = 'DELETE FROM "queue_membership" WHERE fk_user=$1 AND fk_queue=$2'
+        await self.db.execute(q, self.fk_user, self.fk_queue)
 
     @classmethod
     async def get_by_queue_and_user(cls, fk_user: int, fk_queue: int) -> QueueMembership | None:
@@ -95,7 +98,7 @@ class QueueMembership:
 
         """
 
-        q = f"SELECT id, {cls._columns} FROM queue_membership WHERE fk_user=$1 AND fk_queue=$2;"
+        q = f"SELECT id, {cls._columns} FROM queue_membership WHERE fk_user=$1 AND fk_queue=$2"
         row = await cls.db.fetchrow(q, fk_user, fk_queue)
         if not row:
             return None
@@ -120,7 +123,7 @@ class QueueMembership:
 
         q = """SELECT queue.room_id, queue_membership.*
         FROM queue JOIN queue_membership ON queue_membership.fk_queue = queue.id
-        WHERE queue_membership.fk_user = $1;"""
+        WHERE queue_membership.fk_user = $1"""
         row = await cls.db.fetch(q, fk_user)
         if not row:
             return None

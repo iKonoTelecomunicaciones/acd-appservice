@@ -700,7 +700,7 @@ async def member(request: web.Request) -> web.Response:
 
     requestBody:
         required: false
-        description: A json with `action`, `agent` and optional `list of queues`
+        description: A json with `action`, `agent`, `pause_reason` and optional `list of queues`
         content:
             application/json:
                 schema:
@@ -714,10 +714,13 @@ async def member(request: web.Request) -> web.Response:
                             type: array
                             items:
                                 type: string
+                        pause_reason:
+                            type: string
                     example:
                         action: login | logout | pause | unpuase
                         agent: "@agent1:localhost"
                         queues: ["@sdkjfkyasdvbcnnskf:localhost", "@sdkjfkyasdvbcnnskf:localhost"]
+                        pause_reason: "LUNCH"
 
     responses:
         '200':
@@ -735,7 +738,11 @@ async def member(request: web.Request) -> web.Response:
 
     data: Dict = await request.json()
 
-    if not data.get("action") or not data.get("agent"):
+    if (
+        not data.get("action")
+        or not data.get("agent")
+        or (data.get("action") == "pause" and not data.get("pause_reason"))
+    ):
         return web.json_response(**REQUIRED_VARIABLES)
 
     actions = ["login", "logout", "pause", "unpause"]
@@ -746,6 +753,7 @@ async def member(request: web.Request) -> web.Response:
     agent: UserID = data.get("agent")
     agent_user: User = await User.get_by_mxid(mxid=agent, create=False)
     queues: List[RoomID] = data.get("queues")
+    pause_reason: str = data.get("pause_reason")
 
     # If queues are None get all rooms where agent is assigning
     if not data.get("queues"):
@@ -758,6 +766,8 @@ async def member(request: web.Request) -> web.Response:
         return web.json_response(**AGENT_DOESNOT_HAVE_QUEUES)
 
     args = [action, agent]
+    if action == "pause":
+        args = [action, agent, pause_reason]
     action_responses = []
     status = 200
     for queue in queues:

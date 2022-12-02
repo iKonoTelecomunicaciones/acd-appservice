@@ -1,6 +1,6 @@
 .editorconfig
 logs
-.venv
+.env
 start
 config.yaml
 registration.yaml

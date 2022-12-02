@@ -5,6 +5,13 @@ stages:
 
 lint:
   image: python:3.9
+  services:
+    - postgres:12.2-alpine
+  variables:
+    POSTGRES_DB: test
+    POSTGRES_USER: ikono
+    POSTGRES_PASSWORD: secretfoo
+    POSTGRES_INITDB_ARGS: --encoding=UTF-8 --lc-collate=C --lc-ctype=C
   stage: test
   before_script:
     - python --version
@@ -19,7 +26,7 @@ lint:
       - isort --check --diff acd_appservice/
 
       - echo "** Ejecutando los test de la API **"
-      - pytest acd_appservice -vv
+      - pytest --reruns 5 -vv acd_appservice
 
 build-push-image:
   stage: build
