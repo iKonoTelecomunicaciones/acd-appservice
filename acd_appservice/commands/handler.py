@@ -25,7 +25,6 @@ class CommandEvent:
     log: TraceLogger = logging.getLogger("acd.cmd")
     processor: CommandProcessor
     sender: "User"
-    intent: IntentAPI = None
 
     def __init__(
         self,

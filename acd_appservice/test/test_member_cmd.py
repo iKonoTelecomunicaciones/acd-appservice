@@ -39,6 +39,7 @@ class TestMemberCMD:
             is_management=False,
             room_id=queue.room_id,
         )
+        assert queue_membership.state == "online"
         assert response.get("status") == 200
 
     async def test_member_login_over_other_agent(
@@ -149,6 +150,7 @@ class TestMemberCMD:
             is_management=False,
             room_id=queue.room_id,
         )
+        assert queue_membership.state == "offline"
         assert response.get("status") == 200
 
     async def test_member_logout_already_logout(
@@ -225,6 +227,7 @@ class TestMemberCMD:
             is_management=False,
             room_id=queue.room_id,
         )
+        assert queue_membership.state == "online"
         assert response.get("status") == 200
 
     async def test_member_login_by_admin_agent_already_login(
@@ -382,6 +385,7 @@ class TestMemberCMD:
             is_management=False,
             room_id=queue.room_id,
         )
+        assert queue_membership.state == "offline"
         assert response.get("status") == 200
 
     async def test_member_logout_by_admin_agent_already_logout(
@@ -533,6 +537,8 @@ class TestMemberCMD:
             is_management=False,
             room_id=queue.room_id,
         )
+        assert queue_membership.paused == True
+        assert queue_membership.pause_reason == "LUNCH"
         assert response.get("status") == 200
 
     async def test_member_pause_without_login(
@@ -700,6 +706,7 @@ class TestMemberCMD:
             is_management=False,
             room_id=queue.room_id,
         )
+        assert queue_membership.paused == False
         assert response.get("status") == 200
 
     async def test_member_unpause_without_login(
@@ -843,6 +850,8 @@ class TestMemberCMD:
             is_management=False,
             room_id=queue.room_id,
         )
+        assert queue_membership.paused == True
+        assert queue_membership.pause_reason == "LUNCH"
         assert response.get("status") == 200
 
     async def test_member_pause_by_admin_without_login(
@@ -1116,6 +1125,7 @@ class TestMemberCMD:
             is_management=False,
             room_id=queue.room_id,
         )
+        assert queue_membership.paused == False
         assert response.get("status") == 200
 
     async def test_member_unpause_by_admin_agent_already_unpause(
