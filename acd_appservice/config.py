@@ -24,7 +24,8 @@ class Config(BaseBridgeConfig):
         ]
 
     def do_update(self, helper: ConfigUpdateHelper) -> None:
-
+        # You must put the fields that should not change
+        # this makes that when we update in config.yaml
         super().do_update(helper)
         copy, copy_dict, base = helper
 
