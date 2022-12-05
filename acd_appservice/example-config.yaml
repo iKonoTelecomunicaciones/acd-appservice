@@ -195,6 +195,10 @@ acd:
     bulk_resolve:
         block_size: 5
 
+    # Do you want to use synapse presence to distribute chat?,
+    # if not, you can use agent operation login to do it.
+    use_presence: False
+
 # ACD will send below commands to interact with any WA bridge
 bridges:
 

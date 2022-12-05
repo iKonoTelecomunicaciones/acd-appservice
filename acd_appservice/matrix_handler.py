@@ -37,7 +37,7 @@ from .commands.handler import CommandProcessor
 from .message import Message
 from .puppet import Puppet
 from .queue import Queue
-from .queue_membership import QueueMembership
+from .queue_membership import QueueMembership, QueueMembershipState
 from .signaling import Signaling
 from .user import User
 from .util import Util
@@ -637,12 +637,27 @@ class MatrixHandler:
                     )
                     return
 
-                presence = await puppet.agent_manager.get_agent_presence(agent_id=room_agent)
-                if presence and presence.presence != PresenceState.ONLINE:
+                # Switch between presence and agent operation login
+                # using config parameter to show offline menu
+                if self.config["acd.use_presence"]:
+                    presence = await puppet.agent_manager.get_agent_presence(agent_id=room_agent)
+                    is_agent_offline = presence and presence.presence == PresenceState.OFFLINE
+                    last_active_ago = presence.last_active_ago
+                else:
+                    presence = await puppet.agent_manager.is_agent_logged_in(agent_id=room_agent)
+                    is_agent_offline = (
+                        presence.get("presence") == QueueMembershipState.Offline.value
+                    )
+                    logout_date = datetime.strptime(
+                        presence.get("last_active_ago"), "%d/%m/%Y %H:%M:%S"
+                    )
+                    last_active_ago = datetime.timestamp(logout_date)
+
+                if is_agent_offline:
                     await puppet.agent_manager.process_offline_agent(
                         room_id=room_id,
                         room_agent=room_agent,
-                        last_active_ago=presence.last_active_ago,
+                        last_active_ago=last_active_ago,
                     )
                 return
 
