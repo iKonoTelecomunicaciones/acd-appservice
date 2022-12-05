@@ -74,6 +74,7 @@ class RoomManager:
             The room ID of the room you want to set the power levels in.
 
         """
+        self.log.debug(f"Set power levels per effect to the room :: {room_id}")
         levels = await self.intent.get_power_levels(room_id=room_id)
         new_levels: Dict = levels.serialize()
         new_levels.update(self.config[f"bridges.{self.bridge}.setup_rooms.power_levels"])
@@ -99,11 +100,13 @@ class RoomManager:
         """
 
         if not await self.is_customer_room(room_id=room_id):
-            self.log.debug(f"Only customer rooms are initialised :: {room_id}")
             return False
+
+        self.log.debug(f"This room will be set up :: {room_id}")
 
         bridge = await self.get_room_bridge(room_id=room_id)
         if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
+            self.log.debug(f"Sending set-relay, set-pt commands to the room :: {room_id}")
             await self.send_cmd_set_pl(
                 room_id=room_id,
                 bridge=bridge,
