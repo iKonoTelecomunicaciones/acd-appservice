@@ -25,7 +25,7 @@ class Util:
             A boolean value.
 
         """
-        return bool(match(self.config["utils.regex_email"], email))
+        return False if not email else bool(match(self.config["utils.regex_email"], email))
 
     @classmethod
     def is_user_id(cls, user_id: UserID) -> bool:
@@ -41,7 +41,7 @@ class Util:
             A boolean value.
 
         """
-        return bool(match(f"^@{cls._main_matrix_regex}+$", user_id))
+        return False if not user_id else bool(match(f"^@{cls._main_matrix_regex}+$", user_id))
 
     @classmethod
     def is_room_id(cls, room_id: RoomID) -> bool:
@@ -57,7 +57,7 @@ class Util:
             A boolean value.
 
         """
-        return bool(match(f"^!{cls._main_matrix_regex}+$", room_id))
+        return False if not room_id else bool(match(f"^!{cls._main_matrix_regex}+$", room_id))
 
     @classmethod
     def is_room_alias(cls, room_alias: RoomAlias) -> bool:
@@ -73,7 +73,9 @@ class Util:
             A boolean value.
 
         """
-        return bool(match(f"^#{cls._main_matrix_regex}+$", room_alias))
+        return (
+            False if not room_alias else bool(match(f"^#{cls._main_matrix_regex}+$", room_alias))
+        )
 
     @classmethod
     def md_to_text(cls, formatted_text: str) -> str:

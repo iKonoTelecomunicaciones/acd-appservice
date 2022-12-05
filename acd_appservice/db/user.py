@@ -38,6 +38,10 @@ class User:
         q = 'UPDATE "user" SET management_room=$2 WHERE mxid=$1'
         await self.db.execute(q, *self._values)
 
+    async def delete(self) -> None:
+        q = 'DELETE FROM "user" WHERE mxid=$1'
+        await self.db.execute(q, self.mxid)
+
     @classmethod
     async def get_by_mxid(cls, user_id: UserID) -> User | None:
         q = f'SELECT id, {cls._columns} FROM "user" WHERE mxid=$1'
