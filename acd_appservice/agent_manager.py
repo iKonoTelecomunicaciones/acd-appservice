@@ -293,7 +293,9 @@ class AgentManager:
 
                 self.log.debug(
                     f"PRESENCE RESPONSE: "
-                    f"[{agent_id}] -> [{presence_response.get('presence') or presence_response.presence if presence_response else None}]"
+                    f"[{agent_id}] -> "
+                    f"""[{presence_response.get('presence') or presence_response.presence
+                    if presence_response else None}]"""
                 )
 
                 if is_agent_available_for_assignment:
@@ -1071,6 +1073,8 @@ class AgentManager:
             "presence": QueueMembershipState.Offline.value,
             "last_active_ago": datetime.now().timestamp(),
         }
+        if not agent_user:
+            return response
 
         if queue_room_id:
             queue: Queue = await Queue.get_by_room_id(queue_room_id, create=False)
@@ -1125,7 +1129,7 @@ class AgentManager:
         }
         agent_user: User = await User.get_by_mxid(agent_id, create=False)
         queue: Queue = await Queue.get_by_room_id(queue_room_id, create=False)
-        if not queue:
+        if not agent_user or not queue:
             return response
         membership: QueueMembership = await QueueMembership.get_by_queue_and_user(
             fk_user=agent_user.id, fk_queue=queue.id, create=False

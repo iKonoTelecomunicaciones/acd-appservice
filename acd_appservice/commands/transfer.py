@@ -165,8 +165,10 @@ async def transfer_user(evt: CommandEvent) -> str:
         evt.log.debug(
             f"PRESENCE RESPONSE: "
             f"[{evt.args.agent_id}] -> "
-            f"[{presence_response.get('presence') or presence_response.presence if presence_response else None}]"
+            f"""[{presence_response.get('presence') or presence_response.presence
+            if presence_response else None}]"""
         )
+
         if is_agent_online or evt.args.force == "yes":
             await puppet.agent_manager.force_invite_agent(
                 room_id=evt.args.customer_room_id,
