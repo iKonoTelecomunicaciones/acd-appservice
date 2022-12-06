@@ -7,6 +7,7 @@ from mautrix.util.async_db import Database
 
 fake_db = Database.create("") if TYPE_CHECKING else None
 
+from datetime import datetime
 from enum import Enum
 
 import asyncpg
@@ -33,8 +34,8 @@ class QueueMembership:
     fk_user: int
     fk_queue: int
     creation_date: str  # Date of queue_membership creation
-    state_date: str | None = None  # Last change of state
-    pause_date: str | None = None  # Last pause record
+    state_date: datetime | None = None  # Last change of state
+    pause_date: datetime | None = None  # Last pause record
     pause_reason: str = None
     state: str = QueueMembershipState.Offline.value
     paused: bool = False

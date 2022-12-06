@@ -145,18 +145,21 @@ async def transfer_user(evt: CommandEvent) -> str:
         await evt.intent.send_notice(room_id=evt.args.customer_room_id, text=msg)
     else:
         # Switch between presence and agent operation login using config parameter
-        # to verify if agent is available to be assign to the chat
+        # to verify if agent is available to be assigned to the chat
         if evt.config["acd.use_presence"]:
             presence_response = await puppet.agent_manager.get_agent_presence(
                 agent_id=evt.args.agent_id
             )
-            is_agent_online = presence_response.presence == PresenceState.ONLINE
+            is_agent_online = (
+                presence_response and presence_response.presence == PresenceState.ONLINE
+            )
         else:
-            presence_response = await puppet.agent_manager.is_agent_logged_in(
+            presence_response = await puppet.agent_manager.get_agent_status(
                 agent_id=evt.args.agent_id
             )
             is_agent_online = (
-                presence_response.get("presence") == QueueMembershipState.Online.value
+                presence_response
+                and presence_response.get("presence") == QueueMembershipState.Online.value
             )
 
         evt.log.debug(

@@ -270,21 +270,26 @@ class AgentManager:
             if agent_id != transfer_author:
                 # Switch between presence and agent operation login using config parameter
                 # to verify if agent is available to be assigned to the chat
+                is_agent_available_for_assignment: bool = False
                 if self.config["acd.use_presence"]:
                     presence_response = await self.get_agent_presence(agent_id=agent_id)
-                    is_agent_available_for_assignment: bool = (
-                        presence_response.presence == PresenceState.ONLINE
+                    is_agent_available_for_assignment = (
+                        presence_response and presence_response.presence == PresenceState.ONLINE
                     )
                 else:
-                    presence_response = await self.is_agent_logged_in(
-                        room_id=campaign_room_id, agent_id=agent_id
+
+                    presence_response = await self.get_agent_status(
+                        queue_room_id=campaign_room_id, agent_id=agent_id
                     )
-                    paused_response = await self.is_agent_paused(
-                        room_id=campaign_room_id, agent_id=agent_id
-                    )
-                    is_agent_available_for_assignment: bool = presence_response.get(
-                        "presence"
-                    ) == QueueMembershipState.Online.value and not paused_response.get("paused")
+
+                    if (
+                        presence_response
+                        and presence_response.get("presence") == QueueMembershipState.Online.value
+                    ):
+                        paused_response = await self.get_agent_pause_status(
+                            queue_room_id=campaign_room_id, agent_id=agent_id
+                        )
+                        is_agent_available_for_assignment = not paused_response.get("paused")
 
                 self.log.debug(
                     f"PRESENCE RESPONSE: "
@@ -721,11 +726,10 @@ class AgentManager:
                     presence_response and presence_response.presence == PresenceState.ONLINE
                 )
             else:
-                login_response = await self.is_agent_logged_in(room_id=room_id, agent_id=user_id)
-                paused_response = await self.is_agent_paused(room_id=room_id, agent_id=user_id)
-                is_agent_online = login_response.get(
-                    "presence"
-                ) == QueueMembershipState.Online.value and not paused_response.get("paused")
+                login_response = await self.get_agent_status(agent_id=user_id)
+                is_agent_online = (
+                    login_response.get("presence") == QueueMembershipState.Online.value
+                )
 
             if is_agent_online:
                 self.log.debug(f"Online agent {user_id} in the room [{room_id}]")
@@ -805,8 +809,13 @@ class AgentManager:
                     presence_response and presence_response.presence == PresenceState.ONLINE
                 )
             else:
-                login_response = await self.is_agent_logged_in(room_id=room_id, agent_id=agent_id)
-                paused_response = await self.is_agent_paused(room_id=room_id, agent_id=agent_id)
+                login_response = await self.get_agent_status(
+                    queue_room_id=room_id, agent_id=agent_id
+                )
+
+                paused_response = await self.get_agent_pause_status(
+                    queue_room_id=room_id, agent_id=agent_id
+                )
                 is_agent_online = login_response.get(
                     "presence"
                 ) == QueueMembershipState.Online.value and not paused_response.get("paused")
@@ -1039,57 +1048,91 @@ class AgentManager:
 
         await self.room_manager.send_formatted_message(room_id=room_id, msg=menu)
 
-    async def is_agent_logged_in(self, agent_id: UserID, room_id: Optional[RoomID] = None) -> Dict:
+    async def get_agent_status(
+        self, agent_id: UserID, queue_room_id: Optional[RoomID] = None
+    ) -> Dict:
         """> This function checks if the agent is logged in to the queue
 
         Parameters
         ----------
         agent_id : UserID
             The Matrix ID of the agent you want to check.
-        room_id : Optional[RoomID]
+        queue_room_id : Optional[RoomID]
             The room ID of the room the user is in.
 
         Returns
         -------
-            A boolean value.
+            A Dict.
 
         """
 
         agent_user: User = await User.get_by_mxid(agent_id, create=False)
         response = {
             "presence": QueueMembershipState.Offline.value,
-            "last_active_ago": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            "last_active_ago": datetime.now().timestamp(),
         }
-        if room_id:
-            queue: Queue = await Queue.get_by_room_id(room_id, create=False)
+
+        if queue_room_id:
+            queue: Queue = await Queue.get_by_room_id(queue_room_id, create=False)
+            if not queue:
+                return response
+
             membership: QueueMembership = await QueueMembership.get_by_queue_and_user(
                 fk_user=agent_user.id, fk_queue=queue.id, create=False
             )
 
-            response = {
-                "presence": membership.state,
-                "last_active_ago": membership.state_date,
-            }
+            if membership:
+                last_active_ago = datetime.timestamp(membership.state_date)
+
+                response = {
+                    "presence": membership.state,
+                    "last_active_ago": last_active_ago,
+                }
         else:
             memberships: List[dict] = await QueueMembership.get_user_memberships(
                 fk_user=agent_user.id
             )
-            for membership in memberships:
-                if membership.get("state") == QueueMembershipState.Online.value:
-                    response = {
-                        "presence": membership.get("state"),
-                        "last_active_ago": membership.get("state_date"),
-                    }
-                    break
+            if memberships:
+                for membership in memberships:
+                    if membership.get("state") == QueueMembershipState.Online.value:
+                        last_active_ago = datetime.timestamp(membership.get("state_date"))
+                        response = {
+                            "presence": membership.get("state"),
+                            "last_active_ago": last_active_ago,
+                        }
+                        break
 
         return response
 
-    async def is_agent_paused(self, agent_id: UserID, room_id: RoomID) -> Dict:
+    async def get_agent_pause_status(self, agent_id: UserID, queue_room_id: RoomID) -> Dict:
+        """> This function returns a dictionary with the pause status of an agent in a queue
 
+        Parameters
+        ----------
+        agent_id : UserID
+            The Matrix ID of the agent
+        queue_room_id : RoomID
+            The room ID of the queue you want to get the pause status of.
+
+        Returns
+        -------
+            A dictionary with the pause status and the pause date.
+
+        """
+        response = {
+            "presence": False,
+            "last_active_ago": datetime.now().timestamp(),
+        }
         agent_user: User = await User.get_by_mxid(agent_id, create=False)
-        queue: Queue = await Queue.get_by_room_id(room_id, create=False)
+        queue: Queue = await Queue.get_by_room_id(queue_room_id, create=False)
+        if not queue:
+            return response
         membership: QueueMembership = await QueueMembership.get_by_queue_and_user(
             fk_user=agent_user.id, fk_queue=queue.id, create=False
         )
+        if membership:
+            ts_pause_date = datetime.timestamp(membership.pause_date)
+            response["paused"] = membership.paused
+            response["pause_date"] = ts_pause_date
 
-        return {"paused": membership.paused, "pause_date": membership.pause_date}
+        return response
