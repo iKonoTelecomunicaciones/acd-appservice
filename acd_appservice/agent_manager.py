@@ -1074,6 +1074,8 @@ class AgentManager:
             "last_active_ago": datetime.now().timestamp(),
         }
         if not agent_user:
+            self.log.debug(f"Agent {agent_id} does not exist as acd-user")
+            self.log.debug(f"Check that agent is member of a queue room")
             return response
 
         if queue_room_id:
@@ -1130,6 +1132,7 @@ class AgentManager:
         agent_user: User = await User.get_by_mxid(agent_id, create=False)
         queue: Queue = await Queue.get_by_room_id(queue_room_id, create=False)
         if not agent_user or not queue:
+            self.log.debug(f"Agent {agent_id} does not exist as acd-user or queue does not exists")
             return response
         membership: QueueMembership = await QueueMembership.get_by_queue_and_user(
             fk_user=agent_user.id, fk_queue=queue.id, create=False
