@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 from typing import Dict, List, Tuple
@@ -44,7 +45,12 @@ class RoomManager:
     blacklist_rooms = set()
 
     def __init__(
-        self, puppet_pk: int, control_room_id: RoomID, config: Config, intent: IntentAPI = None
+        self,
+        puppet_pk: int,
+        control_room_id: RoomID,
+        config: Config,
+        bridge: str,
+        intent: IntentAPI = None,
     ) -> None:
         self.config = config
         if not intent:
@@ -53,10 +59,31 @@ class RoomManager:
         self.log = self.log.getChild(self.intent.mxid or None)
         self.puppet_pk = puppet_pk
         self.control_room_id = control_room_id
+        self.bridge = bridge
 
     @classmethod
     def _add_to_cache(cls, room_id, room: Room) -> None:
         cls.by_room_id[room_id] = room
+
+    async def set_bridge_default_power_levels(self, room_id: RoomID) -> None:
+        """This function sets the default power levels for the room
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to set the power levels in.
+
+        """
+
+        bridge = await self.get_room_bridge(room_id=room_id)
+        self.log.debug(f"Setting the default power levels in the room :: {room_id}")
+        levels = await self.intent.get_power_levels(room_id=room_id)
+        current_levels: Dict = levels.serialize()
+        current_levels.update(
+            json.loads(json.dumps(self.config[f"bridges.{bridge}.initial_state.power_levels"]))
+        )
+
+        await self.intent.set_power_levels(room_id=room_id, content=current_levels)
 
     async def initialize_room(self, room_id: RoomID) -> bool:
         """Initializing a room.
@@ -78,11 +105,13 @@ class RoomManager:
         """
 
         if not await self.is_customer_room(room_id=room_id):
-            self.log.debug(f"Only customer rooms are initialised :: {room_id}")
             return False
 
+        self.log.debug(f"This room will be set up :: {room_id}")
+
         bridge = await self.get_room_bridge(room_id=room_id)
-        if bridge and bridge in self.config["bridges"] and bridge != "plugin":
+        if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
+            self.log.debug(f"Sending set-relay, set-pt commands to the room :: {room_id}")
             await self.send_cmd_set_pl(
                 room_id=room_id,
                 bridge=bridge,
@@ -90,8 +119,6 @@ class RoomManager:
                 power_level=100,
             )
             await self.send_cmd_set_relay(room_id=room_id, bridge=bridge)
-        else:
-            return False
 
         await asyncio.create_task(self.initial_room_setup(room_id=room_id))
 
@@ -116,6 +143,9 @@ class RoomManager:
         for attempt in range(0, 10):
             self.log.debug(f"Attempt # {attempt} of room configuration")
             try:
+                bridge = await self.get_room_bridge(room_id=room_id)
+                if self.config[f"bridges.{bridge}.initial_state.enabled"]:
+                    await self.set_bridge_default_power_levels(room_id=room_id)
                 await self.intent.set_room_directory_visibility(
                     room_id=room_id, visibility=RoomDirectoryVisibility.PUBLIC
                 )
@@ -939,8 +969,8 @@ class RoomManager:
                     return bridge
 
         if await self.is_guest_room(room_id=room_id):
-            self.ROOMS[room_id]["bridge"] = "plugin"
-            return "plugin"
+            self.ROOMS[room_id]["bridge"] = "chatterbox"
+            return "chatterbox"
 
         return None
 

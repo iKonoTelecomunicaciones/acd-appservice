@@ -200,7 +200,20 @@ async def pm(evt: CommandEvent) -> Dict:
     cmd_front_msg = (
         f"{puppet.config['acd.frontend_command_prefix']} {evt.command} {json.dumps(return_params)}"
     )
-    await evt.reply(text=cmd_front_msg)
+
+    format_room = f"[{data.get('room_id')}](https://matrix.to/#/{data.get('room_id')})"
+
+    format_user = (
+        f"[{evt.args.phone}]"
+        f"(https://matrix.to/#/"
+        f"@{evt.config[f'bridges.{puppet.bridge}.user_prefix']}"
+        f"_{evt.args.phone}:{evt.intent.domain})"
+    )
+    await evt.reply(
+        text=return_params["reply"]
+        .replace("number", format_user if not data.get("error") else evt.args.phone)
+        .replace("room", format_room)
+    )
 
     # Returning a dict with two keys:
     #     - data: The data to be sent to the frontend.

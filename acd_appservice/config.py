@@ -24,8 +24,8 @@ class Config(BaseBridgeConfig):
         ]
 
     def do_update(self, helper: ConfigUpdateHelper) -> None:
-        # Se deben poner los campos que no deben cambiar
-        # esto hace que cuando actualicemos en config.yaml
+        # You must put the fields that should not change
+        # this makes that when we update in config.yaml
         super().do_update(helper)
         copy, copy_dict, base = helper
 
@@ -47,12 +47,23 @@ class Config(BaseBridgeConfig):
         copy("bridges.mautrix.mxid")
         copy("bridges.mautrix.provisioning.url_base")
         copy("bridges.mautrix.provisioning.shared_secret")
+        copy("bridges.mautrix.initial_state.enabled")
+        copy_dict("bridges.mautrix.initial_state.power_levels")
+
         copy("bridges.instagram.mxid")
         copy("bridges.instagram.provisioning.url_base")
         copy("bridges.instagram.provisioning.shared_secret")
+        copy("bridges.instagram.initial_state.enabled")
+        copy_dict("bridges.instagram.initial_state.power_levels")
+
         copy("bridges.gupshup.mxid")
         copy("bridges.gupshup.provisioning.url_base")
         copy("bridges.gupshup.provisioning.shared_secret")
+        copy("bridges.gupshup.initial_state.enabled")
+        copy_dict("bridges.gupshup.initial_state.power_levels")
+
+        copy("bridges.chatterbox.initial_state.enabled")
+        copy_dict("bridges.chatterbox.initial_state.power_levels")
 
         # ACD
         copy("acd.namespaces")
