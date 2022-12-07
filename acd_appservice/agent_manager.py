@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from asyncio import Future, create_task, get_running_loop, sleep
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI
@@ -13,6 +13,8 @@ from mautrix.util.logging import TraceLogger
 
 from .commands.handler import CommandProcessor
 from .config import Config
+from .queue import Queue
+from .queue_membership import QueueMembership, QueueMembershipState
 from .room_manager import RoomManager
 from .signaling import Signaling
 from .user import User
@@ -266,12 +268,37 @@ class AgentManager:
                 break
 
             if agent_id != transfer_author:
-                presence_response = await self.get_agent_presence(agent_id=agent_id)
+                # Switch between presence and agent operation login using config parameter
+                # to verify if agent is available to be assigned to the chat
+                is_agent_available_for_assignment: bool = False
+                if self.config["acd.use_presence"]:
+                    presence_response = await self.get_agent_presence(agent_id=agent_id)
+                    is_agent_available_for_assignment = (
+                        presence_response and presence_response.presence == PresenceState.ONLINE
+                    )
+                else:
+
+                    presence_response = await self.get_agent_status(
+                        queue_room_id=campaign_room_id, agent_id=agent_id
+                    )
+
+                    if (
+                        presence_response
+                        and presence_response.get("presence") == QueueMembershipState.Online.value
+                    ):
+                        paused_response = await self.get_agent_pause_status(
+                            queue_room_id=campaign_room_id, agent_id=agent_id
+                        )
+                        is_agent_available_for_assignment = not paused_response.get("paused")
+
                 self.log.debug(
                     f"PRESENCE RESPONSE: "
-                    f"[{agent_id}] -> [{presence_response.presence if presence_response else None}]"
+                    f"[{agent_id}] -> "
+                    f"""[{presence_response.get('presence') or presence_response.presence
+                    if presence_response else None}]"""
                 )
-                if presence_response and presence_response.presence == PresenceState.ONLINE:
+
+                if is_agent_available_for_assignment:
                     online_agents += 1
 
                     await self.force_invite_agent(
@@ -692,8 +719,21 @@ class AgentManager:
             if not member_is_agent:
                 # count only agents, not customers
                 continue
-            presence_response = await self.intent.get_presence(user_id)
-            if presence_response.presence == PresenceState.ONLINE:
+
+            # Switch between presence and agent operation login using config parameter
+            # to verify if someone agent are online into room
+            if self.config["acd.use_presence"]:
+                presence_response = await self.get_agent_presence(agent_id=user_id)
+                is_agent_online = (
+                    presence_response and presence_response.presence == PresenceState.ONLINE
+                )
+            else:
+                login_response = await self.get_agent_status(agent_id=user_id)
+                is_agent_online = (
+                    login_response.get("presence") == QueueMembershipState.Online.value
+                )
+
+            if is_agent_online:
                 self.log.debug(f"Online agent {user_id} in the room [{room_id}]")
                 return True
 
@@ -763,8 +803,26 @@ class AgentManager:
             return None
 
         for agent_id in agents:
-            presence_response = await self.get_agent_presence(agent_id=agent_id)
-            if presence_response and presence_response.presence == PresenceState.ONLINE:
+            # Switch between presence and agent operation login using config parameter
+            # to verify if agent is logged in
+            if self.config["acd.use_presence"]:
+                presence_response = await self.get_agent_presence(agent_id=agent_id)
+                is_agent_online = (
+                    presence_response and presence_response.presence == PresenceState.ONLINE
+                )
+            else:
+                login_response = await self.get_agent_status(
+                    queue_room_id=room_id, agent_id=agent_id
+                )
+
+                paused_response = await self.get_agent_pause_status(
+                    queue_room_id=room_id, agent_id=agent_id
+                )
+                is_agent_online = login_response.get(
+                    "presence"
+                ) == QueueMembershipState.Online.value and not paused_response.get("paused")
+
+            if is_agent_online:
                 return agent_id
 
         return None
@@ -905,9 +963,7 @@ class AgentManager:
 
         return True
 
-    async def process_offline_agent(
-        self, room_id: RoomID, room_agent: UserID, last_active_ago: int
-    ):
+    async def process_offline_agent(self, room_id: RoomID, room_agent: UserID):
         """If the agent is offline, the bot will send a message to the user and then either
         transfer the user to another agent in the same campaign or put the user in the offline menu
 
@@ -929,44 +985,36 @@ class AgentManager:
 
         action = self.config["acd.offline.agent_action"]
         self.log.debug(f"Agent {room_agent} OFFLINE in {room_id} --> {action}")
-        offline_agent_timeout = self.config["acd.offline.agent_timeout"]
-        self.log.debug(
-            f"last_active_ago: {last_active_ago} / 1000 -- "
-            f"offline_agent_timeout: {offline_agent_timeout}"
-        )
 
-        if not last_active_ago or last_active_ago / 1000 >= offline_agent_timeout:
-            agent_displayname = await self.intent.get_displayname(user_id=room_agent)
-            msg = self.config["acd.offline.agent_message"].format(agentname=agent_displayname)
-            if msg:
-                await self.room_manager.send_formatted_message(room_id=room_id, msg=msg)
+        agent_displayname = await self.intent.get_displayname(user_id=room_agent)
+        msg = self.config["acd.offline.agent_message"].format(agentname=agent_displayname)
+        if msg:
+            await self.room_manager.send_formatted_message(room_id=room_id, msg=msg)
 
-            if action == "keep":
-                return
-            elif action == "transfer":
-                # transfer to another agent in same campaign
-                user_selected_campaign = await self.room_manager.get_campaign_of_room(
-                    room_id=room_id
-                )
-                if not user_selected_campaign:
-                    # this can happen if the database is deleted
-                    user_selected_campaign = self.config["acd.available_agents_room"]
-                self.log.debug(f"Transferring to {user_selected_campaign}")
+        if action == "keep":
+            return
+        elif action == "transfer":
+            # transfer to another agent in same campaign
+            user_selected_campaign = await self.room_manager.get_campaign_of_room(room_id=room_id)
+            if not user_selected_campaign:
+                # this can happen if the database is deleted
+                user_selected_campaign = self.config["acd.available_agents_room"]
+            self.log.debug(f"Transferring to {user_selected_campaign}")
 
-                user: User = await User.get_by_mxid(room_agent)
+            user: User = await User.get_by_mxid(room_agent)
 
-                await self.commands.handle(
-                    room_id=room_id,
-                    sender=user,
-                    command="transfer",
-                    args_list=f"{room_id} {user_selected_campaign}".split(),
-                    intent=self.intent,
-                    is_management=room_id == user.management_room,
-                )
+            await self.commands.handle(
+                room_id=room_id,
+                sender=user,
+                command="transfer",
+                args_list=f"{room_id} {user_selected_campaign}".split(),
+                intent=self.intent,
+                is_management=room_id == user.management_room,
+            )
 
-            elif action == "menu":
-                self.room_manager.put_in_offline_menu(room_id)
-                await self.show_offline_menu(agent_displayname=agent_displayname, room_id=room_id)
+        elif action == "menu":
+            self.room_manager.put_in_offline_menu(room_id)
+            await self.show_offline_menu(agent_displayname=agent_displayname, room_id=room_id)
 
     async def show_offline_menu(self, agent_displayname: str, room_id: RoomID):
         """It takes the agent's display name and returns a formatted string containing the offline menu
@@ -991,3 +1039,103 @@ class AgentManager:
             menu += f"{value['text']}<br>"
 
         await self.room_manager.send_formatted_message(room_id=room_id, msg=menu)
+
+    async def get_agent_status(
+        self, agent_id: UserID, queue_room_id: Optional[RoomID] = None
+    ) -> Dict:
+        """> This function checks if the agent is logged in to the queue
+
+        Parameters
+        ----------
+        agent_id : UserID
+            The Matrix ID of the agent you want to check.
+        queue_room_id : Optional[RoomID]
+            The room ID of the room the user is in.
+
+        Returns
+        -------
+            A Dict.
+
+        """
+
+        agent_user: User = await User.get_by_mxid(agent_id, create=False)
+        response = {
+            "presence": QueueMembershipState.Offline.value,
+            "state_date": datetime.now().timestamp(),
+        }
+        if not agent_user:
+            self.log.debug(
+                f"Agent {agent_id} does not exist as acd-user. "
+                "Check that agent is member of a queue room"
+            )
+            return response
+
+        if queue_room_id:
+            queue: Queue = await Queue.get_by_room_id(queue_room_id, create=False)
+            if not queue:
+                return response
+
+            membership: QueueMembership = await QueueMembership.get_by_queue_and_user(
+                fk_user=agent_user.id, fk_queue=queue.id, create=False
+            )
+
+            if membership:
+                state_date = datetime.timestamp(membership.state_date)
+
+                response = {
+                    "presence": membership.state,
+                    "state_date": state_date,
+                }
+        else:
+            memberships: List[dict] = await QueueMembership.get_user_memberships(
+                fk_user=agent_user.id
+            )
+            if memberships:
+                for membership in memberships:
+                    if membership.get("state") == QueueMembershipState.Online.value:
+                        state_date = datetime.timestamp(membership.get("state_date"))
+                        response = {
+                            "presence": membership.get("state"),
+                            "state_date": state_date,
+                        }
+                        break
+
+        return response
+
+    async def get_agent_pause_status(self, agent_id: UserID, queue_room_id: RoomID) -> Dict:
+        """> This function returns a dictionary with the pause status of an agent in a queue
+
+        Parameters
+        ----------
+        agent_id : UserID
+            The Matrix ID of the agent
+        queue_room_id : RoomID
+            The room ID of the queue you want to get the pause status of.
+
+        Returns
+        -------
+            A dictionary with the pause status and the pause date.
+
+        """
+        response = {
+            "paused": False,
+            "pause_date": datetime.now().timestamp(),
+        }
+        agent_user: User = await User.get_by_mxid(agent_id, create=False)
+        queue: Queue = await Queue.get_by_room_id(queue_room_id, create=False)
+        if not agent_user or not queue:
+            self.log.debug(
+                f"Agent {agent_id} does not exist as acd-user "
+                f"or queue {queue_room_id} does not exists"
+            )
+            return response
+
+        membership: QueueMembership = await QueueMembership.get_by_queue_and_user(
+            fk_user=agent_user.id, fk_queue=queue.id, create=False
+        )
+        if membership:
+            ts_pause_date = datetime.timestamp(membership.pause_date)
+            response["paused"] = membership.paused
+            response["pause_date"] = ts_pause_date
+
+        return response

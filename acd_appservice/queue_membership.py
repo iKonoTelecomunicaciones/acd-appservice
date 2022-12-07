@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from datetime import datetime as dt
 from typing import cast
 
@@ -15,8 +16,8 @@ class QueueMembership(DBMembership):
     fk_user: int
     fk_queue: int
     creation_date: int
-    state_date: int | None = None
-    pause_date: int | None = None
+    state_date: datetime | None = None
+    pause_date: datetime | None = None
     pause_reason: str | None = None
     state: str = QueueMembershipState.Offline.value
     paused: bool = False
@@ -31,8 +32,8 @@ class QueueMembership(DBMembership):
         fk_user: int,
         fk_queue: int,
         creation_date: int,
-        state_date: int | None = None,
-        pause_date: int | None = None,
+        state_date: datetime | None = None,
+        pause_date: datetime | None = None,
         pause_reason: str | None = None,
         state: str = QueueMembershipState.Offline.value,
         paused: bool = False,

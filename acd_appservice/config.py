@@ -79,6 +79,7 @@ class Config(BaseBridgeConfig):
         copy("acd.queues.user_add_method")
         copy("acd.queues.visibility")
         copy("acd.queues.invitees")
+        copy("acd.use_presence")
 
         # Utils
         copy_dict("utils")

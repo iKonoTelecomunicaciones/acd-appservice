@@ -3,6 +3,7 @@ import asyncio
 from mautrix.types import PresenceState
 
 from ..puppet import Puppet
+from ..queue_membership import QueueMembershipState
 from .handler import CommandArg, CommandEvent, command_handler
 
 customer_room_id = CommandArg(
@@ -143,18 +144,32 @@ async def transfer_user(evt: CommandEvent) -> str:
         msg = f"The {evt.args.agent_id} agent is already in the room {evt.args.customer_room_id}"
         await evt.intent.send_notice(room_id=evt.args.customer_room_id, text=msg)
     else:
-        presence_response = await puppet.agent_manager.get_agent_presence(
-            agent_id=evt.args.agent_id
-        )
+        # Switch between presence and agent operation login using config parameter
+        # to verify if agent is available to be assigned to the chat
+        if evt.config["acd.use_presence"]:
+            presence_response = await puppet.agent_manager.get_agent_presence(
+                agent_id=evt.args.agent_id
+            )
+            is_agent_online = (
+                presence_response and presence_response.presence == PresenceState.ONLINE
+            )
+        else:
+            presence_response = await puppet.agent_manager.get_agent_status(
+                agent_id=evt.args.agent_id
+            )
+            is_agent_online = (
+                presence_response
+                and presence_response.get("presence") == QueueMembershipState.Online.value
+            )
+
         evt.log.debug(
             f"PRESENCE RESPONSE: "
-            f"[{evt.args.agent_id}] -> [{presence_response.presence if presence_response else None}]"
+            f"[{evt.args.agent_id}] -> "
+            f"""[{presence_response.get('presence') or presence_response.presence
+            if presence_response else None}]"""
         )
-        if (
-            presence_response
-            and presence_response.presence == PresenceState.ONLINE
-            or evt.args.force == "yes"
-        ):
+
+        if is_agent_online or evt.args.force == "yes":
             await puppet.agent_manager.force_invite_agent(
                 room_id=evt.args.customer_room_id,
                 agent_id=evt.args.agent_id,
