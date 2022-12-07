@@ -217,16 +217,18 @@ bridges:
       # When I can't create a chat with WhatsApp
         phone_is_not_on_whatsapp: "^The server said \\+(?P<phone_number>[0-9]+) is not on WhatsApp$"
     # If you are already a room administrator, configure your power levels.
-    setup_rooms:
+    initial_state:
         # if enabled, these power levels will be configured at room initialization.
         enabled: false
         power_levels:
             events_default: 0
-            invite: 99
             users_default: 0
-            kick: 99
-            ban: 99
-            redact: 99
+            state_default: 50
+            events:
+                m.room.avatar: 0
+                m.room.name: 0
+                m.room.topic: 0
+
     # Settings for provisioning API
     provisioning:
         url_base: "http://mautrix-whatsapp:29318/_matrix/provision"
@@ -253,16 +255,18 @@ bridges:
     # Bridge support formated messages
     format_messages: false
     # If you are already a room administrator, configure your power levels.
-    setup_rooms:
+    initial_state:
         # if enabled, these power levels will be configured at room initialization.
         enabled: false
         power_levels:
             events_default: 0
-            invite: 99
             users_default: 0
-            kick: 99
-            ban: 99
-            redact: 99
+            state_default: 50
+            events:
+                m.room.avatar: 0
+                m.room.name: 0
+                m.room.topic: 0
+
 
     # Settings for provisioning API
     provisioning:
@@ -290,16 +294,18 @@ bridges:
     # Bridge support formated messages
     format_messages: true
     # If you are already a room administrator, configure your power levels.
-    setup_rooms:
+    initial_state:
         # if enabled, these power levels will be configured at room initialization.
         enabled: false
         power_levels:
             events_default: 0
-            invite: 99
             users_default: 0
-            kick: 99
-            ban: 99
-            redact: 99
+            state_default: 50
+            events:
+                m.room.avatar: 0
+                m.room.name: 0
+                m.room.topic: 0
+
 
     # Settings for provisioning API
     provisioning:
@@ -316,16 +322,19 @@ bridges:
     # Prefix for users created
     user_prefix: "plg"
     # If you are already a room administrator, configure your power levels.
-    setup_rooms:
+    initial_state:
         # if enabled, these power levels will be configured at room initialization.
         enabled: true
         power_levels:
             events_default: 0
-            invite: 99
             users_default: 0
-            kick: 99
-            ban: 99
-            redact: 99
+            state_default: 50
+            events:
+                m.room.avatar: 0
+                m.room.message: 0
+                m.room.name: 0
+                m.room.topic: 0
+
 
 utils:
     # Whatsapp connection timeout (seconds)

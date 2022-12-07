@@ -47,23 +47,23 @@ class Config(BaseBridgeConfig):
         copy("bridges.mautrix.mxid")
         copy("bridges.mautrix.provisioning.url_base")
         copy("bridges.mautrix.provisioning.shared_secret")
-        copy("bridges.mautrix.setup_rooms.enabled")
-        copy_dict("bridges.mautrix.setup_rooms.power_levels")
+        copy("bridges.mautrix.initial_state.enabled")
+        copy_dict("bridges.mautrix.initial_state.power_levels")
 
         copy("bridges.instagram.mxid")
         copy("bridges.instagram.provisioning.url_base")
         copy("bridges.instagram.provisioning.shared_secret")
-        copy("bridges.instagram.setup_rooms.enabled")
-        copy_dict("bridges.instagram.setup_rooms.power_levels")
+        copy("bridges.instagram.initial_state.enabled")
+        copy_dict("bridges.instagram.initial_state.power_levels")
 
         copy("bridges.gupshup.mxid")
         copy("bridges.gupshup.provisioning.url_base")
         copy("bridges.gupshup.provisioning.shared_secret")
-        copy("bridges.gupshup.setup_rooms.enabled")
-        copy_dict("bridges.gupshup.setup_rooms.power_levels")
+        copy("bridges.gupshup.initial_state.enabled")
+        copy_dict("bridges.gupshup.initial_state.power_levels")
 
-        copy("bridges.chatterbox.setup_rooms.enabled")
-        copy_dict("bridges.chatterbox.setup_rooms.power_levels")
+        copy("bridges.chatterbox.initial_state.enabled")
+        copy_dict("bridges.chatterbox.initial_state.power_levels")
 
         # ACD
         copy("acd.namespaces")

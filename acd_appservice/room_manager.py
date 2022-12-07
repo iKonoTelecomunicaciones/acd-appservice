@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 from typing import Dict, List, Tuple
@@ -16,6 +17,7 @@ from mautrix.types import (
     MessageType,
     RoomDirectoryVisibility,
     RoomID,
+    StrippedStateEvent,
     TextMessageEventContent,
     UserID,
 )
@@ -65,8 +67,7 @@ class RoomManager:
         cls.by_room_id[room_id] = room
 
     async def set_bridge_default_power_levels(self, room_id: RoomID) -> None:
-        """It gets the power levels of the room, updates them with the power levels specified in
-        the config, and then sets the power levels of the room
+        """This function sets the default power levels for the room
 
         Parameters
         ----------
@@ -74,11 +75,16 @@ class RoomManager:
             The room ID of the room you want to set the power levels in.
 
         """
-        self.log.debug(f"Set power levels per effect to the room :: {room_id}")
+
+        bridge = await self.get_room_bridge(room_id=room_id)
+        self.log.debug(f"Setting the default porder levels in the room :: {room_id}")
         levels = await self.intent.get_power_levels(room_id=room_id)
-        new_levels: Dict = levels.serialize()
-        new_levels.update(self.config[f"bridges.{self.bridge}.setup_rooms.power_levels"])
-        await self.intent.set_power_levels(room_id=room_id, content=new_levels)
+        current_levels: Dict = levels.serialize()
+        current_levels.update(
+            json.loads(json.dumps(self.config[f"bridges.{bridge}.initial_state.power_levels"]))
+        )
+
+        await self.intent.set_power_levels(room_id=room_id, content=current_levels)
 
     async def initialize_room(self, room_id: RoomID) -> bool:
         """Initializing a room.
@@ -138,7 +144,8 @@ class RoomManager:
         for attempt in range(0, 10):
             self.log.debug(f"Attempt # {attempt} of room configuration")
             try:
-                if self.config[f"bridges.{self.bridge}.setup_rooms.enabled"]:
+                bridge = await self.get_room_bridge(room_id=room_id)
+                if self.config[f"bridges.{bridge}.initial_state.enabled"]:
                     await self.set_bridge_default_power_levels(room_id=room_id)
                 await self.intent.set_room_directory_visibility(
                     room_id=room_id, visibility=RoomDirectoryVisibility.PUBLIC
