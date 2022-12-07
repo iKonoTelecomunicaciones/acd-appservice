@@ -648,13 +648,11 @@ class MatrixHandler:
                     is_agent_offline = (
                         presence.get("presence") == QueueMembershipState.Offline.value
                     )
-                    last_active_ago = presence.get("last_active_ago")
 
                 if is_agent_offline:
                     await puppet.agent_manager.process_offline_agent(
                         room_id=room_id,
                         room_agent=room_agent,
-                        last_active_ago=last_active_ago,
                     )
                 return
 

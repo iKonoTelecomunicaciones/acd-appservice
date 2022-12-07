@@ -963,9 +963,7 @@ class AgentManager:
 
         return True
 
-    async def process_offline_agent(
-        self, room_id: RoomID, room_agent: UserID, last_active_ago: int
-    ):
+    async def process_offline_agent(self, room_id: RoomID, room_agent: UserID):
         """If the agent is offline, the bot will send a message to the user and then either
         transfer the user to another agent in the same campaign or put the user in the offline menu
 
@@ -987,44 +985,36 @@ class AgentManager:
 
         action = self.config["acd.offline.agent_action"]
         self.log.debug(f"Agent {room_agent} OFFLINE in {room_id} --> {action}")
-        offline_agent_timeout = self.config["acd.offline.agent_timeout"]
-        self.log.debug(
-            f"last_active_ago: {last_active_ago} / 1000 -- "
-            f"offline_agent_timeout: {offline_agent_timeout}"
-        )
 
-        if not last_active_ago or last_active_ago / 1000 >= offline_agent_timeout:
-            agent_displayname = await self.intent.get_displayname(user_id=room_agent)
-            msg = self.config["acd.offline.agent_message"].format(agentname=agent_displayname)
-            if msg:
-                await self.room_manager.send_formatted_message(room_id=room_id, msg=msg)
+        agent_displayname = await self.intent.get_displayname(user_id=room_agent)
+        msg = self.config["acd.offline.agent_message"].format(agentname=agent_displayname)
+        if msg:
+            await self.room_manager.send_formatted_message(room_id=room_id, msg=msg)
 
-            if action == "keep":
-                return
-            elif action == "transfer":
-                # transfer to another agent in same campaign
-                user_selected_campaign = await self.room_manager.get_campaign_of_room(
-                    room_id=room_id
-                )
-                if not user_selected_campaign:
-                    # this can happen if the database is deleted
-                    user_selected_campaign = self.config["acd.available_agents_room"]
-                self.log.debug(f"Transferring to {user_selected_campaign}")
+        if action == "keep":
+            return
+        elif action == "transfer":
+            # transfer to another agent in same campaign
+            user_selected_campaign = await self.room_manager.get_campaign_of_room(room_id=room_id)
+            if not user_selected_campaign:
+                # this can happen if the database is deleted
+                user_selected_campaign = self.config["acd.available_agents_room"]
+            self.log.debug(f"Transferring to {user_selected_campaign}")
 
-                user: User = await User.get_by_mxid(room_agent)
+            user: User = await User.get_by_mxid(room_agent)
 
-                await self.commands.handle(
-                    room_id=room_id,
-                    sender=user,
-                    command="transfer",
-                    args_list=f"{room_id} {user_selected_campaign}".split(),
-                    intent=self.intent,
-                    is_management=room_id == user.management_room,
-                )
+            await self.commands.handle(
+                room_id=room_id,
+                sender=user,
+                command="transfer",
+                args_list=f"{room_id} {user_selected_campaign}".split(),
+                intent=self.intent,
+                is_management=room_id == user.management_room,
+            )
 
-            elif action == "menu":
-                self.room_manager.put_in_offline_menu(room_id)
-                await self.show_offline_menu(agent_displayname=agent_displayname, room_id=room_id)
+        elif action == "menu":
+            self.room_manager.put_in_offline_menu(room_id)
+            await self.show_offline_menu(agent_displayname=agent_displayname, room_id=room_id)
 
     async def show_offline_menu(self, agent_displayname: str, room_id: RoomID):
         """It takes the agent's display name and returns a formatted string containing the offline menu
@@ -1074,8 +1064,10 @@ class AgentManager:
             "last_active_ago": datetime.now().timestamp(),
         }
         if not agent_user:
-            self.log.debug(f"Agent {agent_id} does not exist as acd-user")
-            self.log.debug(f"Check that agent is member of a queue room")
+            self.log.debug(
+                f"Agent {agent_id} does not exist as acd-user. "
+                "Check that agent is member of a queue room"
+            )
             return response
 
         if queue_room_id:
