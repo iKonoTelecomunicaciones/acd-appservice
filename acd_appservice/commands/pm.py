@@ -206,7 +206,8 @@ async def pm(evt: CommandEvent) -> Dict:
     format_user = (
         f"[{evt.args.phone}]"
         f"(https://matrix.to/#/"
-        f"@{evt.config[f'bridges.{puppet.bridge}.user_prefix']}_{evt.args.phone}:{evt.intent.domain})"
+        f"@{evt.config[f'bridges.{puppet.bridge}.user_prefix']}"
+        f"_{evt.args.phone}:{evt.intent.domain})"
     )
     await evt.reply(
         text=return_params["reply"]
