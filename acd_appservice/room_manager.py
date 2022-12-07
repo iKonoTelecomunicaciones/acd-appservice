@@ -17,7 +17,6 @@ from mautrix.types import (
     MessageType,
     RoomDirectoryVisibility,
     RoomID,
-    StrippedStateEvent,
     TextMessageEventContent,
     UserID,
 )
@@ -77,7 +76,7 @@ class RoomManager:
         """
 
         bridge = await self.get_room_bridge(room_id=room_id)
-        self.log.debug(f"Setting the default porder levels in the room :: {room_id}")
+        self.log.debug(f"Setting the default power levels in the room :: {room_id}")
         levels = await self.intent.get_power_levels(room_id=room_id)
         current_levels: Dict = levels.serialize()
         current_levels.update(
