@@ -216,9 +216,7 @@ async def pm(evt: CommandEvent) -> Dict:
         text=return_params["reply"]
         .replace("number", formatted_user if not data.get("error") else evt.args.phone)
         .replace("room", formatted_room)
-        .replace("agent_displayname", formatted_agent)
-        .replace("<", "")
-        .replace(">", "")
+        .replace("<agent_displayname>", formatted_agent)
     )
 
     # Returning a dict with two keys:
