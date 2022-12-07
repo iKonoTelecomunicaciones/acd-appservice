@@ -1061,7 +1061,7 @@ class AgentManager:
         agent_user: User = await User.get_by_mxid(agent_id, create=False)
         response = {
             "presence": QueueMembershipState.Offline.value,
-            "last_active_ago": datetime.now().timestamp(),
+            "state_date": datetime.now().timestamp(),
         }
         if not agent_user:
             self.log.debug(
@@ -1080,11 +1080,11 @@ class AgentManager:
             )
 
             if membership:
-                last_active_ago = datetime.timestamp(membership.state_date)
+                state_date = datetime.timestamp(membership.state_date)
 
                 response = {
                     "presence": membership.state,
-                    "last_active_ago": last_active_ago,
+                    "state_date": state_date,
                 }
         else:
             memberships: List[dict] = await QueueMembership.get_user_memberships(
@@ -1093,10 +1093,10 @@ class AgentManager:
             if memberships:
                 for membership in memberships:
                     if membership.get("state") == QueueMembershipState.Online.value:
-                        last_active_ago = datetime.timestamp(membership.get("state_date"))
+                        state_date = datetime.timestamp(membership.get("state_date"))
                         response = {
                             "presence": membership.get("state"),
-                            "last_active_ago": last_active_ago,
+                            "state_date": state_date,
                         }
                         break
 
@@ -1118,14 +1118,18 @@ class AgentManager:
 
         """
         response = {
-            "presence": False,
-            "last_active_ago": datetime.now().timestamp(),
+            "paused": False,
+            "pause_date": datetime.now().timestamp(),
         }
         agent_user: User = await User.get_by_mxid(agent_id, create=False)
         queue: Queue = await Queue.get_by_room_id(queue_room_id, create=False)
         if not agent_user or not queue:
-            self.log.debug(f"Agent {agent_id} does not exist as acd-user or queue does not exists")
+            self.log.debug(
+                f"Agent {agent_id} does not exist as acd-user "
+                f"or queue {queue_room_id} does not exists"
+            )
             return response
+
         membership: QueueMembership = await QueueMembership.get_by_queue_and_user(
             fk_user=agent_user.id, fk_queue=queue.id, create=False
         )

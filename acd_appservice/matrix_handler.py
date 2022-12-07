@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from datetime import datetime
 from shlex import split
 
 from markdown import markdown
@@ -642,7 +641,6 @@ class MatrixHandler:
                 if self.config["acd.use_presence"]:
                     presence = await puppet.agent_manager.get_agent_presence(agent_id=room_agent)
                     is_agent_offline = presence and presence.presence == PresenceState.OFFLINE
-                    last_active_ago = presence.last_active_ago
                 else:
                     presence = await puppet.agent_manager.get_agent_status(agent_id=room_agent)
                     is_agent_offline = (

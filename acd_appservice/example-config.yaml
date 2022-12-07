@@ -142,8 +142,6 @@ acd:
         # - transfer: if agent is offline more than x secs, it is kicked out and someone new is invited
         # - menu: if agent is offline more than x secs, the customer is presented a menu of options
         agent_action: keep
-        # agent offline time in seconds to take an action if the customer sends a message
-        agent_timeout: 0
         # message to show when agent is offline longer than offline_agent_timeout
         agent_message: "{agentname} no está disponible en este momento."
         # User requested to see the menu
