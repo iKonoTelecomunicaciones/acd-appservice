@@ -201,18 +201,24 @@ async def pm(evt: CommandEvent) -> Dict:
         f"{puppet.config['acd.frontend_command_prefix']} {evt.command} {json.dumps(return_params)}"
     )
 
-    format_room = f"[{data.get('room_id')}](https://matrix.to/#/{data.get('room_id')})"
-
-    format_user = (
+    formatted_room = f"[{data.get('room_id')}](https://matrix.to/#/{data.get('room_id')})"
+    formatted_user = (
         f"[{evt.args.phone}]"
         f"(https://matrix.to/#/"
         f"@{evt.config[f'bridges.{puppet.bridge}.user_prefix']}"
         f"_{evt.args.phone}:{evt.intent.domain})"
     )
+    formatted_agent = (
+        f"[{agent_displayname}](https://matrix.to/#/{agent_id if agent_id else evt.sender.mxid})"
+    )
+
     await evt.reply(
         text=return_params["reply"]
-        .replace("number", format_user if not data.get("error") else evt.args.phone)
-        .replace("room", format_room)
+        .replace("number", formatted_user if not data.get("error") else evt.args.phone)
+        .replace("room", formatted_room)
+        .replace("agent_displayname", formatted_agent)
+        .replace("<", "")
+        .replace(">", "")
     )
 
     # Returning a dict with two keys:
