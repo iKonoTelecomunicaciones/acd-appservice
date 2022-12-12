@@ -15,6 +15,7 @@ from mautrix.types import (
     Format,
     JoinRule,
     MessageType,
+    PowerLevelStateEventContent,
     RoomDirectoryVisibility,
     RoomID,
     TextMessageEventContent,
@@ -82,8 +83,8 @@ class RoomManager:
         current_levels.update(
             json.loads(json.dumps(self.config[f"bridges.{bridge}.initial_state.power_levels"]))
         )
-
-        await self.intent.set_power_levels(room_id=room_id, content=current_levels)
+        content_current_levels = PowerLevelStateEventContent.deserialize(current_levels)
+        await self.intent.set_power_levels(room_id=room_id, content=content_current_levels)
 
     async def initialize_room(self, room_id: RoomID) -> bool:
         """Initializing a room.
