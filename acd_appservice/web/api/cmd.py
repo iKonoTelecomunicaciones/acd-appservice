@@ -25,6 +25,7 @@ from ..error_responses import (
     SERVER_ERROR,
     USER_DOESNOT_EXIST,
 )
+from datetime import datetime
 
 
 @routes.post("/v1/cmd/create")
@@ -752,6 +753,8 @@ async def member(request: web.Request) -> web.Response:
     action: str = data.get("action")
     agent: UserID = data.get("agent")
     agent_user: User = await User.get_by_mxid(mxid=agent, create=False)
+    if user:
+        return web.json_response(**USER_DOESNOT_EXIST)
     queues: List[RoomID] = data.get("queues")
     pause_reason: str = data.get("pause_reason")
 
@@ -787,3 +790,41 @@ async def member(request: web.Request) -> web.Response:
         action_responses.append(response)
 
     return web.json_response(data={"agent_operation_responses": action_responses}, status=status)
+
+
+@routes.get("/v1/cmd/member/membership", allow_head=False)
+async def get_memberships(request: web.Request) -> web.Response:
+    """
+    ---
+    summary: Get agent queues membership
+
+    tags:
+        - Commands
+
+    responses:
+        '200':
+            $ref: '#/components/responses/GetUserMembershipSuccess'
+        '404':
+            $ref: '#/components/responses/NotFound'
+    """
+
+    user = await _resolve_user_identifier(request=request)
+    memberships = await QueueMembership.get_user_memberships(user.id)
+    if not memberships:
+        return web.json_response(data={"detail": "Agent has no queues membership"}, status=404)
+
+    user_memberships = [
+        {
+            "room_id": membership.get("room_id"),
+            "room_name": membership.get("name"),
+            "description": membership.get("description"),
+            "state_date": datetime.strftime(membership.get("state_date"), "%Y-%m-%d, %H:%M:%S"),
+            "pasuse_date": datetime.strftime(membership.get("state_date"), "%Y-%m-%d, %H:%M:%S"),
+            "pause_reason": membership.get("pause_reason"),
+            "state": membership.get("state"),
+            "paused": membership.get("paused"),
+        }
+        for membership in memberships
+    ]
+
+    return web.json_response(data={"data": user_memberships}, status=200)
