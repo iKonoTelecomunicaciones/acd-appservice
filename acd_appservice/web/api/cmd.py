@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 from typing import Dict, List
 
 from aiohttp import web
@@ -25,7 +26,6 @@ from ..error_responses import (
     SERVER_ERROR,
     USER_DOESNOT_EXIST,
 )
-from datetime import datetime
 
 
 @routes.post("/v1/cmd/create")
