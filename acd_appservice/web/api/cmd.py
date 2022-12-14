@@ -753,7 +753,7 @@ async def member(request: web.Request) -> web.Response:
     action: str = data.get("action")
     agent: UserID = data.get("agent")
     agent_user: User = await User.get_by_mxid(mxid=agent, create=False)
-    if user:
+    if not agent_user:
         return web.json_response(**USER_DOESNOT_EXIST)
     queues: List[RoomID] = data.get("queues")
     pause_reason: str = data.get("pause_reason")
