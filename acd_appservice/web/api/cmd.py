@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 from typing import Dict, List
 
 from aiohttp import web
@@ -9,6 +10,7 @@ from mautrix.types import RoomID, UserID
 from ...puppet import Puppet
 from ...queue_membership import QueueMembership
 from ...user import User
+from ...util import Util
 from ..base import (
     _resolve_puppet_identifier,
     _resolve_user_identifier,
@@ -19,6 +21,7 @@ from ..base import (
 from ..error_responses import (
     AGENT_DOESNOT_HAVE_QUEUES,
     BRIDGE_INVALID,
+    FORBIDDEN_OPERATION,
     INVALID_ACTION,
     NOT_DATA,
     REQUIRED_VARIABLES,
@@ -717,7 +720,7 @@ async def member(request: web.Request) -> web.Response:
                         pause_reason:
                             type: string
                     example:
-                        action: login | logout | pause | unpuase
+                        action: login | logout | pause | unpause
                         agent: "@agent1:localhost"
                         queues: ["@sdkjfkyasdvbcnnskf:localhost", "@sdkjfkyasdvbcnnskf:localhost"]
                         pause_reason: "LUNCH"
@@ -752,6 +755,8 @@ async def member(request: web.Request) -> web.Response:
     action: str = data.get("action")
     agent: UserID = data.get("agent")
     agent_user: User = await User.get_by_mxid(mxid=agent, create=False)
+    if not agent_user:
+        return web.json_response(**USER_DOESNOT_EXIST)
     queues: List[RoomID] = data.get("queues")
     pause_reason: str = data.get("pause_reason")
 
@@ -787,3 +792,61 @@ async def member(request: web.Request) -> web.Response:
         action_responses.append(response)
 
     return web.json_response(data={"agent_operation_responses": action_responses}, status=status)
+
+
+@routes.get("/v1/cmd/member/memberships", allow_head=False)
+async def get_memberships(request: web.Request) -> web.Response:
+    """
+    ---
+    summary: Get agent queue memberships
+
+    tags:
+        - Commands
+
+    parameters:
+    - in: query
+      name: user_id
+      schema:
+          type: string
+      required: false
+      description: user_id to get memberships
+
+    responses:
+        '200':
+            $ref: '#/components/responses/GetUserMembershipsSuccess'
+        '404':
+            $ref: '#/components/responses/NotFound'
+    """
+
+    query_params = request.query
+    user_id: str = query_params.get("user_id")
+
+    user_requester = await _resolve_user_identifier(request=request)
+    target_user: User = user_requester
+
+    if not user_requester.is_admin and user_id:
+        return web.json_response(**FORBIDDEN_OPERATION)
+    elif user_requester.is_admin and not Util.is_user_id(user_id):
+        return web.json_response(**REQUIRED_VARIABLES)
+    elif user_requester.is_admin and Util.is_user_id(user_id):
+        target_user = await User.get_by_mxid(user_id, create=False)
+
+    memberships = await QueueMembership.get_user_memberships(target_user.id)
+    if not memberships:
+        return web.json_response(data={"detail": "Agent has no queue memberships"}, status=404)
+
+    user_memberships = [
+        {
+            "room_id": membership.get("room_id"),
+            "room_name": membership.get("name"),
+            "description": membership.get("description"),
+            "state_date": datetime.strftime(membership.get("state_date"), "%Y-%m-%d %H:%M:%S"),
+            "pasuse_date": datetime.strftime(membership.get("state_date"), "%Y-%m-%d %H:%M:%S"),
+            "pause_reason": membership.get("pause_reason"),
+            "state": membership.get("state"),
+            "paused": membership.get("paused"),
+        }
+        for membership in memberships
+    ]
+
+    return web.json_response(data={"data": user_memberships}, status=200)

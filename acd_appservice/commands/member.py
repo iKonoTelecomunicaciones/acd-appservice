@@ -56,10 +56,7 @@ async def member(evt: CommandEvent) -> Dict:
     """
 
     json_response: Dict = {
-        "data": {
-            "detail": "",
-            "room_id": evt.room_id,
-        },
+        "data": {"detail": "", "room_id": evt.room_id, "room_name": ""},
         "status": 0,
     }
 
@@ -103,6 +100,7 @@ async def member(evt: CommandEvent) -> Dict:
         json_response["status"] = 422
         return json_response
 
+    json_response.get("data")["room_name"] = queue.name
     membership: QueueMembership = await QueueMembership.get_by_queue_and_user(
         fk_user=user.id, fk_queue=queue.id, create=False
     )

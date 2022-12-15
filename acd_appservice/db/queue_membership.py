@@ -122,9 +122,13 @@ class QueueMembership:
 
         """
 
-        q = """SELECT queue.room_id, queue_membership.*
-        FROM queue JOIN queue_membership ON queue_membership.fk_queue = queue.id
-        WHERE queue_membership.fk_user = $1"""
+        q = """
+            SELECT queue.room_id, queue.name, queue.description, queue_membership.state_date,
+            queue_membership.pause_date, queue_membership.pause_reason,
+            queue_membership.state, queue_membership.paused
+            FROM queue JOIN queue_membership ON queue_membership.fk_queue = queue.id
+            WHERE queue_membership.fk_user = $1
+        """
         row = await cls.db.fetch(q, fk_user)
         if not row:
             return None

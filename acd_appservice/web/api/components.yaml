@@ -330,6 +330,50 @@ components:
             room_id: "!dshfjkjhuuakkcnal:localhost"
             error_code: 422
 
+    UserMemberships:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              room_id:
+                type: string
+              room_name:
+                type: string
+              description:
+                type: string
+              state_date:
+                type: string
+              pause_date:
+                type: string
+              pause_reason:
+                type: string
+              state:
+                type: string
+              paused:
+                type: boolean
+      example:
+        data:
+          - room_id: "!foo:localhost"
+            room_name: "Fake room"
+            description: "This is a fake room"
+            state_date: "2022-12-13 21:05:41"
+            pause_date: "2022-12-13 21:05:50"
+            pause_reason: "LUNCH"
+            state: online
+            paused: true
+          - room_id: "!fakeroomid:localhost"
+            room_name: "Second fake room"
+            description: "This is the second fake room"
+            state_date: "2022-12-13 21:10:41"
+            pause_date: "2022-12-13 21:15:50"
+            pause_reason: "TOILET"
+            state: online
+            paused: true
+
+
   # Respuestas de la API
   responses:
     UserCreated:
@@ -464,10 +508,24 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/BadLogout'
-    
+
     AgentOperationSuccess:
       description: "Agent operation success"
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/AgentOperation'
+
+    GetUserMembershipsSuccess:
+      description: "Queue memberships are obtained sucessfully"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserMemberships'
+
+    NotFound:
+      description: Information not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
