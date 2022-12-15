@@ -78,3 +78,8 @@ INVALID_ACTION = {
     "data": {"error": "The provided action is invalid"},
     "status": 422,
 }
+
+FORBIDDEN_OPERATION = {
+    "data": {"error": "Forbidden operation"},
+    "status": 403,
+}

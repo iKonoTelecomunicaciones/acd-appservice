@@ -329,7 +329,7 @@ components:
           - detail: "User {agent_id} is not member of the room {evt.room_id}"
             room_id: "!dshfjkjhuuakkcnal:localhost"
             error_code: 422
-    
+
     UserMemberships:
       type: object
       properties:
@@ -508,15 +508,15 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/BadLogout'
-    
+
     AgentOperationSuccess:
       description: "Agent operation success"
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/AgentOperation'
-    
-    GetUserMembershipSuccess:
+
+    GetUserMembershipsSuccess:
       description: "Queue memberships are obtained sucessfully"
       content:
         application/json:

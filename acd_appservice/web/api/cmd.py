@@ -10,6 +10,7 @@ from mautrix.types import RoomID, UserID
 from ...puppet import Puppet
 from ...queue_membership import QueueMembership
 from ...user import User
+from ...util import Util
 from ..base import (
     _resolve_puppet_identifier,
     _resolve_user_identifier,
@@ -20,6 +21,7 @@ from ..base import (
 from ..error_responses import (
     AGENT_DOESNOT_HAVE_QUEUES,
     BRIDGE_INVALID,
+    FORBIDDEN_OPERATION,
     INVALID_ACTION,
     NOT_DATA,
     REQUIRED_VARIABLES,
@@ -718,7 +720,7 @@ async def member(request: web.Request) -> web.Response:
                         pause_reason:
                             type: string
                     example:
-                        action: login | logout | pause | unpuase
+                        action: login | logout | pause | unpause
                         agent: "@agent1:localhost"
                         queues: ["@sdkjfkyasdvbcnnskf:localhost", "@sdkjfkyasdvbcnnskf:localhost"]
                         pause_reason: "LUNCH"
@@ -792,26 +794,46 @@ async def member(request: web.Request) -> web.Response:
     return web.json_response(data={"agent_operation_responses": action_responses}, status=status)
 
 
-@routes.get("/v1/cmd/member/membership", allow_head=False)
+@routes.get("/v1/cmd/member/memberships", allow_head=False)
 async def get_memberships(request: web.Request) -> web.Response:
     """
     ---
-    summary: Get agent queues membership
+    summary: Get agent queue memberships
 
     tags:
         - Commands
 
+    parameters:
+    - in: query
+      name: user_id
+      schema:
+          type: string
+      required: false
+      description: user_id to get memberships
+
     responses:
         '200':
-            $ref: '#/components/responses/GetUserMembershipSuccess'
+            $ref: '#/components/responses/GetUserMembershipsSuccess'
         '404':
             $ref: '#/components/responses/NotFound'
     """
 
-    user = await _resolve_user_identifier(request=request)
-    memberships = await QueueMembership.get_user_memberships(user.id)
+    query_params = request.query
+    user_id: str = query_params.get("user_id")
+
+    user_requester = await _resolve_user_identifier(request=request)
+    target_user: User = user_requester
+
+    if not user_requester.is_admin and user_id:
+        return web.json_response(**FORBIDDEN_OPERATION)
+    elif user_requester.is_admin and not Util.is_user_id(user_id):
+        return web.json_response(**REQUIRED_VARIABLES)
+    elif user_requester.is_admin and Util.is_user_id(user_id):
+        target_user = await User.get_by_mxid(user_id, create=False)
+
+    memberships = await QueueMembership.get_user_memberships(target_user.id)
     if not memberships:
-        return web.json_response(data={"detail": "Agent has no queues membership"}, status=404)
+        return web.json_response(data={"detail": "Agent has no queue memberships"}, status=404)
 
     user_memberships = [
         {
