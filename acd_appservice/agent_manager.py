@@ -1134,7 +1134,9 @@ class AgentManager:
             fk_user=agent_user.id, fk_queue=queue.id, create=False
         )
         if membership:
-            ts_pause_date = datetime.timestamp(membership.pause_date)
+            ts_pause_date = (
+                datetime.timestamp(membership.pause_date) if membership.pause_date else None
+            )
             response["paused"] = membership.paused
             response["pause_date"] = ts_pause_date
 
