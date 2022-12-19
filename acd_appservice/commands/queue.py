@@ -1,6 +1,5 @@
 from typing import Dict, List
 
-from mautrix.api import Method, SynapseAdminPath
 from mautrix.types import RoomDirectoryVisibility, UserID
 
 from ..queue import Queue
@@ -110,16 +109,11 @@ async def queue(evt: CommandEvent) -> Dict:
         await queue.save()
 
         # Forcing the invitees to join the room.
-        if evt.config["acd.queues.user_add_method"] == "join":
-            for invitee in invitees:
-                try:
-                    await evt.intent.api.request(
-                        method=Method.POST,
-                        path=SynapseAdminPath.v1.join[room_id],
-                        content={"user_id": invitee},
-                    )
-                except Exception as e:
-                    evt.log.warning(e)
+        for invitee in invitees:
+            try:
+                await queue.add_member(new_member=invitee)
+            except Exception as e:
+                evt.log.warning(e)
 
         json_response["data"] = {
             "name": queue.name,

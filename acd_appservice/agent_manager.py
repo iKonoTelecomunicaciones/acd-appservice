@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from asyncio import Future, create_task, get_running_loop, sleep
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI
@@ -13,12 +13,14 @@ from mautrix.util.logging import TraceLogger
 
 from .commands.handler import CommandProcessor
 from .config import Config
-from .queue import Queue
 from .queue_membership import QueueMembership, QueueMembershipState
 from .room_manager import RoomManager
 from .signaling import Signaling
 from .user import User
 from .util import BusinessHour
+
+if TYPE_CHECKING:
+    from .queue import Queue
 
 
 class AgentManager:
