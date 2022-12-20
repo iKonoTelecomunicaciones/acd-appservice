@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from datetime import datetime
 from typing import Dict, List
 
@@ -29,8 +28,6 @@ from ..error_responses import (
     SERVER_ERROR,
     USER_DOESNOT_EXIST,
 )
-
-logger = logging.getLogger()
 
 
 @routes.post("/v1/cmd/create")
@@ -833,6 +830,8 @@ async def get_memberships(request: web.Request) -> web.Response:
         return web.json_response(**REQUIRED_VARIABLES)
     elif user_requester.is_admin and Util.is_user_id(user_id):
         target_user = await User.get_by_mxid(user_id, create=False)
+        if not target_user:
+            return web.json_response(**USER_DOESNOT_EXIST)
 
     memberships = await QueueMembership.get_user_memberships(target_user.id)
     if not memberships:
