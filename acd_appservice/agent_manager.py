@@ -13,14 +13,12 @@ from mautrix.util.logging import TraceLogger
 
 from .commands.handler import CommandProcessor
 from .config import Config
+from .queue import Queue
 from .queue_membership import QueueMembership, QueueMembershipState
 from .room_manager import RoomManager
 from .signaling import Signaling
 from .user import User
 from .util import BusinessHour
-
-if TYPE_CHECKING:
-    from .queue import Queue
 
 
 class AgentManager:

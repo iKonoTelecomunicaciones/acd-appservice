@@ -5,11 +5,10 @@ from typing import TYPE_CHECKING, Dict
 
 from markdown import markdown
 from mautrix.api import Method, SynapseAdminPath
-from mautrix.appservice import AppService
+from mautrix.appservice import AppService, IntentAPI
 from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent, UserID
 from mautrix.util.logging import TraceLogger
 
-from .puppet import Puppet
 from .util import Util
 
 if TYPE_CHECKING:
@@ -23,13 +22,12 @@ class Room:
     log: TraceLogger = logging.getLogger("acd.room")
     az: AppService
 
-    puppet: Puppet
-
     by_room_id: Dict[RoomID, "Room"] = {}
 
-    def __init__(self, room_id: RoomID):
+    def __init__(self, room_id: RoomID, intent: IntentAPI = None):
         self.log = self.log.getChild(room_id)
         self.room_id = room_id
+        self.main_intent = intent or self.az.intent
 
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> None:
@@ -53,18 +51,8 @@ class Room:
         if not self.room_id in self.by_room_id:
             self.by_room_id[self.room_id] = self
 
-        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=self.room_id)
-
-        self.bridge = puppet.bridge if puppet else ""
-
-        self.is_control_room = await Puppet.is_a_control_room(room_id=self.room_id)
-
-        if not puppet:
+        if not self.main_intent:
             self.main_intent = self.az.intent
-            return
-
-        self.puppet = puppet
-        self.main_intent = puppet.intent
 
     async def invite_user(self, user_id: UserID):
         """Invite a user to the room
