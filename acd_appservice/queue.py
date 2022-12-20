@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import cast
 
+from mautrix.appservice import IntentAPI
 from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
@@ -22,10 +23,15 @@ class Queue(DBQueue, Room):
     by_room_id: dict[RoomID, Queue] = {}
 
     def __init__(
-        self, room_id: RoomID, name: str = "", description: str | None = None, id: int = None
+        self,
+        room_id: RoomID,
+        name: str = "",
+        description: str | None = None,
+        id: int = None,
+        intent: IntentAPI = None,
     ):
         DBQueue.__init__(self, id=id, name=name, room_id=room_id, description=description)
-        Room.__init__(self, room_id=self.room_id)
+        Room.__init__(self, room_id=self.room_id, intent=intent)
 
     async def _add_to_cache(self) -> None:
         self.by_id[self.id] = self

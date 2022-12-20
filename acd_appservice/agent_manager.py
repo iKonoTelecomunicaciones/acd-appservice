@@ -13,14 +13,12 @@ from mautrix.util.logging import TraceLogger
 
 from .commands.handler import CommandProcessor
 from .config import Config
+from .queue import Queue
 from .queue_membership import QueueMembership, QueueMembershipState
 from .room_manager import RoomManager
 from .signaling import Signaling
 from .user import User
 from .util import BusinessHour
-
-if TYPE_CHECKING:
-    from .queue import Queue
 
 
 class AgentManager:
@@ -279,7 +277,6 @@ class AgentManager:
                         presence_response and presence_response.presence == PresenceState.ONLINE
                     )
                 else:
-
                     presence_response = await self.get_agent_status(
                         queue_room_id=campaign_room_id, agent_id=agent_id
                     )
@@ -1082,7 +1079,9 @@ class AgentManager:
             )
 
             if membership:
-                state_date = datetime.timestamp(membership.state_date)
+                state_date = (
+                    datetime.timestamp(membership.state_date) if membership.state_date else None
+                )
 
                 response = {
                     "presence": membership.state,
@@ -1095,7 +1094,11 @@ class AgentManager:
             if memberships:
                 for membership in memberships:
                     if membership.get("state") == QueueMembershipState.Online.value:
-                        state_date = datetime.timestamp(membership.get("state_date"))
+                        state_date = (
+                            datetime.timestamp(membership.get("state_date"))
+                            if membership.get("state_date")
+                            else None
+                        )
                         response = {
                             "presence": membership.get("state"),
                             "state_date": state_date,

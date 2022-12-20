@@ -161,13 +161,13 @@ async def agent_user(
 
 
 @pytest_asyncio.fixture
-async def queue(
-    mocker: MockerFixture,
-) -> Queue:
+async def queue(mocker: MockerFixture, intent: IntentAPI) -> Queue:
     mocker.patch.object(
         Queue,
         "get_by_room_id",
-        return_value=Queue(id=int(time.time()), room_id="!foo:foo.com", name="test"),
+        return_value=Queue(
+            id=int(time.time()), room_id="!foo:foo.com", name="test", intent=intent
+        ),
     )
     return await Queue.get_by_room_id("!foo:foo.com")
 

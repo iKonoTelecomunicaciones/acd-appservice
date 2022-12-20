@@ -830,6 +830,8 @@ async def get_memberships(request: web.Request) -> web.Response:
         return web.json_response(**REQUIRED_VARIABLES)
     elif user_requester.is_admin and Util.is_user_id(user_id):
         target_user = await User.get_by_mxid(user_id, create=False)
+        if not target_user:
+            return web.json_response(**USER_DOESNOT_EXIST)
 
     memberships = await QueueMembership.get_user_memberships(target_user.id)
     if not memberships:
@@ -840,8 +842,12 @@ async def get_memberships(request: web.Request) -> web.Response:
             "room_id": membership.get("room_id"),
             "room_name": membership.get("name"),
             "description": membership.get("description"),
-            "state_date": datetime.strftime(membership.get("state_date"), "%Y-%m-%d %H:%M:%S"),
-            "pasuse_date": datetime.strftime(membership.get("state_date"), "%Y-%m-%d %H:%M:%S"),
+            "state_date": datetime.strftime(membership.get("state_date"), "%Y-%m-%d %H:%M:%S%z")
+            if membership.get("state_date")
+            else None,
+            "pause_date": datetime.strftime(membership.get("pause_date"), "%Y-%m-%d %H:%M:%S%z")
+            if membership.get("pause_date")
+            else None,
             "pause_reason": membership.get("pause_reason"),
             "state": membership.get("state"),
             "paused": membership.get("paused"),
