@@ -273,7 +273,6 @@ class AgentManager:
                 # Switch between presence and agent operation login using config parameter
                 # to verify if agent is available to be assigned to the chat
                 is_agent_available_for_assignment: bool = False
-                
                 if self.config["acd.use_presence"]:
                     presence_response = await self.get_agent_presence(agent_id=agent_id)
                     is_agent_available_for_assignment = (
@@ -284,10 +283,6 @@ class AgentManager:
                         queue_room_id=campaign_room_id, agent_id=agent_id
                     )
 
-                    self.log.debug("--------------------------------------------------------")
-                    self.log.debug("Esto esta como raro")
-                    self.log.debug("--------------------------------------------------------")
-                    
                     if (
                         presence_response
                         and presence_response.get("presence") == QueueMembershipState.Online.value
@@ -1076,27 +1071,19 @@ class AgentManager:
             )
             return response
 
-        self.log.debug("-----------------------------------------------------------")
-        self.log.debug("response: ", response)
-        self.log.debug("-----------------------------------------------------------")
-        
         if queue_room_id:
-            self.log.debug("-----------------------------------------------------------")
-            self.log.debug("Andamos más o menos")
-            self.log.debug("-----------------------------------------------------------")
             queue: Queue = await Queue.get_by_room_id(queue_room_id, create=False)
             if not queue:
                 return response
-            
 
             membership: QueueMembership = await QueueMembership.get_by_queue_and_user(
                 fk_user=agent_user.id, fk_queue=queue.id, create=False
             )
 
-            
-            
             if membership:
-                state_date = datetime.timestamp(membership.state_date) if membership.state_date else None
+                state_date = (
+                    datetime.timestamp(membership.state_date) if membership.state_date else None
+                )
 
                 response = {
                     "presence": membership.state,
@@ -1109,7 +1096,11 @@ class AgentManager:
             if memberships:
                 for membership in memberships:
                     if membership.get("state") == QueueMembershipState.Online.value:
-                        state_date = datetime.timestamp(membership.get("state_date")) if membership.state_date else None
+                        state_date = (
+                            datetime.timestamp(membership.get("state_date"))
+                            if membership.state_date
+                            else None
+                        )
                         response = {
                             "presence": membership.get("state"),
                             "state_date": state_date,
@@ -1137,9 +1128,6 @@ class AgentManager:
             "paused": False,
             "pause_date": datetime.now().timestamp(),
         }
-        self.log.debug("-------------------------------------------------------")
-        self.log.debug("We are in get pause_status")
-        self.log.debug("-------------------------------------------------------")
         agent_user: User = await User.get_by_mxid(agent_id, create=False)
         queue: Queue = await Queue.get_by_room_id(queue_room_id, create=False)
         if not agent_user or not queue:
