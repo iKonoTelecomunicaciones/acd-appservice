@@ -1096,7 +1096,7 @@ class AgentManager:
                     if membership.get("state") == QueueMembershipState.Online.value:
                         state_date = (
                             datetime.timestamp(membership.get("state_date"))
-                            if membership.state_date
+                            if membership.get("state_date")
                             else None
                         )
                         response = {
