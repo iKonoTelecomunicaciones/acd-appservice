@@ -29,6 +29,10 @@ from ..error_responses import (
     USER_DOESNOT_EXIST,
 )
 
+import logging
+
+logger = logging.getLogger()
+
 
 @routes.post("/v1/cmd/create")
 async def create(request: web.Request) -> web.Response:
@@ -834,14 +838,14 @@ async def get_memberships(request: web.Request) -> web.Response:
     memberships = await QueueMembership.get_user_memberships(target_user.id)
     if not memberships:
         return web.json_response(data={"detail": "Agent has no queue memberships"}, status=404)
-
+    
     user_memberships = [
         {
             "room_id": membership.get("room_id"),
             "room_name": membership.get("name"),
             "description": membership.get("description"),
-            "state_date": datetime.strftime(membership.get("state_date"), "%Y-%m-%d %H:%M:%S"),
-            "pasuse_date": datetime.strftime(membership.get("state_date"), "%Y-%m-%d %H:%M:%S"),
+            "state_date": datetime.strftime(membership.get("state_date"), "%Y-%m-%d %H:%M:%S%z") if membership.get("state_date") else None,
+            "pasuse_date": datetime.strftime(membership.get("pause_date"), "%Y-%m-%d %H:%M:%S%z") if membership.get("pause_date") else None,
             "pause_reason": membership.get("pause_reason"),
             "state": membership.get("state"),
             "paused": membership.get("paused"),
