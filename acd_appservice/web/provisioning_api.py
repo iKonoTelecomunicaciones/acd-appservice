@@ -8,9 +8,9 @@ from aiohttp import web
 from aiohttp_swagger3 import SwaggerDocs, SwaggerInfo, SwaggerUiSettings
 from mautrix.util.logging import TraceLogger
 
-from .. import VERSION
 from ..commands.resolve import BulkResolve
 from ..config import Config
+from ..version import version
 from . import api
 from .base import routes, set_config
 
@@ -32,9 +32,9 @@ class ProvisioningAPI:
             self.app,
             info=SwaggerInfo(
                 title="ACD AppService documentation",
-                version=VERSION,
+                version=version,
             ),
-            components=f"acd_appservice/web/api/components.yaml",
+            components=f"components.yaml",
             swagger_ui_settings=SwaggerUiSettings(
                 path="/docs",
                 layout="BaseLayout",
