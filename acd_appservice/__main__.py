@@ -2,7 +2,6 @@ import asyncio
 
 from mautrix.types import UserID
 
-from . import VERSION
 from .acd_program import ACD
 from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
@@ -14,6 +13,7 @@ from .matrix_handler import MatrixHandler
 from .puppet import Puppet
 from .room import Room
 from .user import User
+from .version import linkified_version, version
 from .web.provisioning_api import ProvisioningAPI
 
 
@@ -22,7 +22,10 @@ class ACDAppService(ACD):
     module = "acd_appservice"
     command = "python -m acd_appservice"
     description = "An appservice for Automatic Chat Distribution with diferents bridges"
-    version = VERSION
+
+    repo_url = "https://gitlab.com/iKono/acd-appservice"
+    version = version
+    markdown_version = linkified_version
 
     config_class = Config
     matrix_class = MatrixHandler
