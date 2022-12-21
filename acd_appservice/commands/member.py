@@ -121,7 +121,7 @@ async def member(evt: CommandEvent) -> Dict:
         )
 
         if membership.state == state:
-            msg = f"Agent is already {state}"
+            msg = f"Agent {agent_id} is already {state}"
             await evt.reply(text=msg)
             evt.log.warning(msg)
             json_response.get("data")["detail"] = msg
@@ -148,7 +148,7 @@ async def member(evt: CommandEvent) -> Dict:
 
         state = True if evt.args.action == "pause" else False
         if membership.paused == state:
-            msg = f"Agent is already {evt.args.action}d"
+            msg = f"Agent {agent_id} is already {evt.args.action}d"
             await evt.reply(text=msg)
             evt.log.warning(msg)
             json_response.get("data")["detail"] = msg
@@ -169,7 +169,7 @@ async def member(evt: CommandEvent) -> Dict:
             membership.pause_reason = None
         await membership.save()
 
-    msg = f"Agent operation `{evt.args.action}` was successful"
+    msg = f"Agent operation `{evt.args.action}` was successful, {agent_id} state is `{evt.args.action}`"
     await evt.reply(text=msg)
     json_response.get("data")["detail"] = msg
     json_response["status"] = 200
