@@ -171,6 +171,6 @@ async def member(evt: CommandEvent) -> Dict:
 
     msg = f"Agent operation `{evt.args.action}` was successful, {agent_id} state is `{evt.args.action}`"
     await evt.reply(text=msg)
-    json_response.get("data")["detail"] = "Agent operation `{evt.args.action}` was successful"
+    json_response.get("data")["detail"] = f"Agent operation `{evt.args.action}` was successful"
     json_response["status"] = 200
     return json_response
