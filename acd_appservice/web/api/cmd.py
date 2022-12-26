@@ -761,11 +761,10 @@ async def member(request: web.Request) -> web.Response:
     pause_reason: str = data.get("pause_reason")
 
     # If queues are None get all rooms where agent is assigning
-    if not data.get("queues"):
-        queues = [
-            membership.get("room_id")
-            for membership in await QueueMembership.get_user_memberships(agent_user.id)
-        ]
+    if not queues:
+        queue_memberships = await QueueMembership.get_user_memberships(agent_user.id)
+        if queue_memberships:
+            queues = [membership.get("room_id") for membership in queue_memberships]
 
     if not queues:
         return web.json_response(**AGENT_DOESNOT_HAVE_QUEUES)
