@@ -280,6 +280,46 @@ bridges:
             logout: "/v1/api/logout"
             ping: "/v1/api/whoami"
 
+
+  facebook:
+    # Facebook UserID
+    mxid: "@facebookbot:dominio_cliente.com"
+    # Prefix to be listened by bridge
+    prefix: "!fb"
+    # Prefix for users created
+    user_prefix: "fb"
+    # create_portal_command: "pm"
+    send_template_command: ""
+    # Postfix to identify a customer
+    postfix_template: "(FB)"
+    set_permissions: "set-pl {mxid} {power_level}"
+    set_relay: "set-relay"
+    # Bridge support formated messages
+    format_messages: false
+    # If you are already a room administrator, configure your power levels.
+    initial_state:
+        # if enabled, these power levels will be configured at room initialization.
+        enabled: false
+        power_levels:
+            events_default: 0
+            users_default: 0
+            state_default: 50
+            events:
+                m.room.avatar: 0
+                m.room.name: 0
+                m.room.topic: 0
+
+
+    # Settings for provisioning API
+    provisioning:
+        url_base: "http://mautrix-facebook:29319/public"
+        shared_secret: ""
+        endpoints:
+            login: "/api/login"
+            login_2fa: "/api/login/2fa"
+            logout: "/api/logout"
+            ping: "/api/whoami"
+
   gupshup:
     # Gupshup UserID
     mxid: "@gs_whatsappbot:dominio_cliente.com"
