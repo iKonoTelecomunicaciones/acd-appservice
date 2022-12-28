@@ -1,16 +1,6 @@
-import json
-from typing import Dict
-
 from ..client import ProvisionBridge
 from ..puppet import Puppet
 from .handler import CommandArg, CommandEvent, command_handler
-
-room_id = CommandArg(
-    name="room_id",
-    help_text="Room where the template will be sent",
-    is_required=True,
-    example="`!foo:foo.com`",
-)
 
 message = CommandArg(
     name="message",
@@ -19,11 +9,19 @@ message = CommandArg(
     example="Hello {{1}} your ticket {{2}} has been resolved",
 )
 
+room_id = CommandArg(
+    name="room_id",
+    help_text="Room where the template will be sent",
+    is_required=True,
+    example="`!foo:foo.com`",
+    sub_args=[message],
+)
+
 
 @command_handler(
     name="template",
     help_text=("This command is used to send templates"),
-    help_args=[room_id, message],
+    help_args=[room_id],
 )
 async def template(evt: CommandEvent):
     """This function is used to send a template to a room
@@ -34,7 +32,16 @@ async def template(evt: CommandEvent):
         CommandEvent
     """
 
-    puppet: Puppet = await Puppet.get_customer_room_puppet(evt.args.room_id)
+    try:
+        room_id = evt.args_list[0]
+        message = evt.args_list[1]
+    except IndexError:
+        detail = "You have not all arguments"
+        evt.log.error(detail)
+        await evt.reply(detail)
+        return {"data": {"error": detail}, "status": 422}
+
+    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id)
 
     if not puppet:
         return
@@ -46,10 +53,8 @@ async def template(evt: CommandEvent):
 
         # If another bridge must send templates, make this method (gupshup_template) generic.
         await bridge_connector.gupshup_template(
-            room_id=evt.args.room_id, user_id=evt.intent.mxid, template=evt.args.message
+            room_id=room_id, user_id=evt.intent.mxid, template=message
         )
     else:
         # If there's no send_template_command the message send directly to client
-        await puppet.room_manager.send_formatted_message(
-            room_id=evt.args.room_id, msg=evt.args.message
-        )
+        await puppet.room_manager.send_formatted_message(room_id=room_id, msg=message)

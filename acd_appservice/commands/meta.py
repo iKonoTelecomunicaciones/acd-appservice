@@ -51,7 +51,7 @@ async def help_cmd(evt: CommandEvent) -> EventID:
 
 @command_handler(
     name="version",
-    help_text="Show this help message.",
+    help_text="Show the current project version.",
 )
 async def version(evt: CommandEvent) -> EventID:
     return await evt.reply(linkified_version)

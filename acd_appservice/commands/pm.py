@@ -10,13 +10,6 @@ from ..puppet import Puppet
 from ..signaling import Signaling
 from .handler import CommandArg, CommandEvent, command_handler
 
-phone = CommandArg(
-    name="phone",
-    help_text="Number of the customer for whom the private chat is to be created",
-    is_required=True,
-    example="`573123456789` | `+573123456789`",
-)
-
 message = CommandArg(
     name="message",
     help_text="Message to be sent to the customer",
@@ -24,11 +17,19 @@ message = CommandArg(
     example="Hey there!",
 )
 
+phone = CommandArg(
+    name="phone",
+    help_text="Number of the customer for whom the private chat is to be created",
+    is_required=True,
+    example="`573123456789` | `+573123456789`",
+    sub_args=[message],
+)
+
 
 @command_handler(
     name="pm",
     help_text=("Command that allows send a message to a customer"),
-    help_args=[phone, message],
+    help_args=[phone],
 )
 async def pm(evt: CommandEvent) -> Dict:
     """It sends a message to a customer, if the customer is already in a room,
@@ -52,7 +53,21 @@ async def pm(evt: CommandEvent) -> Dict:
     if not puppet:
         return
 
+    try:
+        phone = evt.args_list[0]
+    except IndexError:
+        detail = "You have not sent the argument phone number"
+        evt.log.error(detail)
+        await evt.reply(detail)
+        return {"data": {"error": detail}, "status": 422}
+
     message = " ".join(evt.args_list[1:])
+
+    if not message:
+        detail = "You have not sent the argument message"
+        evt.log.error(detail)
+        await evt.reply(detail)
+        return {"data": {"error": detail}, "status": 422}
 
     # A dict that will be sent to the frontend.
     return_params = {
@@ -69,11 +84,11 @@ async def pm(evt: CommandEvent) -> Dict:
 
     # Checking if the phone number is a number and if the template name and message are not empty.
 
-    if not evt.args.phone.isdigit():
+    if not phone.isdigit():
         return_params["reply"] = "You must specify a valid phone number with country prefix."
 
     # Checking if the phone number starts with a plus sign, if not, it adds it.
-    phone = evt.args.phone if evt.args.phone.startswith("+") else f"+{evt.args.phone}"
+    phone = phone if phone.startswith("+") else f"+{phone}"
 
     # Sending a message to the frontend.
     if return_params.get("reply"):
@@ -203,10 +218,10 @@ async def pm(evt: CommandEvent) -> Dict:
 
     formatted_room = f"[{data.get('room_id')}](https://matrix.to/#/{data.get('room_id')})"
     formatted_user = (
-        f"[{evt.args.phone}]"
+        f"[{phone}]"
         f"(https://matrix.to/#/"
         f"@{evt.config[f'bridges.{puppet.bridge}.user_prefix']}"
-        f"_{evt.args.phone}:{evt.intent.domain})"
+        f"_{phone}:{evt.intent.domain})"
     )
     formatted_agent = (
         f"[{agent_displayname}](https://matrix.to/#/{agent_id if agent_id else evt.sender.mxid})"
@@ -214,7 +229,7 @@ async def pm(evt: CommandEvent) -> Dict:
 
     await evt.reply(
         text=return_params["reply"]
-        .replace("number", formatted_user if not data.get("error") else evt.args.phone)
+        .replace("number", formatted_user if not data.get("error") else phone)
         .replace("room", formatted_room)
         .replace("<agent_displayname>", formatted_agent)
     )
