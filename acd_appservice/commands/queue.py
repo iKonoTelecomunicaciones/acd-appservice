@@ -5,13 +5,6 @@ from mautrix.types import RoomDirectoryVisibility, UserID
 from ..queue import Queue
 from .handler import CommandArg, CommandEvent, command_handler
 
-action = CommandArg(
-    name="action",
-    help_text="Action to be taken in the queue",
-    is_required=True,
-    example="`create`",
-)
-
 name = CommandArg(
     name="name", help_text="Queue room name", is_required=True, example='"My favourite queue"'
 )
@@ -28,7 +21,14 @@ description = CommandArg(
     help_text="Short description about the queue",
     is_required=False,
     example='"It is a queue to distribute chats"',
-    default="",
+)
+
+action = CommandArg(
+    name="action",
+    help_text="Action to be taken in the queue",
+    is_required=True,
+    example="`create`",
+    sub_args=[name, invitees, description],
 )
 
 
@@ -41,7 +41,6 @@ description = CommandArg(
         "for chat distribution. `invitees` is a comma-separated list of user_ids."
     ),
     help_args=[action],
-    help_sub_args=[name, invitees, description],
 )
 async def queue(evt: CommandEvent) -> Dict:
     """It creates a room, sets the visibility, invites the users,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Awaitable, Callable, Dict, List, NamedTuple, Tuple, Type
+from typing import Any, Awaitable, Callable, Dict, List, NamedTuple, Type
 
 from attr import dataclass
 from markdown import markdown
@@ -33,7 +33,6 @@ class CommandEvent:
         config: Config,
         command: str,
         is_management: bool,
-        args: ArgParser = None,
         intent: IntentAPI = None,
         room_id: RoomID = None,
         text: str = None,
@@ -50,7 +49,6 @@ class CommandEvent:
         self.is_management = is_management
         self.text = text
         self.args_list = args_list
-        self.args = args
 
     async def reply(self, text: str) -> None:
         """It sends a message to the room that the event was received from
@@ -84,8 +82,8 @@ class CommandArg:
     name: str
     help_text: str
     example: str
-    default: Any = None
     is_required: bool = False
+    sub_args: List[List[CommandArg] | CommandArg] = []
 
     @property
     def _name(self) -> str:
@@ -93,15 +91,28 @@ class CommandArg:
 
     @property
     def detail(self) -> str:
-        return (
-            f"**{self.name}**: {self.help_text}\n\n"
-            f"\t**is_required**: {self.is_required}\n\n"
-            f"\t**example**: {self.example}\n\n"
-        )
 
+        help_text = f"**{self._name}**: {self.help_text} -> **example**: {self.example}\n\n"
 
-class ArgParser:
-    pass
+        if not self.sub_args:
+            return help_text
+
+        help_text += 2 * "\n"
+        help_text += "##### SubArgs"
+
+        counter = 1
+
+        for sub_arg in self.sub_args:
+            help_text += f"\n\n __**Argument order: {counter}**__"
+            if not isinstance(sub_arg, list):
+                help_text += f"\n\n- {sub_arg.detail}"
+            else:
+                help_text += f"\n\n- {'- '.join([arg.detail for arg in sub_arg])}"
+                help_text += "---"
+
+            counter += 1
+
+        return help_text
 
 
 CommandHandlerFunc = Callable[[CommandEvent], Awaitable[Any]]
@@ -114,7 +125,6 @@ class CommandHandler:
     name: str
     _help_text: str
     _help_args: List[CommandArg] = []
-    _help_sub_args: List[CommandArg] = []
 
     def __init__(
         self,
@@ -124,7 +134,6 @@ class CommandHandler:
         help_text: str,
         help_args: List[CommandArg],
         needs_admin: bool,
-        help_sub_args: List[CommandArg] | None = None,
     ) -> None:
         self.management_only = management_only
         self.needs_admin = needs_admin
@@ -132,7 +141,6 @@ class CommandHandler:
         self.name = name
         self._help_text = help_text
         self._help_args = help_args
-        self._help_sub_args = help_sub_args
 
     async def get_permission_error(self, evt: CommandEvent) -> str | None:
         """Returns the reason why the command could not be issued.
@@ -191,7 +199,7 @@ class CommandHandler:
         if isinstance(self._help_args, list):
             for cmd_arg in self._help_args:
                 if isinstance(cmd_arg, CommandArg):
-                    text += f"{cmd_arg._name} {'[...]' if self._help_sub_args else ''}"
+                    text += f"{cmd_arg._name} {'[...]' if cmd_arg.sub_args else ''}"
 
         text += 2 * "\n"
 
@@ -205,16 +213,10 @@ class CommandHandler:
         text = f"#### Command: {self.name}\n"
         text += f"{self._help_text}\n\n"
 
-        text += f"##### MainArgs\n\n"
+        if self._help_args:
+            text += f"##### MainArgs\n\n"
 
-        for cmd_arg in self._help_args:
-            text += f"- {cmd_arg.detail}\n"
-
-        if self._help_sub_args:
-
-            text += f"##### SubArgs\n\n"
-
-            for cmd_arg in self._help_sub_args:
+            for cmd_arg in self._help_args:
                 text += f"- {cmd_arg.detail}\n"
 
         return text
@@ -251,30 +253,30 @@ class CommandProcessor:
         intent: IntentAPI = None,
         room_id: RoomID = "",
     ) -> Dict:
-        """It takes the command, checks if it's a command or an alias,
-        and then runs the handler for that command
+        """It handles the incoming command.
 
         Parameters
         ----------
         sender : User
-            The user who sent the command.
+            User - The user who sent the command
         command : str
-            The command that was sent to the bot.
-        args : list[str]
+            The command that was sent.
+        args_list : list[str]
             list[str]
         is_management : bool
-            If the command was sent in an ACD management room
+            Whether the command was sent by a management user.
+        content : MessageEventContent
+            The content of the message event.
         intent : IntentAPI
-            The intent that sent the command.
+            IntentAPI = None,
         room_id : RoomID
             The room ID of the room the command was sent in.
 
         Returns
         -------
-            The return value of the handler.
+            The return value is a dictionary with two keys: data and status.
 
         """
-
         evt = self.event_class(
             processor=self,
             room_id=room_id,
@@ -295,18 +297,35 @@ class CommandProcessor:
 
         handler = command_handlers.get(command, command_aliases.get(command))
 
-        if len(args_list) > 0 and args_list[0] == "help":
-            await evt.reply(handler.detail)
-            return
-
-        if handler._help_args:
-            evt.args, ok = await self.parse_arguments(handler=handler, args=args_list, evt=evt)
-
-            if not ok:
-                return evt.args
-
         if handler is None:
             handler = command_handlers["unknown_command"]
+
+        _args: Dict[str, CommandArg] = {}
+
+        for arg in handler._help_args:
+            if arg.sub_args:
+                for sub_arg in arg.sub_args:
+                    if not isinstance(sub_arg, list):
+                        _args[sub_arg.name] = sub_arg
+                    else:
+                        for aux_arg in sub_arg:
+                            _args[aux_arg.name] = aux_arg
+
+            _args[arg.name] = arg
+
+        if len(args_list) == 1 and args_list[0] == "help":
+            return await evt.reply(handler.detail)
+
+        elif evt.command == "help":
+            return await self._run_handler(handler, evt)
+
+        elif len(args_list) > 1 and args_list[-1] == "help":
+            try:
+                return await evt.reply(_args[args_list[-2]].detail)
+            except KeyError:
+                return await evt.reply(
+                    f"**{args_list[-2]}** is not a parameter that has help text"
+                )
 
         try:
             # Trying to delete the log from the result.
@@ -320,51 +339,6 @@ class CommandProcessor:
             self.log.exception(detail)
             return {"data": {"error": detail}, "status": 500}
 
-    async def parse_arguments(
-        self, handler: CommandHandler, args: List, evt: CommandEvent
-    ) -> Tuple(ArgParser, bool):
-        """This function takes the arguments passed to the command and parses them into a dictionary
-
-        Parameters
-        ----------
-        handler : CommandHandler
-            The command handler
-        args : List
-            List - The list of arguments passed to the command
-        evt : CommandEvent
-            The event object that was passed to the command handler
-
-        Returns
-        -------
-            A tuple of the ArgParser object and a boolean.
-
-        """
-
-        arg_parser = ArgParser()
-        aux_args = handler._help_args + handler._help_sub_args
-
-        for index in range(0, len(aux_args)):
-            try:
-                arg_parser.__setattr__(aux_args[index].name, args[index])
-            except IndexError:
-
-                if aux_args[index].is_required:
-                    detail = f"`{aux_args[index].name}` is a required parameter"
-                    detail += (
-                        f"\n\nUse `{self.command_prefix} {evt.command} help` "
-                        "for more information"
-                    )
-                    self.log.error(detail)
-                    await evt.reply(text=detail)
-                    return {"data": {"error": detail}, "status": 422}, False
-
-                if aux_args[index].default:
-                    arg_parser.__setattr__(aux_args[index].name, aux_args[index].default)
-                else:
-                    arg_parser.__setattr__(aux_args[index].name, None)
-
-        return arg_parser, True
-
 
 def command_handler(
     _func: CommandHandlerFunc | None = None,
@@ -372,8 +346,7 @@ def command_handler(
     management_only: bool = False,
     name: str | None = None,
     help_text: str = "",
-    help_args: List[CommandArg] = [],
-    help_sub_args: List[CommandArg] = [],
+    help_args: Dict[CommandArg] = {},
     needs_admin: bool = False,
     _handler_class: Type[CommandHandler] = CommandHandler,
 ) -> Callable[[CommandHandlerFunc], CommandHandler]:
@@ -410,7 +383,6 @@ def command_handler(
             name=actual_name,
             help_text=help_text,
             help_args=help_args,
-            help_sub_args=help_sub_args,
             needs_admin=needs_admin,
         )
         command_handlers[handler.name] = handler
