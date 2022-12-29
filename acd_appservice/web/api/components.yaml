@@ -196,8 +196,22 @@ components:
           type: string
       example:
           id: 5
-          room_id: "!HwBQhttNpkKFfuzUpl:foo.com"
+          room_id: "!foo:foo.com"
           name: "My favourite queue"
+
+    QueueAddRemoveOk:
+      type: object
+      properties:
+        id:
+          type: integer
+        room_id:
+          type: string
+        name:
+          type: string
+      example:
+          detail: "The member has been added|removed from the queue"
+          member: "@foo:foo.com"
+          room_id: "!foo:foo.com"
 
     SendMessageSuccessful:
       type: object
@@ -396,6 +410,20 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/QueueOk'
+
+    QueueAddSuccessful:
+      description: Member successfuly added to a queue.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/QueueAddRemoveOk'
+
+    QueueRemoveSuccessful:
+      description: Member successfuly removed to a queue.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/QueueAddRemoveOk'
 
     QrGenerated:
       description: QR has been generated.

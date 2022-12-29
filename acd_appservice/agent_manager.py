@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from asyncio import Future, create_task, get_running_loop, sleep
 from datetime import datetime
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI

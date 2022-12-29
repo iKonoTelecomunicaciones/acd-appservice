@@ -59,6 +59,10 @@ class QueueMembership(DBMembership):
         self._add_to_cache()
         await self.update()
 
+    async def _delete(self):
+        del self.by_queue_and_user[f"{self.fk_user}-{self.fk_queue}"]
+        await self.delete()
+
     def _add_to_cache(self) -> None:
         self.by_id[self.id] = self
         self.by_queue_and_user[f"{self.fk_user}-{self.fk_queue}"] = self

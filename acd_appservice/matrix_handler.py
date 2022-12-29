@@ -135,6 +135,8 @@ class MatrixHandler:
                 await self.handle_invite(evt)
 
             elif evt.content.membership == Membership.LEAVE:
+                if prev_membership == Membership.JOIN:
+                    await self.handle_leave(evt)
                 if prev_membership == Membership.BAN:
                     pass
                 elif prev_membership == Membership.INVITE:
@@ -302,6 +304,18 @@ class MatrixHandler:
         )
         await puppet.intent.join_room(evt.room_id)
 
+    async def handle_leave(self, evt: Event):
+        self.log.debug(f"The user {evt.sender} leave from to room {evt.room_id}")
+
+        user: User = await User.get_by_mxid(evt.sender)
+
+        is_queue: Queue = await Queue.get_by_room_id(room_id=evt.room_id, create=False)
+
+        if is_queue:
+            queue_membership = await QueueMembership.get_by_queue_and_user(user.id, is_queue.id)
+            await queue_membership._delete()
+            return
+
     async def handle_join(self, room_id: RoomID, user_id: UserID, event_id: EventID) -> None:
         """If the user who has joined the room is the bot, then the room is initialized
 
@@ -328,7 +342,6 @@ class MatrixHandler:
         is_queue: Queue = await Queue.get_by_room_id(room_id=room_id, create=False)
 
         if is_queue:
-
             await QueueMembership.get_by_queue_and_user(user.id, is_queue.id)
             return
 
