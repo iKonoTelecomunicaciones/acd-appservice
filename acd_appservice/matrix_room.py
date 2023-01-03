@@ -15,14 +15,14 @@ if TYPE_CHECKING:
     from .__main__ import ACDAppService
 
 
-class Room:
+class MatrixRoom:
 
     room_id: RoomID
     bridge: str
     log: TraceLogger = logging.getLogger("acd.room")
     az: AppService
 
-    by_room_id: Dict[RoomID, "Room"] = {}
+    by_room_id: Dict[RoomID, "MatrixRoom"] = {}
 
     def __init__(self, room_id: RoomID, intent: IntentAPI = None):
         self.log = self.log.getChild(room_id)
