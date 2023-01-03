@@ -49,3 +49,11 @@ class User:
         if not row:
             return None
         return cls._from_row(row)
+
+    @classmethod
+    async def get_by_id(cls, id: int) -> User | None:
+        q = f'SELECT id, {cls._columns} FROM "user" WHERE id=$1'
+        row = await cls.db.fetchrow(q, id)
+        if not row:
+            return None
+        return cls._from_row(row)

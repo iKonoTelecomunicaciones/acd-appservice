@@ -15,7 +15,7 @@ class QueueMembership(DBMembership):
 
     fk_user: int
     fk_queue: int
-    creation_date: int
+    creation_date: datetime
     state_date: datetime | None = None
     pause_date: datetime | None = None
     pause_reason: str | None = None
@@ -31,7 +31,7 @@ class QueueMembership(DBMembership):
         self,
         fk_user: int,
         fk_queue: int,
-        creation_date: int,
+        creation_date: datetime,
         state_date: datetime | None = None,
         pause_date: datetime | None = None,
         pause_reason: str | None = None,

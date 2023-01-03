@@ -9,6 +9,7 @@ from mautrix.util.logging import TraceLogger
 
 from .db.queue import Queue as DBQueue
 from .matrix_room import MatrixRoom
+from .queue_membership import QueueMembership
 
 
 class Queue(DBQueue, MatrixRoom):
@@ -38,9 +39,37 @@ class Queue(DBQueue, MatrixRoom):
         self.by_room_id[self.room_id] = self
         await self.post_init()
 
+    def clean_cache(self):
+        del self.by_room_id[self.room_id]
+        del self.by_id[self.id]
+
     async def save(self) -> None:
         await self._add_to_cache()
         await self.update()
+
+    async def clean_up(self):
+        """It removes all members from the queue, leaves the queue, and deletes the queue"""
+        members = await self.main_intent.get_joined_members(self.room_id)
+
+        reason = "The queue will be removed"
+
+        for member in members.keys():
+
+            if self.main_intent.mxid == member:
+                continue
+
+            await self.remove_member(member=member, reason=reason)
+
+        await self.leave(reason=reason)
+
+        self.clean_cache()
+
+        memberships = await QueueMembership.get_by_queue(fk_queue=self.id)
+
+        for membership in memberships:
+            await membership.delete()
+
+        await self.delete()
 
     async def add_member(self, new_member: UserID):
         """If the config value for `acd.queue.user_add_method` is `join`, then join the user,
@@ -73,6 +102,34 @@ class Queue(DBQueue, MatrixRoom):
             await self.leave_user(user_id=member, reason=reason)
         else:
             await self.kick_user(user_id=member, reason=reason)
+
+    async def update_description(self, new_description: str):
+        """It updates the description of the room
+
+        Parameters
+        ----------
+        new_description : str
+            The new description of the room.
+        """
+        if not new_description:
+            return
+        self.description = new_description
+        await self.main_intent.set_room_topic(room_id=self.room_id, topic=new_description)
+        await self.save()
+
+    async def update_name(self, new_name: str):
+        """It updates the name of the room
+
+        Parameters
+        ----------
+        new_name : str
+            The new name of the room.
+        """
+        if not new_name:
+            return
+        self.name = new_name
+        await self.main_intent.set_room_name(room_id=self.room_id, name=new_name)
+        await self.save()
 
     @classmethod
     async def get_by_room_id(cls, room_id: RoomID, *, create: bool = True) -> Queue | None:
