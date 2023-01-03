@@ -25,6 +25,7 @@ class User(DBUser, BaseUser):
     log: TraceLogger = logging.getLogger("acd.user")
 
     by_mxid: dict[UserID, User] = {}
+    by_id: dict[int, User] = {}
 
     def __init__(self, mxid: UserID, management_room: RoomID = None, id: int = None):
         self.mxid = mxid
@@ -43,6 +44,7 @@ class User(DBUser, BaseUser):
 
     def _add_to_cache(self) -> None:
         self.by_mxid[self.mxid] = self
+        self.by_id[self.id] = self
 
     async def get_portal_with(self):
         pass
@@ -52,6 +54,10 @@ class User(DBUser, BaseUser):
 
     async def is_logged_in(self):
         pass
+
+    async def formatted_displayname(self) -> str:
+        displayname = await self.az.intent.get_displayname(user_id=self.mxid)
+        return f"[{displayname}](https://matrix.to/#/{self.mxid})"
 
     @classmethod
     @async_getter_lock
@@ -71,6 +77,22 @@ class User(DBUser, BaseUser):
             user = cls(mxid)
             await user.insert()
             user = await super().get_by_mxid(mxid)
+            user._add_to_cache()
+            return user
+
+        return None
+
+    @classmethod
+    @async_getter_lock
+    async def get_by_id(cls, id: int) -> User | None:
+
+        try:
+            return cls.by_id[id]
+        except KeyError:
+            pass
+
+        user = cast(cls, await super().get_by_id(id))
+        if user is not None:
             user._add_to_cache()
             return user
 

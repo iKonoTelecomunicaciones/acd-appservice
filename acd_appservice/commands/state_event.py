@@ -17,7 +17,7 @@ event_type = CommandArg(
 
 content = CommandArg(
     name="content",
-    help_text="Message to be sent to the customer",
+    help_text="The content to send",
     is_required=True,
     example=(
         """

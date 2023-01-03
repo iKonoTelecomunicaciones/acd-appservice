@@ -187,6 +187,11 @@ class MatrixHandler:
             The user who invited the bot to the room.
 
         """
+        is_queue = await Queue.get_by_room_id(room_id=room_id, create=False)
+
+        if is_queue:
+            return
+
         if not inviter.management_room:
             inviter.management_room = room_id
             await inviter.update()

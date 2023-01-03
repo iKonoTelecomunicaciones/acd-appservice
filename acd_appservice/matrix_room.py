@@ -54,6 +54,9 @@ class MatrixRoom:
         if not self.main_intent:
             self.main_intent = self.az.intent
 
+    async def formatted_room_id(self) -> str:
+        return f"[{self.room_id}](https://matrix.to/#/{self.room_id})"
+
     async def invite_user(self, user_id: UserID):
         """Invite a user to the room
 

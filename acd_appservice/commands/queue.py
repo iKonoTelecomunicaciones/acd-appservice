@@ -1,8 +1,11 @@
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from mautrix.types import RoomDirectoryVisibility, RoomID, UserID
 
 from ..queue import Queue
+from ..queue_membership import QueueMembership
+from ..user import User
+from ..util import Util
 from .handler import CommandArg, CommandEvent, command_handler
 
 name = CommandArg(
@@ -45,7 +48,7 @@ action = CommandArg(
     name="action",
     help_text="Action to be taken in the queue",
     is_required=True,
-    example="`create` | `add` | `remove`",
+    example="`create` | `add` | `remove` | `info` | `list` | `update` | `delete`",
     sub_args=[[name, member], [invitees, queue], description],
 )
 
@@ -108,6 +111,9 @@ async def queue(evt: CommandEvent) -> Dict:
         except IndexError:
             description = ""
 
+        if isinstance(invitees, str):
+            invitees: List[UserID] = [invitee.strip() for invitee in invitees.split(",")]
+
         return await create(evt=evt, name=name, invitees=invitees, description=description)
 
     elif action in ["add", "remove"]:
@@ -126,7 +132,101 @@ async def queue(evt: CommandEvent) -> Dict:
         except IndexError:
             queue_id = evt.room_id
 
+        queue = await Queue.get_by_room_id(room_id=queue_id, create=False)
+
+        if not queue or not member:
+            detail = "Arg queue or member not provided"
+            json_response["data"] = {"error": detail}
+            json_response["status"] = 422
+            evt.log.error(detail)
+            await evt.reply(detail)
+            return json_response
+
         return await add_remove(evt=evt, action=action, member=member, queue_id=queue_id)
+
+    elif action == "delete":
+
+        # Checking if the second argument is a room id. If it is,
+        # it sets the queue_id to the second argument and the force to the third argument.
+        # If it is not, it sets the queue_id to the room id and the force to the second argument.
+        try:
+            queue_id_or_force = evt.args_list[1]
+
+            if Util.is_room_id(queue_id_or_force):
+                queue_id = queue_id_or_force
+                try:
+                    force = evt.args_list[2]
+                except IndexError:
+                    force = "n"
+            else:
+                queue_id = evt.room_id
+                force = queue_id_or_force
+        except IndexError:
+            force = "n"
+            queue_id = evt.room_id
+
+        force = True if force.lower() in ["yes", "y", "1"] else False
+
+        return await delete(evt=evt, queue_id=queue_id, force=force)
+
+    elif action == "update":
+
+        try:
+            # Checking if the room_id is valid.
+            # If it is, it will set the room_id to the first argument,
+            # and the name to the second argument.
+            # If it is not, it will set the room_id to the current room_id,
+            # and the name to the first argument.
+            if Util.is_room_id(evt.args_list[1]):
+                room_id = evt.args_list[1]
+                try:
+                    name = evt.args_list[2]
+                except IndexError:
+                    detail = "Arg name not provided"
+                    json_response["data"] = {"error": detail}
+                    json_response["status"] = 422
+                    evt.log.error(detail)
+                    await evt.reply(detail)
+                    return json_response
+                try:
+                    description = evt.args_list[3]
+                except IndexError:
+                    description = ""
+            else:
+                room_id = evt.room_id
+                name = evt.args_list[1]
+                description = evt.args_list[2]
+
+        except IndexError:
+            # Checking if the name is provided or not.
+            room_id = evt.room_id
+            try:
+                name = evt.args_list[1]
+            except IndexError:
+                detail = "Arg name not provided"
+                json_response["data"] = {"error": detail}
+                json_response["status"] = 422
+                evt.log.error(detail)
+                await evt.reply(detail)
+                return json_response
+
+            try:
+                description = evt.args_list[2]
+            except IndexError:
+                description = ""
+
+        return await update(evt=evt, room_id=room_id, name=name, description=description)
+
+    elif action == "info":
+        try:
+            room_id = evt.args_list[1]
+        except IndexError:
+            room_id = evt.room_id
+
+        return await info(evt=evt, room_id=room_id)
+
+    elif action == "list":
+        return await _list(evt=evt)
 
 
 async def create(
@@ -262,3 +362,205 @@ async def add_remove(
     evt.log.debug(detail)
     await evt.reply(detail)
     return json_response
+
+
+async def delete(evt: CommandEvent, queue_id: RoomID, force: Optional[bool] = False) -> Dict:
+    """It deletes a queue if the user is alone in the room or
+    if the user sends the argument `force` in `yes`
+
+    Parameters
+    ----------
+    evt : CommandEvent
+        CommandEvent
+    queue_id : RoomID
+        The room ID of the queue to delete.
+    force : Optional[bool], optional
+        Optional[bool] = False
+
+    Returns
+    -------
+        A JSON response
+
+    """
+    json_response = {}
+    queue = await Queue.get_by_room_id(room_id=queue_id, create=False)
+
+    if not queue:
+        detail = "Arg queue not provided"
+        json_response["data"] = {"error": detail}
+        json_response["status"] = 422
+        evt.log.error(detail)
+        await evt.reply(detail)
+        return json_response
+
+    members = await evt.intent.get_joined_members(room_id=queue_id)
+
+    if len(members) > 1:
+        if force:
+            await queue.clean_up()
+            detail = "The queue has been deleted"
+            json_response["status"] = 200
+            json_response["data"] = {"detail": detail}
+            evt.log.debug(detail)
+            return json_response
+        else:
+            detail = (
+                "You can only delete the queues in which you are alone "
+                "or send the argument force in `yes`"
+            )
+            json_response["data"] = {"error": detail}
+            json_response["status"] = 422
+            evt.log.error(detail)
+            await evt.reply(detail)
+            return json_response
+
+
+async def update(
+    evt: CommandEvent, room_id: RoomID, name: str, description: Optional[str]
+) -> Dict:
+    """It updates the name and description of a queue
+
+    Parameters
+    ----------
+    evt : CommandEvent
+        The event object.
+    room_id : RoomID
+        The room ID of the room where the queue is.
+    name : str
+        The name of the queue.
+    description : Optional[str]
+        The description of the queue.
+
+    Returns
+    -------
+        A dictionary with the status code and the data.
+
+    """
+    json_response = {}
+    queue = await Queue.get_by_room_id(room_id=room_id, create=False)
+
+    if not queue:
+        detail = "It's not a queue"
+        json_response["data"] = {"error": detail}
+        json_response["status"] = 422
+        evt.log.error(detail)
+        await evt.reply(detail)
+        return json_response
+
+    await queue.update_name(new_name=name)
+    await queue.update_description(new_description=description)
+
+    detail = "The queue has been updated"
+    json_response["status"] = 200
+    json_response["data"] = {"detail": detail}
+    evt.log.debug(detail)
+    await evt.reply(detail)
+    return json_response
+
+
+async def info(evt: CommandEvent, room_id: RoomID) -> Dict:
+    """It returns a JSON response with the queue information
+
+    Parameters
+    ----------
+    evt : CommandEvent
+        CommandEvent - This is the event that triggered the command.
+    room_id : RoomID
+        The room ID of the queue you want to get information about.
+
+    Returns
+    -------
+        A dictionary with the data and status.
+
+    """
+
+    json_response = {}
+    queue = await Queue.get_by_room_id(room_id=room_id, create=False)
+
+    if not queue:
+        detail = f"It's not a queue"
+        json_response["data"] = {"error": detail}
+        json_response["status"] = 422
+        evt.log.error(detail)
+        await evt.reply(detail)
+        return json_response
+
+    memberships = await QueueMembership.get_by_queue(fk_queue=queue.id)
+    text = f"#### Room: {await queue.formatted_room_id()}"
+
+    if memberships:
+        text += "\n#### Current memberships:"
+        _memberships: List[Dict[str:Any]] = []
+        for membership in memberships:
+            user: User = await User.get_by_id(membership.fk_user)
+            text += f"\n\n- {await user.formatted_displayname()} -> state: {membership.state} || paused: {membership.paused}"
+            _memberships.append(
+                {
+                    "user_id": user.mxid,
+                    "state": membership.state,
+                    "paused": membership.paused,
+                    "creation_date": membership.creation_date.strftime("%Y-%m-%d %H:%M:%S%z")
+                    if membership.creation_date
+                    else None,
+                    "state_date": membership.state_date.strftime("%Y-%m-%d %H:%M:%S%z")
+                    if membership.state_date
+                    else None,
+                    "pause_date": membership.pause_date.strftime("%Y-%m-%d %H:%M:%S%z")
+                    if membership.pause_date
+                    else None,
+                    "pause_reason": membership.pause_reason,
+                }
+            )
+    await evt.reply(text=text)
+
+    return {
+        "data": {
+            "queue": {
+                "name": queue.name,
+                "room_id": queue.room_id,
+                "description": queue.description,
+                "memberships": _memberships,
+            }
+        },
+        "status": 200,
+    }
+
+
+async def _list(evt: CommandEvent) -> Dict:
+    """`list` returns a list of all registered queues
+
+    Parameters
+    ----------
+    evt : CommandEvent
+        The event object.
+
+    Returns
+    -------
+        A dictionary with a status code and a data key.
+
+    """
+    queues = await Queue.get_all()
+
+    text = "#### Registered queues"
+    _queues = []
+
+    for queue in queues:
+        text += (
+            f"\n- {await queue.formatted_room_id()}" + f"-> `{queue.description}`"
+            if queue.description
+            else ""
+        )
+        _queues.append(
+            {
+                "room_id": queue.room_id,
+                "name": queue.name or None,
+                "description": queue.description or None,
+            }
+        )
+
+    await evt.reply(text)
+
+    return {
+        "data": {"queues": _queues},
+        "status": 200,
+    }
