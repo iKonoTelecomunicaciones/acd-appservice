@@ -8,10 +8,10 @@ from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
 from .db.queue import Queue as DBQueue
-from .room import Room
+from .matrix_room import MatrixRoom
 
 
-class Queue(DBQueue, Room):
+class Queue(DBQueue, MatrixRoom):
 
     room_id: RoomID
     name: str = ""
@@ -31,7 +31,7 @@ class Queue(DBQueue, Room):
         intent: IntentAPI = None,
     ):
         DBQueue.__init__(self, id=id, name=name, room_id=room_id, description=description)
-        Room.__init__(self, room_id=self.room_id, intent=intent)
+        MatrixRoom.__init__(self, room_id=self.room_id, intent=intent)
 
     async def _add_to_cache(self) -> None:
         self.by_id[self.id] = self

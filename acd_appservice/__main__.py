@@ -10,8 +10,8 @@ from .config import Config
 from .db import init as init_db
 from .db import upgrade_table
 from .matrix_handler import MatrixHandler
+from .matrix_room import MatrixRoom
 from .puppet import Puppet
-from .room import Room
 from .user import User
 from .version import linkified_version, version
 from .web.provisioning_api import ProvisioningAPI
@@ -52,7 +52,7 @@ class ACDAppService(ACD):
         # Se cargan las acciones iniciales que deberán ser ejecutadas
         self.add_startup_actions(Puppet.init_cls(self))
         User.init_cls(self)
-        Room.init_cls(self)
+        MatrixRoom.init_cls(self)
         # Se sincronizan las salas donde este los puppets en matrix
         # creando las salas en nuestra bd
         self.add_startup_actions(Puppet.init_joined_rooms())
