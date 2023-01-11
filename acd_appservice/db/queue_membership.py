@@ -33,7 +33,7 @@ class QueueMembership:
     id: int
     fk_user: int
     fk_queue: int
-    creation_date: str  # Date of queue_membership creation
+    creation_date: datetime  # Date of queue_membership creation
     state_date: datetime | None = None  # Last change of state
     pause_date: datetime | None = None  # Last pause record
     pause_reason: str = None
@@ -86,8 +86,6 @@ class QueueMembership:
 
         Parameters
         ----------
-        cls
-            The class that the method is being called on.
         fk_user : int
             int
         fk_queue : int
@@ -106,13 +104,34 @@ class QueueMembership:
         return cls._from_row(row)
 
     @classmethod
+    async def get_by_queue(cls, fk_queue: int) -> List[QueueMembership] | None:
+        """Get a queue membership by queue."
+
+        Parameters
+        ----------
+        fk_user : int
+            int
+        fk_queue : int
+            int
+
+        Returns
+        -------
+            A QueueMembership object
+
+        """
+
+        q = f"SELECT id, {cls._columns} FROM queue_membership WHERE fk_queue=$1"
+        rows = await cls.db.fetch(q, fk_queue)
+        if not rows:
+            return None
+        return [cls._from_row(queue_membership) for queue_membership in rows]
+
+    @classmethod
     async def get_user_memberships(cls, fk_user: int) -> List[dict] | None:
         """Get all user memberships
 
         Parameters
         ----------
-        cls
-            The class that the method is being called on.
         fk_user : int
             The user's ID
 

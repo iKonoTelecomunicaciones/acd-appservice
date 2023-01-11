@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from asyncio import Future, create_task, get_running_loop, sleep
 from datetime import datetime
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI
@@ -289,6 +289,11 @@ class AgentManager:
                             queue_room_id=campaign_room_id, agent_id=agent_id
                         )
                         is_agent_available_for_assignment = not paused_response.get("paused")
+                        self.log.debug(
+                            "PAUSE STATE: "
+                            f"[{agent_id}] -> "
+                            f"[{'paused' if paused_response.get('paused') else 'unpause'}]"
+                        )
 
                 self.log.debug(
                     f"PRESENCE RESPONSE: "
@@ -1122,6 +1127,7 @@ class AgentManager:
             A dictionary with the pause status and the pause date.
 
         """
+
         response = {
             "paused": False,
             "pause_date": datetime.now().timestamp(),

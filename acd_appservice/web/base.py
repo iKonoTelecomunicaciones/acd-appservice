@@ -17,8 +17,6 @@ _bulk_resolve: BulkResolve | None = None
 
 routes: web.RouteTableDef = web.RouteTableDef()
 
-base_path_doc = "acd_appservice/web/api"
-
 
 def set_config(config: Config, bulk_resolve: BulkResolve) -> None:
     global _config

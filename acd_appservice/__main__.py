@@ -2,7 +2,6 @@ import asyncio
 
 from mautrix.types import UserID
 
-from . import VERSION
 from .acd_program import ACD
 from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
@@ -11,9 +10,10 @@ from .config import Config
 from .db import init as init_db
 from .db import upgrade_table
 from .matrix_handler import MatrixHandler
+from .matrix_room import MatrixRoom
 from .puppet import Puppet
-from .room import Room
 from .user import User
+from .version import linkified_version, version
 from .web.provisioning_api import ProvisioningAPI
 
 
@@ -22,7 +22,10 @@ class ACDAppService(ACD):
     module = "acd_appservice"
     command = "python -m acd_appservice"
     description = "An appservice for Automatic Chat Distribution with diferents bridges"
-    version = VERSION
+
+    repo_url = "https://gitlab.com/iKono/acd-appservice"
+    version = version
+    markdown_version = linkified_version
 
     config_class = Config
     matrix_class = MatrixHandler
@@ -49,7 +52,7 @@ class ACDAppService(ACD):
         # Se cargan las acciones iniciales que deberán ser ejecutadas
         self.add_startup_actions(Puppet.init_cls(self))
         User.init_cls(self)
-        Room.init_cls(self)
+        MatrixRoom.init_cls(self)
         # Se sincronizan las salas donde este los puppets en matrix
         # creando las salas en nuestra bd
         self.add_startup_actions(Puppet.init_joined_rooms())

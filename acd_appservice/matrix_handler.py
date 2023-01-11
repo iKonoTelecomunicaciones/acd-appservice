@@ -135,6 +135,8 @@ class MatrixHandler:
                 await self.handle_invite(evt)
 
             elif evt.content.membership == Membership.LEAVE:
+                if prev_membership == Membership.JOIN:
+                    await self.handle_leave(evt)
                 if prev_membership == Membership.BAN:
                     pass
                 elif prev_membership == Membership.INVITE:
@@ -185,6 +187,11 @@ class MatrixHandler:
             The user who invited the bot to the room.
 
         """
+        is_queue = await Queue.get_by_room_id(room_id=room_id, create=False)
+
+        if is_queue:
+            return
+
         if not inviter.management_room:
             inviter.management_room = room_id
             await inviter.update()
@@ -254,7 +261,7 @@ class MatrixHandler:
                     self.log.debug(f"The message {event_id} has been read at {timestamp_read}")
 
     async def handle_invite(self, evt: Event):
-        """If the user who was invited is a acd*, then join the room
+        """If the user who was invited is a acd[n], then join the room
 
         Parameters
         ----------
@@ -278,11 +285,11 @@ class MatrixHandler:
 
             return
 
-        # We verify that the user to be joined is an acd*.
+        # We verify that the user to be joined is an acd[n].
         # and that there is no other puppet in the room
         # to do an auto-join
         # NOTE: If there is another puppet in the room, then we will have problems
-        # as there can't be two acd* users in the same room, this will affect
+        # as there can't be two acd[n] users in the same room, this will affect
         # the performance of the software
         puppet_inside: Puppet = await Puppet.get_customer_room_puppet(room_id=evt.room_id)
 
@@ -301,6 +308,18 @@ class MatrixHandler:
             room_id=evt.room_id, selected_option=None, puppet_pk=puppet.pk
         )
         await puppet.intent.join_room(evt.room_id)
+
+    async def handle_leave(self, evt: Event):
+        self.log.debug(f"The user {evt.sender} leave from to room {evt.room_id}")
+
+        user: User = await User.get_by_mxid(evt.sender)
+
+        is_queue: Queue = await Queue.get_by_room_id(room_id=evt.room_id, create=False)
+
+        if is_queue:
+            queue_membership = await QueueMembership.get_by_queue_and_user(user.id, is_queue.id)
+            await queue_membership._delete()
+            return
 
     async def handle_join(self, room_id: RoomID, user_id: UserID, event_id: EventID) -> None:
         """If the user who has joined the room is the bot, then the room is initialized
@@ -328,7 +347,6 @@ class MatrixHandler:
         is_queue: Queue = await Queue.get_by_room_id(room_id=room_id, create=False)
 
         if is_queue:
-
             await QueueMembership.get_by_queue_and_user(user.id, is_queue.id)
             return
 
@@ -337,7 +355,7 @@ class MatrixHandler:
         if not puppet:
             self.log.warning(f"I can't get a puppet for the room {room_id}  in [DB]")
 
-            # Si el usuario que se une es un acd* entonces verificamos si se encuentra en la sala
+            # Si el usuario que se une es un acd[n] entonces verificamos si se encuentra en la sala
             if Puppet.get_id_from_mxid(user_id):
                 self.log.debug(
                     f"Checking in matrix if the puppet {user_id} has already in the room {room_id}"
@@ -346,7 +364,7 @@ class MatrixHandler:
                 if puppet:
                     result = None
                     try:
-                        # Este endpoint verifica que el usuario acd* este en la sala
+                        # Este endpoint verifica que el usuario acd[n] este en la sala
                         # Si es así, entonces result tendrá contenido
                         # Si no, entonces genera una excepción
                         result = await puppet.intent.get_room_member_info(
@@ -359,7 +377,7 @@ class MatrixHandler:
                         return
 
                     if result:
-                        # Como se encontró el acd* dentro de la sala, entonces la guardamos
+                        # Como se encontró el acd[n] dentro de la sala, entonces la guardamos
                         # en la tabla rooms
                         self.log.debug(f"The puppet {user_id} has already in the room {room_id}")
                         await puppet.room_manager.save_room(
@@ -423,7 +441,7 @@ class MatrixHandler:
             self.log.debug(f"The user who has joined is neither a puppet nor the appservice_bot")
             return
 
-        # Solo se inicializa la sala si el que se une es el usuario acd*
+        # Solo se inicializa la sala si el que se une es el usuario acd[n]
         if Puppet.get_id_from_mxid(user_id):
             if not await puppet.room_manager.initialize_room(room_id=room_id):
                 self.log.debug(f"Room {room_id} initialization has failed")
@@ -611,7 +629,7 @@ class MatrixHandler:
                 )
 
             if puppet.intent.mxid == sender:
-                self.log.debug(f"Ignoring {sender} messages, is acd*")
+                self.log.debug(f"Ignoring {sender} messages, is acd[n]")
                 return
 
             # the user entered the offline agent menu and selected some option

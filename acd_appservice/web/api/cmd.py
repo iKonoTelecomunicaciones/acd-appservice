@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime
 from typing import Dict, List
 
@@ -350,7 +351,7 @@ async def state_event(request: web.Request) -> web.Response:
 
     room_id = data.get("room_id")
     event_type = data.get("event_type")
-    content = data.get("room_id")
+    content = data.get("content")
 
     if not (room_id and event_type):
         return web.json_response(**REQUIRED_VARIABLES)
@@ -360,7 +361,7 @@ async def state_event(request: web.Request) -> web.Response:
     if not puppet:
         return web.json_response(**USER_DOESNOT_EXIST)
 
-    args = [room_id, event_type, content]
+    args = [room_id, event_type, json.dumps(content)]
 
     await get_commands().handle(
         sender=user,
@@ -551,7 +552,7 @@ async def transfer_user(request: web.Request) -> web.Response:
     return web.json_response()
 
 
-@routes.post("/v1/cmd/queue")
+@routes.post("/v1/cmd/queue/create")
 async def queue(request: web.Request) -> web.Response:
     """
     ---
@@ -562,14 +563,12 @@ async def queue(request: web.Request) -> web.Response:
 
     requestBody:
         required: false
-        description: A json with `action`, `name`, `invitees` and optional `description`
+        description: A json with `name`, `invitees` and optional `description`
         content:
             application/json:
                 schema:
                     type: object
                     properties:
-                        action:
-                            type: string
                         name:
                             type: string
                         invitees:
@@ -579,7 +578,6 @@ async def queue(request: web.Request) -> web.Response:
                         description:
                             type: string
                     example:
-                        action: "create"
                         name: "My favourite queue"
                         invitees: ["@agent1:foo.com", "@agent2:foo.com"]
                         description: "It is a queue to distribute chats"
@@ -599,28 +597,280 @@ async def queue(request: web.Request) -> web.Response:
 
     data: Dict = await request.json()
 
-    if not (data.get("name") and data.get("action")):
-        return web.json_response(**REQUIRED_VARIABLES)
-
-    action = data.get("action")
-    name = data.get("name")
-
-    invitees = None
-
-    if data.get("invitees"):
-        invitees: str = ",".join(data.get("invitees"))
-
-    description: str = data.get("description") if data.get("description") else ""
-
-    args = [action, name, invitees, description]
+    args = ["create", data.get("name"), data.get("invitees"), data.get("description")]
 
     result: Dict = await get_commands().handle(
         sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
     )
 
-    return web.json_response(
-        data=result, status=result.get("status") if result.get("status") == 500 else 200
+    return web.json_response(**result)
+
+
+@routes.post("/v1/cmd/queue/add")
+async def queue(request: web.Request) -> web.Response:
+    """
+    ---
+    summary:    Add a member in particular queue.
+    tags:
+        - Commands
+
+    requestBody:
+        required: false
+        description: A json with `member`and `queue_id`
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        member:
+                            type: string
+                        queue_id:
+                            type: string
+                    example:
+                        member: "@foo:foo.com"
+                        queue_id: "!foo:foo.com"
+
+    responses:
+        '200':
+            $ref: '#/components/responses/QueueAddSuccessful'
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '422':
+            $ref: '#/components/responses/NotExist'
+    """
+    user = await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    data: Dict = await request.json()
+
+    args = ["add", data.get("member"), data.get("queue_id")]
+
+    result: Dict = await get_commands().handle(
+        sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
     )
+
+    return web.json_response(**result)
+
+
+@routes.post("/v1/cmd/queue/remove")
+async def queue(request: web.Request) -> web.Response:
+    """
+    ---
+    summary:    Remove a member in particular queue.
+    tags:
+        - Commands
+
+    requestBody:
+        required: false
+        description: A json with `member`and `queue_id`
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        member:
+                            type: string
+                        queue_id:
+                            type: string
+                    example:
+                        member: "@foo:foo.com"
+                        queue_id: "!foo:foo.com"
+    responses:
+        '200':
+            $ref: '#/components/responses/QueueRemoveSuccessful'
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '422':
+            $ref: '#/components/responses/NotExist'
+    """
+    user = await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    data: Dict = await request.json()
+
+    args = ["remove", data.get("member"), data.get("queue_id")]
+
+    result: Dict = await get_commands().handle(
+        sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
+    )
+
+    return web.json_response(**result)
+
+
+@routes.post("/v1/cmd/queue/info")
+async def queue(request: web.Request) -> web.Response:
+    """
+    ---
+    summary:    Command that shows the queue information, its name and memberships.
+
+    tags:
+        - Commands
+
+    requestBody:
+        required: false
+        description: A json with `room_id`
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        room_id:
+                            type: string
+                    example:
+                        room_id: "!foo:foo.com"
+
+    responses:
+        '200':
+            $ref: '#/components/responses/QueueInfoSuccessful'
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '422':
+            $ref: '#/components/responses/NotExist'
+    """
+    user = await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    data: Dict = await request.json()
+
+    args = ["info", data.get("room_id")]
+
+    result: Dict = await get_commands().handle(
+        sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
+    )
+
+    return web.json_response(**result)
+
+
+@routes.post("/v1/cmd/queue/list")
+async def queue(request: web.Request) -> web.Response:
+    """
+    ---
+    summary:    Command that shows the all queues.
+    tags:
+        - Commands
+
+    responses:
+        '200':
+            $ref: '#/components/responses/QueueListSuccessful'
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '422':
+            $ref: '#/components/responses/NotExist'
+    """
+    user = await _resolve_user_identifier(request=request)
+
+    args = ["list"]
+
+    result: Dict = await get_commands().handle(
+        sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
+    )
+
+    return web.json_response(**result)
+
+
+@routes.post("/v1/cmd/queue/update")
+async def queue(request: web.Request) -> web.Response:
+    """
+    ---
+    summary:    Command that update a queue.
+    tags:
+        - Commands
+
+    requestBody:
+        required: false
+        description: A json with `room_id`, `name` and optional `description`
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        room_id:
+                            type: string
+                        name:
+                            type: string
+                        description:
+                            type: string
+                    example:
+                        room_id: "!foo:foo.com"
+                        name: "My favourite queue"
+                        description: "It is a queue to distribute chats"
+
+    responses:
+        '200':
+            $ref: '#/components/responses/QueueUpdateSuccessful'
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '422':
+            $ref: '#/components/responses/NotExist'
+    """
+    user = await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    data: Dict = await request.json()
+
+    args = ["update", data.get("room_id"), data.get("name"), data.get("description")]
+
+    result: Dict = await get_commands().handle(
+        sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
+    )
+
+    return web.json_response(**result)
+
+
+@routes.post("/v1/cmd/queue/delete")
+async def queue(request: web.Request) -> web.Response:
+    """
+    ---
+    summary:    Command that delete a queue.
+    tags:
+        - Commands
+
+    requestBody:
+        required: false
+        description: A json with `room_id`
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        room_id:
+                            type: string
+                        force:
+                            type: boolean
+                    example:
+                        room_id: "!foo:foo.com"
+                        force: true
+
+    responses:
+        '200':
+            $ref: '#/components/responses/QueueDeleteSuccessful'
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '422':
+            $ref: '#/components/responses/NotExist'
+    """
+    user = await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    data: Dict = await request.json()
+
+    args = ["delete", data.get("room_id"), data.get("force")]
+
+    result: Dict = await get_commands().handle(
+        sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
+    )
+
+    return web.json_response(**result)
 
 
 @routes.post("/v1/cmd/acd")
@@ -761,11 +1011,10 @@ async def member(request: web.Request) -> web.Response:
     pause_reason: str = data.get("pause_reason")
 
     # If queues are None get all rooms where agent is assigning
-    if not data.get("queues"):
-        queues = [
-            membership.get("room_id")
-            for membership in await QueueMembership.get_user_memberships(agent_user.id)
-        ]
+    if not queues:
+        queue_memberships = await QueueMembership.get_user_memberships(agent_user.id)
+        if queue_memberships:
+            queues = [membership.get("room_id") for membership in queue_memberships]
 
     if not queues:
         return web.json_response(**AGENT_DOESNOT_HAVE_QUEUES)

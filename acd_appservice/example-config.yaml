@@ -64,7 +64,7 @@ bridge:
         # The prefix to use in the provisioning API endpoints.
         prefix: /provision
 
-    # Room used by acd* to distribute a chats and interact with a bridge
+    # Room used by acd[n] to distribute a chats and interact with a bridge
     puppet_control_room:
         name: CONTROL ROOM
         topic: Puppet control room

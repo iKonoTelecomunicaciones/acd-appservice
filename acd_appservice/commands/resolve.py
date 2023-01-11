@@ -13,13 +13,6 @@ from ..signaling import Signaling
 from ..user import User
 from .handler import CommandArg, CommandEvent, CommandProcessor, command_handler
 
-room_id = CommandArg(
-    name="room_id",
-    help_text="Room to be resolved",
-    is_required=True,
-    example="`!foo:foo.com`",
-)
-
 user_id = CommandArg(
     name="user_id",
     help_text="User who is solving the room",
@@ -32,14 +25,21 @@ send_message = CommandArg(
     help_text="Should I send a resolution message?",
     is_required=False,
     example="`yes` | `y` | `1` | `no` | `n` | `0`",
-    default="",
+)
+
+room_id = CommandArg(
+    name="room_id",
+    help_text="Room to be resolved",
+    is_required=True,
+    example="`!foo:foo.com`",
+    sub_args=[user_id, send_message],
 )
 
 
 @command_handler(
     name="resolve",
     help_text=("Command resolving a chat, ejecting the supervisor and the agent"),
-    help_args=[room_id, user_id, send_message],
+    help_args=[room_id],
 )
 async def resolve(evt: CommandEvent) -> Dict:
     """It kicks the agent and menubot from the chat,
@@ -56,37 +56,50 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     """
 
-    if evt.args.send_message.lower() in ["yes", "y", "1"]:
-        send_message = True
+    try:
+        room_id = evt.args_list[0]
+        user_id = evt.args_list[1]
+    except IndexError:
+        detail = "You have not all arguments"
+        evt.log.error(detail)
+        await evt.reply(detail)
+        return {"data": {"error": detail}, "status": 422}
 
-    if evt.args.send_message.lower() in ["no", "n", "0"] or not evt.args.send_message:
+    try:
+        send_message = evt.args_list[2]
+    except IndexError:
+        send_message = "n"
+
+    if send_message.lower() in ["yes", "y", "1"]:
+        send_message = True
+    else:
         send_message = False
 
     evt.log.debug(
         (
-            f"The user {evt.args.user_id} is resolving "
-            f"the room {evt.args.room_id}, send_message? // {send_message} "
+            f"The user {user_id} is resolving "
+            f"the room {room_id}, send_message? // {send_message} "
         )
     )
 
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=evt.args.room_id)
+    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
 
-    if evt.args.room_id == puppet.control_room_id or (
-        not await puppet.room_manager.is_customer_room(room_id=evt.args.room_id)
-        and not await puppet.room_manager.is_guest_room(room_id=evt.args.room_id)
+    if room_id == puppet.control_room_id or (
+        not await puppet.room_manager.is_customer_room(room_id=room_id)
+        and not await puppet.room_manager.is_guest_room(room_id=room_id)
     ):
 
         detail = "Group rooms or control rooms cannot be resolved."
         evt.log.error(detail)
-        await puppet.intent.send_notice(room_id=evt.args.room_id, text=detail)
+        await puppet.intent.send_notice(room_id=room_id, text=detail)
         return
 
-    agent_id = await puppet.agent_manager.get_room_agent(room_id=evt.args.room_id)
+    agent_id = await puppet.agent_manager.get_room_agent(room_id=room_id)
 
     try:
         if agent_id:
             await puppet.room_manager.remove_user_from_room(
-                room_id=evt.args.room_id,
+                room_id=room_id,
                 user_id=agent_id,
                 reason=puppet.config["acd.resolve_chat.notice"],
             )
@@ -94,7 +107,7 @@ async def resolve(evt: CommandEvent) -> Dict:
         if supervisors:
             for supervisor_id in supervisors:
                 await puppet.room_manager.remove_user_from_room(
-                    room_id=evt.args.room_id,
+                    room_id=room_id,
                     user_id=supervisor_id,
                     reason=puppet.config["acd.resolve_chat.notice"],
                 )
@@ -103,36 +116,34 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     # When the supervisor resolves an open chat, menubot is still in the chat
     await puppet.room_manager.menubot_leaves(
-        room_id=evt.args.room_id,
+        room_id=room_id,
         reason=puppet.config["acd.resolve_chat.notice"],
     )
 
     await puppet.agent_manager.signaling.set_chat_status(
-        room_id=evt.args.room_id, status=Signaling.RESOLVED, agent=evt.args.user_id
+        room_id=room_id, status=Signaling.RESOLVED, agent=user_id
     )
 
     # clear campaign in the ik.chat.campaign_selection state event
     await puppet.agent_manager.signaling.set_selected_campaign(
-        room_id=evt.args.room_id, campaign_room_id=None
+        room_id=room_id, campaign_room_id=None
     )
 
     if send_message is not None:
         resolve_chat_params = puppet.config["acd.resolve_chat"]
         if send_message:
 
-            args = [evt.args.room_id, resolve_chat_params["message"]]
+            args = [room_id, resolve_chat_params["message"]]
             await evt.processor.handle(
                 sender=evt.sender,
                 command="template",
                 args_list=args,
-                is_management=evt.args.room_id == evt.sender.management_room,
+                is_management=room_id == evt.sender.management_room,
                 intent=puppet.intent,
                 room_id=evt.room_id,
             )
 
-        await puppet.intent.send_notice(
-            room_id=evt.args.room_id, text=resolve_chat_params["notice"]
-        )
+        await puppet.intent.send_notice(room_id=room_id, text=resolve_chat_params["notice"])
 
 
 class BulkResolve:

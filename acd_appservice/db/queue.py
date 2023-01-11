@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, List
 
 import asyncpg
 from attr import dataclass
@@ -40,6 +40,10 @@ class Queue:
         q = "UPDATE queue SET name=$2, description=$3 WHERE room_id=$1"
         await self.db.execute(q, *self._values)
 
+    async def delete(self) -> None:
+        q = "DELETE FROM queue WHERE room_id=$1"
+        await self.db.execute(q, self.room_id)
+
     @classmethod
     async def get_by_room_id(cls, room_id: RoomID) -> Queue | None:
         q = f"SELECT id, {cls._columns} FROM queue WHERE room_id=$1"
@@ -47,3 +51,12 @@ class Queue:
         if not row:
             return None
         return cls._from_row(row)
+
+    @classmethod
+    async def get_all(cls) -> List[Queue] | None:
+        q = f"SELECT id, {cls._columns} FROM queue"
+        rows = await cls.db.fetch(q)
+        if not rows:
+            return None
+
+        return [cls._from_row(queue) for queue in rows]

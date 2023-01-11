@@ -196,8 +196,123 @@ components:
           type: string
       example:
           id: 5
-          room_id: "!HwBQhttNpkKFfuzUpl:foo.com"
+          room_id: "!foo:foo.com"
           name: "My favourite queue"
+
+    QueueAddRemoveOk:
+      type: object
+      properties:
+        id:
+          type: integer
+        room_id:
+          type: string
+        name:
+          type: string
+      example:
+          detail: "The member has been added|removed from the queue"
+          member: "@foo:foo.com"
+          room_id: "!foo:foo.com"
+
+    QueueInfoOk:
+      properties:
+        queue:
+          type: object
+          properties:
+            name:
+              type: integer
+            room_id:
+              type: string
+            description:
+              type: string
+            memberships:
+              type: array
+              items:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  state:
+                    type: string
+                  paused:
+                    type: string
+                  creation_date:
+                    type: string
+                  state_date:
+                    type: string
+                  pause_date:
+                    type: string
+                  pause_reason:
+                    type: string
+      example:
+          queue:
+            name: "My favourite queue"
+            room_id: "!foo:foo.com"
+            description: "Queue description"
+            memberships:
+              - user_id: "@user_1:foo.com"
+                state: "online"
+                paused: true
+                creation_date: "2022-12-19 14:42:16.349065+00"
+                state_date: "2022-12-19 14:42:16.349065+00"
+                pause_date: "2022-12-19 14:42:16.349065+00"
+                pause_reason: "LUNCH"
+              - user_id: "@user_2:foo.com"
+                state: "offline"
+                paused: true
+                creation_date: "2022-12-19 14:42:16.349065+00"
+                state_date: "2022-12-19 14:42:16.349065+00"
+                pause_date: "2022-12-19 14:42:16.349065+00"
+                pause_reason: "SLEEP"
+              - user_id: "@user_3:foo.com"
+                state: "online"
+                paused: false
+                creation_date: "2022-12-19 14:42:16.349065+00"
+                state_date: "2022-12-19 14:42:16.349065+00"
+                pause_date: "2022-12-19 14:42:16.349065+00"
+                pause_reason: "BREAKFAST"
+
+    QueueListOk:
+      type: object
+      properties:
+        queues:
+          type: array
+          items:
+            type: object
+            properties:
+              room_id:
+                type: string
+              name:
+                type: string
+              description:
+                type: string
+
+      example:
+          queues:
+            - room_id: "!foo1:foo.com"
+              name: "My favourite queue # 1"
+              description: "Queue description"
+            - room_id: "!foo2:foo.com"
+              name: "My favourite queue # 2"
+              description: "Queue description"
+            - room_id: "!foo3:foo.com"
+              name: "My favourite queue # 3"
+              description: "Queue description"
+
+    QueueUpdateOk:
+      type: object
+      properties:
+        detail:
+          type: string
+      example:
+          detail: "The queue has been updated"
+
+    QueueDeleteOk:
+      type: object
+      properties:
+        detail:
+          type: string
+      example:
+          detail: "The queue has been deleted"
 
     SendMessageSuccessful:
       type: object
@@ -396,6 +511,48 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/QueueOk'
+
+    QueueAddSuccessful:
+      description: Member successfuly added to a queue.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/QueueAddRemoveOk'
+
+    QueueRemoveSuccessful:
+      description: Member successfuly removed to a queue.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/QueueAddRemoveOk'
+
+    QueueInfoSuccessful:
+      description: The queue info has been generated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/QueueInfoOk'
+
+    QueueListSuccessful:
+      description: The queue list has been generated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/QueueListOk'
+
+    QueueUpdateSuccessful:
+      description: The queue has been updated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/QueueUpdateOk'
+
+    QueueDeleteSuccessful:
+      description: The queue has been deleted.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/QueueDeleteOk'
 
     QrGenerated:
       description: QR has been generated.

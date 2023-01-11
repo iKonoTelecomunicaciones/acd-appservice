@@ -15,14 +15,14 @@ if TYPE_CHECKING:
     from .__main__ import ACDAppService
 
 
-class Room:
+class MatrixRoom:
 
     room_id: RoomID
     bridge: str
     log: TraceLogger = logging.getLogger("acd.room")
     az: AppService
 
-    by_room_id: Dict[RoomID, "Room"] = {}
+    by_room_id: Dict[RoomID, "MatrixRoom"] = {}
 
     def __init__(self, room_id: RoomID, intent: IntentAPI = None):
         self.log = self.log.getChild(room_id)
@@ -53,6 +53,9 @@ class Room:
 
         if not self.main_intent:
             self.main_intent = self.az.intent
+
+    async def formatted_room_id(self) -> str:
+        return f"[{self.room_id}](https://matrix.to/#/{self.room_id})"
 
     async def invite_user(self, user_id: UserID):
         """Invite a user to the room

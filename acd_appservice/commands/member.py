@@ -8,13 +8,6 @@ from ..user import User
 from ..util.util import Util
 from .handler import CommandArg, CommandEvent, command_handler
 
-action = CommandArg(
-    name="action",
-    help_text="Agent operation",
-    is_required=True,
-    example="`login | logout | pause | unpause`",
-)
-
 agent_id = CommandArg(
     name="agent_id",
     help_text="Agent to whom the operation applies",
@@ -29,11 +22,19 @@ pause_reason = CommandArg(
     example="Pause to see the sky",
 )
 
+action = CommandArg(
+    name="action",
+    help_text="Agent operation",
+    is_required=True,
+    example="`login | logout | pause | unpause`",
+    sub_args=[agent_id, pause_reason],
+)
+
 
 @command_handler(
     name="member",
     help_text="Agent operations like login, logout, pause, unpause",
-    help_args=[action, agent_id, pause_reason],
+    help_args=[action],
 )
 async def member(evt: CommandEvent) -> Dict:
     """Agent operations like login, logout, pause, unpause
@@ -60,17 +61,28 @@ async def member(evt: CommandEvent) -> Dict:
         "status": 0,
     }
 
-    actions = ["login", "logout", "pause", "unpause"]
-    if not evt.args.action in actions:
-        msg = f"{evt.args.action} is not a valid action"
+    try:
+        action = evt.args_list[0]
+    except IndexError:
+        detail = "You have not sent the argument action"
+        evt.log.error(detail)
+        await evt.reply(detail)
+        return {"data": {"error": detail}, "status": 422}
+
+    try:
+        agent_id: UserID = evt.args_list[1]
+    except IndexError:
+        agent_id = ""
+
+    if not action in ["login", "logout", "pause", "unpause"]:
+        msg = f"{action} is not a valid action"
         evt.log.error(msg)
         await evt.reply(text=msg)
         return
 
     # Verify if user is able to do an agent operation over other agent
-    agent_id: UserID = evt.args.agent_id
     if not evt.sender.is_admin and Util.is_user_id(agent_id) and agent_id != evt.sender.mxid:
-        msg = f"You are unable to use agent operation `{evt.args.action}` over other agents"
+        msg = f"You are unable to use agent operation `{action}` over other agents"
         await evt.reply(text=msg)
         evt.log.warning(msg)
         json_response.get("data")["detail"] = msg
@@ -79,7 +91,7 @@ async def member(evt: CommandEvent) -> Dict:
 
     # Verify that admin do not try to do an agent operation for himself
     elif evt.sender.is_admin and not Util.is_user_id(agent_id):
-        msg = f"Admin user can not use agent operation `{evt.args.action}`"
+        msg = f"Admin user can not use agent operation `{action}`"
         await evt.reply(text=msg)
         evt.log.warning(msg)
         json_response.get("data")["detail"] = msg
@@ -113,15 +125,15 @@ async def member(evt: CommandEvent) -> Dict:
         json_response["status"] = 422
         return json_response
 
-    if evt.args.action == "login" or evt.args.action == "logout":
+    if action in ["login", "logout"]:
         state = (
             QueueMembershipState.Online.value
-            if evt.args.action == "login"
+            if action == "login"
             else QueueMembershipState.Offline.value
         )
 
         if membership.state == state:
-            msg = f"Agent is already {state}"
+            msg = f"Agent {agent_id} is already {state}"
             await evt.reply(text=msg)
             evt.log.warning(msg)
             json_response.get("data")["detail"] = msg
@@ -131,24 +143,25 @@ async def member(evt: CommandEvent) -> Dict:
         membership.state = state
         membership.state_date = QueueMembership.now()
         # When action is `logout` also unpause the user and erase pause_reason
-        if evt.args.action == "logout" and membership.paused:
+        if action == "logout" and membership.paused:
             membership.paused = False
             membership.pause_date = QueueMembership.now()
             membership.pause_reason = None
         await membership.save()
-    elif evt.args.action == "pause" or evt.args.action == "unpause":
+
+    elif action in ["pause", "unpause"]:
         # An offline agent is unable to use pause or unpause operations
         if membership.state == QueueMembershipState.Offline.value:
-            msg = f"You should be logged in to execute `{evt.args.action}` operation"
+            msg = f"You should be logged in to execute `{action}` operation"
             await evt.reply(text=msg)
             evt.log.warning(msg)
             json_response.get("data")["detail"] = msg
             json_response["status"] = 422
             return json_response
 
-        state = True if evt.args.action == "pause" else False
+        state = True if action == "pause" else False
         if membership.paused == state:
-            msg = f"Agent is already {evt.args.action}d"
+            msg = f"Agent {agent_id} is already {action}d"
             await evt.reply(text=msg)
             evt.log.warning(msg)
             json_response.get("data")["detail"] = msg
@@ -159,18 +172,18 @@ async def member(evt: CommandEvent) -> Dict:
         membership.pause_date = QueueMembership.now()
         # The position of the pause_reason argument is variable,
         # in some cases it can be in the position of the agent_id arg
-        if evt.args.action == "pause":
+        if action == "pause":
             membership.pause_reason = (
                 evt.args_list[2]
-                if evt.sender.is_admin or evt.args.agent_id == evt.sender.mxid
+                if evt.sender.is_admin or evt.args_list[1] == evt.sender.mxid
                 else evt.args_list[1]
             )
         else:
             membership.pause_reason = None
         await membership.save()
 
-    msg = f"Agent operation `{evt.args.action}` was successful"
+    msg = f"Agent operation `{action}` was successful, {agent_id} state is `{action}`"
     await evt.reply(text=msg)
-    json_response.get("data")["detail"] = msg
+    json_response.get("data")["detail"] = f"Agent operation `{action}` was successful"
     json_response["status"] = 200
     return json_response
