@@ -206,6 +206,7 @@ class MatrixRoom:
         if self.bridge and not self.config[f"bridges.{self.bridge}.format_messages"]:
             new_body = Util.md_to_text(content.get("body"))
             content["body"] = new_body if new_body else text
+            content["formatted_body"] = markdown(content["body"].replace("\n", "<br>"))
 
         await self.main_intent.send_message(
             room_id=self.room_id,

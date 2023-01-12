@@ -301,6 +301,7 @@ class RoomManager:
         if not self.config[f"bridges.{bridge_room}.format_messages"]:
             new_body = Util.md_to_text(content.get("body"))
             content["body"] = new_body if new_body else msg
+            content["formatted_body"] = markdown(content["body"].replace("\n", "<br>"))
 
         await self.intent.send_message(
             room_id=room_id,
