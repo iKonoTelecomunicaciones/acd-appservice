@@ -86,23 +86,6 @@ class Queue(DBQueue, MatrixRoom):
         else:
             await self.invite_user(user_id=new_member)
 
-    async def remove_member(self, member: UserID, reason: str = None):
-        """If the config value for "acd.remove_method" is "leave", then leave the user,
-        otherwise kick the user
-
-        Parameters
-        ----------
-        member : UserID
-            The user ID of the member to remove.
-        reason : str
-            The reason for the removal.
-
-        """
-        if self.config["acd.remove_method"] == "leave":
-            await self.leave_user(user_id=member, reason=reason)
-        else:
-            await self.kick_user(user_id=member, reason=reason)
-
     async def update_description(self, new_description: str):
         """It updates the description of the room
 

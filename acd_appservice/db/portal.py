@@ -1,4 +1,5 @@
 from __future__ import annotations
+from enum import Enum
 
 from typing import TYPE_CHECKING, ClassVar, Dict, List
 
@@ -9,10 +10,16 @@ from mautrix.util.async_db import Database
 
 fake_db = Database.create("") if TYPE_CHECKING else None
 
+class PortalState(Enum):
+    INIT = "INIT"
+    PENDING = "PENDING"
+    FOLLOWUP = "FOLLOWUP"
+    RESOLVED = "RESOLVED"
+    ENQUEUED = "ENQUEUED"
+
 
 @dataclass
-class Room:
-    """Representación en la bd de room y pending_room"""
+class Portal:
 
     db: ClassVar[Database] = fake_db
 
@@ -22,7 +29,7 @@ class Room:
     fk_puppet: int | None = None
 
     @classmethod
-    def _from_row(cls, row: asyncpg.Record) -> Room:
+    def _from_row(cls, row: asyncpg.Record) -> Portal:
         """It takes a class and a row from a database,
         and returns an instance of the class with the row's values
 
@@ -51,7 +58,7 @@ class Room:
             The puppet foregin key.
 
         """
-        q = "INSERT INTO room (room_id, selected_option, fk_puppet) VALUES ($1, $2, $3)"
+        q = "INSERT INTO portal (room_id, selected_option, fk_puppet) VALUES ($1, $2, $3)"
         await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
 
     @classmethod
@@ -87,7 +94,7 @@ class Room:
             The puppet foregin key.
 
         """
-        q = "UPDATE room SET selected_option=$2, fk_puppet=$3 WHERE room_id=$1"
+        q = "UPDATE portal SET selected_option=$2, fk_puppet=$3 WHERE room_id=$1"
         await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
 
     @classmethod
@@ -109,7 +116,7 @@ class Room:
         await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
 
     @classmethod
-    async def get_room_by_room_id(cls, room_id: RoomID) -> Room | None:
+    async def get_room_by_room_id(cls, room_id: RoomID) -> Portal | None:
         """Get a room from the database by its room_id
 
         Parameters
@@ -122,14 +129,14 @@ class Room:
             A Room object
 
         """
-        q = "SELECT id, room_id, selected_option, fk_puppet FROM room WHERE room_id=$1"
+        q = "SELECT id, room_id, selected_option, fk_puppet FROM portal WHERE room_id=$1"
         row = await cls.db.fetchrow(q, room_id)
         if not row:
             return None
         return cls._from_row(row)
 
     @classmethod
-    async def get_pending_room_by_room_id(cls, room_id: RoomID) -> Room | None:
+    async def get_pending_room_by_room_id(cls, room_id: RoomID) -> Portal | None:
         """This function returns a room object if the room_id is found in the database, otherwise it returns None
 
         Parameters
@@ -162,7 +169,7 @@ class Room:
             The selected option from the room table.
 
         """
-        q = "SELECT selected_option FROM room WHERE room_id=$1"
+        q = "SELECT selected_option FROM portal WHERE room_id=$1"
         row = await cls.db.fetchval(q, room_id)
         if not row:
             return None
@@ -189,7 +196,7 @@ class Room:
         return row
 
     @classmethod
-    async def get_pending_rooms(cls, fk_puppet: int) -> List[Room] | None:
+    async def get_pending_rooms(cls, fk_puppet: int) -> List[Portal] | None:
         """It returns a list of rooms that are pending
 
         Parameters
@@ -211,7 +218,7 @@ class Room:
         return [cls._from_row(room) for room in rows]
 
     @classmethod
-    async def get_puppet_rooms(cls, fk_puppet: int) -> Dict[Room] | None:
+    async def get_puppet_rooms(cls, fk_puppet: int) -> Dict[Portal] | None:
         """It returns a dict of rooms
 
         Parameters
@@ -222,7 +229,7 @@ class Room:
             A dict of Room objects
 
         """
-        q = "SELECT id, room_id, selected_option, fk_puppet FROM room WHERE fk_puppet=$1"
+        q = "SELECT id, room_id, selected_option, fk_puppet FROM portal WHERE fk_puppet=$1"
         rows = await cls.db.fetch(q, fk_puppet)
         if not rows:
             return None

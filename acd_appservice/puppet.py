@@ -168,6 +168,10 @@ class Puppet(DBPuppet, BasePuppet):
 
         """
         db_joined_rooms = await RoomManager.get_puppet_rooms(puppet_pk=self.pk)
+
+        if not db_joined_rooms:
+            return
+
         matrix_joined_rooms = await self.intent.get_joined_rooms()
         if not matrix_joined_rooms:
             return
