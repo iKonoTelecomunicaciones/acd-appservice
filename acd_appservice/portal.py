@@ -153,10 +153,10 @@ class Portal(DBPortal, MatrixRoom):
 
         if transfer:
             self.log.debug(f"[TRANSFER] - LOCKING PORTAL {self.room_id}...")
-            self.LOCKED_PORTALS.add(LockedReason.TRANSFER.value.replace("room_id", self.room_id))
+            self.LOCKED_PORTALS.add(LockedReason.TRANSFER.value.format(room_id=self.room_id))
         else:
             self.log.debug(f"LOCKING PORTAL {self.room_id}...")
-            self.LOCKED_PORTALS.add(LockedReason.GENERAL.value.replace("room_id", self.room_id))
+            self.LOCKED_PORTALS.add(LockedReason.GENERAL.value.format(room_id=self.room_id))
 
     def unlock(self, transfer: bool = False):
         """If the room is locked, remove the lock from the list of locked rooms
