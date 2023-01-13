@@ -17,6 +17,7 @@ class PortalState(Enum):
     FOLLOWUP = "FOLLOWUP"
     RESOLVED = "RESOLVED"
     ENQUEUED = "ENQUEUED"
+    ONMENU = "ONMENU"
 
 
 @dataclass
