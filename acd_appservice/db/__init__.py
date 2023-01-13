@@ -1,10 +1,10 @@
 from mautrix.util.async_db import Database
 
 from .message import Message
+from .portal import Portal
 from .puppet import Puppet
 from .queue import Queue
 from .queue_membership import QueueMembership
-from .portal import Portal
 from .upgrade import upgrade_table
 from .user import User
 
