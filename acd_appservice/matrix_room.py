@@ -58,7 +58,7 @@ class MatrixRoom:
         await self.set_creator()
 
     async def set_creator(self) -> None:
-        '''It sets the creator of the channel'''
+        """It sets the creator of the channel"""
         if self.creator:
             return self.creator
 

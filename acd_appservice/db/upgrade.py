@@ -113,7 +113,6 @@ async def upgrade_v3(conn: Connection) -> None:
     await conn.execute("CREATE INDEX idx_queue_membership_queue ON queue_membership(fk_queue)")
 
 
-
 @upgrade_table.register(description="Rename table room to portal")
 async def upgrade_v4(conn: Connection) -> None:
     await conn.execute("ALTER TABLE room RENAME TO portal")

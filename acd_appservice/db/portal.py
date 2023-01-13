@@ -1,6 +1,6 @@
 from __future__ import annotations
-from enum import Enum
 
+from enum import Enum
 from typing import TYPE_CHECKING, ClassVar, Dict, List
 
 import asyncpg
@@ -9,6 +9,7 @@ from mautrix.types import RoomID
 from mautrix.util.async_db import Database
 
 fake_db = Database.create("") if TYPE_CHECKING else None
+
 
 class PortalState(Enum):
     INIT = "INIT"
