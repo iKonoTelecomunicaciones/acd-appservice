@@ -88,6 +88,7 @@ class Portal(DBPortal, MatrixRoom):
                     new_room_name = await self.main_intent.get_displayname(user_id=self.creator)
                 else:
                     new_room_name = await self.room_name_custom_by_creator()
+
                 if new_room_name:
                     postfix_template = self.config[f"bridges.{bridge}.postfix_template"]
                     new_room_name = new_room_name.replace(f" {postfix_template}", "")
@@ -128,7 +129,7 @@ class Portal(DBPortal, MatrixRoom):
         return None
 
     @property
-    def is_lock(self) -> bool:
+    def is_locked(self) -> bool:
         return self.room_id in self.LOCKED_PORTALS
 
     def lock(self, transfer: bool = False):
