@@ -41,7 +41,6 @@ class Portal(DBPortal, MatrixRoom):
     ):
         DBPortal.__init__(self, id=id, room_id=room_id, fk_puppet=fk_puppet)
         MatrixRoom.__init__(self, room_id=room_id, intent=intent)
-        self.state = PortalState.OPEN
 
     async def _add_to_cache(self) -> None:
         self.by_id[self.id] = self
@@ -149,7 +148,7 @@ class Portal(DBPortal, MatrixRoom):
 
         """
         if self.is_lock:
-            self.log.debug(f"The room {self.room_id} already lock")
+            self.log.debug(f"The room {self.room_id} already locked")
             return
 
         if transfer:
@@ -174,7 +173,7 @@ class Portal(DBPortal, MatrixRoom):
         """
 
         if not self.is_lock:
-            self.log.debug(f"The room {self.room_id} already unlock")
+            self.log.debug(f"The room {self.room_id} already unlocked")
             return
 
         if transfer:
