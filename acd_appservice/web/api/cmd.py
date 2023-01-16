@@ -701,7 +701,7 @@ async def queue(request: web.Request) -> web.Response:
     return web.json_response(**result)
 
 
-@routes.post("/v1/cmd/queue/info")
+@routes.get("/v1/cmd/queue/info/{room_id}", allow_head=False)
 async def queue(request: web.Request) -> web.Response:
     """
     ---
@@ -709,19 +709,6 @@ async def queue(request: web.Request) -> web.Response:
 
     tags:
         - Commands
-
-    requestBody:
-        required: false
-        description: A json with `room_id`
-        content:
-            application/json:
-                schema:
-                    type: object
-                    properties:
-                        room_id:
-                            type: string
-                    example:
-                        room_id: "!foo:foo.com"
 
     responses:
         '200':
@@ -733,12 +720,9 @@ async def queue(request: web.Request) -> web.Response:
     """
     user = await _resolve_user_identifier(request=request)
 
-    if not request.body_exists:
-        return web.json_response(**NOT_DATA)
+    room_id = request.match_info.get("room_id", "")
 
-    data: Dict = await request.json()
-
-    args = ["info", data.get("room_id")]
+    args = ["info", room_id]
 
     result: Dict = await get_commands().handle(
         sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
@@ -747,7 +731,7 @@ async def queue(request: web.Request) -> web.Response:
     return web.json_response(**result)
 
 
-@routes.post("/v1/cmd/queue/list")
+@routes.get("/v1/cmd/queue/list", allow_head=False)
 async def queue(request: web.Request) -> web.Response:
     """
     ---
