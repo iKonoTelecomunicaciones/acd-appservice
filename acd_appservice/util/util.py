@@ -95,14 +95,8 @@ class Util:
         """
 
         if formatted_text:
-            formatted_text = (
-                formatted_text.replace("<br>", "\n")
-                .replace("<p>", "\n")
-                .replace("</p>", "\n")
-                .replace("**", "")
-            )
-            plain_text = BeautifulSoup(formatted_text, features="html.parser").text
-            return plain_text
+            formatted_text = formatted_text.replace("<br>", "\n").replace("**", "")
+            return BeautifulSoup(formatted_text, features="html.parser").text
         else:
             return formatted_text
 
