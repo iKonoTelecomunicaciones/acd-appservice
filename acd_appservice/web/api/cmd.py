@@ -606,7 +606,7 @@ async def queue(request: web.Request) -> web.Response:
     return web.json_response(**result)
 
 
-@routes.post("/v1/cmd/queue/add")
+@routes.patch("/v1/cmd/queue/add")
 async def queue(request: web.Request) -> web.Response:
     """
     ---
@@ -654,7 +654,7 @@ async def queue(request: web.Request) -> web.Response:
     return web.json_response(**result)
 
 
-@routes.post("/v1/cmd/queue/remove")
+@routes.patch("/v1/cmd/queue/remove")
 async def queue(request: web.Request) -> web.Response:
     """
     ---
@@ -758,7 +758,7 @@ async def queue(request: web.Request) -> web.Response:
     return web.json_response(**result)
 
 
-@routes.post("/v1/cmd/queue/update")
+@routes.patch("/v1/cmd/queue/update")
 async def queue(request: web.Request) -> web.Response:
     """
     ---
@@ -809,7 +809,7 @@ async def queue(request: web.Request) -> web.Response:
     return web.json_response(**result)
 
 
-@routes.post("/v1/cmd/queue/delete")
+@routes.delete("/v1/cmd/queue/delete")
 async def queue(request: web.Request) -> web.Response:
     """
     ---
