@@ -56,8 +56,11 @@ class User(DBUser, BaseUser):
         pass
 
     async def formatted_displayname(self) -> str:
-        displayname = await self.az.intent.get_displayname(user_id=self.mxid)
+        displayname = await self.get_displayname()
         return f"[{displayname}](https://matrix.to/#/{self.mxid})"
+
+    async def get_displayname(self):
+        return await self.az.intent.get_displayname(user_id=self.mxid)
 
     @classmethod
     @async_getter_lock

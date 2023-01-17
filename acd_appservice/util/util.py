@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from re import match
 
 from bs4 import BeautifulSoup
@@ -103,3 +105,33 @@ class Util:
             return plain_text
         else:
             return formatted_text
+
+    @classmethod
+    def get_emoji_number(cls, number: str) -> str | None:
+        """It takes a string of numbers and returns a string of emoji numbers
+
+        Parameters
+        ----------
+        number : str
+            The number you want to convert to emojis.
+
+        Returns
+        -------
+            the emoji number.
+
+        """
+
+        emoji_number = (
+            number.replace("0", "0️⃣")
+            .replace("1", "1️⃣")
+            .replace("2", "2️⃣")
+            .replace("3", "3️⃣")
+            .replace("4", "4️⃣")
+            .replace("5", "5️⃣")
+            .replace("6", "6️⃣")
+            .replace("7", "7️⃣")
+            .replace("8", "8️⃣")
+            .replace("9", "9️⃣")
+        )
+
+        return emoji_number

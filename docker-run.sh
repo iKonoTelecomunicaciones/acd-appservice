@@ -17,6 +17,11 @@ if [ ! -f /data/registration.yaml ]; then
 	exit
 fi
 
+if [ ! -f /data/components.yaml ]; then
+	mv components.yaml /data
+	echo "Didn't find a components file."
+	echo "Moved components file to /data/components.yaml"
+fi
 
 if [ "$1" = "dev" ]; then
 	pip install -r requirements-dev.txt

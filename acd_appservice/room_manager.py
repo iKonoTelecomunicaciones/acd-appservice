@@ -24,7 +24,7 @@ from mautrix.types import (
 from mautrix.util.logging import TraceLogger
 
 from .config import Config
-from .db import Room
+from .db.portal import Portal
 from .util import Util
 
 
@@ -34,7 +34,7 @@ class RoomManager:
     ROOMS: dict[RoomID, Dict] = {}
 
     # Listado de salas  en la DB
-    by_room_id: dict[RoomID, Room] = {}
+    by_room_id: dict[RoomID, Portal] = {}
 
     # list of room_ids to know if distribution process is taking place
     LOCKED_ROOMS = set()
@@ -63,7 +63,7 @@ class RoomManager:
         self.bridge = bridge
 
     @classmethod
-    def _add_to_cache(cls, room_id, room: Room) -> None:
+    def _add_to_cache(cls, room_id, room: Portal) -> None:
         cls.by_room_id[room_id] = room
 
     async def set_bridge_default_power_levels(self, room_id: RoomID) -> None:
@@ -97,7 +97,7 @@ class RoomManager:
         Parameters
         ----------
         room_id: RoomID
-            Room to initialize.
+            Portal to initialize.
 
         Returns
         -------
@@ -123,7 +123,7 @@ class RoomManager:
 
         await asyncio.create_task(self.initial_room_setup(room_id=room_id))
 
-        self.log.info(f"Room {room_id} initialization is complete")
+        self.log.info(f"Portal {room_id} initialization is complete")
         return True
 
     async def initial_room_setup(self, room_id: RoomID):
@@ -135,7 +135,7 @@ class RoomManager:
         Parameters
         ----------
         room_id: RoomID
-            Room to initialize.
+            Portal to initialize.
 
         Returns
         -------
@@ -228,7 +228,7 @@ class RoomManager:
         Parameters
         ----------
         room_id: RoomID
-            Room to send command.
+            Portal to send command.
 
         Returns
         -------
@@ -255,7 +255,7 @@ class RoomManager:
         Parameters
         ----------
         room_id: RoomID
-            Room to send command.
+            Portal to send command.
 
         Returns
         -------
@@ -314,7 +314,7 @@ class RoomManager:
         Parameters
         ----------
         room_id: RoomID
-            Room to check.
+            Portal to check.
 
         Returns
         -------
@@ -388,7 +388,7 @@ class RoomManager:
         Parameters
         ----------
         room_id: RoomID
-            Room to check.
+            Portal to check.
 
         Returns
         -------
@@ -695,7 +695,7 @@ class RoomManager:
         Parameters
         ----------
         room_id: RoomID
-            Room to check.
+            Portal to check.
 
         Returns
         -------
@@ -944,7 +944,7 @@ class RoomManager:
         Parameters
         ----------
         room_id: RoomID
-            Room to check.
+            Portal to check.
 
         Returns
         -------
@@ -1003,7 +1003,7 @@ class RoomManager:
         Parameters
         ----------
         room_id: RoomID
-            Room to check.
+            Portal to check.
 
         Returns
         -------
@@ -1037,7 +1037,7 @@ class RoomManager:
         Parameters
         ----------
         room_id: RoomID
-            Room to check.
+            Portal to check.
 
         Returns
         -------
@@ -1077,7 +1077,7 @@ class RoomManager:
             A boolean value.
 
         """
-        room = await Room.get_pending_room_by_room_id(room_id)
+        room = await Portal.get_pending_room_by_room_id(room_id)
         if room:
             return await cls.update_pending_room_in_db(
                 room_id=room_id, selected_option=selected_option, puppet_pk=puppet_pk
@@ -1114,7 +1114,7 @@ class RoomManager:
 
         """
 
-        room = await Room.get_room_by_room_id(room_id)
+        room = await Portal.get_room_by_room_id(room_id)
         cls.log.debug(f"Saving the room {room_id} for the puppet {puppet_pk}")
         if room:
             return await cls.update_room_in_db(
@@ -1135,7 +1135,7 @@ class RoomManager:
         Parameters
         ----------
         room_id: RoomID
-            Room to remove data.
+            Portal to remove data.
 
         Returns
         -------
@@ -1143,11 +1143,11 @@ class RoomManager:
             True if successful, False otherwise.
         """
         try:
-            room = await Room.get_pending_room_by_room_id(room_id)
+            room = await Portal.get_pending_room_by_room_id(room_id)
             if not room:
                 return False
 
-            return await Room.remove_pending_room(room_id)
+            return await Portal.remove_pending_room(room_id)
         except Exception as e:
             cls.log.exception(e)
             return False
@@ -1173,11 +1173,11 @@ class RoomManager:
 
         """
         try:
-            room = await Room.get_room_by_room_id(room_id)
+            room = await Portal.get_room_by_room_id(room_id)
             if room:
                 return False
             else:
-                await Room.insert_room(room_id, selected_option, puppet_pk)
+                await Portal.insert_room(room_id, selected_option, puppet_pk)
         except Exception as e:
             cls.log.exception(e)
             return False
@@ -1205,11 +1205,11 @@ class RoomManager:
 
         """
         try:
-            room = await Room.get_pending_room_by_room_id(room_id)
+            room = await Portal.get_pending_room_by_room_id(room_id)
             if room:
                 return False
             else:
-                await Room.insert_pending_room(room_id, selected_option, puppet_pk)
+                await Portal.insert_pending_room(room_id, selected_option, puppet_pk)
         except Exception as e:
             cls.log.exception(e)
             return False
@@ -1237,10 +1237,10 @@ class RoomManager:
 
         """
         try:
-            room = await Room.get_pending_room_by_room_id(room_id)
+            room = await Portal.get_pending_room_by_room_id(room_id)
             if room:
                 puppet_pk = room.fk_puppet if puppet_pk == room.fk_puppet else puppet_pk
-                await Room.update_pending_room_by_room_id(room_id, selected_option, puppet_pk)
+                await Portal.update_pending_room_by_room_id(room_id, selected_option, puppet_pk)
             else:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
                 return False
@@ -1278,13 +1278,13 @@ class RoomManager:
 
         """
         try:
-            room = await Room.get_room_by_room_id(room_id)
+            room = await Portal.get_room_by_room_id(room_id)
             if room:
                 if not change_selected_option:
                     selected_option = room.selected_option
 
                 puppet_pk = room.fk_puppet if puppet_pk == room.fk_puppet else puppet_pk
-                await Room.update_room_by_room_id(room_id, selected_option, puppet_pk)
+                await Portal.update_room_by_room_id(room_id, selected_option, puppet_pk)
             else:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
                 return False
@@ -1309,7 +1309,7 @@ class RoomManager:
 
         """
         try:
-            rooms = await Room.get_pending_rooms(puppet_pk)
+            rooms = await Portal.get_pending_rooms(puppet_pk)
         except Exception as e:
             cls.log.exception(e)
             return
@@ -1334,7 +1334,7 @@ class RoomManager:
 
         """
         try:
-            rooms = await Room.get_puppet_rooms(puppet_pk)
+            rooms = await Portal.get_puppet_rooms(puppet_pk)
         except Exception as e:
             cls.log.exception(e)
             return
@@ -1349,7 +1349,7 @@ class RoomManager:
         Parameters
         ----------
         room_id: RoomID
-            Room to query.
+            Portal to query.
 
         Returns
         -------
@@ -1357,7 +1357,7 @@ class RoomManager:
             RoomID if successful, None otherwise.
         """
         try:
-            return await Room.get_campaign_of_pending_room(room_id=room_id)
+            return await Portal.get_campaign_of_pending_room(room_id=room_id)
         except Exception as e:
             cls.log.exception(e)
 
@@ -1367,7 +1367,7 @@ class RoomManager:
         Parameters
         ----------
         room_id: RoomID
-            Room to query.
+            Portal to query.
 
         Returns
         -------
@@ -1375,12 +1375,12 @@ class RoomManager:
             RoomID if successful, None otherwise.
         """
         try:
-            return await Room.get_user_selected_menu(room_id=room_id)
+            return await Portal.get_user_selected_menu(room_id=room_id)
         except Exception as e:
             cls.log.exception(e)
 
     @classmethod
-    async def get_room(cls, room_id: RoomID) -> Room:
+    async def get_room(cls, room_id: RoomID) -> Portal:
         """If the room is in the cache, return it.
         If not, get it from the database and add it to the cache.
 
@@ -1405,7 +1405,7 @@ class RoomManager:
         room = None
 
         try:
-            room = await Room.get_room_by_room_id(room_id=room_id)
+            room = await Portal.get_room_by_room_id(room_id=room_id)
         except Exception as e:
             cls.log.exception(e)
 

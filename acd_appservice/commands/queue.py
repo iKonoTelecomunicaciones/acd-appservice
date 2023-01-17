@@ -95,7 +95,7 @@ async def queue(evt: CommandEvent) -> Dict:
 
         # Checking if the invitees are specified.
         # If they are, it will split them by comma and strip them.
-        if len(evt.args_list) < 2:
+        if len(evt.args_list) < 3:
             detail = "You have not sent all arguments"
             evt.log.error(detail)
             await evt.reply(detail)
@@ -165,7 +165,11 @@ async def queue(evt: CommandEvent) -> Dict:
             force = "n"
             queue_id = evt.room_id
 
-        force = True if force.lower() in ["yes", "y", "1"] else False
+        force = (
+            (True if force.lower() in ["yes", "y", "1"] else False)
+            if isinstance(force, str)
+            else force
+        )
 
         return await delete(evt=evt, queue_id=queue_id, force=force)
 
@@ -386,7 +390,7 @@ async def delete(evt: CommandEvent, queue_id: RoomID, force: Optional[bool] = Fa
     queue = await Queue.get_by_room_id(room_id=queue_id, create=False)
 
     if not queue:
-        detail = "Arg queue not provided"
+        detail = "The queue has not been found"
         json_response["data"] = {"error": detail}
         json_response["status"] = 422
         evt.log.error(detail)
@@ -448,7 +452,9 @@ async def update(
         return json_response
 
     await queue.update_name(new_name=name)
-    await queue.update_description(new_description=description)
+    await queue.update_description(
+        new_description=f"Queue -> {description}" if description else ""
+    )
 
     detail = "The queue has been updated"
     json_response["status"] = 200
@@ -488,15 +494,17 @@ async def info(evt: CommandEvent, room_id: RoomID) -> Dict:
     memberships = await QueueMembership.get_by_queue(fk_queue=queue.id)
     text = f"#### Room: {await queue.formatted_room_id()}"
 
+    _memberships: List[Dict[str:Any]] = []
+
     if memberships:
         text += "\n#### Current memberships:"
-        _memberships: List[Dict[str:Any]] = []
         for membership in memberships:
             user: User = await User.get_by_id(membership.fk_user)
             text += f"\n\n- {await user.formatted_displayname()} -> state: {membership.state} || paused: {membership.paused}"
             _memberships.append(
                 {
                     "user_id": user.mxid,
+                    "displayname": await user.get_displayname(),
                     "state": membership.state,
                     "paused": membership.paused,
                     "creation_date": membership.creation_date.strftime("%Y-%m-%d %H:%M:%S%z")
@@ -543,12 +551,11 @@ async def _list(evt: CommandEvent) -> Dict:
 
     text = "#### Registered queues"
     _queues = []
+    _text = ""
 
     for queue in queues:
-        text += (
-            f"\n- {await queue.formatted_room_id()}" + f"-> `{queue.description}`"
-            if queue.description
-            else ""
+        _text += f"\n- {await queue.formatted_room_id()}" + (
+            f"-> `{queue.description}`" if queue.description else ""
         )
         _queues.append(
             {
@@ -558,7 +565,7 @@ async def _list(evt: CommandEvent) -> Dict:
             }
         )
 
-    await evt.reply(text)
+    await evt.reply(text + (_text or "\nNo rooms available"))
 
     return {
         "data": {"queues": _queues},

@@ -1,6 +1,6 @@
 /.venv
 venv/
-/env/
+*env/
 .env
 /synapse/
 /config.yaml

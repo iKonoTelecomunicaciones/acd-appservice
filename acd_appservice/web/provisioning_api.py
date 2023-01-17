@@ -34,7 +34,7 @@ class ProvisioningAPI:
                 title="ACD AppService documentation",
                 version=version,
             ),
-            components=f"components.yaml",
+            components=f"/data/components.yaml",
             swagger_ui_settings=SwaggerUiSettings(
                 path="/docs",
                 layout="BaseLayout",

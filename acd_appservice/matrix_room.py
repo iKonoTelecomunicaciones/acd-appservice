@@ -23,6 +23,7 @@ class MatrixRoom:
     az: AppService
 
     by_room_id: Dict[RoomID, "MatrixRoom"] = {}
+    creator: UserID = None
 
     def __init__(self, room_id: RoomID, intent: IntentAPI = None):
         self.log = self.log.getChild(room_id)
@@ -54,7 +55,61 @@ class MatrixRoom:
         if not self.main_intent:
             self.main_intent = self.az.intent
 
+        await self.set_creator()
+
+    async def set_creator(self) -> None:
+        """It sets the creator of the channel"""
+        if self.creator:
+            return self.creator
+
+        info = await self.get_info()
+
+        if not info:
+            return
+
+        self.creator = info.get("creator")
+
+    async def get_room_name(self) -> str:
+        """It returns the name of the room
+
+        Returns
+        -------
+            The name of the room.
+
+        """
+
+        info = await self.get_info()
+
+        if not info:
+            return
+
+        return info.get("name")
+
+    async def remove_member(self, member: UserID, reason: str = None):
+        """If the config value for "acd.remove_method" is "leave", then leave the user,
+        otherwise kick the user
+
+        Parameters
+        ----------
+        member : UserID
+            The user ID of the member to remove.
+        reason : str
+            The reason for the removal.
+
+        """
+        if self.config["acd.remove_method"] == "leave":
+            await self.leave_user(user_id=member, reason=reason)
+        else:
+            await self.kick_user(user_id=member, reason=reason)
+
     async def formatted_room_id(self) -> str:
+        """It returns a string that contains the room ID, but with a link to the room
+
+        Returns
+        -------
+            A string with the room_id in a link.
+
+        """
         return f"[{self.room_id}](https://matrix.to/#/{self.room_id})"
 
     async def invite_user(self, user_id: UserID):
@@ -212,3 +267,19 @@ class MatrixRoom:
             room_id=self.room_id,
             content=content,
         )
+
+    async def get_info(self) -> Dict:
+        """It gets the room's information
+
+        Returns
+        -------
+            A dictionary of the room's information.
+        """
+        intent = self.main_intent if not self.main_intent.bot else self.main_intent.bot
+        try:
+            return await intent.api.request(
+                method=Method.GET, path=SynapseAdminPath.v1.rooms[self.room_id]
+            )
+        except Exception as e:
+            self.log.exception(e)
+            return
