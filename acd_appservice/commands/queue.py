@@ -494,9 +494,10 @@ async def info(evt: CommandEvent, room_id: RoomID) -> Dict:
     memberships = await QueueMembership.get_by_queue(fk_queue=queue.id)
     text = f"#### Room: {await queue.formatted_room_id()}"
 
+    _memberships: List[Dict[str:Any]] = []
+    
     if memberships:
         text += "\n#### Current memberships:"
-        _memberships: List[Dict[str:Any]] = []
         for membership in memberships:
             user: User = await User.get_by_id(membership.fk_user)
             text += f"\n\n- {await user.formatted_displayname()} -> state: {membership.state} || paused: {membership.paused}"
