@@ -231,6 +231,8 @@ components:
                 properties:
                   user_id:
                     type: string
+                  displayname:
+                    type: string
                   state:
                     type: string
                   paused:
@@ -250,6 +252,7 @@ components:
             description: "Queue description"
             memberships:
               - user_id: "@user_1:foo.com"
+                displayname: "Mario Valverde"
                 state: "online"
                 paused: true
                 creation_date: "2022-12-19 14:42:16.349065+00"
@@ -257,6 +260,7 @@ components:
                 pause_date: "2022-12-19 14:42:16.349065+00"
                 pause_reason: "LUNCH"
               - user_id: "@user_2:foo.com"
+                displayname: "Alejandro Herrera"
                 state: "offline"
                 paused: true
                 creation_date: "2022-12-19 14:42:16.349065+00"
@@ -264,6 +268,7 @@ components:
                 pause_date: "2022-12-19 14:42:16.349065+00"
                 pause_reason: "SLEEP"
               - user_id: "@user_3:foo.com"
+                displayname: "Dan Loporte"
                 state: "online"
                 paused: false
                 creation_date: "2022-12-19 14:42:16.349065+00"

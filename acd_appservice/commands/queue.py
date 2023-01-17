@@ -503,6 +503,7 @@ async def info(evt: CommandEvent, room_id: RoomID) -> Dict:
             _memberships.append(
                 {
                     "user_id": user.mxid,
+                    "displayname": await user.get_displayname(),
                     "state": membership.state,
                     "paused": membership.paused,
                     "creation_date": membership.creation_date.strftime("%Y-%m-%d %H:%M:%S%z")
