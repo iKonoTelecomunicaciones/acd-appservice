@@ -495,7 +495,7 @@ async def info(evt: CommandEvent, room_id: RoomID) -> Dict:
     text = f"#### Room: {await queue.formatted_room_id()}"
 
     _memberships: List[Dict[str:Any]] = []
-    
+
     if memberships:
         text += "\n#### Current memberships:"
         for membership in memberships:
