@@ -56,6 +56,12 @@ class Config(BaseBridgeConfig):
         copy("bridges.instagram.initial_state.enabled")
         copy_dict("bridges.instagram.initial_state.power_levels")
 
+        copy("bridges.facebook.mxid")
+        copy("bridges.facebook.provisioning.url_base")
+        copy("bridges.facebook.provisioning.shared_secret")
+        copy("bridges.facebook.initial_state.enabled")
+        copy_dict("bridges.facebook.initial_state.power_levels")
+
         copy("bridges.gupshup.mxid")
         copy("bridges.gupshup.provisioning.url_base")
         copy("bridges.gupshup.provisioning.shared_secret")

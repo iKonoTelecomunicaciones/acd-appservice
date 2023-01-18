@@ -260,7 +260,8 @@ class MatrixRoom:
         # Remove markdown and html tags if bridge not support formatted messages
         if self.bridge and not self.config[f"bridges.{self.bridge}.format_messages"]:
             new_body = Util.md_to_text(content.get("body"))
-            content["body"] = new_body if new_body else text
+            content["body"] = new_body or text
+            content["formatted_body"] = ""
 
         await self.main_intent.send_message(
             room_id=self.room_id,
