@@ -547,18 +547,19 @@ async def _list(evt: CommandEvent) -> Dict:
     """
     queues = await Queue.get_all()
 
+    text = "#### Registered queues"
+
     if not queues:
+        await evt.reply(text + "\nNo rooms available")
         return {
             "data": {"queues": []},
             "status": 200,
         }
 
-    text = "#### Registered queues"
     _queues = []
-    _text = ""
 
     for queue in queues:
-        _text += f"\n- {await queue.formatted_room_id()}" + (
+        text += f"\n- {await queue.formatted_room_id()}" + (
             f"-> `{queue.description}`" if queue.description else ""
         )
         _queues.append(
@@ -569,7 +570,7 @@ async def _list(evt: CommandEvent) -> Dict:
             }
         )
 
-    await evt.reply(text + (_text or "\nNo rooms available"))
+    await evt.reply(text)
 
     return {
         "data": {"queues": _queues},
