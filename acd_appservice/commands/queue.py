@@ -270,17 +270,13 @@ async def create(
         visibility = RoomDirectoryVisibility.PUBLIC
 
     try:
-        topic: str = f"""
-            {evt.config['acd.queues.topic']}
-            {f' -> {str(description).strip()}' if description else ''}
-        """
 
         room_id = await evt.intent.create_room(
             name=name,
             invitees=invitees
             if evt.config["acd.queues.user_add_method"] == "invite"
             else evt.config["acd.queues.invitees"],
-            topic=topic.strip(),
+            topic=description.strip(),
             visibility=visibility,
         )
     except Exception as e:
@@ -447,11 +443,7 @@ async def update(
         return json_response
 
     await queue.update_name(new_name=name)
-    await queue.update_description(
-        new_description=f"Queue -> {description.replace('Queue ->', '').strip()}"
-        if description
-        else ""
-    )
+    await queue.update_description(new_description=description.strip())
 
     detail = "The queue has been updated"
     json_response["status"] = 200
