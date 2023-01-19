@@ -9,6 +9,7 @@ from aiohttp import web
 from mautrix.types import RoomID, UserID
 
 from ...puppet import Puppet
+from ...queue import Queue
 from ...queue_membership import QueueMembership
 from ...user import User
 from ...util import Util
@@ -25,6 +26,8 @@ from ..error_responses import (
     FORBIDDEN_OPERATION,
     INVALID_ACTION,
     NOT_DATA,
+    QUEUE_DOESNOT_EXIST,
+    QUEUE_MEMBERSHIP_DOESNOT_EXIST,
     REQUIRED_VARIABLES,
     SERVER_ERROR,
     USER_DOESNOT_EXIST,
@@ -604,6 +607,93 @@ async def queue(request: web.Request) -> web.Response:
     )
 
     return web.json_response(**result)
+
+
+@routes.patch("/v1/cmd/queue/update_members")
+async def queue(request: web.Request) -> web.Response:
+    """
+    ---
+    summary:    Add or remove members from a queue
+    tags:
+        - Commands
+
+    requestBody:
+        required: false
+        description: A json with `room_id`and `members`
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        room_id:
+                            type: string
+                        members:
+                            type: array
+                            items:
+                                type: string
+                    example:
+                        room_id: "!foo:foo.com"
+                        members: ["@agent1:foo.com", "@agent2:foo.com", "@agent3:foo.com"]
+
+    responses:
+        '200':
+            $ref: '#/components/responses/QueueAddRemoveSuccessful'
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '422':
+            $ref: '#/components/responses/NotExist'
+    """
+    user = await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    data: Dict = await request.json()
+
+    queue: Queue = await Queue.get_by_room_id(data.get("room_id"))
+
+    if not queue:
+        return web.json_response(**QUEUE_DOESNOT_EXIST)
+
+    members: List = set(data.get("members"))
+
+    memberships = await QueueMembership.get_by_queue(queue.id)
+
+    if not memberships:
+        return web.json_response(**QUEUE_MEMBERSHIP_DOESNOT_EXIST)
+
+    old_members = set()
+
+    for membership in memberships:
+
+        member: User = await User.get_by_id(membership.fk_user)
+
+        if not member or member.is_admin:
+            continue
+
+        old_members.add(member.mxid)
+
+    members_to_add = members - old_members
+    members_to_remove = old_members - members
+
+    results = []
+
+    async def add_remove_members(action: str, _members: set):
+        for new_member in _members:
+            args = [action, new_member, queue.room_id]
+            result: Dict = await get_commands().handle(
+                sender=user,
+                command="queue",
+                args_list=args,
+                intent=user.az.intent,
+                is_management=True,
+            )
+            results.append(result)
+
+    await add_remove_members("add", members_to_add)
+    await add_remove_members("remove", members_to_remove)
+
+    return web.json_response(data={"resuls": results})
 
 
 @routes.patch("/v1/cmd/queue/add")

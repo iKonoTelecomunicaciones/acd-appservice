@@ -213,6 +213,39 @@ components:
           member: "@foo:foo.com"
           room_id: "!foo:foo.com"
 
+    QueueUpdateAddRemoveOk:
+      type: object
+      properties:
+        members:
+            type: array
+            items:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      detail:
+                        type: string
+                      member:
+                        type: string
+                      room_id:
+                        type: string
+
+                  status:
+                    type: integer
+      example:
+          result:
+            - data:
+                detail: "The member has been added from the queue"
+                member: "@foo:foo.com"
+                room_id: "!foo:foo.com"
+              status: 200
+            - data:
+                detail: "The member has been removed from the queue"
+                member: "@foo:foo.com"
+                room_id: "!foo:foo.com"
+              status: 200
+
     QueueInfoOk:
       properties:
         queue:
@@ -523,6 +556,13 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/QueueAddRemoveOk'
+
+    QueueAddRemoveSuccessful:
+      description: Members successfuly added|removed to a queue.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/QueueUpdateAddRemoveOk'
 
     QueueRemoveSuccessful:
       description: Member successfuly removed to a queue.
