@@ -665,12 +665,9 @@ async def queue(request: web.Request) -> web.Response:
     old_members = set()
 
     for membership in memberships:
-
         member: User = await User.get_by_id(membership.fk_user)
-
         if not member or member.is_admin:
             continue
-
         old_members.add(member.mxid)
 
     members_to_add = members - old_members
