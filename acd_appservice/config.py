@@ -92,7 +92,6 @@ class Config(BaseBridgeConfig):
         copy("acd.bulk_resolve.block_size")
         copy("acd.available_agents_room")
 
-        copy("acd.queues.topic")
         copy("acd.queues.user_add_method")
         copy("acd.queues.visibility")
         copy("acd.queues.invitees")

@@ -27,6 +27,17 @@ USER_DOESNOT_EXIST = {
     "status": 404,
 }
 
+QUEUE_DOESNOT_EXIST = {
+    "data": {"error": "Queue doesn't exist"},
+    "status": 404,
+}
+
+QUEUE_MEMBERSHIP_DOESNOT_EXIST = {
+    "data": {"error": "Queue membership doesn't exist"},
+    "status": 404,
+}
+
+
 TIMEOUT_ERROR = {
     "data": {
         "error": "The request took too long, please try again. If the error persists, contact technical support"

@@ -270,17 +270,13 @@ async def create(
         visibility = RoomDirectoryVisibility.PUBLIC
 
     try:
-        topic: str = f"""
-            {evt.config['acd.queues.topic']}
-            {f' -> {str(description).strip()}' if description else ''}
-        """
 
         room_id = await evt.intent.create_room(
             name=name,
             invitees=invitees
             if evt.config["acd.queues.user_add_method"] == "invite"
             else evt.config["acd.queues.invitees"],
-            topic=topic.strip(),
+            topic=description.strip(),
             visibility=visibility,
         )
     except Exception as e:
@@ -353,13 +349,8 @@ async def add_remove(
         return json_response
 
     detail = f"The member has been {'added' if action == 'add' else 'removed'} from the queue"
-    json_response["data"] = (
-        {
-            "detail": detail,
-            "member": member,
-            "room_id": queue.room_id,
-        },
-    )
+    json_response["data"] = {"detail": detail, "member": member, "room_id": queue.room_id}
+
     json_response["status"] = 200
 
     detail = detail.replace("queue", queue.room_id).replace("member", member)
@@ -452,9 +443,7 @@ async def update(
         return json_response
 
     await queue.update_name(new_name=name)
-    await queue.update_description(
-        new_description=f"Queue -> {description}" if description else ""
-    )
+    await queue.update_description(new_description=description.strip())
 
     detail = "The queue has been updated"
     json_response["status"] = 200
@@ -505,6 +494,7 @@ async def info(evt: CommandEvent, room_id: RoomID) -> Dict:
                 {
                     "user_id": user.mxid,
                     "displayname": await user.get_displayname(),
+                    "is_admin": user.is_admin,
                     "state": membership.state,
                     "paused": membership.paused,
                     "creation_date": membership.creation_date.strftime("%Y-%m-%d %H:%M:%S%z")
@@ -550,11 +540,18 @@ async def _list(evt: CommandEvent) -> Dict:
     queues = await Queue.get_all()
 
     text = "#### Registered queues"
+
+    if not queues:
+        await evt.reply(text + "\nNo rooms available")
+        return {
+            "data": {"queues": []},
+            "status": 200,
+        }
+
     _queues = []
-    _text = ""
 
     for queue in queues:
-        _text += f"\n- {await queue.formatted_room_id()}" + (
+        text += f"\n- {await queue.formatted_room_id()}" + (
             f"-> `{queue.description}`" if queue.description else ""
         )
         _queues.append(
@@ -565,7 +562,7 @@ async def _list(evt: CommandEvent) -> Dict:
             }
         )
 
-    await evt.reply(text + (_text or "\nNo rooms available"))
+    await evt.reply(text)
 
     return {
         "data": {"queues": _queues},

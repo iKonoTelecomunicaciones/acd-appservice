@@ -172,7 +172,6 @@ acd:
     remove_method: "leave"
 
     queues:
-        topic: "Queue"
         # Does the ACD have to `invite` users to the queue or do a forced `join`?
         # You can only force `join` users from your own server.
         # Possible fields:
