@@ -353,13 +353,8 @@ async def add_remove(
         return json_response
 
     detail = f"The member has been {'added' if action == 'add' else 'removed'} from the queue"
-    json_response["data"] = (
-        {
-            "detail": detail,
-            "member": member,
-            "room_id": queue.room_id,
-        },
-    )
+    json_response["data"] = {"detail": detail, "member": member, "room_id": queue.room_id}
+
     json_response["status"] = 200
 
     detail = detail.replace("queue", queue.room_id).replace("member", member)
@@ -453,7 +448,9 @@ async def update(
 
     await queue.update_name(new_name=name)
     await queue.update_description(
-        new_description=f"Queue -> {description}" if description else ""
+        new_description=f"Queue -> {description.replace('Queue ->', '').strip()}"
+        if description
+        else ""
     )
 
     detail = "The queue has been updated"
@@ -505,6 +502,7 @@ async def info(evt: CommandEvent, room_id: RoomID) -> Dict:
                 {
                     "user_id": user.mxid,
                     "displayname": await user.get_displayname(),
+                    "is_admin": user.is_admin,
                     "state": membership.state,
                     "paused": membership.paused,
                     "creation_date": membership.creation_date.strftime("%Y-%m-%d %H:%M:%S%z")
