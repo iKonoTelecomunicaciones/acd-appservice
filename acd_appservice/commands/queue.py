@@ -547,6 +547,12 @@ async def _list(evt: CommandEvent) -> Dict:
     """
     queues = await Queue.get_all()
 
+    if not queues:
+        return {
+            "data": {"queues": []},
+            "status": 200,
+        }
+
     text = "#### Registered queues"
     _queues = []
     _text = ""
