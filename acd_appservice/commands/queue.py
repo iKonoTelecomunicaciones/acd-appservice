@@ -55,7 +55,7 @@ action = CommandArg(
 
 @command_handler(
     management_only=False,
-    needs_admin=True,
+    needs_admin=False,
     name="queue",
     help_text=(
         "Create a queue. A queue is a matrix room containing agents that will be used "
