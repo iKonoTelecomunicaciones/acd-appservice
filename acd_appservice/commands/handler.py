@@ -188,7 +188,8 @@ class CommandHandler:
 
         if error is not None:
             evt.log.warning(error)
-            return await evt.reply(error)
+            await evt.reply(error)
+            return {"data": {"error": error}, "status": 500}
         return await self._handler(evt)
 
     @property
