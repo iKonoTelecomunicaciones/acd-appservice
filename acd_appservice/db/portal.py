@@ -28,7 +28,19 @@ class Portal:
     id: int | None
     room_id: RoomID
     selected_option: str | None
+    state: PortalState = None
     fk_puppet: int | None = None
+
+    @property
+    def _values(self):
+        return (
+            self.room_id,
+            self.selected_option,
+            self.state,
+            self.fk_puppet,
+        )
+
+    _columns = "room_id, selected_option, state, fk_puppet"
 
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> Portal:
@@ -47,7 +59,7 @@ class Portal:
         return cls(**row)
 
     @classmethod
-    async def insert_room(cls, room_id: RoomID, selected_option: str, fk_puppet: int) -> None:
+    async def insert(cls, room_id: RoomID, selected_option: str, fk_puppet: int) -> None:
         """It inserts a new row into the room table
 
         Parameters
@@ -60,7 +72,7 @@ class Portal:
             The puppet foregin key.
 
         """
-        q = "INSERT INTO portal (room_id, selected_option, fk_puppet) VALUES ($1, $2, $3)"
+        q = f"INSERT INTO portal ({cls._columns}) VALUES ($1, $2, $3, $4)"
         await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
 
     @classmethod
@@ -81,9 +93,7 @@ class Portal:
         await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
 
     @classmethod
-    async def update_room_by_room_id(
-        cls, room_id: RoomID, selected_option: str, fk_puppet: int
-    ) -> None:
+    async def update(cls, room_id: RoomID, selected_option: str, fk_puppet: int) -> None:
         """Update the selected_option column of the room table with the given room_id
 
         Parameters
@@ -118,7 +128,7 @@ class Portal:
         await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
 
     @classmethod
-    async def get_room_by_room_id(cls, room_id: RoomID) -> Portal | None:
+    async def get_by_room_id(cls, room_id: RoomID) -> Portal | None:
         """Get a room from the database by its room_id
 
         Parameters
@@ -131,7 +141,7 @@ class Portal:
             A Room object
 
         """
-        q = "SELECT id, room_id, selected_option, fk_puppet FROM portal WHERE room_id=$1"
+        q = f"SELECT id, {cls._columns} FROM portal WHERE room_id=$1"
         row = await cls.db.fetchrow(q, room_id)
         if not row:
             return None
@@ -220,7 +230,7 @@ class Portal:
         return [cls._from_row(room) for room in rows]
 
     @classmethod
-    async def get_puppet_rooms(cls, fk_puppet: int) -> Dict[Portal] | None:
+    async def get_rooms_by_puppet(cls, fk_puppet: int) -> Dict[Portal] | None:
         """It returns a dict of rooms
 
         Parameters
@@ -231,7 +241,7 @@ class Portal:
             A dict of Room objects
 
         """
-        q = "SELECT id, room_id, selected_option, fk_puppet FROM portal WHERE fk_puppet=$1"
+        q = f"SELECT id, {cls._columns} FROM portal WHERE fk_puppet=$1"
         rows = await cls.db.fetch(q, fk_puppet)
         if not rows:
             return None

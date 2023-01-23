@@ -1114,7 +1114,7 @@ class RoomManager:
 
         """
 
-        room = await Portal.get_room_by_room_id(room_id)
+        room = await Portal.get_by_room_id(room_id)
         cls.log.debug(f"Saving the room {room_id} for the puppet {puppet_pk}")
         if room:
             return await cls.update_room_in_db(
@@ -1173,11 +1173,11 @@ class RoomManager:
 
         """
         try:
-            room = await Portal.get_room_by_room_id(room_id)
+            room = await Portal.get_by_room_id(room_id)
             if room:
                 return False
             else:
-                await Portal.insert_room(room_id, selected_option, puppet_pk)
+                await Portal.insert(room_id, selected_option, puppet_pk)
         except Exception as e:
             cls.log.exception(e)
             return False
@@ -1278,13 +1278,13 @@ class RoomManager:
 
         """
         try:
-            room = await Portal.get_room_by_room_id(room_id)
+            room = await Portal.get_by_room_id(room_id)
             if room:
                 if not change_selected_option:
                     selected_option = room.selected_option
 
                 puppet_pk = room.fk_puppet if puppet_pk == room.fk_puppet else puppet_pk
-                await Portal.update_room_by_room_id(room_id, selected_option, puppet_pk)
+                await Portal.update(room_id, selected_option, puppet_pk)
             else:
                 cls.log.error(f"The room {room_id} does not exist so it will not be updated")
                 return False
@@ -1334,7 +1334,7 @@ class RoomManager:
 
         """
         try:
-            rooms = await Portal.get_puppet_rooms(puppet_pk)
+            rooms = await Portal.get_rooms_by_puppet(puppet_pk)
         except Exception as e:
             cls.log.exception(e)
             return
@@ -1405,7 +1405,7 @@ class RoomManager:
         room = None
 
         try:
-            room = await Portal.get_room_by_room_id(room_id=room_id)
+            room = await Portal.get_by_room_id(room_id=room_id)
         except Exception as e:
             cls.log.exception(e)
 
