@@ -261,34 +261,65 @@ async def link_phone(request: web.Request) -> web.Response:
     )
 
 
-@routes.post("/v1/instagram/login")
-async def instagram_login(request: web.Request) -> web.Response:
+@routes.patch("/v1/{bridge_meta}/login")
+async def metainc_login(request: web.Request) -> web.Response:
     """
-    Login to Instagram Bridge.
+    Login to Facebook or Instagram bridge.
     ---
-    summary:        Sign in with your instagram account to start receiving messages.
+    summary: Login to Facebook or Instagram bridge.
+
+    description: Sign in with your Instagram or Facebook account to start receiving messages.
+
     tags:
         - Bridge
+
+    parameters:
+      - name: bridge_meta
+        description: 'The Facebook or Instagram bridge'
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+            - instagram
+            - facebook
+
     requestBody:
-      required: false
-      description: A json with `user_email`
+      required: true
+      description: A JSON with `user_id` or `user_email` of the puppet bridge and `email`
+                   (or `username`) and `password` to sign in with Meta account.
       content:
         application/json:
           schema:
             type: object
             properties:
               user_email:
+                description: "The puppet user email"
                 type: string
+                format: email
               user_id:
+                description: "The puppet user id"
                 type: string
-              username:
-                type: string
-              password:
-                type: string
+              auth:
+                description: "The Meta account credentials"
+                type: object
+                properties:
+                    email:
+                        type: string
+                        format: email
+                    username:
+                        type: string
+                    password:
+                        type: string
+                        format: password
+                required:
+                    - password
             example:
-                user_email: nobody@somewhere.com
-                username: instagram_user
-                password: secretfoo
+                user_id: "@puppet:somewhere.com"
+                auth:
+                    email: "johndoe@email.com"
+                    username: johndoe123
+                    password: secretfoo
 
     responses:
         '400':
@@ -302,8 +333,10 @@ async def instagram_login(request: web.Request) -> web.Response:
         return web.json_response(**NOT_DATA)
 
     data = await request.json()
-    username = data.get("username")
-    password = data.get("password")
+    auth = data.get("auth")
+    email = auth.get("email")
+    username = auth.get("username")
+    password = auth.get("password")
 
     puppet = await _resolve_puppet_identifier(request=request)
 
@@ -311,40 +344,68 @@ async def instagram_login(request: web.Request) -> web.Response:
         session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
     )
 
-    response = await bridge_connector.instagram_login(
-        user_id=puppet.custom_mxid, username=username, password=password
+    response = await bridge_connector.metainc_login(
+        user_id=puppet.custom_mxid, email=email, username=username, password=password
     )
 
     return web.json_response(data=response)
 
 
-@routes.post("/v1/instagram/challenge")
-async def instagram_challenge(request: web.Request) -> web.Response:
+@routes.patch("/v1/{bridge_meta}/challenge")
+async def metainc_challenge(request: web.Request) -> web.Response:
     """
-    Solve the instagram login challenge.
+    Solve the Facebook or Instagram login challenge.
     ---
-    summary:        By sending the code that instagram sent you, you can finish the login process.
+    summary: Solve the Facebook or Instagram login challenge.
+
+    description: By sending the code that Facebook or Instagram sent you, you can finish the login process.
 
     tags:
         - Bridge
 
+    parameters:
+      - name: bridge_meta
+        description: 'The Facebook or Instagram bridge'
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+            - instagram
+            - facebook
+
     requestBody:
-      required: false
-      description: A json with `user_email`
+      required: true
+      description: A JSON with `user_id` or `user_email` of the puppet bridge, `email`
+                   and `code` to finish the login process.
       content:
         application/json:
           schema:
             type: object
             properties:
                 user_email:
+                    description: "The puppet user email"
                     type: string
+                    format: email
                 user_id:
+                    description: "The puppet user id"
                     type: string
-                code:
-                    type: string
+                challenge:
+                    description: "The login data for two factor authentication (2FA)"
+                    type: object
+                    properties:
+                        email:
+                            type: string
+                            format: email
+                        code:
+                            type: string
+                    required:
+                        - code
             example:
-                user_email: nobody@somewhere.com
-                code: 54862
+                user_id: "@puppet:somewhere.com"
+                challenge:
+                    email: "johndoe@email.com"
+                    code: 54862
 
     responses:
         '400':
@@ -358,7 +419,9 @@ async def instagram_challenge(request: web.Request) -> web.Response:
         return web.json_response(**NOT_DATA)
 
     data = await request.json()
-    code = data.get("code")
+    challenge = data.get("challenge")
+    email = challenge.get("email")
+    code = challenge.get("code")
 
     puppet = await _resolve_puppet_identifier(request=request)
 
@@ -366,7 +429,9 @@ async def instagram_challenge(request: web.Request) -> web.Response:
         session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
     )
 
-    response = await bridge_connector.instagram_challenge(user_id=puppet.custom_mxid, code=code)
+    response = await bridge_connector.metainc_challenge(
+        user_id=puppet.custom_mxid, email=email, code=code
+    )
 
     return web.json_response(data=response)
 

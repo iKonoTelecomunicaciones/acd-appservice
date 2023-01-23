@@ -240,13 +240,18 @@ class ProvisionBridge(Base):
 
         return data
 
-    async def instagram_login(self, user_id: UserID, username: str, password: str) -> Dict:
-        """It sends a POST request to the `/v1/api/login` endpoint with the user's Instagram username and password
+    async def metainc_login(
+        self, user_id: UserID, email: str, username: str, password: str
+    ) -> Dict:
+        """It sends a POST request to the `/v1/api/login` endpoint with the user's
+        Instagram username (or Facebook email) and password
 
         Parameters
         ----------
         user_id : UserID
-            The user ID of the user who is logging in.
+            The user ID of the puppet user who is logging in.
+        email : str
+            The email of the account you want to login to.
         username : str
             The username of the account you want to login to.
         password : str
@@ -262,6 +267,7 @@ class ProvisionBridge(Base):
                 url=f"{self.url_base}{self.endpoints['login']}",
                 headers=self.headers,
                 json={
+                    "email": email,
                     "username": username,
                     "password": password,
                 },
@@ -277,13 +283,15 @@ class ProvisionBridge(Base):
 
         return data
 
-    async def instagram_challenge(self, user_id: UserID, code: str) -> Dict:
+    async def metainc_challenge(self, user_id: UserID, email: str, code: str) -> Dict:
         """It sends a POST request to the Instagram API with the user's ID and the code they entered
 
         Parameters
         ----------
         user_id : UserID
-            The user ID of the account you're trying to log into.
+            The user ID of the puppet account you're trying to log into.
+        email: str
+            The email of the account you're trying to log into
         code : str
             The code you received from the challenge.
 
@@ -292,14 +300,13 @@ class ProvisionBridge(Base):
             A dictionary with the key "error" and the value of the error message.
 
         """
+        path = "checkpoint" if self.bridge == "instagram" else "login_2fa"
 
         try:
             response = await self.session.post(
-                url=f"{self.url_base}{self.endpoints['checkpoint']}",
+                url=f"{self.url_base}{self.endpoints[path]}",
                 headers=self.headers,
-                json={
-                    "code": code,
-                },
+                json={"email": email, "code": code},
                 params={"user_id": user_id},
             )
         except Exception as e:

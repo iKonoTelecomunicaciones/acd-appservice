@@ -1,8 +1,8 @@
 from .bridge import (
     gupshup_register,
-    instagram_challenge,
-    instagram_login,
     link_phone,
+    metainc_challenge,
+    metainc_login,
     read_check,
     send_message,
     ws_link_phone,
