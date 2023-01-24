@@ -340,6 +340,10 @@ async def metainc_login(request: web.Request) -> web.Response:
 
     puppet = await _resolve_puppet_identifier(request=request)
 
+    bridge_meta = request.match_info.get("bridge_meta", "")
+    if bridge_meta != puppet.bridge:
+        return web.json_response(**BRIDGE_INVALID)
+
     bridge_connector = ProvisionBridge(
         session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
     )
@@ -424,6 +428,10 @@ async def metainc_challenge(request: web.Request) -> web.Response:
     code = challenge.get("code")
 
     puppet = await _resolve_puppet_identifier(request=request)
+
+    bridge_meta = request.match_info.get("bridge_meta", "")
+    if bridge_meta != puppet.bridge:
+        return web.json_response(**BRIDGE_INVALID)
 
     bridge_connector = ProvisionBridge(
         session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
