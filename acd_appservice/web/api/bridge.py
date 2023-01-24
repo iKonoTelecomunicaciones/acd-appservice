@@ -305,21 +305,30 @@ async def metainc_login(request: web.Request) -> web.Response:
                 type: object
                 properties:
                     email:
+                        description: "To login with Facebook account"
                         type: string
                         format: email
                     username:
+                        description: "To login with Instagram account"
                         type: string
                     password:
                         type: string
                         format: password
                 required:
                     - password
-            example:
-                user_id: "@puppet:somewhere.com"
-                auth:
-                    email: "johndoe@email.com"
-                    username: johndoe123
-                    password: secretfoo
+          examples:
+            Instagram:
+                value:
+                    user_id: "@puppet:somewhere.com"
+                    auth:
+                        username: johndoe123
+                        password: secretfoo
+            Facebook:
+                value:
+                    user_id: "@puppet:somewhere.com"
+                    auth:
+                        email: "johndoe@email.com"
+                        password: secretfoo
 
     responses:
         '400':
@@ -399,17 +408,25 @@ async def metainc_challenge(request: web.Request) -> web.Response:
                     type: object
                     properties:
                         email:
+                            description: "To login with Facebook account"
                             type: string
                             format: email
                         code:
                             type: string
                     required:
                         - code
-            example:
-                user_id: "@puppet:somewhere.com"
-                challenge:
-                    email: "johndoe@email.com"
-                    code: 54862
+          examples:
+            Instagram:
+                value:
+                    user_id: "@puppet:somewhere.com"
+                    challenge:
+                        code: 54862
+            Facebook:
+                value:
+                    user_id: "@puppet:somewhere.com"
+                    challenge:
+                        email: "johndoe@email.com"
+                        code: 54862
 
     responses:
         '400':
