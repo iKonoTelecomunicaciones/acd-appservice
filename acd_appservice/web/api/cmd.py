@@ -25,6 +25,7 @@ from ..error_responses import (
     BRIDGE_INVALID,
     FORBIDDEN_OPERATION,
     INVALID_ACTION,
+    INVALID_USER_ID,
     NOT_DATA,
     QUEUE_DOESNOT_EXIST,
     QUEUE_MEMBERSHIP_DOESNOT_EXIST,
@@ -1153,7 +1154,11 @@ async def get_memberships(request: web.Request) -> web.Response:
 
     if not user_requester.is_admin:
         return web.json_response(**FORBIDDEN_OPERATION)
-    elif user_requester.is_admin and user_id and Util.is_user_id(user_id):
+
+    if user_id and not Util.is_user_id(user_id):
+        return web.json_response(**INVALID_USER_ID)
+
+    if user_id:
         target_user = await User.get_by_mxid(user_id, create=False)
         if not target_user:
             return web.json_response(**USER_DOESNOT_EXIST)
@@ -1163,9 +1168,9 @@ async def get_memberships(request: web.Request) -> web.Response:
         return web.json_response(data={"detail": "Agent has no queue memberships"}, status=404)
 
     user_memberships = []
+    dt_format = "%Y-%m-%d %H:%M:%S%z"
     for membership in memberships:
         user: User = await User.get_by_id(membership.get("id"))
-        dt_format = "%Y-%m-%d %H:%M:%S%z"
         state_date = membership.get("state_date")
         pause_date = membership.get("pause_date")
         user_memberships.append(

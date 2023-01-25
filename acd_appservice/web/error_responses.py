@@ -17,6 +17,11 @@ INVALID_PHONE = {
     "status": 400,
 }
 
+INVALID_USER_ID = {
+    "data": {"error": "Not a valid user ID"},
+    "status": 400,
+}
+
 MESSAGE_TYPE_NOT_SUPPORTED = {
     "data": {"error": "This type of message is not supported"},
     "status": 400,

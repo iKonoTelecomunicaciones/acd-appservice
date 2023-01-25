@@ -143,8 +143,8 @@ class QueueMembership:
 
         q = """
             SELECT
-                \"user\".id,
-                \"user\".mxid as user_id,
+                "user".id,
+                "user".mxid as user_id,
                 queue.room_id,
                 queue.name,
                 queue.description,
@@ -155,11 +155,11 @@ class QueueMembership:
                 queue_membership.paused
             FROM queue
             JOIN queue_membership ON queue_membership.fk_queue = queue.id
-            JOIN \"user\" ON \"user\".id = queue_membership.fk_user
+            JOIN "user" ON "user".id = queue_membership.fk_user
         """
 
         if fk_user:
-            q += """WHERE queue_membership.fk_user = $1"""
+            q += "WHERE queue_membership.fk_user = $1"
             row = await cls.db.fetch(q, fk_user)
         else:
             row = await cls.db.fetch(q)
