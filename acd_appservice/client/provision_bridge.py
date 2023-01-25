@@ -243,7 +243,7 @@ class ProvisionBridge(Base):
     async def metainc_login(
         self, user_id: UserID, email: str, username: str, password: str
     ) -> Dict:
-        """It sends a POST request to the `/v1/api/login` endpoint with the user's
+        """It sends a POST request to the login endpoint with the user's
         Instagram username (or Facebook email) and password
 
         Parameters
