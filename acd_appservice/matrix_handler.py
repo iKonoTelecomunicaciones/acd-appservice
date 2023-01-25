@@ -440,10 +440,7 @@ class MatrixHandler:
                         puppet.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)
                     )
 
-            try:
-                puppet.BIC_ROOMS.remove(room_id)
-            except KeyError:
-                pass
+            puppet.BIC_ROOMS.discard(room_id)
 
     async def handle_notice(
         self, room_id: RoomID, sender: UserID, message: MessageEventContent, event_id: EventID
