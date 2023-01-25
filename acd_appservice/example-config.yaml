@@ -229,7 +229,6 @@ bridges:
                 m.room.avatar: 0
                 m.room.name: 0
                 m.room.topic: 0
-
     # Settings for provisioning API
     provisioning:
         url_base: "http://mautrix-whatsapp:29318/_matrix/provision"
@@ -267,8 +266,6 @@ bridges:
                 m.room.avatar: 0
                 m.room.name: 0
                 m.room.topic: 0
-
-
     # Settings for provisioning API
     provisioning:
         url_base: "http://mautrix-instagram:29320/_matrix/provision"
@@ -278,7 +275,6 @@ bridges:
             checkpoint: "/v1/api/login/checkpoint"
             logout: "/v1/api/logout"
             ping: "/v1/api/whoami"
-
 
   facebook:
     # Facebook UserID
@@ -307,8 +303,6 @@ bridges:
                 m.room.avatar: 0
                 m.room.name: 0
                 m.room.topic: 0
-
-
     # Settings for provisioning API
     provisioning:
         url_base: "http://mautrix-facebook:29319/public"
@@ -346,8 +340,6 @@ bridges:
                 m.room.avatar: 0
                 m.room.name: 0
                 m.room.topic: 0
-
-
     # Settings for provisioning API
     provisioning:
         url_base: "http://gupshup:29324/_matrix/provision"
