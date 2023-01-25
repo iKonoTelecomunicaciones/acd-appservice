@@ -59,7 +59,9 @@ class Portal:
         return cls(**row)
 
     @classmethod
-    async def insert(cls, room_id: RoomID, selected_option: str, fk_puppet: int) -> None:
+    async def insert(
+        cls, room_id: RoomID, selected_option: str, fk_puppet: int, state: str = "INIT"
+    ) -> None:
         """It inserts a new row into the room table
 
         Parameters
@@ -73,7 +75,7 @@ class Portal:
 
         """
         q = f"INSERT INTO portal ({cls._columns}) VALUES ($1, $2, $3, $4)"
-        await cls.db.execute(q, *(room_id, selected_option, fk_puppet))
+        await cls.db.execute(q, *(room_id, selected_option, state, fk_puppet))
 
     @classmethod
     async def insert_pending_room(
