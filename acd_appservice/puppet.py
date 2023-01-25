@@ -37,6 +37,9 @@ class Puppet(DBPuppet, BasePuppet):
 
     CONTROL_ROOMS: List[RoomID] = []
 
+    # ROOMS INITIALIZED BY PM
+    BIC_ROOMS: set = set()
+
     # Sala de control del puppet
     control_room_id: RoomID
 
