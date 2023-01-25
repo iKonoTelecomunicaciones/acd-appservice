@@ -127,7 +127,7 @@ class QueueMembership:
         return [cls._from_row(queue_membership) for queue_membership in rows]
 
     @classmethod
-    async def get_user_memberships(cls, fk_user: int) -> List[dict] | None:
+    async def get_user_memberships(cls, fk_user: int = None) -> List[dict] | None:
         """Get all user memberships
 
         Parameters
@@ -142,13 +142,28 @@ class QueueMembership:
         """
 
         q = """
-            SELECT queue.room_id, queue.name, queue.description, queue_membership.state_date,
-            queue_membership.pause_date, queue_membership.pause_reason,
-            queue_membership.state, queue_membership.paused
-            FROM queue JOIN queue_membership ON queue_membership.fk_queue = queue.id
-            WHERE queue_membership.fk_user = $1
+            SELECT
+                \"user\".id,
+                \"user\".mxid as user_id,
+                queue.room_id,
+                queue.name,
+                queue.description,
+                queue_membership.state_date,
+                queue_membership.pause_date,
+                queue_membership.pause_reason,
+                queue_membership.state,
+                queue_membership.paused
+            FROM queue
+            JOIN queue_membership ON queue_membership.fk_queue = queue.id
+            JOIN \"user\" ON \"user\".id = queue_membership.fk_user
         """
-        row = await cls.db.fetch(q, fk_user)
+
+        if fk_user:
+            q += """WHERE queue_membership.fk_user = $1"""
+            row = await cls.db.fetch(q, fk_user)
+        else:
+            row = await cls.db.fetch(q)
+
         if not row:
             return None
         return row

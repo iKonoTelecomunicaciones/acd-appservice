@@ -491,6 +491,10 @@ components:
           items:
             type: object
             properties:
+              user_id:
+                type: string
+              is_admin:
+                type: boolean
               room_id:
                 type: string
               room_name:
@@ -509,7 +513,9 @@ components:
                 type: boolean
       example:
         data:
-          - room_id: "!foo:localhost"
+          - user_id: "@user:example.com"
+            is_admin: true
+            room_id: "!foo:example.com"
             room_name: "Fake room"
             description: "This is a fake room"
             state_date: "2022-12-13 21:05:41"
@@ -517,7 +523,9 @@ components:
             pause_reason: "LUNCH"
             state: online
             paused: true
-          - room_id: "!fakeroomid:localhost"
+          - user_id: "@anotheruser:example.com"
+            is_admin: false
+            room_id: "!fakeroomid:example.com"
             room_name: "Second fake room"
             description: "This is the second fake room"
             state_date: "2022-12-13 21:10:41"
