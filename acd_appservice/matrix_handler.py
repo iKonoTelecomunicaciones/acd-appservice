@@ -445,6 +445,20 @@ class MatrixHandler:
         if Puppet.get_id_from_mxid(user_id):
             if not await puppet.room_manager.initialize_room(room_id=room_id):
                 self.log.debug(f"Room {room_id} initialization has failed")
+                return
+
+            # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
+            if not room_id in puppet.BIC_ROOMS:
+                # invite menubot to show menu
+                # this is done with create_task because with no official API set-pl can take
+                # a while so several invite attempts are made without blocking
+                menubot_id = await puppet.room_manager.get_menubot_id()
+                if menubot_id:
+                    asyncio.create_task(
+                        puppet.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)
+                    )
+
+            puppet.BIC_ROOMS.discard(room_id)
 
     async def handle_notice(
         self, room_id: RoomID, sender: UserID, message: MessageEventContent, event_id: EventID

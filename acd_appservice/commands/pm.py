@@ -119,6 +119,9 @@ async def pm(evt: CommandEvent) -> Dict:
     customer_room_id = data.get("room_id")
     agent_id = None
     if customer_room_id:
+        # TODO WORKAROUND FOR NOT LINKING TO THE MENU IN A BIC
+        puppet.BIC_ROOMS.add(customer_room_id)
+
         agent_id = await puppet.agent_manager.get_room_agent(room_id=customer_room_id)
 
         # Checking if the agent is already in the room, if it is, it returns a message to the frontend.
