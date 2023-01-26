@@ -48,7 +48,7 @@ action = CommandArg(
     name="action",
     help_text="Action to be taken in the queue",
     is_required=True,
-    example="`create` | `add` | `remove` | `info` | `list` | `update` | `delete`",
+    example="`create` | `add` | `remove` | `info` | `list` | `update` | `delete` | `append`",
     sub_args=[[name, member], [invitees, queue], description],
 )
 
@@ -231,6 +231,8 @@ async def queue(evt: CommandEvent) -> Dict:
 
     elif action == "list":
         return await _list(evt=evt)
+    elif action == "append":
+        return await _append(evt=evt)
 
 
 async def create(
@@ -566,5 +568,45 @@ async def _list(evt: CommandEvent) -> Dict:
 
     return {
         "data": {"queues": _queues},
+        "status": 200,
+    }
+
+
+async def _append(evt: CommandEvent) -> Dict:
+    """This function will add a queue to the database and synchronize it with the room
+
+    Parameters
+    ----------
+    evt : CommandEvent
+        The event object that triggered the command.
+
+    Returns
+    -------
+        A dictionary with a status and data.
+
+    """
+
+    try:
+        queue_id = evt.args_list[1]
+    except IndexError:
+        queue_id = evt.room_id
+
+    queue = await Queue.get_by_room_id(room_id=queue_id, create=False)
+    if queue:
+        deatil = "The queue alredy exist"
+        await evt.reply(text=deatil)
+        return {
+            "data": {"detail": deatil},
+            "status": 422,
+        }
+
+    queue = await Queue.get_by_room_id(room_id=queue_id)
+    await queue.sync()
+
+    deatil = "The queue has been added and synchronized"
+    await evt.reply(text=deatil)
+
+    return {
+        "data": {"detail": deatil},
         "status": 200,
     }
