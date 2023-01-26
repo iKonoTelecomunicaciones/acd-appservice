@@ -46,7 +46,17 @@ queue = CommandArg(
 
 action = CommandArg(
     name="action",
-    help_text="Action to be taken in the queue",
+    help_text=(
+        "Action to be taken in the queue.\n\n"
+        "\t`create`: Creates a new queue.\n\n"
+        "\t`add`: Adds a member to a specific queue.\n\n"
+        "\t`remove`: Removes a member from a specific queue.\n\n"
+        "\t`info`: Shows detailed information about a specific queue.\n\n"
+        "\t`list`: Shows a list of all existing queues.\n\n"
+        "\t`update`: Updates the information of a specific queue.\n\n"
+        "\t`delete`: Deletes a specific queue.\n\n"
+        "\t`set`: Sets a specific room as a queue.\n\n"
+    ),
     is_required=True,
     example="`create` | `add` | `remove` | `info` | `list` | `update` | `delete` | `set`",
     sub_args=[[name, member], [invitees, queue], description],
@@ -593,7 +603,7 @@ async def _set(evt: CommandEvent) -> Dict:
 
     queue = await Queue.get_by_room_id(room_id=queue_id, create=False)
     if queue:
-        detail = "The queue alredy exist"
+        detail = "The queue already exists"
         await evt.reply(text=detail)
         return {
             "data": {"detail": detail},
