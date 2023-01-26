@@ -593,20 +593,20 @@ async def _append(evt: CommandEvent) -> Dict:
 
     queue = await Queue.get_by_room_id(room_id=queue_id, create=False)
     if queue:
-        deatil = "The queue alredy exist"
-        await evt.reply(text=deatil)
+        detail = "The queue alredy exist"
+        await evt.reply(text=detail)
         return {
-            "data": {"detail": deatil},
+            "data": {"detail": detail},
             "status": 422,
         }
 
     queue = await Queue.get_by_room_id(room_id=queue_id)
     await queue.sync()
 
-    deatil = "The queue has been added and synchronized"
-    await evt.reply(text=deatil)
+    detail = "The queue has been added and synchronized"
+    await evt.reply(text=detail)
 
     return {
-        "data": {"detail": deatil},
+        "data": {"detail": detail},
         "status": 200,
     }
