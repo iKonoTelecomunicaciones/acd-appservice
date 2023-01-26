@@ -51,7 +51,7 @@ class AgentManager:
 
     async def process_distribution(
         self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
-    ) -> None:
+    ) -> Dict:
         """Start distribution process if no online agents in the room.
 
         If the room is locked, return. If the room is not locked, lock it.
@@ -73,9 +73,19 @@ class AgentManager:
 
         """
 
+        json_response: Dict = {
+            "data": {
+                "detail": "",
+                "room_id": customer_room_id,
+            },
+            "status": 0,
+        }
+
         if RoomManager.is_room_locked(room_id=customer_room_id):
             self.log.debug(f"Room [{customer_room_id}] LOCKED")
-            return
+            json_response["data"]["detail"] = f"Room [{customer_room_id}] LOCKED"
+            json_response["status"] = 409
+            return json_response
 
         # Send an informative message if the conversation started no within the business hour
         if await self.business_hours.is_not_business_hour():
@@ -86,7 +96,9 @@ class AgentManager:
                 selected_option=campaign_room_id,
                 puppet_pk=self.puppet_pk,
             )
-            return
+            json_response["data"]["detail"] = f"Message out of business hours"
+            json_response["status"] = 409
+            return json_response
 
         self.log.debug(f"INIT Process distribution for [{customer_room_id}]")
 
@@ -97,7 +109,9 @@ class AgentManager:
 
         if online_agents_in_room == "unlock":
             RoomManager.unlock_room(room_id=customer_room_id)
-            return
+            json_response["data"]["detail"] = f"No joined members in the room [{customer_room_id}]"
+            json_response["status"] = 409
+            return json_response
 
         if not online_agents_in_room:
             # if a campaign is provided, the loop is done over the agents of that campaign.
@@ -108,17 +122,19 @@ class AgentManager:
             )
 
             # a task is created to not block asyncio loop
-            create_task(
-                self.loop_agents(
-                    customer_room_id=customer_room_id,
-                    campaign_room_id=target_room_id,
-                    agent_id=self.CURRENT_AGENT.get(target_room_id),
-                    joined_message=joined_message,
-                )
+            return await self.loop_agents(
+                customer_room_id=customer_room_id,
+                campaign_room_id=target_room_id,
+                agent_id=self.CURRENT_AGENT.get(target_room_id),
+                joined_message=joined_message,
             )
+
         else:
-            self.log.debug(f"This room [{customer_room_id}] have online agents")
+            self.log.debug(f"This room [{customer_room_id}] has online agents")
             RoomManager.unlock_room(room_id=customer_room_id)
+            json_response["data"]["detail"] = f"This room [{customer_room_id}] has online agents"
+            json_response["status"] = 409
+            return json_response
 
     async def process_pending_rooms(self) -> None:
         """Task to run every X second looking for pending rooms
@@ -203,7 +219,7 @@ class AgentManager:
         agent_id: UserID,
         joined_message: str | None = None,
         transfer_author: Optional[UserID] = None,
-    ) -> None:
+    ) -> Dict:
         """It loops through a list of agents and tries to invite them to a room
 
         Parameters
@@ -219,6 +235,15 @@ class AgentManager:
         transfer_author: UserID
             if it is a transfer, then it will be the author of this
         """
+
+        json_response: Dict = {
+            "data": {
+                "detail": "",
+                "room_id": customer_room_id,
+            },
+            "status": 0,
+        }
+
         total_agents = await self.get_agent_count(room_id=campaign_room_id)
         online_agents = 0
 
@@ -243,15 +268,17 @@ class AgentManager:
                         f"[{campaign_room_id}] but it has no agents"
                     )
                     await self.intent.send_notice(room_id=customer_room_id, text=msg)
+                    json_response["data"]["detail"] = msg
                 else:
                     await self.show_no_agents_message(
                         customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
                     )
+                    json_response["data"]["detail"] = "There are no agents in queue room"
 
+                json_response["status"] = 404
                 RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
                 break
 
-            # Usar get_room_members porque regresa solo una lista de UserIDs
             joined_members = await self.intent.get_room_members(room_id=customer_room_id)
             if not joined_members:
                 self.log.debug(f"No joined members in the room [{customer_room_id}]")
@@ -312,6 +339,8 @@ class AgentManager:
                         joined_message=joined_message,
                         transfer_author=transfer_author,
                     )
+                    json_response.get("data")["detail"] = "Chat distribute successfully"
+                    json_response["status"] = 200
                     break
 
             agent_count += 1
@@ -326,13 +355,16 @@ class AgentManager:
 
                 if transfer_author:
                     msg = self.config["acd.no_agents_for_transfer"]
+                    json_response["status"] = 404
                     await self.intent.send_notice(room_id=customer_room_id, text=msg)
                 else:
+                    msg = (
+                        "The chat could not be distributed, however, it was saved in pending rooms"
+                    )
+                    json_response["status"] = 202
                     await self.show_no_agents_message(
                         customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
                     )
-
-                if not transfer_author:
                     self.log.debug(f"Saving room [{customer_room_id}] in pending list")
                     await RoomManager.save_pending_room(
                         room_id=customer_room_id,
@@ -341,9 +373,12 @@ class AgentManager:
                     )
 
                 RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
+                json_response["data"]["detail"] = msg
                 break
 
             self.log.debug(f"Agent count: [{agent_count}] online_agents: [{online_agents}]")
+
+        return json_response
 
     async def get_next_agent(self, agent_id: UserID, room_id: RoomID) -> UserID:
         """It takes a room ID and an agent ID, and returns the next agent in the room

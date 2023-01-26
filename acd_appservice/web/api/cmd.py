@@ -1006,11 +1006,11 @@ async def acd(request: web.Request) -> web.Response:
 
     args = [customer_room_id, campaign_room_id, joined_message]
 
-    await get_commands().handle(
+    response = await get_commands().handle(
         sender=user, command="acd", args_list=args, intent=puppet.intent, is_management=False
     )
 
-    return web.json_response()
+    return web.json_response(**response)
 
 
 @routes.post("/v1/cmd/member")

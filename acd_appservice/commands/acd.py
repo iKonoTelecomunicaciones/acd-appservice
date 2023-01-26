@@ -63,7 +63,7 @@ async def acd(evt: CommandEvent) -> str:
         return
 
     try:
-        await puppet.agent_manager.process_distribution(
+        return await puppet.agent_manager.process_distribution(
             customer_room_id=customer_room_id,
             campaign_room_id=campaign_room_id,
             joined_message=joined_message,
