@@ -87,7 +87,7 @@ class MatrixRoom:
         return info.get("name")
 
     async def get_room_topic(self) -> str:
-        """It returns the name of the room
+        """It returns the topic of the room
 
         Returns
         -------

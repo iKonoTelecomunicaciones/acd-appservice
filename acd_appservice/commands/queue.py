@@ -48,7 +48,7 @@ action = CommandArg(
     name="action",
     help_text="Action to be taken in the queue",
     is_required=True,
-    example="`create` | `add` | `remove` | `info` | `list` | `update` | `delete` | `append`",
+    example="`create` | `add` | `remove` | `info` | `list` | `update` | `delete` | `set`",
     sub_args=[[name, member], [invitees, queue], description],
 )
 
@@ -231,8 +231,8 @@ async def queue(evt: CommandEvent) -> Dict:
 
     elif action == "list":
         return await _list(evt=evt)
-    elif action == "append":
-        return await _append(evt=evt)
+    elif action == "set":
+        return await _set(evt=evt)
 
 
 async def create(
@@ -572,7 +572,7 @@ async def _list(evt: CommandEvent) -> Dict:
     }
 
 
-async def _append(evt: CommandEvent) -> Dict:
+async def _set(evt: CommandEvent) -> Dict:
     """This function will add a queue to the database and synchronize it with the room
 
     Parameters
