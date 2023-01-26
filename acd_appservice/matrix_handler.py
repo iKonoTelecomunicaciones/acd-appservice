@@ -34,6 +34,7 @@ from acd_appservice import acd_program
 from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
 from .message import Message
+from .portal import Portal
 from .puppet import Puppet
 from .queue import Queue
 from .queue_membership import QueueMembership, QueueMembershipState
@@ -635,11 +636,13 @@ class MatrixHandler:
         user_prefix_guest = re.search(self.config[f"acd.username_regex_guest"], sender)
         if await puppet.room_manager.is_customer_room(room_id=room_id) or user_prefix_guest:
 
-            room_name = await puppet.room_manager.get_room_name(room_id=room_id)
+            portal: Portal = await Portal.get_by_room_id(room_id=room_id)
+
+            room_name = await puppet.room_manager.get_room_name(room_id=portal.room_id)
             if not room_name:
-                await puppet.room_manager.put_name_customer_room(room_id=room_id)
+                await puppet.room_manager.put_name_customer_room(room_id=portal.room_id)
                 self.log.info(
-                    f"User {room_id} has changed the name of the room {puppet.intent.mxid}"
+                    f"User {portal.room_id} has changed the name of the room {puppet.intent.mxid}"
                 )
 
             if puppet.intent.mxid == sender:
@@ -647,24 +650,24 @@ class MatrixHandler:
                 return
 
             # the user entered the offline agent menu and selected some option
-            if puppet.room_manager.in_offline_menu(room_id):
-                puppet.room_manager.pull_from_offline_menu(room_id)
+            if puppet.room_manager.in_offline_menu(portal.room_id):
+                puppet.room_manager.pull_from_offline_menu(portal.room_id)
                 valid_option = await puppet.agent_manager.process_offline_selection(
-                    room_id=room_id, msg=message.body
+                    room_id=portal.room_id, msg=message.body
                 )
                 if valid_option:
                     return
 
-            room_agent = await puppet.agent_manager.get_room_agent(room_id=room_id)
+            room_agent = await puppet.agent_manager.get_room_agent(room_id=portal.room_id)
             if room_agent:
                 # if message is not from agents, bots or ourselves, it is from the customer
                 await puppet.agent_manager.signaling.set_chat_status(
-                    room_id=room_id, status=Signaling.PENDING, agent=room_agent
+                    room_id=portal.room_id, status=Signaling.PENDING, agent=room_agent
                 )
 
                 if await puppet.agent_manager.business_hours.is_not_business_hour():
                     await puppet.agent_manager.business_hours.send_business_hours_message(
-                        room_id=room_id
+                        room_id=portal.room_id
                     )
                     return
 
@@ -681,43 +684,45 @@ class MatrixHandler:
 
                 if is_agent_offline:
                     await puppet.agent_manager.process_offline_agent(
-                        room_id=room_id,
+                        room_id=portal.room_id,
                         room_agent=room_agent,
                     )
                 return
 
-            if await puppet.room_manager.has_menubot(room_id=room_id):
+            if await puppet.room_manager.has_menubot(room_id=portal.room_id):
                 self.log.debug("Menu bot is here...")
                 return
 
-            if await puppet.room_manager.is_group_room(room_id=room_id):
-                self.log.debug(f"{room_id} is a group room, ignoring message")
+            if await puppet.room_manager.is_group_room(room_id=portal.room_id):
+                self.log.debug(f"{portal.room_id} is a group room, ignoring message")
                 return
 
             # Send an informative message if the conversation started no within the business hour
             if await puppet.agent_manager.business_hours.is_not_business_hour():
                 await puppet.agent_manager.business_hours.send_business_hours_message(
-                    room_id=room_id
+                    room_id=portal.room_id
                 )
                 if not self.config["utils.business_hours.show_menu"]:
                     return
 
-            if not puppet.room_manager.is_room_locked(room_id=room_id):
+            if not puppet.room_manager.is_room_locked(room_id=portal.room_id):
 
                 await puppet.agent_manager.signaling.set_chat_status(
-                    room_id=room_id, status=Signaling.OPEN
+                    room_id=portal.room_id, status=Signaling.OPEN
                 )
 
                 if self.config["acd.supervisors_to_invite.invite"]:
-                    asyncio.create_task(puppet.room_manager.invite_supervisors(room_id=room_id))
+                    asyncio.create_task(
+                        puppet.room_manager.invite_supervisors(room_id=portal.room_id)
+                    )
 
                 # clear campaign in the ik.chat.campaign_selection state event
                 await puppet.agent_manager.signaling.set_selected_campaign(
-                    room_id=room_id, campaign_room_id=None
+                    room_id=portal.room_id, campaign_room_id=None
                 )
 
             if puppet.destination:
-                if await self.process_destination(customer_room_id=room_id):
+                if await self.process_destination(portal=portal.room_id):
                     return
 
             # invite menubot to show menu
@@ -726,10 +731,12 @@ class MatrixHandler:
             menubot_id = await puppet.room_manager.get_menubot_id()
             if menubot_id:
                 asyncio.create_task(
-                    puppet.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)
+                    puppet.room_manager.invite_menu_bot(
+                        room_id=portal.room_id, menubot_id=menubot_id
+                    )
                 )
 
-    async def process_destination(self, customer_room_id: RoomID) -> bool:
+    async def process_destination(self, portal: Portal) -> bool:
         """Distribute the chat using puppet destination, destination can be a user_id or room_id
 
         Parameters
@@ -742,7 +749,7 @@ class MatrixHandler:
             A boolean value.
 
         """
-        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=portal.room_id)
 
         if not puppet:
             return False
@@ -752,10 +759,10 @@ class MatrixHandler:
         # If destination exists, distribute chat using it.
         # Destination can be user_id or room_id.
         if not Util.is_room_id(puppet.destination) and not Util.is_user_id(puppet.destination):
-            self.log.debug(f"Wrong destination for room id {customer_room_id}")
+            self.log.debug(f"Wrong destination for room id {portal.room_id}")
             return False
 
-        args = [customer_room_id, puppet.destination]
+        args = [portal.room_id, puppet.destination]
         command = "acd" if Util.is_room_id(puppet.destination) else "transfer_user"
         await self.commands.handle(
             sender=user, command=command, args_list=args, is_management=False, intent=puppet.intent
