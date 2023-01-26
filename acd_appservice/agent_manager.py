@@ -410,7 +410,7 @@ class AgentManager:
         queue : Queue
             Queue room
         joined_message : str
-            When the agent enters the room, send this messahe
+            When the agent enters the room, send this message
         transfer_author : UserID
             Who sends the transfer
 
