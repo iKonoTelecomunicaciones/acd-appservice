@@ -86,6 +86,22 @@ class MatrixRoom:
 
         return info.get("name")
 
+    async def get_room_topic(self) -> str:
+        """It returns the name of the room
+
+        Returns
+        -------
+            The topic of the room.
+
+        """
+
+        info = await self.get_info()
+
+        if not info:
+            return
+
+        return info.get("topic")
+
     async def remove_member(self, member: UserID, reason: str = None):
         """If the config value for "acd.remove_method" is "leave", then leave the user,
         otherwise kick the user
