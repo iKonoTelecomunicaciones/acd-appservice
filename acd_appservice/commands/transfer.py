@@ -2,7 +2,9 @@ import asyncio
 
 from mautrix.types import PresenceState
 
+from ..portal import Portal
 from ..puppet import Puppet
+from ..queue import Queue
 from ..queue_membership import QueueMembershipState
 from .handler import CommandArg, CommandEvent, command_handler
 
@@ -93,11 +95,13 @@ async def transfer(evt: CommandEvent) -> str:
         agent_id = await puppet.agent_manager.get_room_agent(room_id=customer_room_id)
         transfer_author = agent_id
 
+    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id)
+    queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
     # Creating a task that will be executed in the background.
     asyncio.create_task(
         puppet.agent_manager.loop_agents(
-            customer_room_id=customer_room_id,
-            campaign_room_id=campaign_room_id,
+            portal=portal,
+            queue=queue,
             agent_id=puppet.agent_manager.CURRENT_AGENT.get(campaign_room_id),
             transfer_author=transfer_author or evt.sender.mxid,
         )
@@ -138,7 +142,8 @@ async def transfer_user(evt: CommandEvent) -> str:
         await evt.reply(detail)
         return {"data": {"error": detail}, "status": 422}
 
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id)
+    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=portal.room_id)
 
     try:
         force = evt.args_list[2]
@@ -149,27 +154,27 @@ async def transfer_user(evt: CommandEvent) -> str:
         return
 
     # Checking if the room is locked, if it is, it returns.
-    if puppet.room_manager.is_room_locked(room_id=customer_room_id, transfer=True):
-        evt.log.debug(f"Room: {customer_room_id} LOCKED by Transfer user")
+    if puppet.room_manager.is_room_locked(room_id=portal.room_id, transfer=True):
+        evt.log.debug(f"Room: {portal.room_id} LOCKED by Transfer user")
         return
 
-    evt.log.debug(f"INIT TRANSFER for {customer_room_id} to AGENT {agent_id}")
+    evt.log.debug(f"INIT TRANSFER for {portal.room_id} to AGENT {agent_id}")
 
     # Locking the room so that no other transfer can be made to the room.
-    puppet.room_manager.lock_room(room_id=customer_room_id, transfer=True)
+    puppet.room_manager.lock_room(room_id=portal.room_id, transfer=True)
     is_agent = puppet.agent_manager.is_agent(agent_id=evt.sender.mxid)
 
     # Checking if the sender is an agent, if not, it gets the agent id from the room.
     if is_agent:
         transfer_author = evt.sender.mxid
     else:
-        _agent_id = await puppet.agent_manager.get_room_agent(room_id=customer_room_id)
+        _agent_id = await puppet.agent_manager.get_room_agent(room_id=portal.room_id)
         transfer_author = _agent_id
 
     # Checking if the agent is already in the room, if so, it sends a message to the room.
     if transfer_author == agent_id:
-        msg = f"The {agent_id} agent is already in the room {customer_room_id}"
-        await evt.intent.send_notice(room_id=customer_room_id, text=msg)
+        msg = f"The {agent_id} agent is already in the room {portal.room_id}"
+        await evt.intent.send_notice(room_id=portal.room_id, text=msg)
     else:
         # Switch between presence and agent operation login using config parameter
         # to verify if agent is available to be assigned to the chat
@@ -194,12 +199,12 @@ async def transfer_user(evt: CommandEvent) -> str:
 
         if is_agent_online or force == "yes":
             await puppet.agent_manager.force_invite_agent(
-                room_id=customer_room_id,
+                portal=portal,
                 agent_id=agent_id,
                 transfer_author=transfer_author or evt.sender.mxid,
             )
         else:
             msg = f"Agent {agent_id} is not available"
-            await evt.intent.send_notice(room_id=customer_room_id, text=msg)
+            await evt.intent.send_notice(room_id=portal.room_id, text=msg)
 
-    puppet.room_manager.unlock_room(room_id=customer_room_id, transfer=True)
+    puppet.room_manager.unlock_room(room_id=portal.room_id, transfer=True)

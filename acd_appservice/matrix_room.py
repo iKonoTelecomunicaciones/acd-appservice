@@ -24,6 +24,7 @@ class MatrixRoom:
 
     by_room_id: Dict[RoomID, "MatrixRoom"] = {}
     creator: UserID = None
+    main_intent: IntentAPI = None
 
     def __init__(self, room_id: RoomID, intent: IntentAPI = None):
         self.log = self.log.getChild(room_id)

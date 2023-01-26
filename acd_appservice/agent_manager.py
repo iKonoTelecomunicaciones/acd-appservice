@@ -13,6 +13,7 @@ from mautrix.util.logging import TraceLogger
 
 from .commands.handler import CommandProcessor
 from .config import Config
+from .portal import Portal
 from .queue import Queue
 from .queue_membership import QueueMembership, QueueMembershipState
 from .room_manager import RoomManager
@@ -50,75 +51,67 @@ class AgentManager:
         self.commands = CommandProcessor(config=self.config)
 
     async def process_distribution(
-        self, customer_room_id: RoomID, campaign_room_id: RoomID = None, joined_message: str = None
+        self, portal: Portal, queue: Queue = None, joined_message: str = None
     ) -> None:
-        """Start distribution process if no online agents in the room.
-
-        If the room is locked, return. If the room is not locked, lock it.
-        If there are no online agents in the room, create a task to loop over the agents in the campaign room.
-        If there are online agents in the room, unlock the room
+        """If there are no online agents in the room, then loop over the agents in the campaign room
+        (or control room if no campaign is provided) and invite them to the customer room
 
         Parameters
         ----------
-        customer_room_id : RoomID
-            RoomID
-        campaign_room_id : RoomID
-            RoomID = None
+        portal : Portal
+            The room where the customer is.
+        queue : Queue
+            The queue that the customer is being distributed to.
         joined_message : str
-            str = None
-
-        Returns
-        -------
-            The return value is a list of tuples.
+            The message that will be sent to the customer when the agent joins the room.
 
         """
-
-        if RoomManager.is_room_locked(room_id=customer_room_id):
-            self.log.debug(f"Room [{customer_room_id}] LOCKED")
+        if RoomManager.is_room_locked(room_id=portal.room_id):
+            self.log.debug(f"Room [{portal.room_id}] LOCKED")
             return
 
         # Send an informative message if the conversation started no within the business hour
         if await self.business_hours.is_not_business_hour():
-            await self.business_hours.send_business_hours_message(room_id=customer_room_id)
-            self.log.debug(f"Saving room {customer_room_id} in pending list")
+            await self.business_hours.send_business_hours_message(room_id=portal.room_id)
+            self.log.debug(f"Saving room {portal.room_id} in pending list")
             await RoomManager.save_pending_room(
-                room_id=customer_room_id,
-                selected_option=campaign_room_id,
+                room_id=portal.room_id,
+                selected_option=queue.room_id,
                 puppet_pk=self.puppet_pk,
             )
             return
 
-        self.log.debug(f"INIT Process distribution for [{customer_room_id}]")
+        self.log.debug(f"INIT Process distribution for [{portal.room_id}]")
 
         # lock the room
-        RoomManager.lock_room(room_id=customer_room_id)
+        RoomManager.lock_room(room_id=portal.room_id)
 
-        online_agents_in_room = await self.is_a_room_with_online_agents(room_id=customer_room_id)
+        online_agents_in_room = await self.is_a_room_with_online_agents(room_id=portal.room_id)
 
         if online_agents_in_room == "unlock":
-            RoomManager.unlock_room(room_id=customer_room_id)
+            RoomManager.unlock_room(room_id=portal.room_id)
             return
 
         if not online_agents_in_room:
             # if a campaign is provided, the loop is done over the agents of that campaign.
             # if campaign is None, the loop is done over the control room
 
-            target_room_id = (
-                campaign_room_id if campaign_room_id else self.config["acd.available_agents_room"]
-            )
+            target_room_id = queue.room_id if queue else self.config["acd.available_agents_room"]
+
+            queue: Queue = await Queue.get_by_room_id(room_id=target_room_id)
 
             # a task is created to not block asyncio loop
             create_task(
                 self.loop_agents(
-                    customer_room_id=customer_room_id,
-                    campaign_room_id=target_room_id,
-                    agent_id=self.CURRENT_AGENT.get(target_room_id),
+                    portal=portal,
+                    queue=queue,
+                    agent_id=self.CURRENT_AGENT.get(queue.room_id),
                     joined_message=joined_message,
                 )
             )
         else:
-            self.log.debug(f"This room [{customer_room_id}] have online agents")
-            RoomManager.unlock_room(room_id=customer_room_id)
+            self.log.debug(f"This room [{portal.room_id}] have online agents")
+            RoomManager.unlock_room(room_id=portal.room_id)
 
     async def process_pending_rooms(self) -> None:
         """Task to run every X second looking for pending rooms
@@ -147,28 +140,30 @@ class AgentManager:
                 for customer_room_id in customer_room_ids:
                     # Se actualiza el puppet dada la sala que se tenga en pending_rooms :)
                     # que bug tan maluco le digo
-                    result = await self.get_room_agent(room_id=customer_room_id)
+                    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id)
+                    result = await self.get_room_agent(room_id=portal.room_id)
                     if result:
                         self.log.debug(
-                            f"Room {customer_room_id} has already an agent, removing from pending rooms..."
+                            f"Room {portal.room_id} has already an agent, removing from pending rooms..."
                         )
                         # self.bot.store.remove_pending_room(room_id)
-                        await RoomManager.remove_pending_room(room_id=customer_room_id)
+                        await RoomManager.remove_pending_room(room_id=portal.room_id)
 
                     else:
                         # campaign_room_id = self.bot.store.get_campaign_of_pending_room(room_id)
                         campaign_room_id = await RoomManager.get_campaign_of_pending_room(
-                            customer_room_id
+                            portal.room_id
                         )
+                        queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
 
                         self.log.debug(
                             "Searching for online agent in campaign "
-                            f"{campaign_room_id if campaign_room_id else '👻'} "
-                            f"to room: {customer_room_id}"
+                            f"{queue.room_id if queue else '👻'} "
+                            f"to room: {portal.room_id}"
                         )
 
-                        if campaign_room_id != last_campaign_room_id:
-                            online_agent = await self.get_online_agent_in_room(campaign_room_id)
+                        if queue.room_id != last_campaign_room_id:
+                            online_agent = await self.get_online_agent_in_room(queue.room_id)
                         else:
                             self.log.debug(
                                 f"Same campaign, continue with other room waiting "
@@ -179,17 +174,17 @@ class AgentManager:
                         if online_agent:
                             self.log.debug(
                                 f"The agent {online_agent} is online to join "
-                                f"room: {customer_room_id}"
+                                f"room: {portal.room_id}"
                             )
                             try:
-                                await self.process_distribution(customer_room_id, campaign_room_id)
+                                await self.process_distribution(portal, queue)
                             except Exception as e:
                                 self.log.exception(e)
 
                         else:
                             self.log.debug("There's no online agents yet")
 
-                        last_campaign_room_id = campaign_room_id
+                        last_campaign_room_id = queue.room_id
 
             else:
                 self.log.debug("There's no pending rooms")
@@ -198,73 +193,76 @@ class AgentManager:
 
     async def loop_agents(
         self,
-        customer_room_id: RoomID,
-        campaign_room_id: RoomID,
+        portal: Portal,
+        queue: Queue,
         agent_id: UserID,
         joined_message: str | None = None,
         transfer_author: Optional[UserID] = None,
     ) -> None:
-        """It loops through a list of agents and tries to invite them to a room
+        """It loops through all the agents in a queue, and if it finds one that is online,
+        it invites them to the room
 
         Parameters
         ----------
-        customer_room_id : RoomID
-            The room ID of the customer.
-        campaign_room_id : RoomID
-            The room ID of the campaign room.
+        portal : Portal
+            Portal = Portal
+        queue : Queue
+            Queue
         agent_id : UserID
-            The ID of the agent to start the loop with.
-        joined_message : str
-            Agent join message to be displayed in the room
-        transfer_author: UserID
-            if it is a transfer, then it will be the author of this
+            The ID of the agent to invite to the room.
+        joined_message : str | None
+            str | None = None
+        transfer_author : Optional[UserID]
+            The user who initiated the transfer.
+
         """
-        total_agents = await self.get_agent_count(room_id=campaign_room_id)
+
+        total_agents = await self.get_agent_count(room_id=queue.room_id)
         online_agents = 0
 
         # Number of agents iterated
         agent_count = 0
 
         self.log.debug(
-            f"New agent loop in [{campaign_room_id}] starting with [{agent_id if agent_id else '👻'}]"
+            f"New agent loop in [{queue.room_id}] starting with [{agent_id if agent_id else '👻'}]"
         )
 
         transfer = True if transfer_author else False
 
         # Trying to find an agent to invite to the room.
         while True:
-            agent_id = await self.get_next_agent(agent_id, campaign_room_id)
+            agent_id = await self.get_next_agent(agent_id, queue.room_id)
             if not agent_id:
-                self.log.info(f"NO AGENTS IN ROOM [{campaign_room_id}]")
+                self.log.info(f"NO AGENTS IN ROOM [{queue.room_id}]")
 
                 if transfer_author:
                     msg = (
-                        f"The room [{customer_room_id}] tried to be transferred to "
-                        f"[{campaign_room_id}] but it has no agents"
+                        f"The room [{portal.room_id}] tried to be transferred to "
+                        f"[{queue.room_id}] but it has no agents"
                     )
-                    await self.intent.send_notice(room_id=customer_room_id, text=msg)
+                    await self.intent.send_notice(room_id=portal.room_id, text=msg)
                 else:
                     await self.show_no_agents_message(
-                        customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
+                        customer_room_id=portal.room_id, campaign_room_id=queue.room_id
                     )
 
-                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
+                RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
                 break
 
             # Usar get_room_members porque regresa solo una lista de UserIDs
-            joined_members = await self.intent.get_room_members(room_id=customer_room_id)
+            joined_members = await self.intent.get_room_members(room_id=portal.room_id)
             if not joined_members:
-                self.log.debug(f"No joined members in the room [{customer_room_id}]")
-                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
+                self.log.debug(f"No joined members in the room [{portal.room_id}]")
+                RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
                 break
 
             if len(joined_members) == 1 and joined_members[0] == self.intent.mxid:
                 # customer leaves when trying to connect an agent
                 self.log.info("NOBODY IN THIS ROOM, I'M LEAVING")
                 await self.intent.leave_room(
-                    room_id=customer_room_id, reason="NOBODY IN THIS ROOM, I'M LEAVING"
+                    room_id=portal.room_id, reason="NOBODY IN THIS ROOM, I'M LEAVING"
                 )
-                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
+                RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
                 break
 
             if agent_id != transfer_author:
@@ -278,7 +276,7 @@ class AgentManager:
                     )
                 else:
                     presence_response = await self.get_agent_status(
-                        queue_room_id=campaign_room_id, agent_id=agent_id
+                        queue_room_id=queue.room_id, agent_id=agent_id
                     )
 
                     if (
@@ -286,7 +284,7 @@ class AgentManager:
                         and presence_response.get("presence") == QueueMembershipState.Online.value
                     ):
                         paused_response = await self.get_agent_pause_status(
-                            queue_room_id=campaign_room_id, agent_id=agent_id
+                            queue_room_id=queue.room_id, agent_id=agent_id
                         )
                         is_agent_available_for_assignment = not paused_response.get("paused")
                         self.log.debug(
@@ -306,9 +304,9 @@ class AgentManager:
                     online_agents += 1
 
                     await self.force_invite_agent(
-                        room_id=customer_room_id,
                         agent_id=agent_id,
-                        campaign_room_id=campaign_room_id,
+                        portal=portal,
+                        queue=queue,
                         joined_message=joined_message,
                         transfer_author=transfer_author,
                     )
@@ -326,21 +324,21 @@ class AgentManager:
 
                 if transfer_author:
                     msg = self.config["acd.no_agents_for_transfer"]
-                    await self.intent.send_notice(room_id=customer_room_id, text=msg)
+                    await self.intent.send_notice(room_id=portal.room_id, text=msg)
                 else:
                     await self.show_no_agents_message(
-                        customer_room_id=customer_room_id, campaign_room_id=campaign_room_id
+                        customer_room_id=portal.room_id, campaign_room_id=queue.room_id
                     )
 
                 if not transfer_author:
-                    self.log.debug(f"Saving room [{customer_room_id}] in pending list")
+                    self.log.debug(f"Saving room [{portal.room_id}] in pending list")
                     await RoomManager.save_pending_room(
-                        room_id=customer_room_id,
-                        selected_option=campaign_room_id,
+                        room_id=portal.room_id,
+                        selected_option=queue.room_id,
                         puppet_pk=self.puppet_pk,
                     )
 
-                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
+                RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
                 break
 
             self.log.debug(f"Agent count: [{agent_count}] online_agents: [{online_agents}]")
@@ -395,26 +393,26 @@ class AgentManager:
 
     async def force_invite_agent(
         self,
-        room_id: RoomID,
+        portal: Portal,
         agent_id: UserID,
-        campaign_room_id: RoomID = None,
+        queue: Queue = None,
         joined_message: str = None,
         transfer_author: UserID = None,
     ) -> None:
-        """It creates a new Future object, adds it to a dictionary, and then spawns a task that waits for the Future to be set
+        """Given the portal and the queue have the agent forcibly join the portal.
 
         Parameters
         ----------
-        room_id : RoomID
-            RoomID
+        portal : Portal
+            Customer room
         agent_id : UserID
-            UserID
-        campaign_room_id : RoomID
-            RoomID
+            The user ID of the agent to invite
+        queue : Queue
+            Queue room
         joined_message : str
-            Agent join message to be displayed in the room
-        transfer_author: UserID
-            if it is a transfer, then it will be the author of this
+            When the agent enters the room, send this message
+        transfer_author : UserID
+            Who sends the transfer
 
         """
         # get the current event loop
@@ -426,7 +424,7 @@ class AgentManager:
         transfer = True if transfer_author else False
 
         future_key = RoomManager.get_future_key(
-            room_id=room_id, agent_id=agent_id, transfer=transfer
+            room_id=portal.room_id, agent_id=agent_id, transfer=transfer
         )
         # mantain an array of futures for every invite to get notification of joins
         self.PENDING_INVITES[future_key] = pending_invite
@@ -434,46 +432,46 @@ class AgentManager:
 
         create_task(
             self.check_agent_joined(
-                customer_room_id=room_id,
+                portal=portal,
+                queue=queue,
                 pending_invite=pending_invite,
                 agent_id=agent_id,
-                campaign_room_id=campaign_room_id,
                 joined_message=joined_message,
                 transfer_author=transfer_author,
             )
         )
 
-        await self.force_join_agent(room_id, agent_id)
+        await self.force_join_agent(portal.room_id, agent_id)
 
     async def check_agent_joined(
         self,
-        customer_room_id: RoomID,
+        portal: Portal,
         pending_invite: Future,
         agent_id: UserID,
-        campaign_room_id: RoomID = None,
+        queue: Queue = None,
         joined_message: str = None,
         transfer_author: Optional[UserID] = None,
     ) -> None:
-        """Start a loop of x seconds that is interrupted when the agent accepts the invite.
-
-        It checks if an agent has joined a room within a certain amount of time.
-        If the agent has joined, it sets the agent as the current agent for the room,
-        and if the agent has not joined, it kicks the agent and invites the next agent in the list
+        """It checks if the agent has joined the room, if not,
+        it kicks the agent out of the room and tries to invite the next agent
 
         Parameters
         ----------
-        customer_room_id : RoomID
-            The room ID of the customer.
+        portal : Portal
+            The room where the customer is waiting for an agent to join.
         pending_invite : Future
             Future object that is resolved when the agent accepts the invite.
         agent_id : UserID
             The user ID of the agent to invite.
-        campaign_room_id : RoomID
-            The room ID of the campaign that the customer has selected.
+        queue : Queue
+            The queue object that the agent is being invited to.
         joined_message : str
-            The message to send to the customer when the agent joins the room.
+            This is the message that will be sent to the customer when the agent joins the room.
+        transfer_author : Optional[UserID]
+            The user who transferred the chat.
 
         """
+
         loop = get_running_loop()
         end_time = loop.time() + float(self.config["acd.agent_invite_timeout"])
 
@@ -493,50 +491,50 @@ class AgentManager:
             await sleep(1)
 
         agent_joined = pending_invite.result()
-        future_key = RoomManager.get_future_key(customer_room_id, agent_id, transfer)
+        future_key = RoomManager.get_future_key(portal.room_id, agent_id, transfer)
         if future_key in self.PENDING_INVITES:
             del self.PENDING_INVITES[future_key]
         self.log.debug(f"futures left: {self.PENDING_INVITES}")
 
         self.signaling.intent = self.intent
         if agent_joined:
-            if campaign_room_id:
-                self.CURRENT_AGENT[campaign_room_id] = agent_id
+            if queue.room_id:
+                self.CURRENT_AGENT[queue.room_id] = agent_id
                 self.log.debug(f"[{agent_id}] ACCEPTED the invite. CHAT ASSIGNED.")
                 self.log.debug(f"NEW CURRENT_AGENT : [{self.CURRENT_AGENT}]")
-                self.log.debug(f"======> [{customer_room_id}] selected [{campaign_room_id}]")
+                self.log.debug(f"======> [{portal.room_id}] selected [{queue.room_id}]")
 
             # Setting the selected menu option for the customer.
-            self.log.debug(f"Saving room [{customer_room_id}]")
+            self.log.debug(f"Saving room [{portal.room_id}]")
             await RoomManager.save_room(
-                room_id=customer_room_id,
-                selected_option=campaign_room_id,
+                room_id=portal.room_id,
+                selected_option=queue.room_id,
                 puppet_pk=self.puppet_pk,
-                change_selected_option=True if campaign_room_id else False,
+                change_selected_option=True if queue else False,
             )
-            self.log.debug(f"Removing room [{customer_room_id}] from pending list")
+            self.log.debug(f"Removing room [{portal.room_id}] from pending list")
             await RoomManager.remove_pending_room(
-                room_id=customer_room_id,
+                room_id=portal.room_id,
             )
 
             agent_displayname = await self.intent.get_displayname(user_id=agent_id)
             detail = ""
             if transfer_author:
-                detail = f"{transfer_author} transferred {customer_room_id} to {agent_id}"
+                detail = f"{transfer_author} transferred {portal.room_id} to {agent_id}"
 
             # transfer_author can be a supervisor or admin when an open chat is transferred.
             if transfer_author is not None and self.is_agent(transfer_author):
                 await self.room_manager.remove_user_from_room(
-                    room_id=customer_room_id,
+                    room_id=portal.room_id,
                     user_id=transfer_author,
                     reason=self.config["acd.transfer_message"].format(agentname=agent_displayname),
                 )
             else:
                 # kick menu bot
-                self.log.debug(f"Kicking the menubot out of the room {customer_room_id}")
+                self.log.debug(f"Kicking the menubot out of the room {portal.room_id}")
                 try:
                     await self.room_manager.menubot_leaves(
-                        room_id=customer_room_id,
+                        room_id=portal.room_id,
                         reason=detail if detail else f"agent [{agent_id}] accepted invite",
                     )
                 except Exception as e:
@@ -553,9 +551,7 @@ class AgentManager:
                     )
 
                 if msg:
-                    await self.room_manager.send_formatted_message(
-                        room_id=customer_room_id, msg=msg
-                    )
+                    await self.room_manager.send_formatted_message(room_id=portal.room_id, msg=msg)
 
             except Exception as e:
                 self.log.exception(e)
@@ -563,60 +559,58 @@ class AgentManager:
             # set chat status to pending when the agent is asigned to the chat
             if transfer_author:
                 await self.signaling.set_chat_status(
-                    room_id=customer_room_id,
+                    room_id=portal.room_id,
                     status=Signaling.PENDING,
-                    campaign_room_id=campaign_room_id,
+                    campaign_room_id=queue.room_id,
                     agent=agent_id,
                     keep_agent=False,
                 )
             else:
                 await self.signaling.set_chat_status(
-                    room_id=customer_room_id,
+                    room_id=portal.room_id,
                     status=Signaling.PENDING,
-                    campaign_room_id=campaign_room_id,
+                    campaign_room_id=queue.room_id,
                     agent=agent_id,
                 )
 
             # send campaign selection event
             await self.signaling.set_selected_campaign(
-                room_id=customer_room_id, campaign_room_id=campaign_room_id
+                room_id=portal.room_id, campaign_room_id=queue.room_id
             )
 
             # send agent chat connect
             if transfer_author:
                 await self.signaling.set_chat_connect_agent(
-                    room_id=customer_room_id,
+                    room_id=portal.room_id,
                     agent=agent_id,
-                    source="transfer_user" if not campaign_room_id else "transfer_room",
-                    campaign_room_id=campaign_room_id,
+                    source="transfer_user" if not queue else "transfer_room",
+                    campaign_room_id=queue.room_id,
                     previous_agent=transfer_author if self.is_agent(transfer_author) else None,
                 )
             else:
                 await self.signaling.set_chat_connect_agent(
-                    room_id=customer_room_id,
+                    room_id=portal.room_id,
                     agent=agent_id,
                     source="auto",
-                    campaign_room_id=campaign_room_id,
+                    campaign_room_id=queue.room_id,
                 )
 
-            RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
+            RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
 
-        elif await self.get_room_agent(room_id=customer_room_id) and transfer_author is None:
-            RoomManager.unlock_room(room_id=customer_room_id)
-            self.log.debug(
-                f"Unlocking room {customer_room_id}..., agent {agent_id} already in room"
-            )
+        elif await self.get_room_agent(room_id=portal.room_id) and transfer_author is None:
+            RoomManager.unlock_room(room_id=portal.room_id)
+            self.log.debug(f"Unlocking room {portal.room_id}..., agent {agent_id} already in room")
         else:
             self.log.debug(f"[{agent_id}] DID NOT ACCEPT the invite. Inviting next agent ...")
             await self.intent.kick_user(
-                room_id=customer_room_id,
+                room_id=portal.room_id,
                 user_id=agent_id,
                 reason="Tiempo de espera cumplido para unirse a la conversación",
             )
-            if campaign_room_id:
+            if queue:
                 await self.loop_agents(
-                    customer_room_id=customer_room_id,
-                    campaign_room_id=campaign_room_id,
+                    portal=portal,
+                    queue=queue,
                     agent_id=agent_id,
                     joined_message=joined_message,
                     transfer_author=transfer_author,
@@ -624,8 +618,8 @@ class AgentManager:
             else:
                 # if it is a direct transfer, unlock the room
                 msg = f"{agent_displayname} no aceptó la transferencia."
-                await self.intent.send_notice(room_id=customer_room_id, text=msg)
-                RoomManager.unlock_room(room_id=customer_room_id, transfer=transfer)
+                await self.intent.send_notice(room_id=portal.room_id, text=msg)
+                RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
 
     async def force_join_agent(
         self, room_id: RoomID, agent_id: UserID, room_alias: RoomAlias = None
