@@ -1,4 +1,6 @@
+from ..portal import Portal
 from ..puppet import Puppet
+from ..queue import Queue
 from .handler import CommandArg, CommandEvent, command_handler
 
 campaign_room_id = CommandArg(
@@ -58,14 +60,16 @@ async def acd(evt: CommandEvent) -> str:
         joined_message = ""
 
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id)
+    queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
 
     if not puppet:
         return
 
     try:
         return await puppet.agent_manager.process_distribution(
-            customer_room_id=customer_room_id,
-            campaign_room_id=campaign_room_id,
+            portal=portal,
+            queue=queue,
             joined_message=joined_message,
         )
     except Exception as e:
