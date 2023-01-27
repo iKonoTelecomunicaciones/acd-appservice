@@ -532,7 +532,7 @@ class AgentManager:
 
         self.signaling.intent = self.intent
         if agent_joined:
-            if queue.room_id:
+            if queue and queue.room_id:
                 self.CURRENT_AGENT[queue.room_id] = agent_id
                 self.log.debug(f"[{agent_id}] ACCEPTED the invite. CHAT ASSIGNED.")
                 self.log.debug(f"NEW CURRENT_AGENT : [{self.CURRENT_AGENT}]")
@@ -542,7 +542,7 @@ class AgentManager:
             self.log.debug(f"Saving room [{portal.room_id}]")
             await RoomManager.save_room(
                 room_id=portal.room_id,
-                selected_option=queue.room_id,
+                selected_option=queue.room_id if queue else None,
                 puppet_pk=self.puppet_pk,
                 change_selected_option=True if queue else False,
             )
@@ -595,7 +595,7 @@ class AgentManager:
                 await self.signaling.set_chat_status(
                     room_id=portal.room_id,
                     status=Signaling.PENDING,
-                    campaign_room_id=queue.room_id,
+                    campaign_room_id=queue.room_id if queue else None,
                     agent=agent_id,
                     keep_agent=False,
                 )
@@ -603,13 +603,13 @@ class AgentManager:
                 await self.signaling.set_chat_status(
                     room_id=portal.room_id,
                     status=Signaling.PENDING,
-                    campaign_room_id=queue.room_id,
+                    campaign_room_id=queue.room_id if queue else None,
                     agent=agent_id,
                 )
 
             # send campaign selection event
             await self.signaling.set_selected_campaign(
-                room_id=portal.room_id, campaign_room_id=queue.room_id
+                room_id=portal.room_id, campaign_room_id=queue.room_id if queue else None
             )
 
             # send agent chat connect
@@ -618,7 +618,7 @@ class AgentManager:
                     room_id=portal.room_id,
                     agent=agent_id,
                     source="transfer_user" if not queue else "transfer_room",
-                    campaign_room_id=queue.room_id,
+                    campaign_room_id=queue.room_id if queue else None,
                     previous_agent=transfer_author if self.is_agent(transfer_author) else None,
                 )
             else:
@@ -626,7 +626,7 @@ class AgentManager:
                     room_id=portal.room_id,
                     agent=agent_id,
                     source="auto",
-                    campaign_room_id=queue.room_id,
+                    campaign_room_id=queue.room_id if queue else None,
                 )
 
             RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
