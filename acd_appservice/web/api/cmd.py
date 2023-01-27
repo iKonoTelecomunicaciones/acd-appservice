@@ -1149,43 +1149,36 @@ async def get_memberships(request: web.Request) -> web.Response:
     query_params = request.query
     user_id: str = query_params.get("user_id")
 
-    user_requester = await _resolve_user_identifier(request=request)
-    target_user: User = user_requester
-
-    if not user_requester.is_admin:
-        return web.json_response(**FORBIDDEN_OPERATION)
-
     if user_id and not Util.is_user_id(user_id):
         return web.json_response(**INVALID_USER_ID)
+
+    user_requester = await _resolve_user_identifier(request=request)
+
+    # Only admins are allowed to get all agents memberships.
+    # Normal users can only get their own memberships.
+    if not user_requester.is_admin and (not user_id or user_id != user_requester.mxid):
+        return web.json_response(**FORBIDDEN_OPERATION)
 
     if user_id:
         target_user = await User.get_by_mxid(user_id, create=False)
         if not target_user:
             return web.json_response(**USER_DOESNOT_EXIST)
-
-    memberships = await QueueMembership.get_user_memberships(target_user.id if user_id else None)
-    if not memberships:
-        return web.json_response(data={"detail": "Agent has no queue memberships"}, status=404)
-
-    user_memberships = []
-    dt_format = "%Y-%m-%d %H:%M:%S%z"
-    for membership in memberships:
-        user: User = await User.get_by_id(membership.get("id"))
-        state_date = membership.get("state_date")
-        pause_date = membership.get("pause_date")
-        user_memberships.append(
-            {
-                "user_id": membership.get("user_id"),
-                "is_admin": user.is_admin,
-                "room_id": membership.get("room_id"),
-                "room_name": membership.get("name"),
-                "description": membership.get("description"),
-                "state_date": datetime.strftime(state_date, dt_format) if state_date else None,
-                "pause_date": datetime.strftime(pause_date, dt_format) if pause_date else None,
-                "pause_reason": membership.get("pause_reason"),
-                "state": membership.get("state"),
-                "paused": membership.get("paused"),
+        user_memberships = await QueueMembership.get_user_memberships(target_user.id)
+        if not user_memberships:
+            return web.json_response(data={"detail": "Agent has no queue memberships"}, status=404)
+    else:
+        users = await QueueMembership.get_users()
+        if not users:
+            return web.json_response(
+                data={"detail": "Queues do not have member users."}, status=404
+            )
+        user_memberships = {}
+        for user in users:
+            member: User = await User.get_by_id(user.get("id"))
+            memberships = await QueueMembership.get_user_memberships(user.get("id"))
+            user_memberships[user.get("user_id")] = {
+                "is_admin": member.is_admin,
+                "memberships": memberships,
             }
-        )
 
     return web.json_response(data={"data": user_memberships}, status=200)

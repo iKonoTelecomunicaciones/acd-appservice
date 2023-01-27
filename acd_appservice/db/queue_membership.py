@@ -127,7 +127,7 @@ class QueueMembership:
         return [cls._from_row(queue_membership) for queue_membership in rows]
 
     @classmethod
-    async def get_user_memberships(cls, fk_user: int = None) -> List[dict] | None:
+    async def get_user_memberships(cls, fk_user: int) -> List[dict] | None:
         """Get all user memberships
 
         Parameters
@@ -137,14 +137,12 @@ class QueueMembership:
 
         Returns
         -------
-            A list of dictionaries.
+            A list of dictionaries with memberships data of the user.
 
         """
 
         q = """
             SELECT
-                "user".id,
-                "user".mxid as user_id,
                 queue.room_id,
                 queue.name,
                 queue.description,
@@ -155,15 +153,49 @@ class QueueMembership:
                 queue_membership.paused
             FROM queue
             JOIN queue_membership ON queue_membership.fk_queue = queue.id
-            JOIN "user" ON "user".id = queue_membership.fk_user
+            WHERE queue_membership.fk_user = $1
         """
 
-        if fk_user:
-            q += "WHERE queue_membership.fk_user = $1"
-            row = await cls.db.fetch(q, fk_user)
-        else:
-            row = await cls.db.fetch(q)
-
-        if not row:
+        result = await cls.db.fetch(q, fk_user)
+        if not result:
             return None
-        return row
+
+        memberships = []
+        dt_format = "%Y-%m-%d %H:%M:%S%z"
+        for user in result:
+            state_date = user.get("state_date")
+            pause_date = user.get("pause_date")
+            memberships.append(
+                {
+                    "room_id": user.get("room_id"),
+                    "room_name": user.get("name"),
+                    "description": user.get("description"),
+                    "state_date": datetime.strftime(state_date, dt_format) if state_date else None,
+                    "pause_date": datetime.strftime(pause_date, dt_format) if pause_date else None,
+                    "pause_reason": user.get("pause_reason"),
+                    "state": user.get("state"),
+                    "paused": user.get("paused"),
+                }
+            )
+
+        return memberships
+
+    @classmethod
+    async def get_users(cls) -> List[dict] | None:
+        """Get all users with memberships
+
+        Returns
+        -------
+            A list of dictionaries with id and mxid of each user.
+
+        """
+
+        q = """
+            SELECT DISTINCT "user".id, "user".mxid
+            FROM "user"
+            JOIN queue_membership ON queue_membership.fk_user = "user".id
+        """
+
+        results = await cls.db.fetch(q)
+
+        return [{"id": id, "user_id": mxid} for id, mxid in results if results]
