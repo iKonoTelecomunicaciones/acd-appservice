@@ -10,6 +10,7 @@ from mautrix.util.logging import TraceLogger
 from .db.queue import Queue as DBQueue
 from .matrix_room import MatrixRoom
 from .queue_membership import QueueMembership
+from .user import User
 
 
 class Queue(DBQueue, MatrixRoom):
@@ -70,6 +71,23 @@ class Queue(DBQueue, MatrixRoom):
             await membership.delete()
 
         await self.delete()
+
+    async def sync(self):
+        """It gets the name and description of the room, saves it,
+        and then gets the members of the room and adds them to the database
+        """
+        self.name = await self.get_room_name()
+        self.description = await self.get_room_topic()
+
+        self.log.debug(f"Syncing the memberships for this room")
+        members = await self.main_intent.get_joined_members(room_id=self.room_id)
+        for member in members.keys():
+            if member == self.main_intent.mxid:
+                continue
+            user: User = await User.get_by_mxid(member)
+            await QueueMembership.get_by_queue_and_user(fk_queue=self.id, fk_user=user.id)
+
+        await self.save()
 
     async def add_member(self, new_member: UserID):
         """If the config value for `acd.queue.user_add_method` is `join`, then join the user,

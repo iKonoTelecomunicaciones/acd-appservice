@@ -311,9 +311,9 @@ class MatrixHandler:
         await puppet.intent.join_room(evt.room_id)
 
     async def handle_leave(self, evt: Event):
-        self.log.debug(f"The user {evt.sender} leave from to room {evt.room_id}")
+        self.log.debug(f"The user {evt.state_key} leave from to room {evt.room_id}")
 
-        user: User = await User.get_by_mxid(evt.sender)
+        user: User = await User.get_by_mxid(evt.state_key)
 
         is_queue: Queue = await Queue.get_by_room_id(room_id=evt.room_id, create=False)
 

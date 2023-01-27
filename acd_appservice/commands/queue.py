@@ -46,9 +46,19 @@ queue = CommandArg(
 
 action = CommandArg(
     name="action",
-    help_text="Action to be taken in the queue",
+    help_text=(
+        "Action to be taken in the queue.\n\n"
+        "\t`create`: Creates a new queue.\n\n"
+        "\t`add`: Adds a member to a specific queue.\n\n"
+        "\t`remove`: Removes a member from a specific queue.\n\n"
+        "\t`info`: Shows detailed information about a specific queue.\n\n"
+        "\t`list`: Shows a list of all existing queues.\n\n"
+        "\t`update`: Updates the information of a specific queue.\n\n"
+        "\t`delete`: Deletes a specific queue.\n\n"
+        "\t`set`: Sets a specific room as a queue.\n\n"
+    ),
     is_required=True,
-    example="`create` | `add` | `remove` | `info` | `list` | `update` | `delete`",
+    example="`create` | `add` | `remove` | `info` | `list` | `update` | `delete` | `set`",
     sub_args=[[name, member], [invitees, queue], description],
 )
 
@@ -231,6 +241,8 @@ async def queue(evt: CommandEvent) -> Dict:
 
     elif action == "list":
         return await _list(evt=evt)
+    elif action == "set":
+        return await _set(evt=evt)
 
 
 async def create(
@@ -566,5 +578,45 @@ async def _list(evt: CommandEvent) -> Dict:
 
     return {
         "data": {"queues": _queues},
+        "status": 200,
+    }
+
+
+async def _set(evt: CommandEvent) -> Dict:
+    """This function will add a queue to the database and synchronize it with the room
+
+    Parameters
+    ----------
+    evt : CommandEvent
+        The event object that triggered the command.
+
+    Returns
+    -------
+        A dictionary with a status and data.
+
+    """
+
+    try:
+        queue_id = evt.args_list[1]
+    except IndexError:
+        queue_id = evt.room_id
+
+    queue = await Queue.get_by_room_id(room_id=queue_id, create=False)
+    if queue:
+        detail = "The queue already exists"
+        await evt.reply(text=detail)
+        return {
+            "data": {"detail": detail},
+            "status": 422,
+        }
+
+    queue = await Queue.get_by_room_id(room_id=queue_id)
+    await queue.sync()
+
+    detail = "The queue has been added and synchronized"
+    await evt.reply(text=detail)
+
+    return {
+        "data": {"detail": detail},
         "status": 200,
     }
