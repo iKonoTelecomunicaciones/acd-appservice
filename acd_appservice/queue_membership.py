@@ -89,3 +89,29 @@ class QueueMembership(DBMembership):
             return queue_membership
 
         return None
+
+    @classmethod
+    async def get_serialize_memberships(cls, fk_user: int) -> list[dict] | None:
+        """Get all user memberships with formatted date
+
+        Parameters
+        ----------
+        fk_user : int
+            The user's ID
+
+        Returns
+        -------
+            A list of dictionaries with memberships data of the user.
+
+        """
+        memberships = []
+        dt_format = "%Y-%m-%d %H:%M:%S%z"
+        user_memberships = await cls.get_user_memberships(fk_user)
+        for membership in user_memberships:
+            membership = dict(membership)
+            state_date: datetime = membership.get("state_date")
+            pause_date: datetime = membership.get("pause_date")
+            membership["state_date"] = state_date.strftime(dt_format) if state_date else None
+            membership["pause_date"] = pause_date.strftime(dt_format) if pause_date else None
+            memberships.append(membership)
+        return memberships
