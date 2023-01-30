@@ -491,10 +491,6 @@ components:
           items:
             type: object
             properties:
-              user_id:
-                type: string
-              is_admin:
-                type: boolean
               room_id:
                 type: string
               room_name:
