@@ -137,18 +137,48 @@ class QueueMembership:
 
         Returns
         -------
-            A list of dictionaries.
+            A list of memberships.
 
         """
 
         q = """
-            SELECT queue.room_id, queue.name, queue.description, queue_membership.state_date,
-            queue_membership.pause_date, queue_membership.pause_reason,
-            queue_membership.state, queue_membership.paused
-            FROM queue JOIN queue_membership ON queue_membership.fk_queue = queue.id
+            SELECT
+                queue.room_id,
+                queue.name,
+                queue.description,
+                queue_membership.state_date,
+                queue_membership.pause_date,
+                queue_membership.pause_reason,
+                queue_membership.state,
+                queue_membership.paused
+            FROM queue
+            JOIN queue_membership ON queue_membership.fk_queue = queue.id
             WHERE queue_membership.fk_user = $1
         """
-        row = await cls.db.fetch(q, fk_user)
-        if not row:
-            return None
-        return row
+
+        results = await cls.db.fetch(q, fk_user)
+
+        return results if results else None
+
+    @classmethod
+    async def get_members(cls) -> List[dict] | None:
+        """Get all users that have memberships
+
+        Returns
+        -------
+            A list of dictionaries with id and mxid of each user.
+
+        """
+
+        q = """
+            SELECT DISTINCT
+                "user".id,
+                "user".mxid
+            FROM "user"
+            JOIN queue_membership ON queue_membership.fk_user = "user".id
+            ORDER BY "user".mxid ASC
+        """
+
+        results = await cls.db.fetch(q)
+
+        return [{"id": id, "user_id": mxid} for id, mxid in results if results]

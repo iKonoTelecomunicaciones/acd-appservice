@@ -25,6 +25,7 @@ from ..error_responses import (
     BRIDGE_INVALID,
     FORBIDDEN_OPERATION,
     INVALID_ACTION,
+    INVALID_USER_ID,
     NOT_DATA,
     QUEUE_DOESNOT_EXIST,
     QUEUE_MEMBERSHIP_DOESNOT_EXIST,
@@ -1118,7 +1119,9 @@ async def member(request: web.Request) -> web.Response:
 async def get_memberships(request: web.Request) -> web.Response:
     """
     ---
-    summary: Get agent queue memberships
+    summary: Get agent queues memberships
+
+    description: Get agent queues memberships, by user_id or all users
 
     tags:
         - Commands
@@ -1128,8 +1131,13 @@ async def get_memberships(request: web.Request) -> web.Response:
       name: user_id
       schema:
           type: string
+      examples:
+        Filter by user:
+            value: "@userid:example.com"
+        All users:
+            value: ""
       required: false
-      description: user_id to get memberships
+      description: user_id to get memberships by user, leave empty to filter all users
 
     responses:
         '200':
@@ -1141,38 +1149,36 @@ async def get_memberships(request: web.Request) -> web.Response:
     query_params = request.query
     user_id: str = query_params.get("user_id")
 
-    user_requester = await _resolve_user_identifier(request=request)
-    target_user: User = user_requester
+    if user_id and not Util.is_user_id(user_id):
+        return web.json_response(**INVALID_USER_ID)
 
-    if not user_requester.is_admin and user_id:
+    user_requester = await _resolve_user_identifier(request=request)
+
+    # Only admins are allowed to get all agents memberships.
+    # Normal users can only get their own memberships.
+    if not user_requester.is_admin and (not user_id or user_id != user_requester.mxid):
         return web.json_response(**FORBIDDEN_OPERATION)
-    elif user_requester.is_admin and not Util.is_user_id(user_id):
-        return web.json_response(**REQUIRED_VARIABLES)
-    elif user_requester.is_admin and Util.is_user_id(user_id):
+
+    if user_id:
         target_user = await User.get_by_mxid(user_id, create=False)
         if not target_user:
             return web.json_response(**USER_DOESNOT_EXIST)
-
-    memberships = await QueueMembership.get_user_memberships(target_user.id)
-    if not memberships:
-        return web.json_response(data={"detail": "Agent has no queue memberships"}, status=404)
-
-    user_memberships = [
-        {
-            "room_id": membership.get("room_id"),
-            "room_name": membership.get("name"),
-            "description": membership.get("description"),
-            "state_date": datetime.strftime(membership.get("state_date"), "%Y-%m-%d %H:%M:%S%z")
-            if membership.get("state_date")
-            else None,
-            "pause_date": datetime.strftime(membership.get("pause_date"), "%Y-%m-%d %H:%M:%S%z")
-            if membership.get("pause_date")
-            else None,
-            "pause_reason": membership.get("pause_reason"),
-            "state": membership.get("state"),
-            "paused": membership.get("paused"),
-        }
-        for membership in memberships
-    ]
+        user_memberships = await QueueMembership.get_serialized_memberships(fk_user=target_user.id)
+        if not user_memberships:
+            return web.json_response(data={"detail": "Agent has no queue memberships"}, status=404)
+    else:
+        users = await QueueMembership.get_members()
+        if not users:
+            return web.json_response(
+                data={"detail": "Queues do not have member users."}, status=404
+            )
+        user_memberships = {}
+        for user in users:
+            member: User = await User.get_by_id(user.get("id"))
+            memberships = await QueueMembership.get_serialized_memberships(fk_user=user.get("id"))
+            user_memberships[user.get("user_id")] = {
+                "is_admin": member.is_admin,
+                "memberships": memberships,
+            }
 
     return web.json_response(data={"data": user_memberships}, status=200)
