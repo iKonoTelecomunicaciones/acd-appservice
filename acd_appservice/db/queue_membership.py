@@ -137,7 +137,7 @@ class QueueMembership:
 
         Returns
         -------
-            A list of dictionaries with memberships data of the user.
+            A list of memberships.
 
         """
 
@@ -156,33 +156,46 @@ class QueueMembership:
             WHERE queue_membership.fk_user = $1
         """
 
-        result = await cls.db.fetch(q, fk_user)
-        if not result:
-            return None
+        results = await cls.db.fetch(q, fk_user)
 
+        return results if results else None
+
+    @classmethod
+    async def get_user_memberships_with_formatted_date(
+        cls, fk_user: int, dt_format: str = "%Y-%m-%d %H:%M:%S%z"
+    ) -> List[dict] | None:
+        """Get all user memberships with formatted date
+
+        Parameters
+        ----------
+        fk_user : int
+            The user's ID
+        df_format : str
+            The date format
+
+        Returns
+        -------
+            A list of dictionaries with memberships data of the user.
+
+        """
         memberships = []
-        dt_format = "%Y-%m-%d %H:%M:%S%z"
-        for user in result:
-            state_date = user.get("state_date")
-            pause_date = user.get("pause_date")
-            memberships.append(
-                {
-                    "room_id": user.get("room_id"),
-                    "room_name": user.get("name"),
-                    "description": user.get("description"),
-                    "state_date": datetime.strftime(state_date, dt_format) if state_date else None,
-                    "pause_date": datetime.strftime(pause_date, dt_format) if pause_date else None,
-                    "pause_reason": user.get("pause_reason"),
-                    "state": user.get("state"),
-                    "paused": user.get("paused"),
-                }
+        user_memberships = await cls.get_user_memberships(fk_user)
+        for membership in user_memberships:
+            membership = dict(membership)
+            state_date = membership.get("state_date")
+            pause_date = membership.get("pause_date")
+            membership["state_date"] = (
+                datetime.strftime(state_date, dt_format) if state_date else None
             )
-
+            membership["pause_date"] = (
+                datetime.strftime(pause_date, dt_format) if pause_date else None
+            )
+            memberships.append(membership)
         return memberships
 
     @classmethod
-    async def get_users(cls) -> List[dict] | None:
-        """Get all users with memberships
+    async def get_members(cls) -> List[dict] | None:
+        """Get all users that have memberships
 
         Returns
         -------
@@ -191,9 +204,12 @@ class QueueMembership:
         """
 
         q = """
-            SELECT DISTINCT "user".id, "user".mxid
+            SELECT DISTINCT
+                "user".id,
+                "user".mxid
             FROM "user"
             JOIN queue_membership ON queue_membership.fk_user = "user".id
+            ORDER BY "user".mxid ASC
         """
 
         results = await cls.db.fetch(q)
