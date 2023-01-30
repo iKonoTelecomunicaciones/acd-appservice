@@ -182,14 +182,10 @@ class QueueMembership:
         user_memberships = await cls.get_user_memberships(fk_user)
         for membership in user_memberships:
             membership = dict(membership)
-            state_date = membership.get("state_date")
-            pause_date = membership.get("pause_date")
-            membership["state_date"] = (
-                datetime.strftime(state_date, dt_format) if state_date else None
-            )
-            membership["pause_date"] = (
-                datetime.strftime(pause_date, dt_format) if pause_date else None
-            )
+            state_date: datetime = membership.get("state_date")
+            pause_date: datetime = membership.get("pause_date")
+            membership["state_date"] = state_date.strftime(dt_format) if state_date else None
+            membership["pause_date"] = pause_date.strftime(dt_format) if pause_date else None
             memberships.append(membership)
         return memberships
 
