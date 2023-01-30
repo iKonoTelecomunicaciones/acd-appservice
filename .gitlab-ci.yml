@@ -29,7 +29,7 @@ lint:
       - pytest --reruns 5 -vv acd_appservice
 
 build-push-image:
-  stage: build
+  stage: test
   image: docker:latest
   services:
     - docker:dind
