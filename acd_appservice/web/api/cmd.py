@@ -1163,7 +1163,7 @@ async def get_memberships(request: web.Request) -> web.Response:
         target_user = await User.get_by_mxid(user_id, create=False)
         if not target_user:
             return web.json_response(**USER_DOESNOT_EXIST)
-        user_memberships = await QueueMembership.get_serialize_memberships(fk_user=target_user.id)
+        user_memberships = await QueueMembership.get_serialized_memberships(fk_user=target_user.id)
         if not user_memberships:
             return web.json_response(data={"detail": "Agent has no queue memberships"}, status=404)
     else:
@@ -1175,7 +1175,7 @@ async def get_memberships(request: web.Request) -> web.Response:
         user_memberships = {}
         for user in users:
             member: User = await User.get_by_id(user.get("id"))
-            memberships = await QueueMembership.get_serialize_memberships(fk_user=user.get("id"))
+            memberships = await QueueMembership.get_serialized_memberships(fk_user=user.get("id"))
             user_memberships[user.get("user_id")] = {
                 "is_admin": member.is_admin,
                 "memberships": memberships,

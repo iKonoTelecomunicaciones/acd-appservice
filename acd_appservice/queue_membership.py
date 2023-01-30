@@ -91,8 +91,8 @@ class QueueMembership(DBMembership):
         return None
 
     @classmethod
-    async def get_serialize_memberships(cls, fk_user: int) -> list[dict] | None:
-        """Get all user memberships with formatted date
+    async def get_serialized_memberships(cls, fk_user: int) -> list[dict] | None:
+        """Get all user serialized memberships and formatted date
 
         Parameters
         ----------
