@@ -722,7 +722,7 @@ class MatrixHandler:
                 )
 
             if puppet.destination:
-                if await self.process_destination(portal=portal.room_id):
+                if await self.process_destination(portal=portal):
                     return
 
             # invite menubot to show menu
