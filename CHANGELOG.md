@@ -1,4 +1,4 @@
-# v0.2.5 ()
+# v0.2.5 (2023-01-03)
 - Agregado de todas las operaciones CRUD para el comando de colas.
 - Renombrado de la clase Room a MatrixRoom.
 - Adición y eliminación de agentes a una cola.
@@ -16,14 +16,14 @@
 - Endpoint para obtener los miembros del usuario.
 - Corrección de bugs en la resolución del identificador del muñeco.
 
-# v0.2.4.2 ()
+# v0.2.4.2 (2023-01-25)
 - Se cambió el método para eliminar room_id
 - Se corrigió el problema al crear la sala y no invitar a menubot.
 
-# v0.2.4.1 ()
+# v0.2.4.1 (2022-12-13)
 - Corregido error mautrix python caché
 
-# v0.2.4 ()
+# v0.2.4 (2022-12-07)
 - Refactorización del procesador de comandos con una nueva estructura de documentación.
 - Añadido de un comando de pausa de miembro.
 - Ajuste en la base de datos para agregar un campo de descripción a la tabla de colas y utilizarlo en el comando de cola.
@@ -35,17 +35,17 @@
 - Adición de pruebas para los comandos de miembro y pausa de miembro.
 - Cambio en el tipo de datos de fecha y hora en la tabla de membresía de cola.
 
-# v0.2.3 ()
+# v0.2.3 (2022-11-15)
 - Se resolvió un bug relacionado con el control de la habitación al distribuir el chat cuando el id de la habitación de la campaña es nulo.
 
-# v0.2.2 ()
+# v0.2.2 (2022-11-03)
 - Se arregló un error relacionado con el comando de transferencia, cuando el identificador de la sala (room_id) de la campaña no estaba disponible para el ACD principal.
 - Se corrigió la función get_bridges_status para saltarse la validación de estado del puente gupshup.
 - Se agregó un endpoint en la API para el comando ACD.
 - Se realizaron mejoras en la documentación del endpoint logout.
 - Se realizaron refactorizaciones en get_bridges_status, ProvisionBridge y se creó el endpoint logout.
 
-# v0.2.0 ()
+# v0.2.0 (2022-10-18)
 - Se resolvió un bug reportado en 18/10/2022
 - Se agregó un endpoint para obtener el estado de los canales
 - Se corrigió un error en la función transfer_user
@@ -62,7 +62,7 @@
 - Se parametrizó el comando para expulsar o abandonar un usuario.
 
 
-# v0.1.9 ()
+# v0.1.9 (2022-09-15)
 - El bot principal de ACD distribuye chats en salas grupales
 - Actualización de dependencias y eliminación de imports no utilizados
 - Corrección de un bug al registrar la aplicación de Gupshup
@@ -77,7 +77,7 @@
 - Adición de una función donde los usuarios no son expulsados sino que salen por su cuenta.
 
 
-# v0.1.8 (2022-31-08)
+# v0.1.8 (2022-08-31)
 - ➕ ADD FEATURE: Ahora puedes enviar mensajes vía gupshup con este endpoint `/v1/gupshup/send_message`
 - ➕ ADD FEATURE: Ahora puedes crear líneas con gupshup con este endpoint `/v1/gupshup/register`
 - ➕ ADD FEATURE: Este ACD soporta el bridge de gupshup
@@ -87,7 +87,7 @@
     - `/v1/whatsapp/ws_link_phone` -> `/v1/mautrix/ws_link_phone`
 - 🔃 CODE REFACTORING: El comando pm fue modificado para que funcione a la par de mautrix y gupshup
 
-# v0.1.7 (2022-24-08)
+# v0.1.7 (2022-08-24)
 
 - 🐛 BUG FIX: El evento join llegaba antes del invite, las salas no inicializaban bien
 - 🐛 BUG FIX: La puppet_password se actualizaba sola al reiniciar el servicio
