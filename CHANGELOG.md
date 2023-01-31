@@ -1,3 +1,29 @@
+# v0.2.6 (2023-01-31)
+- Corrección de errores cuando el destino está establecido
+- Corrección de errores en el proceso de destino
+- Corrección de errores cuando los invitados son una cadena vacía
+- Renombrar métodos para obtener membresías serializadas
+- Cambios sugeridos en la estructura de los datos a devolver
+- Refactorización para el uso de portal y cola en algunas partes del código
+- Endpoint de miembros modificado para devolver el estado de todos los agentes
+- Corrección cuando se crea la habitación y no se invita a menubot
+- Corrección de errores cuando el agente deja la cola
+- Agregada nueva acción de cola que agrega habitaciones previamente creadas
+- Agregado método para obtener el tema de la habitación
+- Agregado soporte para la conexión con el puente de Facebook
+- Agregado ejemplos en la documentación de inicio de sesión y desafío
+- Corrección de errores en la consulta de la base de datos de portal
+- Cambiar el permiso de ejecución del comando de cola
+- Responder el error cuando el comando falla
+- Agregado nuevo endpoint update_members
+- Agregado displayname en la respuesta de membresía de usuario
+- Corrección de errores en la lista de membresías de la cola
+- Mejorar el nombre de las funciones para consultar la base de datos
+- Corrección de errores en el comando de cola
+- Corrección de errores en los endpoints de información y lista de cola
+- Eliminar estado de portal no utilizado y corrección de ortografía
+
+
 # v0.2.5 (2023-01-03)
 - Agregado de todas las operaciones CRUD para el comando de colas.
 - Renombrado de la clase Room a MatrixRoom.
@@ -26,7 +52,7 @@
 # v0.2.4 (2022-12-07)
 - Refactorización del procesador de comandos con una nueva estructura de documentación.
 - Añadido de un comando de pausa de miembro.
-- Ajuste en la base de datos para agregar un campo de descripción a la tabla de colas y utilizarlo en el comando de cola.
+- Ajuste en la base de datos para agregado un campo de descripción a la tabla de colas y utilizarlo en el comando de cola.
 - Adición de operaciones de agente, incluyendo inicio de sesión y cierre de sesión.
 - Adición de un comando para crear colas de agentes desde el ACD.
 - Envío de mensajes sin formato a puentes que no admiten mensajes con formato.
@@ -52,13 +78,13 @@
 - Se agregó un argumento "force" a la función transfer_user para obligar a la transferencia de usuario
 - Se agregó una nueva función para crear comandos y se refactorizó el módulo web para tener endpoint separados
 - Se actualizó el archivo README.md
-- Se agregaron funcionalidades para la gestión de salas
+- Se agregadoon funcionalidades para la gestión de salas
 - Se agregó un script para el equipo de desarrollo
 - Se cambió la URL del servicio de Gupshup a la URL de instalación por defecto del puente
 - Se actualizaron los procesos de CI/CD
 - Se eliminó la necesidad de enviar un correo electrónico al crear un usuario de muñeca
 - Se ignoró el directorio "dev" y se eliminó
-- Se agregaron sugerencias y se corrigió un error en el archivo de configuración config.py relacionado con el parámetro leave_or_kick
+- Se agregadoon sugerencias y se corrigió un error en el archivo de configuración config.py relacionado con el parámetro leave_or_kick
 - Se parametrizó el comando para expulsar o abandonar un usuario.
 
 
