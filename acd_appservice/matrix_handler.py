@@ -449,7 +449,7 @@ class MatrixHandler:
                 return
 
             # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
-            if not room_id in puppet.BIC_ROOMS:
+            if not room_id in puppet.BIC_ROOMS and not puppet.destination:
                 # invite menubot to show menu
                 # this is done with create_task because with no official API set-pl can take
                 # a while so several invite attempts are made without blocking
