@@ -1,3 +1,82 @@
+# v0.2.5 ()
+- Agregado de todas las operaciones CRUD para el comando de colas.
+- Renombrado de la clase Room a MatrixRoom.
+- Adición y eliminación de agentes a una cola.
+- Expansión de la operación del procesador de comandos.
+- Mejora de los logs en las operaciones de agentes.
+- Obtención de la versión desde Git.
+- Corrección de errores en las operaciones de agentes.
+- Corrección de la falla en la intención de cola.
+- Solución de fechas en las operaciones de agentes.
+- Corrección del bug en el estado de pausa de los agentes.
+- Interfaz para las colas.
+- Endpoint para obtener el estado de pausa de los agentes.
+- Corrección de errores en el endpoint de miembros.
+- Adición del nombre de la sala en la respuesta JSON en el comando de miembros.
+- Endpoint para obtener los miembros del usuario.
+- Corrección de bugs en la resolución del identificador del muñeco.
+
+# v0.2.4.2 ()
+- Se cambió el método para eliminar room_id
+- Se corrigió el problema al crear la sala y no invitar a menubot.
+
+# v0.2.4.1 ()
+- Corregido error mautrix python caché
+
+# v0.2.4 ()
+- Refactorización del procesador de comandos con una nueva estructura de documentación.
+- Añadido de un comando de pausa de miembro.
+- Ajuste en la base de datos para agregar un campo de descripción a la tabla de colas y utilizarlo en el comando de cola.
+- Adición de operaciones de agente, incluyendo inicio de sesión y cierre de sesión.
+- Adición de un comando para crear colas de agentes desde el ACD.
+- Envío de mensajes sin formato a puentes que no admiten mensajes con formato.
+- Añadido de sugerencias.
+- Corrección de errores en el comando de creación.
+- Adición de pruebas para los comandos de miembro y pausa de miembro.
+- Cambio en el tipo de datos de fecha y hora en la tabla de membresía de cola.
+
+# v0.2.3 ()
+- Se resolvió un bug relacionado con el control de la habitación al distribuir el chat cuando el id de la habitación de la campaña es nulo.
+
+# v0.2.2 ()
+- Se arregló un error relacionado con el comando de transferencia, cuando el identificador de la sala (room_id) de la campaña no estaba disponible para el ACD principal.
+- Se corrigió la función get_bridges_status para saltarse la validación de estado del puente gupshup.
+- Se agregó un endpoint en la API para el comando ACD.
+- Se realizaron mejoras en la documentación del endpoint logout.
+- Se realizaron refactorizaciones en get_bridges_status, ProvisionBridge y se creó el endpoint logout.
+
+# v0.2.0 ()
+- Se resolvió un bug reportado en 18/10/2022
+- Se agregó un endpoint para obtener el estado de los canales
+- Se corrigió un error en la función transfer_user
+- Se agregó un argumento "force" a la función transfer_user para obligar a la transferencia de usuario
+- Se agregó una nueva función para crear comandos y se refactorizó el módulo web para tener endpoint separados
+- Se actualizó el archivo README.md
+- Se agregaron funcionalidades para la gestión de salas
+- Se agregó un script para el equipo de desarrollo
+- Se cambió la URL del servicio de Gupshup a la URL de instalación por defecto del puente
+- Se actualizaron los procesos de CI/CD
+- Se eliminó la necesidad de enviar un correo electrónico al crear un usuario de muñeca
+- Se ignoró el directorio "dev" y se eliminó
+- Se agregaron sugerencias y se corrigió un error en el archivo de configuración config.py relacionado con el parámetro leave_or_kick
+- Se parametrizó el comando para expulsar o abandonar un usuario.
+
+
+# v0.1.9 ()
+- El bot principal de ACD distribuye chats en salas grupales
+- Actualización de dependencias y eliminación de imports no utilizados
+- Corrección de un bug al registrar la aplicación de Gupshup
+- Movimiento del menú fuera de línea a una ubicación mejor
+- Cambio de la sesión de httpclient a la sesión de puppet
+- Refactorización de CommandEvent
+- Actualización de docker-compose y .gitignore
+- Eliminación del campo de puente en la solicitud de resolución de una sala
+- Corrección de un error de Diana
+- Adición del nombre del agente en el mensaje de transferencia
+- Documentación agregada para el endpoint create_user
+- Adición de una función donde los usuarios no son expulsados sino que salen por su cuenta.
+
+
 # v0.1.8 (2022-31-08)
 - ➕ ADD FEATURE: Ahora puedes enviar mensajes vía gupshup con este endpoint `/v1/gupshup/send_message`
 - ➕ ADD FEATURE: Ahora puedes crear líneas con gupshup con este endpoint `/v1/gupshup/register`
