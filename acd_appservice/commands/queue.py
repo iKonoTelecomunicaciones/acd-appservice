@@ -114,14 +114,14 @@ async def queue(evt: CommandEvent) -> Dict:
             return json_response
 
         name = evt.args_list[1]
-        invitees = evt.args_list[2]
+        invitees = evt.args_list[2] or []
 
         try:
             description = evt.args_list[3]
         except IndexError:
             description = ""
 
-        if isinstance(invitees, str):
+        if invitees and isinstance(invitees, str) and invitees.strip():
             invitees: List[UserID] = [invitee.strip() for invitee in invitees.split(",")]
 
         return await create(evt=evt, name=name, invitees=invitees, description=description)
