@@ -46,6 +46,11 @@ class Portal(DBPortal, MatrixRoom):
         self.by_id[self.id] = self
         self.by_room_id[self.room_id] = self
 
+    async def update_state(self, state: PortalState):
+        self.log.debug(f"Updating state [{self.state}] to [{state.value}]")
+        self.state = state.value
+        await self.save()
+
     async def update_room_name(self) -> None:
         """If the room name is not set to be kept, get the updated name and set it
 

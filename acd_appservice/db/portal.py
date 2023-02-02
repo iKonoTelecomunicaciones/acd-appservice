@@ -27,7 +27,7 @@ class Portal:
 
     id: int | None
     room_id: RoomID
-    selected_option: str | None
+    selected_option: RoomID | None
     state: PortalState = None
     fk_puppet: int | None = None
 
@@ -148,6 +148,15 @@ class Portal:
         if not row:
             return None
         return cls._from_row(row)
+
+    @classmethod
+    async def get_rooms_by_state(cls, state: PortalState) -> List[Portal] | None:
+        q = f"SELECT id, {cls._columns} FROM portal WHERE state=$1"
+        rows = await cls.db.fetch(q, state.value)
+        if not rows:
+            return None
+
+        return [cls._from_row(room) for room in rows]
 
     @classmethod
     async def get_pending_room_by_room_id(cls, room_id: RoomID) -> Portal | None:

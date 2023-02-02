@@ -13,7 +13,7 @@ from mautrix.util.logging import TraceLogger
 
 from .commands.handler import CommandProcessor
 from .config import Config
-from .portal import Portal
+from .portal import Portal, PortalState
 from .queue import Queue
 from .queue_membership import QueueMembership, QueueMembershipState
 from .room_manager import RoomManager
@@ -84,11 +84,7 @@ class AgentManager:
         if await self.business_hours.is_not_business_hour():
             await self.business_hours.send_business_hours_message(room_id=portal.room_id)
             self.log.debug(f"Saving room {portal.room_id} in pending list")
-            await RoomManager.save_pending_room(
-                room_id=portal.room_id,
-                selected_option=queue.room_id,
-                puppet_pk=self.puppet_pk,
-            )
+            await portal.update_state(state=PortalState.ENQUEUED)
             json_response["data"]["detail"] = f"Message out of business hours"
             json_response["status"] = 409
             return json_response
@@ -146,30 +142,26 @@ class AgentManager:
                 continue
 
             self.log.debug("Searching for pending rooms...")
-            customer_room_ids = await RoomManager.get_pending_rooms(puppet_pk=self.puppet_pk)
+            enqueued_portals: List[Portal] = await Portal.get_rooms_by_state(
+                state=PortalState.ENQUEUED
+            )
 
-            if len(customer_room_ids) > 0:
+            if len(enqueued_portals) > 0:
                 last_campaign_room_id = None
                 online_agent = None
 
-                for customer_room_id in customer_room_ids:
+                for portal in enqueued_portals:
                     # Se actualiza el puppet dada la sala que se tenga en pending_rooms :)
                     # que bug tan maluco le digo
-                    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id)
                     result = await self.get_room_agent(room_id=portal.room_id)
                     if result:
                         self.log.debug(
                             f"Room {portal.room_id} has already an agent, removing from pending rooms..."
                         )
-                        # self.bot.store.remove_pending_room(room_id)
-                        await RoomManager.remove_pending_room(room_id=portal.room_id)
+                        await portal.update_state(state=PortalState.PENDING)
 
                     else:
-                        # campaign_room_id = self.bot.store.get_campaign_of_pending_room(room_id)
-                        campaign_room_id = await RoomManager.get_campaign_of_pending_room(
-                            portal.room_id
-                        )
-                        queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
+                        queue: Queue = await Queue.get_by_room_id(room_id=portal.selected_option)
 
                         self.log.debug(
                             "Searching for online agent in campaign "
@@ -363,11 +355,7 @@ class AgentManager:
                         customer_room_id=portal.room_id, campaign_room_id=queue.room_id
                     )
                     self.log.debug(f"Saving room [{portal.room_id}] in pending list")
-                    await RoomManager.save_pending_room(
-                        room_id=portal.room_id,
-                        selected_option=queue.room_id,
-                        puppet_pk=self.puppet_pk,
-                    )
+                    await portal.update_state(state=PortalState.ENQUEUED)
 
                 RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
                 json_response["data"]["detail"] = msg
