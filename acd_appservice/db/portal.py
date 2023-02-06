@@ -62,12 +62,10 @@ class Portal:
         q = f"INSERT INTO portal ({self._columns}) VALUES ($1, $2, $3, $4)"
         await self.db.execute(q, *self._values)
 
-
     async def update(self) -> None:
         """It updates the portal's selected_option, state, and fk_puppet in the database"""
         q = "UPDATE portal SET selected_option=$2, state=$3, fk_puppet=$4 WHERE room_id=$1"
         await self.db.execute(q, *self._values)
-
 
     @classmethod
     async def get_by_room_id(cls, room_id: RoomID) -> Portal | None:
@@ -98,7 +96,6 @@ class Portal:
 
         return [cls._from_row(room) for room in rows]
 
-
     @classmethod
     async def get_user_selected_menu(cls, room_id: RoomID) -> str | None:
         """Get the selected menu option from the database
@@ -118,7 +115,6 @@ class Portal:
         if not row:
             return None
         return row
-
 
     @classmethod
     async def get_rooms_by_puppet(cls, fk_puppet: int) -> Dict[RoomID, None] | None:

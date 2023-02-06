@@ -25,8 +25,8 @@ from mautrix.types import (
     SingleReceiptEventContent,
     StateEvent,
     StateUnsigned,
+    StrippedStateEvent,
     UserID,
-    StrippedStateEvent
 )
 from mautrix.util.logging import TraceLogger
 
@@ -306,7 +306,7 @@ class MatrixHandler:
 
         puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.state_key)
         self.log.debug(f"The user {puppet.intent.mxid} is trying join in the room {evt.room_id}")
-        
+
         if await Portal.is_portal(evt.room_id):
             await Portal.get_by_room_id(evt.room_id, fk_puppet=puppet.pk)
 

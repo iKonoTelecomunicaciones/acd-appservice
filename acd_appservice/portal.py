@@ -5,6 +5,7 @@ import re
 from enum import Enum
 from typing import cast
 
+from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI
 from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
@@ -14,7 +15,6 @@ from .db.portal import Portal as DBPortal
 from .db.portal import PortalState
 from .matrix_room import MatrixRoom
 from .util import Util
-from mautrix.api import Method, SynapseAdminPath
 
 
 class LockedReason(Enum):
@@ -42,7 +42,6 @@ class Portal(DBPortal, MatrixRoom):
         DBPortal.__init__(self, id=id, room_id=room_id, fk_puppet=fk_puppet)
         MatrixRoom.__init__(self, room_id=room_id, intent=intent)
         self.log = self.log.getChild(room_id)
-
 
     async def _add_to_cache(self) -> None:
         self.by_id[self.id] = self

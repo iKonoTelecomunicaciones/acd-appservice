@@ -641,7 +641,6 @@ class RoomManager:
 
         return emoji_number
 
-
     async def get_room_creator(self, room_id: RoomID) -> str:
         """Given a room, get its creator.
 
@@ -1009,7 +1008,6 @@ class RoomManager:
 
         return room_info
 
-
     @classmethod
     async def get_puppet_rooms(cls, puppet_pk: int) -> Dict[RoomID]:
         """`get_puppet_rooms` returns a dictionary of rooms that are associated with a puppet
@@ -1033,7 +1031,6 @@ class RoomManager:
             return {}
 
         return rooms
-
 
     @classmethod
     async def get_campaign_of_room(cls, room_id: RoomID) -> RoomID:

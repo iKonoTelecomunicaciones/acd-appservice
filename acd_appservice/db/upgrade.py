@@ -39,7 +39,6 @@ async def upgrade_v1(conn: Connection) -> None:
         "ALTER TABLE room ADD CONSTRAINT FK_puppet_room FOREIGN KEY (fk_puppet) references puppet (pk)"
     )
 
-
     await conn.execute(
         """CREATE TABLE message (
         event_id            TEXT PRIMARY KEY,

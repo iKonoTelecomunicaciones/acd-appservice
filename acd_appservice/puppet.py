@@ -14,8 +14,8 @@ from yarl import URL
 from .agent_manager import AgentManager
 from .config import Config
 from .db import Puppet as DBPuppet
-from .room_manager import RoomManager
 from .portal import Portal
+from .room_manager import RoomManager
 
 if TYPE_CHECKING:
     from .__main__ import ACDAppService
