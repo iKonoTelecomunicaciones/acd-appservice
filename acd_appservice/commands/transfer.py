@@ -95,7 +95,7 @@ async def transfer(evt: CommandEvent) -> str:
         agent_id = await puppet.agent_manager.get_room_agent(room_id=customer_room_id)
         transfer_author = agent_id
 
-    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id)
+    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id, fk_puppet=puppet.pk)
     queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
     # Creating a task that will be executed in the background.
     asyncio.create_task(
@@ -144,6 +144,8 @@ async def transfer_user(evt: CommandEvent) -> str:
 
     portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id)
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=portal.room_id)
+    portal.fk_puppet = puppet.pk
+    await puppet.save()
 
     try:
         force = evt.args_list[2]

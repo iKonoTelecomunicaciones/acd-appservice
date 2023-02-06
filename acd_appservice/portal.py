@@ -14,6 +14,7 @@ from .db.portal import Portal as DBPortal
 from .db.portal import PortalState
 from .matrix_room import MatrixRoom
 from .util import Util
+from mautrix.api import Method, SynapseAdminPath
 
 
 class LockedReason(Enum):
@@ -22,14 +23,13 @@ class LockedReason(Enum):
 
 
 class Portal(DBPortal, MatrixRoom):
-
-    log: TraceLogger = logging.getLogger("acd.message")
+    log: TraceLogger = logging.getLogger("acd.portal")
     config: Config
 
     room_id: RoomID
     creator: UserID
     bridge: str
-    state: PortalState
+    state: PortalState = PortalState.INIT
 
     by_id: dict[int, Portal] = {}
     by_room_id: dict[RoomID, Portal] = {}
@@ -41,14 +41,16 @@ class Portal(DBPortal, MatrixRoom):
     ):
         DBPortal.__init__(self, id=id, room_id=room_id, fk_puppet=fk_puppet)
         MatrixRoom.__init__(self, room_id=room_id, intent=intent)
+        self.log = self.log.getChild(room_id)
+
 
     async def _add_to_cache(self) -> None:
         self.by_id[self.id] = self
         self.by_room_id[self.room_id] = self
 
     async def update_state(self, state: PortalState):
-        self.log.debug(f"Updating state [{self.state}] to [{state.value}]")
-        self.state = state.value
+        self.log.debug(f"Updating room [{self.room_id}] state [{self.state}] to [{state.value}]")
+        self.state = state
         await self.save()
 
     async def update_room_name(self) -> None:
@@ -98,7 +100,6 @@ class Portal(DBPortal, MatrixRoom):
                     new_room_name = new_room_name.replace(f" {postfix_template}", "")
                     if self.config["acd.numbers_in_rooms"]:
                         try:
-
                             emoji_number = Util.get_emoji_number(number=str(self.fk_puppet))
 
                             if emoji_number:
@@ -203,7 +204,6 @@ class Portal(DBPortal, MatrixRoom):
         fk_puppet: int = None,
         intent: IntentAPI = None,
     ) -> Portal | None:
-
         try:
             return cls.by_room_id[room_id]
         except KeyError:
@@ -211,7 +211,6 @@ class Portal(DBPortal, MatrixRoom):
 
         portal = cast(cls, await super().get_by_room_id(room_id))
         if portal is not None:
-
             if fk_puppet:
                 portal.fk_puppet = fk_puppet
 
@@ -238,3 +237,27 @@ class Portal(DBPortal, MatrixRoom):
             return portal
 
         return None
+
+    @classmethod
+    async def is_portal(cls, room_id: RoomID) -> bool:
+        try:
+            response = await cls.az.intent.api.request(
+                method=Method.GET, path=SynapseAdminPath.v1.rooms[room_id]
+            )
+        except Exception as e:
+            cls.log.exception(e)
+            return False
+
+        creator: UserID = response.get("creator", "")
+
+        if not creator:
+            return False
+
+        bridges = cls.config["bridges"]
+
+        for bridge in bridges:
+            user_prefix = cls.config[f"bridges.{bridge}.user_prefix"]
+            if creator.startswith(f"@{user_prefix}"):
+                return True
+
+        return False

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 from datetime import datetime as dt
 from typing import cast
 
@@ -15,9 +14,9 @@ class QueueMembership(DBMembership):
 
     fk_user: int
     fk_queue: int
-    creation_date: datetime
-    state_date: datetime | None = None
-    pause_date: datetime | None = None
+    creation_date: dt
+    state_date: dt | None = None
+    pause_date: dt | None = None
     pause_reason: str | None = None
     state: str = QueueMembershipState.Offline.value
     paused: bool = False
@@ -31,9 +30,9 @@ class QueueMembership(DBMembership):
         self,
         fk_user: int,
         fk_queue: int,
-        creation_date: datetime,
-        state_date: datetime | None = None,
-        pause_date: datetime | None = None,
+        creation_date: dt,
+        state_date: dt | None = None,
+        pause_date: dt | None = None,
         pause_reason: str | None = None,
         state: str = QueueMembershipState.Offline.value,
         paused: bool = False,
@@ -109,8 +108,8 @@ class QueueMembership(DBMembership):
         user_memberships = await cls.get_user_memberships(fk_user)
         for membership in user_memberships:
             membership = dict(membership)
-            state_date: datetime = membership.get("state_date")
-            pause_date: datetime = membership.get("pause_date")
+            state_date: dt = membership.get("state_date")
+            pause_date: dt = membership.get("pause_date")
             membership["state_date"] = state_date.strftime(dt_format) if state_date else None
             membership["pause_date"] = pause_date.strftime(dt_format) if pause_date else None
             memberships.append(membership)

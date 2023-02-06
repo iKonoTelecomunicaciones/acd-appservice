@@ -124,24 +124,24 @@ class AgentManager:
             json_response["status"] = 409
             return json_response
 
-    async def process_pending_rooms(self) -> None:
-        """Task to run every X second looking for pending rooms
+    async def process_enqueued_rooms(self) -> None:
+        """Task to run every X second looking for enqueued rooms
 
-        Every X seconds, check if there are pending rooms, if there are,
+        Every X seconds, check if there are enqueued rooms, if there are,
         check if there are online agents in the campaign room, if there are,
-        assign the agent to the pending room
+        assign the agent to the enqueued room
         """
         while True:
 
-            # Stop process pending rooms if the conversation is not within the business hour
+            # Stop process enqueued rooms if the conversation is not within the business hour
             if await self.business_hours.is_not_business_hour():
                 self.log.debug(
-                    "Pending rooms process is stopped, the conversation is not within the business hour"
+                    f"[{PortalState.ENQUEUED.value}] rooms process is stopped, the conversation is not within the business hour"
                 )
                 await sleep(self.config["acd.search_pending_rooms_interval"])
                 continue
 
-            self.log.debug("Searching for pending rooms...")
+            self.log.debug(f"Searching for [{PortalState.ENQUEUED.value}] rooms...")
             enqueued_portals: List[Portal] = await Portal.get_rooms_by_state(
                 state=PortalState.ENQUEUED
             )
@@ -156,7 +156,7 @@ class AgentManager:
                     result = await self.get_room_agent(room_id=portal.room_id)
                     if result:
                         self.log.debug(
-                            f"Room {portal.room_id} has already an agent, removing from pending rooms..."
+                            f"Room {portal.room_id} has already an agent, removing from [{PortalState.ENQUEUED.value}] rooms..."
                         )
                         await portal.update_state(state=PortalState.PENDING)
 
@@ -194,7 +194,7 @@ class AgentManager:
                         last_campaign_room_id = queue.room_id
 
             else:
-                self.log.debug("There's no pending rooms")
+                self.log.debug(f"There's no [{PortalState.ENQUEUED.value}] rooms")
 
             await sleep(self.config["acd.search_pending_rooms_interval"])
 
@@ -528,16 +528,13 @@ class AgentManager:
 
             # Setting the selected menu option for the customer.
             self.log.debug(f"Saving room [{portal.room_id}]")
-            await RoomManager.save_room(
-                room_id=portal.room_id,
-                selected_option=queue.room_id if queue else None,
-                puppet_pk=self.puppet_pk,
-                change_selected_option=True if queue else False,
-            )
+            
+            portal.fk_puppet = self.puppet_pk
+            portal.selected_option = queue.room_id if queue else None
+            await portal.save()
+
             self.log.debug(f"Removing room [{portal.room_id}] from pending list")
-            await RoomManager.remove_pending_room(
-                room_id=portal.room_id,
-            )
+            await portal.update_state(PortalState.PENDING)
 
             agent_displayname = await self.intent.get_displayname(user_id=agent_id)
             detail = ""
