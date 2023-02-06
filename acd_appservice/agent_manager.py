@@ -529,7 +529,6 @@ class AgentManager:
             # Setting the selected menu option for the customer.
             self.log.debug(f"Saving room [{portal.room_id}]")
 
-            portal.fk_puppet = self.puppet_pk
             portal.selected_option = queue.room_id if queue else None
             await portal.save()
 
