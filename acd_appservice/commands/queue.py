@@ -601,15 +601,6 @@ async def _set(evt: CommandEvent) -> Dict:
     except IndexError:
         queue_id = evt.room_id
 
-    queue = await Queue.get_by_room_id(room_id=queue_id, create=False)
-    if queue:
-        detail = "The queue already exists"
-        await evt.reply(text=detail)
-        return {
-            "data": {"detail": detail},
-            "status": 422,
-        }
-
     queue = await Queue.get_by_room_id(room_id=queue_id)
     await queue.sync()
 
