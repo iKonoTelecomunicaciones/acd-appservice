@@ -85,6 +85,9 @@ class AgentManager:
             await self.business_hours.send_business_hours_message(room_id=portal.room_id)
             self.log.debug(f"Saving room {portal.room_id} in pending list")
             await portal.update_state(state=PortalState.ENQUEUED)
+            portal.selected_option = queue.room_id
+            await portal.update()
+
             json_response["data"]["detail"] = f"Message out of business hours"
             json_response["status"] = 409
             return json_response
@@ -132,11 +135,13 @@ class AgentManager:
         assign the agent to the enqueued room
         """
         while True:
-
             # Stop process enqueued rooms if the conversation is not within the business hour
             if await self.business_hours.is_not_business_hour():
                 self.log.debug(
-                    f"[{PortalState.ENQUEUED.value}] rooms process is stopped, the conversation is not within the business hour"
+                    (
+                        f"[{PortalState.ENQUEUED.value}] rooms process is stopped,"
+                        " the conversation is not within the business hour"
+                    )
                 )
                 await sleep(self.config["acd.search_pending_rooms_interval"])
                 continue
@@ -156,7 +161,10 @@ class AgentManager:
                     result = await self.get_room_agent(room_id=portal.room_id)
                     if result:
                         self.log.debug(
-                            f"Room {portal.room_id} has already an agent, removing from [{PortalState.ENQUEUED.value}] rooms..."
+                            (
+                                f"Room {portal.room_id} has already an agent, "
+                                f"removing from [{PortalState.ENQUEUED.value}] rooms..."
+                            )
                         )
                         await portal.update_state(state=PortalState.PENDING)
 
