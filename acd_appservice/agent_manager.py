@@ -142,8 +142,8 @@ class AgentManager:
                 continue
 
             self.log.debug(f"Searching for [{PortalState.ENQUEUED.value}] rooms...")
-            enqueued_portals: List[Portal] = await Portal.get_rooms_by_state(
-                state=PortalState.ENQUEUED
+            enqueued_portals: List[Portal] = await Portal.get_rooms_by_state_and_puppet(
+                state=PortalState.ENQUEUED, fk_puppet=self.puppet_pk
             )
 
             if len(enqueued_portals) > 0:
@@ -357,6 +357,9 @@ class AgentManager:
                     self.log.debug(f"Saving room [{portal.room_id}] in pending list")
                     await portal.update_state(state=PortalState.ENQUEUED)
 
+                    portal.selected_option = queue.room_id
+                    await portal.update()
+
                 RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
                 json_response["data"]["detail"] = msg
                 break
@@ -529,8 +532,9 @@ class AgentManager:
             # Setting the selected menu option for the customer.
             self.log.debug(f"Saving room [{portal.room_id}]")
 
-            portal.selected_option = queue.room_id if queue else None
-            await portal.save()
+            if queue:
+                portal.selected_option = queue.room_id
+                await portal.save()
 
             self.log.debug(f"Removing room [{portal.room_id}] from pending list")
             await portal.update_state(PortalState.PENDING)

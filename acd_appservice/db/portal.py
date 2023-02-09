@@ -25,7 +25,7 @@ class Portal:
     db: ClassVar[Database] = fake_db
 
     room_id: RoomID
-    state: PortalState | str = PortalState.INIT
+    state: PortalState = PortalState.INIT
     fk_puppet: int | None = None
     selected_option: RoomID | None = None
     id: int | None = None
@@ -35,7 +35,7 @@ class Portal:
         return (
             self.room_id,
             self.selected_option,
-            self.state.value if isinstance(self.state, PortalState) else self.state,
+            self.state.name,
             self.fk_puppet,
         )
 
@@ -55,7 +55,9 @@ class Portal:
             A Room object
 
         """
-        return cls(**row)
+        data = {**row}
+        state = PortalState(data.pop("state"))
+        return cls(state=state, **data)
 
     async def insert(self) -> None:
         """It inserts a new row into the room table"""
@@ -88,9 +90,9 @@ class Portal:
         return cls._from_row(row)
 
     @classmethod
-    async def get_rooms_by_state(cls, state: PortalState) -> List[Portal] | None:
-        q = f"SELECT id, {cls._columns} FROM portal WHERE state=$1"
-        rows = await cls.db.fetch(q, state.value)
+    async def get_rooms_by_state_and_puppet(cls, state: PortalState, fk_puppet: int) -> List[Portal] | None:
+        q = f"SELECT id, {cls._columns} FROM portal WHERE state=$1 AND fk_puppet=$2"
+        rows = await cls.db.fetch(q, state.value, fk_puppet)
         if not rows:
             return []
 

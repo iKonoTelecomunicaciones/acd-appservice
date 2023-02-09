@@ -48,7 +48,7 @@ class Portal(DBPortal, MatrixRoom):
         self.by_room_id[self.room_id] = self
 
     async def update_state(self, state: PortalState):
-        self.log.debug(f"Updating room [{self.room_id}] state [{self.state}] to [{state.value}]")
+        self.log.debug(f"Updating room [{self.room_id}] state [{self.state.value}] to [{state.value}]")
         self.state = state
         await self.save()
 
