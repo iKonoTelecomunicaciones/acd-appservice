@@ -1,3 +1,6 @@
+# v0.2.6.1 (2023-02-07)
+- Removed unnecessary validation when queue already exists in `queue set` command
+
 # v0.2.6 (2023-01-31)
 - Rename methods to obtain serialized memberships
 - Modified members endpoint to return the status of all agents
