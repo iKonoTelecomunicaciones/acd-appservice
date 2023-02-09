@@ -90,7 +90,9 @@ class Portal:
         return cls._from_row(row)
 
     @classmethod
-    async def get_rooms_by_state_and_puppet(cls, state: PortalState, fk_puppet: int) -> List[Portal] | None:
+    async def get_rooms_by_state_and_puppet(
+        cls, state: PortalState, fk_puppet: int
+    ) -> List[Portal] | None:
         q = f"SELECT id, {cls._columns} FROM portal WHERE state=$1 AND fk_puppet=$2"
         rows = await cls.db.fetch(q, state.value, fk_puppet)
         if not rows:
