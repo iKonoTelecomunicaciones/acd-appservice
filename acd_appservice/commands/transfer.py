@@ -142,10 +142,8 @@ async def transfer_user(evt: CommandEvent) -> str:
         await evt.reply(detail)
         return {"data": {"error": detail}, "status": 422}
 
-    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id)
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=portal.room_id)
-    portal.fk_puppet = puppet.pk
-    await puppet.save()
+    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id, fk_puppet=puppet.pk)
 
     try:
         force = evt.args_list[2]

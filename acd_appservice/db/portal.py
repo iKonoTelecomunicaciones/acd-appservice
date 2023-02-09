@@ -35,7 +35,7 @@ class Portal:
         return (
             self.room_id,
             self.selected_option,
-            self.state.name,
+            self.state.value,
             self.fk_puppet,
         )
 
