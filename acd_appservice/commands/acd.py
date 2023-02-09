@@ -60,7 +60,7 @@ async def acd(evt: CommandEvent) -> str:
         joined_message = ""
 
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
-    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id)
+    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id, fk_puppet=puppet.pk)
     queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
 
     if not puppet:

@@ -19,7 +19,7 @@ class MatrixRoom:
 
     room_id: RoomID
     bridge: str
-    log: TraceLogger = logging.getLogger("acd.room")
+    log: TraceLogger = logging.getLogger("acd.matrix_room")
     az: AppService
 
     by_room_id: Dict[RoomID, "MatrixRoom"] = {}

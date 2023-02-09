@@ -14,6 +14,7 @@ from yarl import URL
 from .agent_manager import AgentManager
 from .config import Config
 from .db import Puppet as DBPuppet
+from .portal import Portal
 from .room_manager import RoomManager
 
 if TYPE_CHECKING:
@@ -102,7 +103,7 @@ class Puppet(DBPuppet, BasePuppet):
         )
 
         if not self.get_tasks_by_name(self.custom_mxid):
-            asyncio.create_task(self.agent_manager.process_pending_rooms(), name=self.custom_mxid)
+            asyncio.create_task(self.agent_manager.process_enqueued_rooms(), name=self.custom_mxid)
         else:
             self.log.debug(f"The task process_pending_rooms.{self.custom_mxid} already exists")
 
@@ -170,7 +171,7 @@ class Puppet(DBPuppet, BasePuppet):
             A list of rooms that the puppet is in.
 
         """
-        db_joined_rooms = await RoomManager.get_puppet_rooms(puppet_pk=self.pk)
+        db_joined_rooms = await Portal.get_rooms_by_puppet(self.pk)
 
         if not db_joined_rooms:
             return
@@ -183,9 +184,8 @@ class Puppet(DBPuppet, BasePuppet):
         # it adds it to the database.
         for mx_joined_room in matrix_joined_rooms:
             if not mx_joined_room in db_joined_rooms:
-                await RoomManager.save_room(
-                    room_id=mx_joined_room, selected_option=None, puppet_pk=self.pk
-                )
+                if await Portal.is_portal(mx_joined_room):
+                    await Portal.get_by_room_id(mx_joined_room, fk_puppet=self.pk)
 
     async def sync_puppet_account(self):
         """It updates the puppet account's password and email address
