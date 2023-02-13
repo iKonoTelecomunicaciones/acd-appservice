@@ -25,6 +25,7 @@ from mautrix.types import (
     SingleReceiptEventContent,
     StateEvent,
     StateUnsigned,
+    StrippedStateEvent,
     UserID,
 )
 from mautrix.util.logging import TraceLogger
@@ -261,7 +262,7 @@ class MatrixHandler:
                     )
                     self.log.debug(f"The message {event_id} has been read at {timestamp_read}")
 
-    async def handle_invite(self, evt: Event):
+    async def handle_invite(self, evt: StrippedStateEvent):
         """If the user who was invited is a acd[n], then join the room
 
         Parameters
@@ -305,9 +306,10 @@ class MatrixHandler:
 
         puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.state_key)
         self.log.debug(f"The user {puppet.intent.mxid} is trying join in the room {evt.room_id}")
-        await puppet.room_manager.save_room(
-            room_id=evt.room_id, selected_option=None, puppet_pk=puppet.pk
-        )
+
+        if await Portal.is_portal(evt.room_id):
+            await Portal.get_by_room_id(evt.room_id, fk_puppet=puppet.pk)
+
         await puppet.intent.join_room(evt.room_id)
 
     async def handle_leave(self, evt: Event):
@@ -381,17 +383,15 @@ class MatrixHandler:
                         # Como se encontró el acd[n] dentro de la sala, entonces la guardamos
                         # en la tabla rooms
                         self.log.debug(f"The puppet {user_id} has already in the room {room_id}")
-                        await puppet.room_manager.save_room(
-                            room_id=room_id, selected_option=None, puppet_pk=puppet.pk
-                        )
+                        if await Portal.is_portal(room_id):
+                            await Portal.get_by_room_id(room_id, fk_puppet=puppet.pk)
             else:
                 return
 
         # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
         if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
-            await puppet.room_manager.save_room(
-                room_id=room_id, selected_option=None, puppet_pk=puppet.pk
-            )
+            if await Portal.is_portal(room_id):
+                await Portal.get_by_room_id(room_id, fk_puppet=puppet.pk)
 
         if puppet.intent and puppet.intent.bot and puppet.intent.bot.mxid == user_id:
             # Si el que se unió es el bot principal, debemos sacarlo para que no dañe
@@ -449,7 +449,7 @@ class MatrixHandler:
                 return
 
             # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
-            if not room_id in puppet.BIC_ROOMS:
+            if not room_id in puppet.BIC_ROOMS and not puppet.destination:
                 # invite menubot to show menu
                 # this is done with create_task because with no official API set-pl can take
                 # a while so several invite attempts are made without blocking
@@ -636,7 +636,7 @@ class MatrixHandler:
         user_prefix_guest = re.search(self.config[f"acd.username_regex_guest"], sender)
         if await puppet.room_manager.is_customer_room(room_id=room_id) or user_prefix_guest:
 
-            portal: Portal = await Portal.get_by_room_id(room_id=room_id)
+            portal: Portal = await Portal.get_by_room_id(room_id=room_id, fk_puppet=puppet.pk)
 
             room_name = await puppet.room_manager.get_room_name(room_id=portal.room_id)
             if not room_name:
