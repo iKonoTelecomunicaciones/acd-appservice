@@ -80,9 +80,11 @@ class QueueMembership(DBMembership):
             return queue_membership
 
         if create:
-            prev_membership = await QueueMembership.get_serialized_memberships(fk_user=fk_user)
+            prev_membership = await QueueMembership.get_user_memberships(fk_user=fk_user)
             queue_membership = cls(fk_user, fk_queue, cls.now())
             if prev_membership:
+                # Set prev membership state to new membership
+                # to keep all membership status congruence
                 queue_membership.state = prev_membership[0]["state"]
                 queue_membership.paused = prev_membership[0]["paused"]
                 queue_membership.pause_reason = prev_membership[0]["pause_reason"]
