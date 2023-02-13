@@ -11,7 +11,6 @@ from .db.queue_membership import QueueMembershipState
 
 
 class QueueMembership(DBMembership):
-
     fk_user: int
     fk_queue: int
     creation_date: dt
@@ -70,7 +69,6 @@ class QueueMembership(DBMembership):
     async def get_by_queue_and_user(
         cls, fk_user: int, fk_queue: int, *, create: bool = True
     ) -> QueueMembership | None:
-
         try:
             return cls.by_queue_and_user[f"{fk_user}-{fk_queue}"]
         except KeyError:
@@ -82,7 +80,21 @@ class QueueMembership(DBMembership):
             return queue_membership
 
         if create:
+            prev_membership = await QueueMembership.get_user_memberships(fk_user=fk_user)
             queue_membership = cls(fk_user, fk_queue, cls.now())
+            if prev_membership:
+                # Set prev membership state to new membership
+                # to keep all membership status congruence
+                queue_membership.state = prev_membership[0]["state"]
+                queue_membership.paused = prev_membership[0]["paused"]
+                queue_membership.pause_reason = prev_membership[0]["pause_reason"]
+                queue_membership.state_date = (
+                    cls.now() if prev_membership[0]["state_date"] else None
+                )
+                queue_membership.pause_date = (
+                    cls.now() if prev_membership[0]["pause_date"] else None
+                )
+
             await queue_membership.insert()
             queue_membership._add_to_cache()
             return queue_membership
