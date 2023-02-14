@@ -174,6 +174,9 @@ class MatrixHandler:
 
             await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
 
+        elif evt.type == EventType.ROOM_NAME or evt.type == EventType.ROOM_TOPIC:
+            await self.handle_room_name(evt=evt)
+
         elif evt.type.is_ephemeral and isinstance(evt, (ReceiptEvent)):
             await self.handle_ephemeral_event(evt)
 
@@ -494,6 +497,15 @@ class MatrixHandler:
                 puppet.phone = response.get("whatsapp").get("phone").replace("+", "")
                 await puppet.save()
 
+    async def handle_room_name(self, evt: Event):
+        queue: Queue = await Queue.get_by_room_id(room_id=evt.room_id, create=False)
+        if queue:
+            if evt.type == EventType.ROOM_NAME:
+                queue.name = evt.content.name
+            else:
+                queue.description = evt.content.topic
+            await queue.save()
+
     def is_command(self, message: MessageEventContent) -> tuple[bool, str]:
         """It checks if a message starts with the command prefix, and if it does,
         it removes the prefix and returns the message without the prefix
@@ -551,7 +563,6 @@ class MatrixHandler:
         is_command, text = self.is_command(message=message)
 
         if is_command:
-
             try:
                 command, arguments = text.split(" ", 1)
                 args = split(arguments)
@@ -635,7 +646,6 @@ class MatrixHandler:
         # If the room name is empty, it is setting the room name to the new room name.
         user_prefix_guest = re.search(self.config[f"acd.username_regex_guest"], sender)
         if await puppet.room_manager.is_customer_room(room_id=room_id) or user_prefix_guest:
-
             portal: Portal = await Portal.get_by_room_id(room_id=room_id, fk_puppet=puppet.pk)
 
             room_name = await puppet.room_manager.get_room_name(room_id=portal.room_id)
@@ -706,7 +716,6 @@ class MatrixHandler:
                     return
 
             if not puppet.room_manager.is_room_locked(room_id=portal.room_id):
-
                 await puppet.agent_manager.signaling.set_chat_status(
                     room_id=portal.room_id, status=Signaling.OPEN
                 )
