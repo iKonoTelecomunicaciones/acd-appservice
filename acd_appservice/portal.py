@@ -305,13 +305,14 @@ class Portal(DBPortal, MatrixRoom):
             if fk_puppet:
                 portal.fk_puppet = fk_puppet
 
-            if intent:
-                portal.main_intent = intent
-
             await portal.insert()
             portal = cast(cls, await super().get_by_room_id(room_id))
             await portal._add_to_cache()
             await portal.post_init()
+
+            if intent:
+                portal.main_intent = intent
+
             return portal
 
         return None

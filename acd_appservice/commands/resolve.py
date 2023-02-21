@@ -85,7 +85,7 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
 
-    if portal.room_id == puppet.control_room_id or (
+    if customer_room_id == puppet.control_room_id or (
         not await Portal.is_portal(customer_room_id)
         and not await puppet.room_manager.is_guest_room(room_id=customer_room_id)
     ):

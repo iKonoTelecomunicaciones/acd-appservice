@@ -108,22 +108,22 @@ class QueueMembership:
     @classmethod
     async def get_count_by_queue_and_state(cls, fk_queue: int, state: QueueMembershipState) -> int:
         q = f"SELECT count(*) FROM queue_membership WHERE fk_queue=$1 AND state=$2"
-        result = await cls.db.execute(q, fk_queue, state.value)
+        result = await cls.db.fetchval(q, fk_queue, state.value)
 
         if not result:
             return 0
 
-        return int(result)
+        return result
 
     @classmethod
     async def get_count_by_user_and_state(cls, fk_user: int, state: QueueMembershipState) -> int:
         q = f"SELECT count(*) FROM queue_membership WHERE fk_user=$1 AND state=$2"
-        result = await cls.db.execute(q, fk_user, state.value)
+        result = await cls.db.fetchval(q, fk_user, state.value)
 
         if not result:
             return 0
 
-        return int(result)
+        return result
 
     @classmethod
     async def get_by_queue(cls, fk_queue: int) -> List[QueueMembership] | None:

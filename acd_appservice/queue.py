@@ -34,7 +34,8 @@ class Queue(DBQueue, MatrixRoom):
         intent: IntentAPI = None,
     ):
         DBQueue.__init__(self, id=id, name=name, room_id=room_id, description=description)
-        MatrixRoom.__init__(self, room_id=self.room_id, intent=intent)
+        MatrixRoom.__init__(self, room_id=self.room_id)
+        self.main_intent = intent
         self.log = self.log.getChild(room_id)
 
     async def _add_to_cache(self) -> None:

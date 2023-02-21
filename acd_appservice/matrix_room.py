@@ -27,10 +27,9 @@ class MatrixRoom:
     creator: UserID = None
     main_intent: IntentAPI = None
 
-    def __init__(self, room_id: RoomID, intent: IntentAPI = None):
+    def __init__(self, room_id: RoomID):
         self.log = self.log.getChild(room_id)
         self.room_id = room_id
-        self.main_intent = intent or self.az.intent
 
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> None:
@@ -231,7 +230,7 @@ class MatrixRoom:
             The HTML version of the message body.
 
         """
-        await self.az.intent.send_text(
+        await self.main_intent.send_text(
             room_id=self.room_id,
             text=text,
             html=html,
@@ -248,7 +247,7 @@ class MatrixRoom:
             The HTML version of the message.
 
         """
-        await self.az.intent.send_notice(
+        await self.main_intent.send_notice(
             room_id=self.room_id,
             text=text,
             html=html,

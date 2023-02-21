@@ -185,7 +185,9 @@ class Puppet(DBPuppet, BasePuppet):
         for mx_joined_room in matrix_joined_rooms:
             if not mx_joined_room in db_joined_rooms:
                 if await Portal.is_portal(mx_joined_room):
-                    await Portal.get_by_room_id(mx_joined_room, fk_puppet=self.pk)
+                    await Portal.get_by_room_id(
+                        mx_joined_room, fk_puppet=self.pk, intent=self.intent
+                    )
 
     async def sync_puppet_account(self):
         """It updates the puppet account's password and email address

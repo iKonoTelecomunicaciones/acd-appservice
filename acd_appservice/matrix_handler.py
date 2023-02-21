@@ -642,7 +642,9 @@ class MatrixHandler:
         user_prefix_guest = re.search(self.config[f"acd.username_regex_guest"], sender.mxid)
         if await Portal.is_portal(room_id=room_id) or user_prefix_guest:
 
-            portal: Portal = await Portal.get_by_room_id(room_id=room_id, fk_puppet=puppet.pk)
+            portal: Portal = await Portal.get_by_room_id(
+                room_id=room_id, fk_puppet=puppet.pk, intent=puppet.intent
+            )
 
             room_name = await portal.get_room_name()
             if not room_name:
@@ -665,12 +667,13 @@ class MatrixHandler:
                     return
 
             # room_agent = await puppet.agent_manager.get_room_agent(room_id=portal.room_id)
+            self.log.critical(portal.main_intent.mxid)
             room_agent = await portal.get_current_agent()
 
             if room_agent:
                 # if message is not from agents, bots or ourselves, it is from the customer
                 await puppet.agent_manager.signaling.set_chat_status(
-                    room_id=portal.room_id, status=Signaling.PENDING, agent=room_agent
+                    room_id=portal.room_id, status=Signaling.PENDING, agent=room_agent.mxid
                 )
 
                 if await puppet.agent_manager.business_hours.is_not_business_hour():
