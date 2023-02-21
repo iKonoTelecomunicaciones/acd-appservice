@@ -64,7 +64,7 @@ class QueueMembership:
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> QueueMembership:
         data = {**row}
-        state = QueueMembershipState(data.get("state"))
+        state = QueueMembershipState(data.pop("state"))
         return cls(state=state, **data)
 
     async def insert(self) -> None:
