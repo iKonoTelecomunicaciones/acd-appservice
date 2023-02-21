@@ -8,6 +8,7 @@ from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
 from ..config import Config
+from ..portal import Portal
 from ..puppet import Puppet
 from ..signaling import Signaling
 from ..user import User
@@ -57,7 +58,7 @@ async def resolve(evt: CommandEvent) -> Dict:
     """
 
     try:
-        room_id = evt.args_list[0]
+        customer_room_id = evt.args_list[0]
         user_id = evt.args_list[1]
     except IndexError:
         detail = "You have not all arguments"
@@ -78,72 +79,69 @@ async def resolve(evt: CommandEvent) -> Dict:
     evt.log.debug(
         (
             f"The user {user_id} is resolving "
-            f"the room {room_id}, send_message? // {send_message} "
+            f"the room {customer_room_id}, send_message? // {send_message} "
         )
     )
 
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
 
-    if room_id == puppet.control_room_id or (
-        not await puppet.room_manager.is_customer_room(room_id=room_id)
-        and not await puppet.room_manager.is_guest_room(room_id=room_id)
+    if portal.room_id == puppet.control_room_id or (
+        not await Portal.is_portal(customer_room_id)
+        and not await puppet.room_manager.is_guest_room(room_id=customer_room_id)
     ):
 
         detail = "Group rooms or control rooms cannot be resolved."
         evt.log.error(detail)
-        await puppet.intent.send_notice(room_id=room_id, text=detail)
+        await puppet.intent.send_notice(room_id=customer_room_id, text=detail)
         return
 
-    agent_id = await puppet.agent_manager.get_room_agent(room_id=room_id)
+    portal = await Portal.get_by_room_id(room_id=customer_room_id, fk_puppet=puppet.pk)
+    agent = await portal.get_current_agent()
 
     try:
-        if agent_id:
-            await puppet.room_manager.remove_user_from_room(
-                room_id=room_id,
-                user_id=agent_id,
-                reason=puppet.config["acd.resolve_chat.notice"],
+        if agent:
+            await portal.remove_member(
+                member=agent.mxid, reason=puppet.config["acd.resolve_chat.notice"]
             )
         supervisors = puppet.config["acd.supervisors_to_invite.invitees"]
         if supervisors:
             for supervisor_id in supervisors:
-                await puppet.room_manager.remove_user_from_room(
-                    room_id=room_id,
-                    user_id=supervisor_id,
-                    reason=puppet.config["acd.resolve_chat.notice"],
+                await portal.remove_member(
+                    member=supervisor_id, reason=puppet.config["acd.resolve_chat.notice"]
                 )
     except Exception as e:
         evt.log.warning(e)
 
     # When the supervisor resolves an open chat, menubot is still in the chat
     await puppet.room_manager.menubot_leaves(
-        room_id=room_id,
+        room_id=portal.room_id,
         reason=puppet.config["acd.resolve_chat.notice"],
     )
 
     await puppet.agent_manager.signaling.set_chat_status(
-        room_id=room_id, status=Signaling.RESOLVED, agent=user_id
+        room_id=portal.room_id, status=Signaling.RESOLVED, agent=user_id
     )
 
     # clear campaign in the ik.chat.campaign_selection state event
     await puppet.agent_manager.signaling.set_selected_campaign(
-        room_id=room_id, campaign_room_id=None
+        room_id=portal.room_id, campaign_room_id=None
     )
 
     if send_message is not None:
         resolve_chat_params = puppet.config["acd.resolve_chat"]
         if send_message:
 
-            args = [room_id, resolve_chat_params["message"]]
+            args = [portal.room_id, resolve_chat_params["message"]]
             await evt.processor.handle(
                 sender=evt.sender,
                 command="template",
                 args_list=args,
-                is_management=room_id == evt.sender.management_room,
+                is_management=portal.room_id == evt.sender.management_room,
                 intent=puppet.intent,
                 room_id=evt.room_id,
             )
 
-        await puppet.intent.send_notice(room_id=room_id, text=resolve_chat_params["notice"])
+        await portal.send_notice(text=resolve_chat_params["notice"])
 
 
 class BulkResolve:
