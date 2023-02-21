@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, List
 
 from markdown import markdown
 from mautrix.api import Method, SynapseAdminPath
@@ -9,6 +9,7 @@ from mautrix.appservice import AppService, IntentAPI
 from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent, UserID
 from mautrix.util.logging import TraceLogger
 
+from .user import User
 from .util import Util
 
 if TYPE_CHECKING:
@@ -60,8 +61,6 @@ class MatrixRoom:
 
     async def set_creator(self) -> None:
         """It sets the creator of the channel"""
-        if self.creator:
-            return self.creator
 
         info = await self.get_info()
 
@@ -102,6 +101,23 @@ class MatrixRoom:
 
         return info.get("topic")
 
+    async def get_joined_users(self) -> List[User]:
+        """`get_joined_users` returns a list of all the users in the room
+
+        Returns
+        -------
+            A list of User objects
+
+        """
+        members = await self.main_intent.get_joined_members(room_id=self.room_id)
+        users: List[User] = []
+
+        for member in members:
+            user = await User.get_by_mxid(member)
+            users.append(user)
+
+        return users
+
     async def remove_member(self, member: UserID, reason: str = None):
         """If the config value for "acd.remove_method" is "leave", then leave the user,
         otherwise kick the user
@@ -119,7 +135,7 @@ class MatrixRoom:
         else:
             await self.kick_user(user_id=member, reason=reason)
 
-    async def formatted_room_id(self) -> str:
+    async def get_formatted_room_id(self) -> str:
         """It returns a string that contains the room ID, but with a link to the room
 
         Returns
