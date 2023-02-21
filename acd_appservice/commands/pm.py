@@ -6,6 +6,7 @@ from typing import Dict
 from markdown import markdown
 
 from ..client import ProvisionBridge
+from ..portal import Portal
 from ..puppet import Puppet
 from ..signaling import Signaling
 from .handler import CommandArg, CommandEvent, command_handler
@@ -117,25 +118,27 @@ async def pm(evt: CommandEvent) -> Dict:
     # if the agent_id is not set,
     # it joins the agent to the room and sends a message to the room.
     customer_room_id = data.get("room_id")
-    agent_id = None
+    agent = None
     if customer_room_id:
         # TODO WORKAROUND FOR NOT LINKING TO THE MENU IN A BIC
-        puppet.BIC_ROOMS.add(customer_room_id)
+        portal = await Portal.get_by_room_id(room_id=customer_room_id)
 
-        agent_id = await puppet.agent_manager.get_room_agent(room_id=customer_room_id)
+        puppet.BIC_ROOMS.add(portal.room_id)
+
+        agent = await portal.get_current_agent()
 
         # Checking if the agent is already in the room, if it is, it returns a message to the frontend.
-        if agent_id and agent_id != evt.sender.mxid:
-            agent_displayname = await evt.intent.get_displayname(user_id=agent_id)
+        if agent and agent.mxid != evt.sender.mxid:
+            agent_displayname = await agent.get_displayname()
             return_params[
                 "reply"
             ] = "The agent <agent_displayname> is already in room with [number]"
         else:
             # If the agent is already in the room, it returns a message to the frontend.
             await puppet.agent_manager.signaling.set_chat_status(
-                room_id=customer_room_id, status=Signaling.FOLLOWUP, agent=evt.sender.mxid
+                room_id=portal.room_id, status=Signaling.FOLLOWUP, agent=evt.sender.mxid
             )
-            if agent_id == evt.sender.mxid:
+            if agent.mxid == evt.sender.mxid:
                 return_params["reply"] = "You are already in room with [number], message was sent."
             else:
                 # Joining the agent to the room.
@@ -161,7 +164,7 @@ async def pm(evt: CommandEvent) -> Dict:
     return_params["phone_number"] = phone
     # Cuando ya hay otro agente en la sala, se debe enviar room_id en None
     return_params["room_id"] = (
-        None if agent_id and agent_id != evt.sender.mxid else data.get("room_id")
+        None if agent and agent.mxid != evt.sender.mxid else data.get("room_id")
     )
     return_params["agent_displayname"] = agent_displayname if agent_displayname else None
 
@@ -189,7 +192,7 @@ async def pm(evt: CommandEvent) -> Dict:
         # the room is marked as followup and campaign from previous room state
         # is not kept
         await puppet.agent_manager.signaling.set_chat_status(
-            room_id=customer_room_id,
+            room_id=portal.room_id,
             status=Signaling.FOLLOWUP,
             agent=evt.sender.mxid,
             campaign_room_id=None,
@@ -197,17 +200,17 @@ async def pm(evt: CommandEvent) -> Dict:
         )
         # clear campaign in the ik.chat.campaign_selection state event
         await puppet.agent_manager.signaling.set_selected_campaign(
-            room_id=customer_room_id, campaign_room_id=None
+            room_id=portal.room_id, campaign_room_id=None
         )
         if puppet.config["acd.supervisors_to_invite.invite"]:
-            asyncio.create_task(puppet.room_manager.invite_supervisors(room_id=customer_room_id))
+            asyncio.create_task(puppet.room_manager.invite_supervisors(room_id=portal.room_id))
 
         # kick menu bot
-        evt.log.debug(f"Kicking the menubot out of the room {customer_room_id}")
+        evt.log.debug(f"Kicking the menubot out of the room {portal.room_id}")
         try:
             await puppet.room_manager.menubot_leaves(
-                room_id=customer_room_id,
-                reason=f"{evt.sender.mxid} pm existing room {customer_room_id}",
+                room_id=portal.room_id,
+                reason=f"{evt.sender.mxid} pm existing room {portal.room_id}",
             )
         except Exception as e:
             evt.log.exception(e)
@@ -227,7 +230,7 @@ async def pm(evt: CommandEvent) -> Dict:
         f"_{phone}:{evt.intent.domain})"
     )
     formatted_agent = (
-        f"[{agent_displayname}](https://matrix.to/#/{agent_id if agent_id else evt.sender.mxid})"
+        agent.get_formatted_displayname() if agent else evt.sender.get_formatted_displayname()
     )
 
     await evt.reply(
