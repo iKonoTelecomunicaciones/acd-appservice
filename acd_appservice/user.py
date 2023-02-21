@@ -11,6 +11,7 @@ from mautrix.util.logging import TraceLogger
 
 from .config import Config
 from .db import User as DBUser
+from .db.user import UserRoles
 
 if TYPE_CHECKING:
     from .__main__ import ACDAppService
@@ -52,7 +53,7 @@ class User(DBUser, BaseUser):
             A boolean value.
 
         """
-        return bool(self.mxid.startswith(self.config["acd.menubot_prefix"]))
+        return self.mxid.startswith(self.config["acd.menubot_prefix"])
 
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> None:
@@ -96,6 +97,8 @@ class User(DBUser, BaseUser):
 
         if create:
             user = cls(mxid)
+            if user.is_menubot:
+                user.role = UserRoles.MENU.value
             await user.insert()
             user = await super().get_by_mxid(mxid)
             user._add_to_cache()

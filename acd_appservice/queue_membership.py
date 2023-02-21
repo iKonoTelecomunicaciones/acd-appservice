@@ -8,6 +8,7 @@ from mautrix.util.logging import TraceLogger
 
 from .db.queue_membership import QueueMembership as DBMembership
 from .db.queue_membership import QueueMembershipState
+from .user import User, UserRoles
 
 
 class QueueMembership(DBMembership):
@@ -80,6 +81,10 @@ class QueueMembership(DBMembership):
             return queue_membership
 
         if create:
+            user: User = await User.get_by_id(fk_user)
+            user.role = UserRoles.SUPERVISOR.value if user.is_admin else UserRoles.AGENT
+            await user.update()
+
             prev_membership = await QueueMembership.get_user_memberships(fk_user=fk_user)
             queue_membership = cls(fk_user, fk_queue, cls.now())
             if prev_membership:

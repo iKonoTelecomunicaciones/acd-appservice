@@ -345,9 +345,6 @@ class MatrixHandler:
         self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
 
         user: User = await User.get_by_mxid(user_id)
-        if user.is_menubot:
-            user.role = UserRoles.MENU.value
-            await user.update()
 
         # Checking if the user is already in the queue. If they are,
         # it updates their creation_date to the current time.
@@ -355,8 +352,6 @@ class MatrixHandler:
 
         if is_queue:
             await QueueMembership.get_by_queue_and_user(user.id, is_queue.id)
-            user.role = UserRoles.SUPERVISOR.value if user.is_admin else UserRoles.AGENT.value
-            await user.update()
             return
 
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
@@ -762,8 +757,6 @@ class MatrixHandler:
         if not puppet:
             return False
 
-        user: User = await User.get_by_mxid(puppet.custom_mxid, create=False)
-
         # If destination exists, distribute chat using it.
         # Destination can be menubot, agent or queue.
         if not Util.is_room_id(puppet.destination) and not Util.is_user_id(puppet.destination):
@@ -781,6 +774,7 @@ class MatrixHandler:
                 )
                 return True
 
+        user: User = await User.get_by_mxid(puppet.custom_mxid, create=False)
         args = [portal.room_id, puppet.destination]
         command = "acd" if Util.is_room_id(puppet.destination) else "transfer_user"
         await self.commands.handle(

@@ -68,7 +68,7 @@ class User:
 
     @classmethod
     async def get_users_by_role(cls, role: str):
-        q = f"""SELECT id, {cls._columns} FROM "user" WHERE role=$1"""
+        q = f"""SELECT id, {cls._columns} FROM "user" WHERE role=$1 ORDER BY mxid"""
         rows = await cls.db.fetch(q, role)
         if not rows:
             return None

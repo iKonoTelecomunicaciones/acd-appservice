@@ -6,8 +6,10 @@ from aiohttp import web
 
 from ...db.user import User, UserRoles
 from ...puppet import Puppet
-from ..base import routes
+from ...util import Util
+from ..base import _resolve_user_identifier, routes
 from ..error_responses import (
+    INVALID_DESTINATION,
     INVALID_USER_ROLE,
     NOT_DATA,
     PUPPET_DOESNOT_EXIST,
@@ -111,6 +113,7 @@ async def get_users_by_role(request: web.Request) -> web.Response:
         '404':
             $ref: '#/components/responses/NotFound'
     """
+    await _resolve_user_identifier(request=request)
 
     user_role = request.match_info.get("user_role", "")
     if not user_role.upper() in UserRoles.__members__:
@@ -134,6 +137,8 @@ async def get_puppet(request: web.Request) -> web.Response:
         '404':
             $ref: '#/components/responses/NotFound'
     """
+    await _resolve_user_identifier(request=request)
+
     puppet_mxid = request.match_info.get("puppet_mxid", "")
     puppet: Dict = await Puppet.get_info_by_custom_mxid(puppet_mxid)
     if not puppet:
@@ -142,8 +147,8 @@ async def get_puppet(request: web.Request) -> web.Response:
     return web.json_response(data=puppet)
 
 
-@routes.patch("/v1/set_destionation/{puppet_mxid}")
-async def set_destionation(request: web.Request) -> web.Response:
+@routes.patch("/v1/set_destination/{puppet_mxid}")
+async def set_destination(request: web.Request) -> web.Response:
     """
     ---
     summary:    Set puppet destination
@@ -171,11 +176,16 @@ async def set_destionation(request: web.Request) -> web.Response:
         '404':
             $ref: '#/components/responses/NotFound'
     """
+    await _resolve_user_identifier(request=request)
 
     if not request.body_exists:
         return web.json_response(**NOT_DATA)
 
     data: Dict = await request.json()
+    if not Util.is_room_id(data.get("destination")) and not Util.is_user_id(
+        data.get("destination")
+    ):
+        return web.json_response(**INVALID_DESTINATION)
 
     puppet_mxid = request.match_info.get("puppet_mxid", "")
     puppet: Puppet = await Puppet.get_puppet_by_mxid(puppet_mxid, create=False)

@@ -100,6 +100,8 @@ FORBIDDEN_OPERATION = {
     "status": 403,
 }
 
-INVALID_USER_ROLE = {"data": {"error": "User role does not exists"}, "status": 404}
+INVALID_USER_ROLE = {"data": {"error": "User role does not exist"}, "status": 404}
 
 PUPPET_DOESNOT_EXIST = {"data": {"error": "Puppet with given mxid was not found."}, "status": 404}
+
+INVALID_DESTINATION = {"data": {"error": "Given destination is invalid"}, "status": 409}
