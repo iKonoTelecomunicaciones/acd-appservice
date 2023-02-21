@@ -18,7 +18,6 @@ from mautrix.types import (
     MessageEvent,
     MessageEventContent,
     MessageType,
-    PresenceState,
     ReceiptEvent,
     ReceiptType,
     RoomID,
@@ -38,7 +37,7 @@ from .message import Message
 from .portal import Portal
 from .puppet import Puppet
 from .queue import Queue
-from .queue_membership import QueueMembership, QueueMembershipState
+from .queue_membership import QueueMembership
 from .signaling import Signaling
 from .user import User
 from .util import Util
@@ -172,7 +171,8 @@ class MatrixHandler:
                 await self.handle_notice(evt.room_id, evt.sender, evt.content, evt.event_id)
                 return
 
-            await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
+            sender: User = await User.get_by_mxid(evt.sender)
+            await self.handle_message(evt.room_id, sender, evt.content, evt.event_id)
 
         elif evt.type.is_ephemeral and isinstance(evt, (ReceiptEvent)):
             await self.handle_ephemeral_event(evt)
@@ -516,7 +516,7 @@ class MatrixHandler:
         return is_command, text
 
     async def handle_message(
-        self, room_id: RoomID, sender: UserID, message: MessageEventContent, event_id: EventID
+        self, room_id: RoomID, sender: User, message: MessageEventContent, event_id: EventID
     ) -> None:
         """If the message is a command, process it. If not, ignore it
 
@@ -524,8 +524,8 @@ class MatrixHandler:
         ----------
         room_id : RoomID
             The room ID of the room the message was sent in.
-        sender : UserID
-            The user ID of the user who sent the message.
+        sender : User
+            The user who sent the message.
         message : MessageEventContent
             The message that was sent.
         event_id : EventID
@@ -544,7 +544,6 @@ class MatrixHandler:
         message.body = message.body.strip()
 
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
-        user: User = await User.get_by_mxid(sender)
 
         # Checking if the message is a command, and if it is,
         # it is sending the command to the command processor.
@@ -562,12 +561,12 @@ class MatrixHandler:
 
             await self.commands.handle(
                 room_id=room_id,
-                sender=user,
+                sender=sender,
                 command=command,
                 args_list=args,
                 content=message,
                 intent=puppet.intent if puppet else self.az.intent,
-                is_management=room_id == user.management_room,
+                is_management=room_id == sender.management_room,
             )
 
         if not puppet:
@@ -581,10 +580,8 @@ class MatrixHandler:
         # Dado un user_id obtenemos el número y buscamos que el número no sea uno de los ya
         # registrados en el ACD - AZ, si es así lo agregamos a la lista negra
         # luego se envía un mensaje indicando personalizado.
-        customer_match = re.match(self.config["utils.username_regex"], sender)
-        if customer_match:
-            customer_phone = customer_match.group("number")
-            if await puppet.is_another_puppet(phone=customer_phone):
+        if sender.is_customer and sender.account_id:
+            if await puppet.is_another_puppet(phone=sender.account_id):
                 self.log.error(self.config["utils.message_bot_war"])
                 await puppet.intent.send_text(
                     room_id=room_id, text=self.config["utils.message_bot_war"]
@@ -594,7 +591,7 @@ class MatrixHandler:
 
         # Ignore messages from whatsapp bots
         bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
-        if bridge and sender == self.config[f"bridges.{bridge}.mxid"]:
+        if bridge and sender.mxid == self.config[f"bridges.{bridge}.mxid"]:
             return
 
         # Checking if the room is a control room.
@@ -602,11 +599,11 @@ class MatrixHandler:
             return
 
         # ignore messages other than commands from menu bot
-        if sender.startswith(self.config["acd.menubot_prefix"]):
+        if sender.is_menubot:
             return
 
         # ignore messages other than commands from supervisor
-        if sender.startswith(self.config["acd.supervisor_prefix"]):
+        if sender.is_supervisor:
             return
 
         # if it is a voice call, let the customer know that the company doesn't receive calls
@@ -621,44 +618,44 @@ class MatrixHandler:
             self.log.debug(f"Ignoring the room {room_id} because it is whatsapp_status_broadcast")
             return
 
-        is_agent = puppet.agent_manager.is_agent(agent_id=sender)
-
         # Ignore messages from ourselves or agents if not a command
-        if is_agent:
+        if sender.is_agent:
             await puppet.agent_manager.signaling.set_chat_status(
-                room_id=room_id, status=Signaling.FOLLOWUP, agent=sender
+                room_id=room_id, status=Signaling.FOLLOWUP, agent=sender.mxid
             )
             return
 
         # The below code is checking if the room is a customer room, if it is,
         # it is getting the room name, and the creator of the room.
         # If the room name is empty, it is setting the room name to the new room name.
-        user_prefix_guest = re.search(self.config[f"acd.username_regex_guest"], sender)
-        if await puppet.room_manager.is_customer_room(room_id=room_id) or user_prefix_guest:
+        user_prefix_guest = re.search(self.config[f"acd.username_regex_guest"], sender.mxid)
+        if await Portal.is_portal(room_id=room_id) or user_prefix_guest:
 
             portal: Portal = await Portal.get_by_room_id(room_id=room_id, fk_puppet=puppet.pk)
 
-            room_name = await puppet.room_manager.get_room_name(room_id=portal.room_id)
+            room_name = await portal.get_room_name()
             if not room_name:
-                await puppet.room_manager.put_name_customer_room(room_id=portal.room_id)
+                await portal.update_room_name()
                 self.log.info(
                     f"User {portal.room_id} has changed the name of the room {puppet.intent.mxid}"
                 )
 
-            if puppet.intent.mxid == sender:
-                self.log.debug(f"Ignoring {sender} messages, is acd[n]")
+            if puppet.intent.mxid == sender.mxid:
+                self.log.debug(f"Ignoring {sender.mxid} messages, is acd[n]")
                 return
 
             # the user entered the offline agent menu and selected some option
             if puppet.room_manager.in_offline_menu(portal.room_id):
                 puppet.room_manager.pull_from_offline_menu(portal.room_id)
                 valid_option = await puppet.agent_manager.process_offline_selection(
-                    room_id=portal.room_id, msg=message.body
+                    portal=portal, msg=message.body
                 )
                 if valid_option:
                     return
 
-            room_agent = await puppet.agent_manager.get_room_agent(room_id=portal.room_id)
+            # room_agent = await puppet.agent_manager.get_room_agent(room_id=portal.room_id)
+            room_agent = await portal.get_current_agent()
+
             if room_agent:
                 # if message is not from agents, bots or ourselves, it is from the customer
                 await puppet.agent_manager.signaling.set_chat_status(
@@ -673,16 +670,8 @@ class MatrixHandler:
 
                 # Switch between presence and agent operation login
                 # using config parameter to show offline menu
-                if self.config["acd.use_presence"]:
-                    presence = await puppet.agent_manager.get_agent_presence(agent_id=room_agent)
-                    is_agent_offline = presence and presence.presence == PresenceState.OFFLINE
-                else:
-                    presence = await puppet.agent_manager.get_agent_status(agent_id=room_agent)
-                    is_agent_offline = (
-                        presence.get("presence") == QueueMembershipState.Offline.value
-                    )
 
-                if is_agent_offline:
+                if not await room_agent.is_online():
                     await puppet.agent_manager.process_offline_agent(
                         room_id=portal.room_id,
                         room_agent=room_agent,
