@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
-from typing import cast
+from typing import List, cast
 
 from mautrix.appservice import IntentAPI
+from mautrix.errors.base import IntentError
 from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
@@ -132,6 +133,80 @@ class Queue(DBQueue, MatrixRoom):
         self.name = new_name
         await self.main_intent.set_room_name(room_id=self.room_id, name=new_name)
         await self.save()
+
+    async def get_agent_count(self) -> int:
+        agents = await self.get_agents() or []
+        return len(agents)
+
+    async def get_agents(self) -> List[User]:
+
+        members = []
+
+        try:
+            members = await self.get_joined_users()
+        except IntentError as e:
+            self.log.error(e)
+
+        if not members:
+            return members
+
+        # remove bots from member list
+        return self.remove_not_agents(members)
+
+    def remove_not_agents(self, members: List[User]) -> List[User]:
+        only_agents: List[User] = []
+        if members:
+            # Removes non-agents
+            only_agents = [user for user in members if user.is_agent]
+
+        return only_agents
+
+    async def get_first_online_agent(self) -> User | None:
+        """It returns the first agent that is online in the room
+
+        Returns
+        -------
+            UserID
+
+        """
+        agents: List[User] = await self.get_agents(self.room_id)
+
+        if not agents:
+            self.log.debug(f"There's no agent in room: {self.room_id}")
+            return
+
+        for agent in agents:
+            # Switch between presence and agent operation login using config parameter
+            # to verify if agent is logged in
+
+            is_agent_online = await agent.is_online(queue_id=self.id)
+
+            if is_agent_online:
+                return agent
+
+    async def get_membership(self, agent: User) -> QueueMembership:
+        """It returns a QueueMembership object if the user is a member of the queue,
+        otherwise it returns None
+
+        Parameters
+        ----------
+        agent : User
+            User = The user that is being added to the queue
+
+        Returns
+        -------
+            A QueueMembership object
+
+        """
+
+        membership: QueueMembership = await QueueMembership.get_by_queue_and_user(
+            fk_user=agent.id, fk_queue=self.id, create=False
+        )
+
+        if not membership:
+            return
+
+        return membership
 
     @classmethod
     async def get_by_room_id(cls, room_id: RoomID, *, create: bool = True) -> Queue | None:
