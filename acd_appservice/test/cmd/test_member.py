@@ -1,10 +1,10 @@
 import nest_asyncio
 import pytest
 
-from ..commands.handler import CommandProcessor
-from ..queue import Queue
-from ..queue_membership import QueueMembership, QueueMembershipState
-from ..user import User
+from ...commands.handler import CommandProcessor
+from ...queue import Queue
+from ...queue_membership import QueueMembership, QueueMembershipState
+from ...user import User
 
 nest_asyncio.apply()
 
@@ -39,7 +39,7 @@ class TestMemberCMD:
             is_management=False,
             room_id=queue.room_id,
         )
-        assert queue_membership.state == "online"
+        assert queue_membership.state == QueueMembershipState.ONLINE
         assert response.get("status") == 200
 
     async def test_member_login_over_other_agent(
@@ -227,7 +227,7 @@ class TestMemberCMD:
             is_management=False,
             room_id=queue.room_id,
         )
-        assert queue_membership.state == "online"
+        assert queue_membership.state == QueueMembershipState.ONLINE
         assert response.get("status") == 200
 
     async def test_member_login_by_admin_agent_already_login(
