@@ -493,7 +493,7 @@ async def info(evt: CommandEvent, room_id: RoomID) -> Dict:
         return json_response
 
     memberships = await QueueMembership.get_by_queue(fk_queue=queue.id)
-    text = f"#### Room: {await queue.formatted_room_id()}"
+    text = f"#### Room: {await queue.get_formatted_room_id()}"
 
     _memberships: List[Dict[str:Any]] = []
 
@@ -501,7 +501,7 @@ async def info(evt: CommandEvent, room_id: RoomID) -> Dict:
         text += "\n#### Current memberships:"
         for membership in memberships:
             user: User = await User.get_by_id(membership.fk_user)
-            text += f"\n\n- {await user.formatted_displayname()} -> state: {membership.state} || paused: {membership.paused}"
+            text += f"\n\n- {await user.get_formatted_displayname()} -> state: {membership.state} || paused: {membership.paused}"
             _memberships.append(
                 {
                     "user_id": user.mxid,
