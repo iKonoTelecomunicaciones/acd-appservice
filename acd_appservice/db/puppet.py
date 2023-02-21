@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, List
+from typing import TYPE_CHECKING, ClassVar, Dict, List
 
 import asyncpg
 from attr import dataclass
@@ -100,6 +100,15 @@ class Puppet:
         if not row:
             return None
         return cls._from_row(row)
+
+    @classmethod
+    async def get_info_by_custom_mxid(cls, mxid: UserID) -> Dict | None:
+        q = f"""SELECT pk, email, phone, bridge, destination, photo_mxc, name_set, avatar_set,
+        is_registered, custom_mxid, control_room_id FROM puppet WHERE custom_mxid=$1"""
+        row = await cls.db.fetchrow(q, mxid)
+        if not row:
+            return None
+        return dict(row)
 
     @classmethod
     async def get_by_email(cls, email: str) -> Puppet | None:

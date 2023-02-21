@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import Enum
 from typing import TYPE_CHECKING, ClassVar
 
 import asyncpg
@@ -10,6 +11,12 @@ from mautrix.util.async_db import Database
 fake_db = Database.create("") if TYPE_CHECKING else None
 
 
+class UserRoles(Enum):
+    SUPERVISOR = "supervisor"
+    AGENT = "agent"
+    MENU = "menu"
+
+
 @dataclass
 class User:
     db: ClassVar[Database] = fake_db
@@ -17,25 +24,26 @@ class User:
     mxid: UserID
     id: int | None = None
     management_room: RoomID | None = None  # if is admin
+    role: str = None
 
     # max_chats: int = 0
 
-    _columns = "mxid, management_room"
+    _columns = "mxid, management_room, role"
 
     @property
     def _values(self):
-        return (self.mxid, self.management_room)
+        return (self.mxid, self.management_room, self.role)
 
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> User:
         return cls(**row)
 
     async def insert(self) -> None:
-        q = 'INSERT INTO "user" (mxid, management_room) VALUES ($1, $2)'
+        q = 'INSERT INTO "user" (mxid, management_room, role) VALUES ($1, $2, $3)'
         await self.db.execute(q, *self._values)
 
     async def update(self) -> None:
-        q = 'UPDATE "user" SET management_room=$2 WHERE mxid=$1'
+        q = 'UPDATE "user" SET management_room=$2, role=$3 WHERE mxid=$1'
         await self.db.execute(q, *self._values)
 
     async def delete(self) -> None:
@@ -57,3 +65,12 @@ class User:
         if not row:
             return None
         return cls._from_row(row)
+
+    @classmethod
+    async def get_users_by_role(cls, role: str):
+        q = f"""SELECT id, {cls._columns} FROM "user" WHERE role=$1"""
+        rows = await cls.db.fetch(q, role)
+        if not rows:
+            return None
+
+        return [dict(user) for user in rows]

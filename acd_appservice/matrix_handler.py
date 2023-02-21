@@ -34,6 +34,7 @@ from acd_appservice import acd_program
 
 from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
+from .db.user import UserRoles
 from .message import Message
 from .portal import Portal
 from .puppet import Puppet
@@ -344,6 +345,9 @@ class MatrixHandler:
         self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
 
         user: User = await User.get_by_mxid(user_id)
+        if user.is_menubot:
+            user.role = UserRoles.MENU.value
+            await user.update()
 
         # Checking if the user is already in the queue. If they are,
         # it updates their creation_date to the current time.
@@ -351,6 +355,8 @@ class MatrixHandler:
 
         if is_queue:
             await QueueMembership.get_by_queue_and_user(user.id, is_queue.id)
+            user.role = UserRoles.SUPERVISOR.value if user.is_admin else UserRoles.AGENT.value
+            await user.update()
             return
 
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
@@ -449,7 +455,12 @@ class MatrixHandler:
                 return
 
             # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
-            if not room_id in puppet.BIC_ROOMS and not puppet.destination:
+            if not room_id in puppet.BIC_ROOMS:
+                if puppet.destination:
+                    portal: Portal = Portal.get_by_room_id(room_id=room_id, create=False)
+                    if await self.process_destination(portal):
+                        return
+
                 # invite menubot to show menu
                 # this is done with create_task because with no official API set-pl can take
                 # a while so several invite attempts are made without blocking
@@ -551,7 +562,6 @@ class MatrixHandler:
         is_command, text = self.is_command(message=message)
 
         if is_command:
-
             try:
                 command, arguments = text.split(" ", 1)
                 args = split(arguments)
@@ -635,7 +645,6 @@ class MatrixHandler:
         # If the room name is empty, it is setting the room name to the new room name.
         user_prefix_guest = re.search(self.config[f"acd.username_regex_guest"], sender)
         if await puppet.room_manager.is_customer_room(room_id=room_id) or user_prefix_guest:
-
             portal: Portal = await Portal.get_by_room_id(room_id=room_id, fk_puppet=puppet.pk)
 
             room_name = await puppet.room_manager.get_room_name(room_id=portal.room_id)
@@ -706,7 +715,6 @@ class MatrixHandler:
                     return
 
             if not puppet.room_manager.is_room_locked(room_id=portal.room_id):
-
                 await puppet.agent_manager.signaling.set_chat_status(
                     room_id=portal.room_id, status=Signaling.OPEN
                 )
@@ -754,13 +762,24 @@ class MatrixHandler:
         if not puppet:
             return False
 
-        user: User = await User.get_by_mxid(puppet.custom_mxid)
+        user: User = await User.get_by_mxid(puppet.custom_mxid, create=False)
 
         # If destination exists, distribute chat using it.
-        # Destination can be user_id or room_id.
+        # Destination can be menubot, agent or queue.
         if not Util.is_room_id(puppet.destination) and not Util.is_user_id(puppet.destination):
             self.log.debug(f"Wrong destination for room id {portal.room_id}")
             return False
+
+        # Verify if destination is a menubot and init the process to invite them to chat room
+        if Util.is_user_id(puppet.destination):
+            probably_menubot: User = await User.get_by_mxid(puppet.destination, create=False)
+            if probably_menubot.role == UserRoles.MENU.value:
+                asyncio.create_task(
+                    puppet.room_manager.invite_menu_bot(
+                        room_id=portal.room_id, menubot_id=puppet.destination
+                    )
+                )
+                return True
 
         args = [portal.room_id, puppet.destination]
         command = "acd" if Util.is_room_id(puppet.destination) else "transfer_user"

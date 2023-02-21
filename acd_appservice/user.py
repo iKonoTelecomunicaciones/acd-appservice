@@ -27,13 +27,32 @@ class User(DBUser, BaseUser):
     by_mxid: dict[UserID, User] = {}
     by_id: dict[int, User] = {}
 
-    def __init__(self, mxid: UserID, management_room: RoomID = None, id: int = None):
+    def __init__(
+        self, mxid: UserID, management_room: RoomID = None, id: int = None, role: str = None
+    ):
         self.mxid = mxid
-        super().__init__(id=id, mxid=mxid, management_room=management_room)
+        super().__init__(id=id, mxid=mxid, management_room=management_room, role=role)
         BaseUser.__init__(self)
         perms = self.config.get_permissions(mxid)
         self.is_whitelisted, self.is_admin, self.permission_level = perms
         self.log = self.log.getChild(mxid)
+
+    @property
+    def is_menubot(self) -> bool:
+        """This function checks if the user_id starts with the menubot prefix
+        defined in the config file
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user to check.
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+        return bool(self.mxid.startswith(self.config["acd.menubot_prefix"]))
 
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> None:
@@ -65,7 +84,6 @@ class User(DBUser, BaseUser):
     @classmethod
     @async_getter_lock
     async def get_by_mxid(cls, mxid: UserID, *, create: bool = True) -> User | None:
-
         try:
             return cls.by_mxid[mxid]
         except KeyError:
@@ -88,7 +106,6 @@ class User(DBUser, BaseUser):
     @classmethod
     @async_getter_lock
     async def get_by_id(cls, id: int) -> User | None:
-
         try:
             return cls.by_id[id]
         except KeyError:
