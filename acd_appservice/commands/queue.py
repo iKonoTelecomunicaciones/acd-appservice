@@ -549,7 +549,7 @@ async def _list(evt: CommandEvent) -> Dict:
         A dictionary with a status code and a data key.
 
     """
-    queues = await Queue.get_all()
+    queues: List[Queue] = await Queue.get_all()
 
     text = "#### Registered queues"
 
@@ -563,7 +563,7 @@ async def _list(evt: CommandEvent) -> Dict:
     _queues = []
 
     for queue in queues:
-        text += f"\n- {await queue.formatted_room_id()}" + (
+        text += f"\n- {await queue.get_formatted_room_id()}" + (
             f"-> `{queue.description}`" if queue.description else ""
         )
         _queues.append(
