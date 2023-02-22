@@ -574,7 +574,6 @@ async def read_check(request: web.Request) -> web.Response:
 
 @routes.post("/v1/get_bridges_status")
 async def get_bridges_status(request: web.Request) -> web.Response:
-
     """
     ---
     summary:        Given a list of puppets, get his bridges status.
@@ -628,7 +627,6 @@ async def get_bridges_status(request: web.Request) -> web.Response:
 
 @routes.post("/v1/logout")
 async def logout(request: web.Request) -> web.Response:
-
     """
     ---
     summary:        Close connection of a previously logged-in bridge

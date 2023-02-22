@@ -229,7 +229,7 @@ async def resolve(request: web.Request) -> web.Response:
     send_message = data.get("send_message") if data.get("send_message") else None
 
     # Obtenemos el puppet de este email si existe
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
 
     if not puppet:
         return web.json_response(**USER_DOESNOT_EXIST)
@@ -361,7 +361,7 @@ async def state_event(request: web.Request) -> web.Response:
         return web.json_response(**REQUIRED_VARIABLES)
 
     # Obtenemos el puppet de este email si existe
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
     if not puppet:
         return web.json_response(**USER_DOESNOT_EXIST)
 
@@ -420,7 +420,7 @@ async def template(request: web.Request) -> web.Response:
     if not (room_id and template_message):
         return web.json_response(**REQUIRED_VARIABLES)
 
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
     if not puppet:
         return web.json_response(**USER_DOESNOT_EXIST)
 
@@ -476,7 +476,7 @@ async def transfer(request: web.Request) -> web.Response:
     campaign_room_id = data.get("campaign_room_id")
 
     # Obtenemos el puppet de este email si existe
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     if not puppet:
         return web.json_response(**USER_DOESNOT_EXIST)
 
@@ -538,7 +538,7 @@ async def transfer_user(request: web.Request) -> web.Response:
     target_agent_id = data.get("target_agent_id")
 
     # Obtenemos el puppet de este email si existe
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     if not puppet:
         return web.json_response(**USER_DOESNOT_EXIST)
 
@@ -1001,7 +1001,7 @@ async def acd(request: web.Request) -> web.Response:
     joined_message = data.get("joined_message") or ""
 
     # Get the puppet from customer_room_id if exists
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     if not puppet:
         return web.json_response(**USER_DOESNOT_EXIST)
 
