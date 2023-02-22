@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
 
 class MatrixRoom:
-
     room_id: RoomID
     bridge: str
     log: TraceLogger = logging.getLogger("acd.matrix_room")
