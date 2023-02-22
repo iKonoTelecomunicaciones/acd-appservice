@@ -83,19 +83,20 @@ async def resolve(evt: CommandEvent) -> Dict:
         )
     )
 
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
 
     if customer_room_id == puppet.control_room_id or (
         not await Portal.is_portal(customer_room_id)
         and not await puppet.room_manager.is_guest_room(room_id=customer_room_id)
     ):
-
         detail = "Group rooms or control rooms cannot be resolved."
         evt.log.error(detail)
         await puppet.intent.send_notice(room_id=customer_room_id, text=detail)
         return
 
-    portal = await Portal.get_by_room_id(room_id=customer_room_id, fk_puppet=puppet.pk)
+    portal = await Portal.get_by_room_id(
+        room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent
+    )
     agent = await portal.get_current_agent()
 
     try:
@@ -130,7 +131,6 @@ async def resolve(evt: CommandEvent) -> Dict:
     if send_message is not None:
         resolve_chat_params = puppet.config["acd.resolve_chat"]
         if send_message:
-
             args = [portal.room_id, resolve_chat_params["message"]]
             await evt.processor.handle(
                 sender=evt.sender,
@@ -145,7 +145,6 @@ async def resolve(evt: CommandEvent) -> Dict:
 
 
 class BulkResolve:
-
     log: TraceLogger = logging.getLogger("acd.bulk_resolve")
     room_ids = set()
     active_resolve = False
@@ -205,7 +204,7 @@ class BulkResolve:
 
             for room_id in rooms_to_resolve:
                 self.room_ids.remove(room_id)
-                puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+                puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
                 if not puppet:
                     self.log.warning(
                         f"The room {room_id} has not been resolved because the puppet was not found"
