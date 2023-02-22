@@ -383,12 +383,12 @@ class Puppet(DBPuppet, BasePuppet):
         return next_puppet
 
     @classmethod
-    async def get_customer_room_puppet(cls, room_id: RoomID):
+    async def get_by_portal(cls, portal_room_id: RoomID):
         """Get the puppet from a customer room
 
         Parameters
         ----------
-        room_id : RoomID
+        portal_room_id : RoomID
             Customer room_id
 
         Returns
@@ -400,11 +400,40 @@ class Puppet(DBPuppet, BasePuppet):
         puppet: Puppet = None
 
         try:
-            room = await RoomManager.get_room(room_id)
-            if not (room and room.fk_puppet):
+            portal = await Portal.get_by_room_id(room_id=portal_room_id, create=False)
+            if not (portal and portal.fk_puppet):
                 return
 
-            puppet = await Puppet.get_by_pk(room.fk_puppet)
+            puppet = await Puppet.get_by_pk(portal.fk_puppet)
+        except Exception as e:
+            cls.log.exception(e)
+            return
+
+        return puppet
+
+    @classmethod
+    async def get_by_control_room_id(cls, control_room_id: RoomID):
+        """Get the puppet from a customer room
+
+        Parameters
+        ----------
+        control_room_id : RoomID
+            Customer room_id
+
+        Returns
+        -------
+            A puppet
+
+        """
+
+        puppet: Puppet = None
+
+        try:
+            portal = await Portal.get_by_room_id(room_id=control_room_id)
+            if not (portal and portal.fk_puppet):
+                return
+
+            puppet = await Puppet.get_by_pk(portal.fk_puppet)
         except Exception as e:
             cls.log.exception(e)
             return
