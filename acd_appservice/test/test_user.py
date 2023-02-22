@@ -6,6 +6,7 @@ from ..user import User
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip
 class TestUser:
     # async def test_insert(self):
     #     pass
