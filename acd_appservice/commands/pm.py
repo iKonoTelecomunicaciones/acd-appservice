@@ -6,7 +6,7 @@ from typing import Dict
 from markdown import markdown
 
 from ..client import ProvisionBridge
-from ..portal import Portal
+from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..signaling import Signaling
 from .handler import CommandArg, CommandEvent, command_handler
@@ -137,6 +137,7 @@ async def pm(evt: CommandEvent) -> Dict:
             ] = "The agent <agent_displayname> is already in room with [number]"
         else:
             # If the agent is already in the room, it returns a message to the frontend.
+            await portal.update_state(PortalState.FOLLOWUP)
             await puppet.agent_manager.signaling.set_chat_status(
                 room_id=portal.room_id, status=Signaling.FOLLOWUP, agent=evt.sender.mxid
             )
@@ -193,6 +194,7 @@ async def pm(evt: CommandEvent) -> Dict:
     if not return_params.get("reply"):
         # the room is marked as followup and campaign from previous room state
         # is not kept
+        await portal.update_state(PortalState.FOLLOWUP)
         await puppet.agent_manager.signaling.set_chat_status(
             room_id=portal.room_id,
             status=Signaling.FOLLOWUP,

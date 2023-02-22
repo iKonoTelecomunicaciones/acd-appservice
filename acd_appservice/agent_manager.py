@@ -566,6 +566,7 @@ class AgentManager:
                 self.log.exception(e)
 
             # set chat status to pending when the agent is asigned to the chat
+            await portal.update_state(PortalState.PENDING)
             if transfer_author:
                 await self.signaling.set_chat_status(
                     room_id=portal.room_id,
