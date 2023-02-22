@@ -24,5 +24,5 @@ class TestMatrixRoom:
             == await matrix_room.get_formatted_room_id()
         )
 
-    async def test_get_joined_users(self, matrix_room: MatrixRoom):
-        pass
+    # async def test_get_joined_users(self, matrix_room: MatrixRoom):
+    #     pass

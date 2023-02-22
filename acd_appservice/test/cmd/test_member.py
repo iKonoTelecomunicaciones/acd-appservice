@@ -79,7 +79,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """> The function tests that a member can login to a queue, and that if they try to login again,
         they get a message saying they are already logged in
 
@@ -119,7 +118,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """It tests the member logout command.
 
         Parameters
@@ -160,7 +158,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """> The function tests that a member can logout to a queue, and that if they try to logout again,
         they get a message saying they are already logged out.
 
@@ -201,7 +198,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """Tests that an admin can log in a member
 
         Parameters
@@ -238,7 +234,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """Test admin try to log in an agent again.
 
         Parameters
@@ -281,7 +276,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """> An admin user can not login to a queue
 
         Parameters
@@ -315,7 +309,6 @@ class TestMemberCMD:
         processor: CommandProcessor,
         queue: Queue,
     ):
-
         """>This function tests that an admin user cannot login a member that is not in the queue
 
         Parameters
@@ -350,7 +343,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """Tests that an admin can log out a member
 
         Parameters
@@ -396,7 +388,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """Test admin try to log out an agent again.
 
         Parameters
@@ -439,7 +430,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """> An admin user can not logout to a queue
 
         Parameters
@@ -473,7 +463,6 @@ class TestMemberCMD:
         processor: CommandProcessor,
         queue: Queue,
     ):
-
         """>This function tests that an admin user cannot logout a member that is not in the queue
 
         Parameters
@@ -617,7 +606,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """> The function tests that a member can pause to a queue, and that if they try to pause again,
         they get a message saying they are already logged in
 
@@ -666,7 +654,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """It tests the member unpause command.
 
         Parameters
@@ -716,7 +703,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """It tests member cannot unpause if member is not logged in.
 
         Parameters
@@ -756,7 +742,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """> The function tests that a member can unpause to a queue, and that if they try to unpause again,
         they get a message saying they are already unpaused.
 
@@ -815,7 +800,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """Tests that an admin can pause a member
 
         Parameters
@@ -862,7 +846,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """Tests that an admin cannot pause a member if member is not logged in
 
         Parameters
@@ -898,7 +881,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """Test admin try to pause an agent again.
 
         Parameters
@@ -951,7 +933,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """> An admin user can not pause to a queue
 
         Parameters
@@ -993,7 +974,6 @@ class TestMemberCMD:
         processor: CommandProcessor,
         queue: Queue,
     ):
-
         """>This function tests that an admin user cannot pause a member that is not in the queue
 
         Parameters
@@ -1036,7 +1016,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """Tests that an admin cannot unpause a member if member is not logged in
 
         Parameters
@@ -1081,7 +1060,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """Tests that an admin can unpause a member
 
         Parameters
@@ -1136,7 +1114,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """Test admin try unpause an agent again.
 
         Parameters
@@ -1198,7 +1175,6 @@ class TestMemberCMD:
         queue: Queue,
         queue_membership: QueueMembership,
     ):
-
         """> An admin user can not unpause to a queue
 
         Parameters
@@ -1241,7 +1217,6 @@ class TestMemberCMD:
         processor: CommandProcessor,
         queue: Queue,
     ):
-
         """>This function tests that an admin user cannot unpause a member that is not in the queue
 
         Parameters

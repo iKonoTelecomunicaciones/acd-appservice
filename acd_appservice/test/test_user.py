@@ -7,23 +7,23 @@ from ..user import User
 
 @pytest.mark.asyncio
 class TestUser:
-    async def test_insert(self):
-        pass
+    # async def test_insert(self):
+    #     pass
 
-    async def test_update(self):
-        pass
+    # async def test_update(self):
+    #     pass
 
-    async def test_delete(self):
-        pass
+    # async def test_delete(self):
+    #     pass
 
-    async def test_get_by_mxid(self):
-        pass
+    # async def test_get_by_mxid(self):
+    #     pass
 
-    async def test_get_id(self):
-        pass
+    # async def test_get_id(self):
+    #     pass
 
-    async def test_get_by_mxid_create(self):
-        pass
+    # async def test_get_by_mxid_create(self):
+    #     pass
 
     async def test_is_agent(self, agent_user: User):
         assert agent_user.is_agent == True
@@ -57,11 +57,11 @@ class TestUser:
         assert agent_user.is_admin != True
         assert customer.is_admin != True
 
-    async def test_is_online(self):
-        pass
+    # async def test_is_online(self):
+    #     pass
 
-    async def test_is_not_online(self):
-        pass
+    # async def test_is_not_online(self):
+    #     pass
 
     async def test_get_account_id(self, customer: User):
         assert "3123456789" == customer.account_id

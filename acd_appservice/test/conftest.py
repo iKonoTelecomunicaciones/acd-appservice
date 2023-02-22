@@ -69,7 +69,6 @@ async def db(config: Config):
 
 @pytest_asyncio.fixture
 async def acd_init(config: Config, db: Database):
-
     for table in [User, Queue, QueueMembership]:
         table.db = db
         table.config = config
@@ -90,7 +89,6 @@ async def room_manager_mock(config: Config):
 
 @pytest_asyncio.fixture
 async def get_room_info_mock(mocker, room_manager_mock: RoomManager):
-
     room_info = {
         "room_id": "!mscvqgqpHYjBGDxNym:matrix.org",
         "name": "The big bang Theory",
