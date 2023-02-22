@@ -48,7 +48,7 @@ async def get_control_room(request: web.Request) -> web.Response:
             return web.json_response(**REQUIRED_VARIABLES)
 
     if room_id:
-        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+        puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
     else:
         puppet: Puppet = await Puppet.get_by_phone(company_phone)
 
