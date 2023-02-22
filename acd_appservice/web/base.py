@@ -60,7 +60,6 @@ async def _resolve_user_identifier(request: web.Request) -> User | None:
 
     try:
         authorization: str = request.headers["Authorization"]
-        request.app.logger.critical(authorization)
         user_request = authorization.split(" ")[1]
     except KeyError:
         raise web.HTTPUnauthorized(
