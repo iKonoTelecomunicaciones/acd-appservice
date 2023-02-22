@@ -15,7 +15,6 @@ from .user import User
 
 
 class Queue(DBQueue, MatrixRoom):
-
     room_id: RoomID
     name: str = ""
     description: str | None = None
@@ -58,7 +57,6 @@ class Queue(DBQueue, MatrixRoom):
         reason = "The queue will be removed"
 
         for member in members.keys():
-
             if self.main_intent.mxid == member:
                 continue
 
@@ -140,7 +138,6 @@ class Queue(DBQueue, MatrixRoom):
         return len(agents)
 
     async def get_agents(self) -> List[User]:
-
         members = []
 
         try:
@@ -211,7 +208,6 @@ class Queue(DBQueue, MatrixRoom):
 
     @classmethod
     async def get_by_room_id(cls, room_id: RoomID, *, create: bool = True) -> Queue | None:
-
         try:
             return cls.by_room_id[room_id]
         except KeyError:
