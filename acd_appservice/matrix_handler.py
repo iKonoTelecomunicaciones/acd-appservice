@@ -766,7 +766,7 @@ class MatrixHandler:
         # Verify if destination is a menubot and init the process to invite them to chat room
         if Util.is_user_id(puppet.destination):
             probably_menubot: User = await User.get_by_mxid(puppet.destination, create=False)
-            if probably_menubot.role == UserRoles.MENU.value:
+            if probably_menubot and probably_menubot.role == UserRoles.MENU.value:
                 asyncio.create_task(
                     puppet.room_manager.invite_menu_bot(
                         room_id=portal.room_id, menubot_id=puppet.destination
