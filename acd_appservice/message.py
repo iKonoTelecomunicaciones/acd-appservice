@@ -71,7 +71,6 @@ class Message(DBMessage):
 
     @classmethod
     async def get_by_event_id(cls, event_id: EventID) -> Message | None:
-
         message = cast(cls, await super().get_by_event_id(event_id))
         if message:
             return message
