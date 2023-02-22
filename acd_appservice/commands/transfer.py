@@ -70,8 +70,10 @@ async def transfer(evt: CommandEvent) -> str:
         await evt.reply(detail)
         return {"data": {"error": detail}, "status": 422}
 
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
-    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id, fk_puppet=puppet.pk)
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
+    portal: Portal = await Portal.get_by_room_id(
+        room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent
+    )
 
     if not puppet:
         return
@@ -140,8 +142,10 @@ async def transfer_user(evt: CommandEvent) -> str:
         await evt.reply(detail)
         return {"data": {"error": detail}, "status": 422}
 
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
-    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id, fk_puppet=puppet.pk)
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
+    portal: Portal = await Portal.get_by_room_id(
+        room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent
+    )
     agent: User = await User.get_by_mxid(agent_id)
 
     try:
@@ -164,17 +168,17 @@ async def transfer_user(evt: CommandEvent) -> str:
 
     # Checking if the sender is an agent, if not, it gets the agent id from the room.
     if evt.sender.is_agent:
-        transfer_author = evt.sender.mxid
+        transfer_author = evt.sender
     else:
         _agent = await portal.get_current_agent()
-        transfer_author = _agent.mxid
+
+        transfer_author = _agent or evt.sender
 
     # Checking if the agent is already in the room, if so, it sends a message to the room.
-    if transfer_author == agent.mxid:
+    if transfer_author.mxid == agent.mxid:
         msg = f"The {agent.mxid} agent is already in the room {portal.room_id}"
         await evt.intent.send_notice(room_id=portal.room_id, text=msg)
     else:
-
         if await agent.is_online() or force == "yes":
             await puppet.agent_manager.force_invite_agent(
                 portal=portal,
