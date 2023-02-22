@@ -121,7 +121,9 @@ async def pm(evt: CommandEvent) -> Dict:
     agent = None
     if customer_room_id:
         # TODO WORKAROUND FOR NOT LINKING TO THE MENU IN A BIC
-        portal = await Portal.get_by_room_id(room_id=customer_room_id)
+        portal = await Portal.get_by_room_id(
+            room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent
+        )
 
         puppet.BIC_ROOMS.add(portal.room_id)
 
@@ -138,7 +140,7 @@ async def pm(evt: CommandEvent) -> Dict:
             await puppet.agent_manager.signaling.set_chat_status(
                 room_id=portal.room_id, status=Signaling.FOLLOWUP, agent=evt.sender.mxid
             )
-            if agent.mxid == evt.sender.mxid:
+            if agent and agent.mxid == evt.sender.mxid:
                 return_params["reply"] = "You are already in room with [number], message was sent."
             else:
                 # Joining the agent to the room.
@@ -223,6 +225,9 @@ async def pm(evt: CommandEvent) -> Dict:
     )
 
     formatted_room = f"[{data.get('room_id')}](https://matrix.to/#/{data.get('room_id')})"
+
+    phone = phone.replace("+", "")
+
     formatted_user = (
         f"[{phone}]"
         f"(https://matrix.to/#/"
@@ -230,7 +235,9 @@ async def pm(evt: CommandEvent) -> Dict:
         f"_{phone}:{evt.intent.domain})"
     )
     formatted_agent = (
-        agent.get_formatted_displayname() if agent else evt.sender.get_formatted_displayname()
+        await agent.get_formatted_displayname()
+        if agent
+        else await evt.sender.get_formatted_displayname()
     )
 
     await evt.reply(
