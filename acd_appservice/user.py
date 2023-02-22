@@ -166,7 +166,6 @@ class User(DBUser, BaseUser):
     @classmethod
     @async_getter_lock
     async def get_by_mxid(cls, mxid: UserID, *, create: bool = True) -> User | None:
-
         try:
             return cls.by_mxid[mxid]
         except KeyError:
@@ -189,7 +188,6 @@ class User(DBUser, BaseUser):
     @classmethod
     @async_getter_lock
     async def get_by_id(cls, id: int) -> User | None:
-
         try:
             return cls.by_id[id]
         except KeyError:
