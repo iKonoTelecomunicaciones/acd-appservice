@@ -144,6 +144,11 @@ class Portal(DBPortal, MatrixRoom):
         if not creator:
             return False
 
+        is_customer_guest = re.search(cls.config[f"acd.username_regex_guest"], creator)
+
+        if is_customer_guest:
+            return True
+
         bridges = cls.config["bridges"]
 
         for bridge in bridges:
@@ -283,7 +288,11 @@ class Portal(DBPortal, MatrixRoom):
         intent: IntentAPI = None,
     ) -> Portal | None:
         try:
-            return cls.by_room_id[room_id]
+            portal = cls.by_room_id[room_id]
+            if intent:
+                portal.main_intent = intent
+
+            return portal
         except KeyError:
             pass
 
@@ -292,11 +301,12 @@ class Portal(DBPortal, MatrixRoom):
             if fk_puppet:
                 portal.fk_puppet = fk_puppet
 
+            await portal._add_to_cache()
+            await portal.post_init()
+
             if intent:
                 portal.main_intent = intent
 
-            await portal._add_to_cache()
-            await portal.post_init()
             return portal
 
         if create:
@@ -314,5 +324,3 @@ class Portal(DBPortal, MatrixRoom):
                 portal.main_intent = intent
 
             return portal
-
-        return None
