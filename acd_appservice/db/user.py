@@ -25,7 +25,7 @@ class User:
     mxid: UserID
     id: int | None = None
     management_room: RoomID | None = None  # if is admin
-    role: UserRoles = UserRoles.CUSTOMER
+    role: UserRoles = None
 
     # max_chats: int = 0
 
@@ -33,12 +33,16 @@ class User:
 
     @property
     def _values(self):
-        return (self.mxid, self.management_room, self.role.value)
+        role = self.role.value if self.role else None
+        return (self.mxid, self.management_room, role)
 
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> User:
         data = dict(row)
-        role = UserRoles(data.pop("role"))
+        try:
+            role = UserRoles(data.pop("role"))
+        except ValueError:
+            role = None
         return cls(role=role, **data)
 
     async def insert(self) -> None:

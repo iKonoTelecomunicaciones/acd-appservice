@@ -15,6 +15,7 @@ from .db.user import UserRoles
 
 if TYPE_CHECKING:
     from .__main__ import ACDAppService
+import re
 
 
 class User(DBUser, BaseUser):
@@ -33,7 +34,7 @@ class User(DBUser, BaseUser):
         mxid: UserID,
         management_room: RoomID = None,
         id: int = None,
-        role: UserRoles = UserRoles.CUSTOMER,
+        role: UserRoles = None,
     ):
         self.mxid = mxid
         super().__init__(id=id, mxid=mxid, management_room=management_room, role=role)
@@ -43,21 +44,20 @@ class User(DBUser, BaseUser):
         self.log = self.log.getChild(mxid)
 
     @property
+    def is_agent(self) -> bool:
+        return True if self.mxid.startswith(self.config["acd.agent_prefix"]) else False
+
+    @property
+    def is_customer(self) -> bool:
+        return bool(re.match(self.config["utils.username_regex"], self.mxid))
+
+    @property
+    def is_supervisor(self) -> bool:
+        return True if self.mxid.startswith(self.config["acd.supervisor_prefix"]) else False
+
+    @property
     def is_menubot(self) -> bool:
-        """This function checks if the user_id starts with the menubot prefix
-        defined in the config file
-
-        Parameters
-        ----------
-        user_id : UserID
-            The user ID of the user to check.
-
-        Returns
-        -------
-            A boolean value.
-
-        """
-        return self.mxid.startswith(self.config["acd.menubot_prefix"])
+        return True if self.mxid.startswith(self.config["acd.menubot_prefix"]) else False
 
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> None:
@@ -65,6 +65,18 @@ class User(DBUser, BaseUser):
         cls.config = bridge.config
         cls.az = bridge.az
         cls.loop = bridge.loop
+
+    async def post_init(self):
+        if not self.role:
+            role_map = {
+                self.is_agent: UserRoles.AGENT,
+                self.is_supervisor: UserRoles.SUPERVISOR,
+                self.is_menubot: UserRoles.MENU,
+                self.is_customer: UserRoles.CUSTOMER,
+            }
+            role = role_map.get(True)
+            self.role = role
+            await self.update()
 
     def _add_to_cache(self) -> None:
         self.by_mxid[self.mxid] = self
@@ -97,6 +109,7 @@ class User(DBUser, BaseUser):
         user = cast(cls, await super().get_by_mxid(mxid))
         if user is not None:
             user._add_to_cache()
+            await user.post_init()
             return user
 
         if create:
@@ -106,6 +119,7 @@ class User(DBUser, BaseUser):
             await user.insert()
             user = await super().get_by_mxid(mxid)
             user._add_to_cache()
+            await user.post_init()
             return user
 
         return None
