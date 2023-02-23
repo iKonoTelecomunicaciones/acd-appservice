@@ -29,7 +29,11 @@ class User(DBUser, BaseUser):
     by_id: dict[int, User] = {}
 
     def __init__(
-        self, mxid: UserID, management_room: RoomID = None, id: int = None, role: str = None
+        self,
+        mxid: UserID,
+        management_room: RoomID = None,
+        id: int = None,
+        role: UserRoles = UserRoles.CUSTOMER,
     ):
         self.mxid = mxid
         super().__init__(id=id, mxid=mxid, management_room=management_room, role=role)
@@ -98,7 +102,7 @@ class User(DBUser, BaseUser):
         if create:
             user = cls(mxid)
             if user.is_menubot:
-                user.role = UserRoles.MENU.value
+                user.role = UserRoles.MENU
             await user.insert()
             user = await super().get_by_mxid(mxid)
             user._add_to_cache()

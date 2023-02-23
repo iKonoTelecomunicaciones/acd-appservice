@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Dict
 
 from aiohttp import web
@@ -10,12 +11,16 @@ from ...util import Util
 from ..base import _resolve_user_identifier, routes
 from ..error_responses import (
     INVALID_DESTINATION,
+    INVALID_EMAIL,
+    INVALID_USER_ID,
     INVALID_USER_ROLE,
     NOT_DATA,
     PUPPET_DOESNOT_EXIST,
     REQUIRED_VARIABLES,
     USER_DOESNOT_EXIST,
 )
+
+logger = logging.getLogger()
 
 
 @routes.get("/v1/get_control_room", allow_head=False)
@@ -99,7 +104,7 @@ async def get_control_rooms() -> web.Response:
     return web.json_response(data={"control_room_ids": control_room_ids})
 
 
-@routes.get("/v1/get_users/{user_role}", allow_head=False)
+@routes.get("/v1/user/{role}", allow_head=False)
 async def get_users_by_role(request: web.Request) -> web.Response:
     """
     ---
@@ -115,15 +120,16 @@ async def get_users_by_role(request: web.Request) -> web.Response:
     """
     await _resolve_user_identifier(request=request)
 
-    user_role = request.match_info.get("user_role", "")
-    if not user_role.upper() in UserRoles.__members__:
+    role = request.match_info.get("role", "")
+
+    if not role in UserRoles.__members__:
         return web.json_response(**INVALID_USER_ROLE)
 
-    users = await User.get_users_by_role(role=user_role.lower())
+    users = await User.get_users_by_role(role=role)
     return web.json_response(data={"users": users})
 
 
-@routes.get("/v1/get_puppet/{puppet_mxid}", allow_head=False)
+@routes.get("/v1/puppet/{puppet_mxid}", allow_head=False)
 async def get_puppet(request: web.Request) -> web.Response:
     """
     ---
@@ -147,16 +153,16 @@ async def get_puppet(request: web.Request) -> web.Response:
     return web.json_response(data=puppet)
 
 
-@routes.patch("/v1/set_destination/{puppet_mxid}")
-async def set_destination(request: web.Request) -> web.Response:
+@routes.patch("/v1/puppet/{puppet_mxid}")
+async def update_puppet(request: web.Request) -> web.Response:
     """
     ---
-    summary:    Set puppet destination
+    summary:    Update puppet information
     tags:
         - Mis
 
     requestBody:
-        required: true
+        required: false
         description: A json with `destination`
         content:
             application/json:
@@ -164,6 +170,10 @@ async def set_destination(request: web.Request) -> web.Response:
                     type: object
                     properties:
                         destination:
+                            type: string
+                        email:
+                            type: string
+                        phone:
                             type: string
                     example:
                         destination: "!foo:foo.com | @agent1:foo.com | @menubot1:foo.com"
@@ -182,6 +192,7 @@ async def set_destination(request: web.Request) -> web.Response:
         return web.json_response(**NOT_DATA)
 
     data: Dict = await request.json()
+
     if not Util.is_room_id(data.get("destination")) and not Util.is_user_id(
         data.get("destination")
     ):
@@ -189,10 +200,19 @@ async def set_destination(request: web.Request) -> web.Response:
 
     puppet_mxid = request.match_info.get("puppet_mxid", "")
     puppet: Puppet = await Puppet.get_puppet_by_mxid(puppet_mxid, create=False)
+    if not Util.is_user_id(puppet_mxid):
+        return web.json_response(**INVALID_USER_ID)
+
+    _utils = Util(config=puppet.config)
+    if data.get("email") and not _utils.is_email(email=data.get("email")):
+        return web.json_response(**INVALID_EMAIL)
+
     if not puppet:
         return web.json_response(**PUPPET_DOESNOT_EXIST)
 
     puppet.destination = data.get("destination")
+    puppet.email = data.get("email") or puppet.email
+    puppet.phone = data.get("phone") or puppet.phone
     await puppet.save()
 
     updated_puppet = await Puppet.get_info_by_custom_mxid(puppet_mxid)

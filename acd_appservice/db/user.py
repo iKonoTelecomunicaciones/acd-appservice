@@ -12,9 +12,10 @@ fake_db = Database.create("") if TYPE_CHECKING else None
 
 
 class UserRoles(Enum):
-    SUPERVISOR = "supervisor"
-    AGENT = "agent"
-    MENU = "menu"
+    SUPERVISOR = "SUPERVISOR"
+    AGENT = "AGENT"
+    MENU = "MENU"
+    CUSTOMER = "CUSTOMER"
 
 
 @dataclass
@@ -24,7 +25,7 @@ class User:
     mxid: UserID
     id: int | None = None
     management_room: RoomID | None = None  # if is admin
-    role: str = None
+    role: UserRoles = UserRoles.CUSTOMER
 
     # max_chats: int = 0
 
@@ -32,11 +33,13 @@ class User:
 
     @property
     def _values(self):
-        return (self.mxid, self.management_room, self.role)
+        return (self.mxid, self.management_room, self.role.value)
 
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> User:
-        return cls(**row)
+        data = dict(row)
+        role = UserRoles(data.pop("role"))
+        return cls(role=role, **data)
 
     async def insert(self) -> None:
         q = 'INSERT INTO "user" (mxid, management_room, role) VALUES ($1, $2, $3)'

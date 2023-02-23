@@ -103,12 +103,17 @@ class Puppet:
 
     @classmethod
     async def get_info_by_custom_mxid(cls, mxid: UserID) -> Dict | None:
-        q = f"""SELECT pk, email, phone, bridge, destination, photo_mxc, name_set, avatar_set,
-        is_registered, custom_mxid, control_room_id FROM puppet WHERE custom_mxid=$1"""
+        columns_to_remove = ["access_token", "next_batch", "base_url"]
+        q = f"""{cls.query} custom_mxid=$1"""
         row = await cls.db.fetchrow(q, mxid)
         if not row:
             return None
-        return dict(row)
+
+        data = dict(row)
+        for column in columns_to_remove:
+            del data[column]
+
+        return data
 
     @classmethod
     async def get_by_email(cls, email: str) -> Puppet | None:

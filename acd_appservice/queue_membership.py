@@ -82,7 +82,7 @@ class QueueMembership(DBMembership):
 
         if create:
             user: User = await User.get_by_id(fk_user)
-            user.role = UserRoles.SUPERVISOR.value if user.is_admin else UserRoles.AGENT
+            user.role = UserRoles.SUPERVISOR if user.is_admin else UserRoles.AGENT
             await user.update()
 
             prev_membership = await QueueMembership.get_user_memberships(fk_user=fk_user)
