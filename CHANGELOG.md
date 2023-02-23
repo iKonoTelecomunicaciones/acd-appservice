@@ -1,3 +1,6 @@
+# v0.2.6.2 (2023-02-23)
+- Added `no_voice_call` configuration parameter to config.py, to keep the changes in this parameter.  
+
 # v0.2.6.1 (2023-02-07)
 - Removed unnecessary validation when queue already exists in `queue set` command
 
