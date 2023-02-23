@@ -85,6 +85,7 @@ class Config(BaseBridgeConfig):
         copy("acd.supervisors_to_invite.invitees")
         copy("acd.supervisors_to_invite.power_level")
         copy("acd.voice_call.call_message")
+        copy("acd.voice_call.no_voice_call")
         copy_dict("acd.offline")
         copy("acd.no_agents_for_transfer")
         copy_dict("acd.resolve_chat")
