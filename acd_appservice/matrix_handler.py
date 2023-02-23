@@ -611,7 +611,10 @@ class MatrixHandler:
 
         # if it is a voice call, let the customer know that the company doesn't receive calls
         if self.config["acd.voice_call"]:
-            if message.body == self.config["acd.voice_call.call_message"]:
+            if (
+                message.body == self.config["acd.voice_call.call_message"]
+                and self.config["acd.voice_call.no_voice_call"]
+            ):
                 no_call_message = self.config["acd.voice_call.no_voice_call"]
                 await puppet.intent.send_text(room_id=room_id, text=no_call_message)
                 return
