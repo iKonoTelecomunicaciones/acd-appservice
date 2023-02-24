@@ -95,7 +95,7 @@ class AgentManager:
         # lock the room
         RoomManager.lock_room(room_id=portal.room_id)
 
-        online_agents_in_room = await portal.is_online_agents()
+        online_agents_in_room = await portal.has_online_agents()
 
         if online_agents_in_room == "unlock":
             RoomManager.unlock_room(room_id=portal.room_id)
@@ -132,77 +132,83 @@ class AgentManager:
         check if there are online agents in the campaign room, if there are,
         assign the agent to the enqueued room
         """
-        while True:
-            # Stop process enqueued rooms if the conversation is not within the business hour
-            if await self.business_hours.is_not_business_hour():
-                self.log.debug(
-                    (
-                        f"[{PortalState.ENQUEUED.value}] rooms process is stopped,"
-                        " the conversation is not within the business hour"
+        try:
+            while True:
+                # Stop process enqueued rooms if the conversation is not within the business hour
+                if await self.business_hours.is_not_business_hour():
+                    self.log.debug(
+                        (
+                            f"[{PortalState.ENQUEUED.value}] rooms process is stopped,"
+                            " the conversation is not within the business hour"
+                        )
                     )
+                    await sleep(self.config["acd.search_pending_rooms_interval"])
+                    continue
+
+                self.log.debug(f"Searching for [{PortalState.ENQUEUED.value}] rooms...")
+                enqueued_portals: List[Portal] = await Portal.get_rooms_by_state_and_puppet(
+                    state=PortalState.ENQUEUED, fk_puppet=self.puppet_pk
                 )
+
+                if len(enqueued_portals) > 0:
+                    last_campaign_room_id = None
+                    first_online_agent = None
+
+                    for portal in enqueued_portals:
+                        portal.main_intent = self.intent
+                        # Se actualiza el puppet dada la sala que se tenga en pending_rooms :)
+                        # que bug tan maluco le digo
+                        result = await portal.get_current_agent()
+                        if result:
+                            self.log.debug(
+                                (
+                                    f"Room {portal.room_id} has already an agent, "
+                                    f"removing from [{PortalState.ENQUEUED.value}] rooms..."
+                                )
+                            )
+                            await portal.update_state(state=PortalState.PENDING)
+
+                        else:
+                            queue: Queue = await Queue.get_by_room_id(
+                                room_id=portal.selected_option
+                            )
+
+                            self.log.debug(
+                                "Searching for online agent in campaign "
+                                f"{queue.room_id if queue else '👻'} "
+                                f"to room: {portal.room_id}"
+                            )
+
+                            if queue.room_id != last_campaign_room_id:
+                                first_online_agent = await queue.get_first_online_agent()
+                            else:
+                                self.log.debug(
+                                    f"Same campaign, continue with other room waiting "
+                                    "for other online agent different than last one"
+                                )
+                                continue
+
+                            if first_online_agent:
+                                self.log.debug(
+                                    f"The agent {first_online_agent.mxid} is online to join "
+                                    f"room: {portal.room_id}"
+                                )
+                                try:
+                                    await self.process_distribution(portal, queue)
+                                except Exception as e:
+                                    self.log.exception(e)
+
+                            else:
+                                self.log.debug("There's no online agents yet")
+
+                            last_campaign_room_id = queue.room_id
+
+                else:
+                    self.log.debug(f"There's no [{PortalState.ENQUEUED.value}] rooms")
+
                 await sleep(self.config["acd.search_pending_rooms_interval"])
-                continue
-
-            self.log.debug(f"Searching for [{PortalState.ENQUEUED.value}] rooms...")
-            enqueued_portals: List[Portal] = await Portal.get_rooms_by_state_and_puppet(
-                state=PortalState.ENQUEUED, fk_puppet=self.puppet_pk
-            )
-
-            if len(enqueued_portals) > 0:
-                last_campaign_room_id = None
-                first_online_agent = None
-
-                for portal in enqueued_portals:
-                    # Se actualiza el puppet dada la sala que se tenga en pending_rooms :)
-                    # que bug tan maluco le digo
-                    result = await portal.get_current_agent()
-                    if result:
-                        self.log.debug(
-                            (
-                                f"Room {portal.room_id} has already an agent, "
-                                f"removing from [{PortalState.ENQUEUED.value}] rooms..."
-                            )
-                        )
-                        await portal.update_state(state=PortalState.PENDING)
-
-                    else:
-                        queue: Queue = await Queue.get_by_room_id(room_id=portal.selected_option)
-
-                        self.log.debug(
-                            "Searching for online agent in campaign "
-                            f"{queue.room_id if queue else '👻'} "
-                            f"to room: {portal.room_id}"
-                        )
-
-                        if queue.room_id != last_campaign_room_id:
-                            first_online_agent = await queue.get_first_online_agent()
-                        else:
-                            self.log.debug(
-                                f"Same campaign, continue with other room waiting "
-                                "for other online agent different than last one"
-                            )
-                            continue
-
-                        if first_online_agent:
-                            self.log.debug(
-                                f"The agent {first_online_agent.mxid} is online to join "
-                                f"room: {portal.room_id}"
-                            )
-                            try:
-                                await self.process_distribution(portal, queue)
-                            except Exception as e:
-                                self.log.exception(e)
-
-                        else:
-                            self.log.debug("There's no online agents yet")
-
-                        last_campaign_room_id = queue.room_id
-
-            else:
-                self.log.debug(f"There's no [{PortalState.ENQUEUED.value}] rooms")
-
-            await sleep(self.config["acd.search_pending_rooms_interval"])
+        except Exception as e:
+            self.log.exception(e)
 
     async def loop_agents(
         self,
@@ -291,7 +297,9 @@ class AgentManager:
                 RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
                 break
 
-            if agent.mxid != transfer_author.mxid:
+            aux_transfer_author_mxid = transfer_author.mxid if transfer_author else ""
+
+            if agent.mxid != aux_transfer_author_mxid:
                 # Switch between presence and agent operation login using config parameter
                 # to verify if agent is available to be assigned to the chat
 
@@ -508,7 +516,7 @@ class AgentManager:
             del self.PENDING_INVITES[future_key]
         self.log.debug(f"futures left: {self.PENDING_INVITES}")
 
-        self.signaling.intent = self.intent
+        self.signaling.intent = portal.main_intent
         if agent_joined:
             if queue and queue.room_id:
                 self.CURRENT_AGENT[queue.room_id] = agent_id
@@ -611,8 +619,7 @@ class AgentManager:
             self.log.debug(f"Unlocking room {portal.room_id}..., agent {agent_id} already in room")
         else:
             self.log.debug(f"[{agent_id}] DID NOT ACCEPT the invite. Inviting next agent ...")
-            await self.intent.kick_user(
-                room_id=portal.room_id,
+            await portal.kick_user(
                 user_id=agent_id,
                 reason="Tiempo de espera cumplido para unirse a la conversación",
             )
@@ -626,8 +633,8 @@ class AgentManager:
                 )
             else:
                 # if it is a direct transfer, unlock the room
-                msg = f"{agent_displayname} no aceptó la transferencia."
-                await self.intent.send_notice(room_id=portal.room_id, text=msg)
+                msg = f"{agent_id} no aceptó la transferencia."
+                await portal.send_notice(text=msg)
                 RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
 
     async def force_join_agent(
