@@ -1152,13 +1152,6 @@ async def get_memberships(request: web.Request) -> web.Response:
     if user_id and not Util.is_user_id(user_id):
         return web.json_response(**INVALID_USER_ID)
 
-    user_requester = await _resolve_user_identifier(request=request)
-
-    # Only admins are allowed to get all agents memberships.
-    # Normal users can only get their own memberships.
-    if not user_requester.is_admin and (not user_id or user_id != user_requester.mxid):
-        return web.json_response(**FORBIDDEN_OPERATION)
-
     if user_id:
         target_user = await User.get_by_mxid(user_id, create=False)
         if not target_user:
