@@ -90,6 +90,27 @@ class Queue(DBQueue, MatrixRoom):
 
         await self.save()
 
+    @classmethod
+    async def is_queue(cls, room_id: RoomID) -> bool:
+        """if a queue exists for the given room, return True, otherwise return False
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the queue.
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+        queue = await cls.get_by_room_id(room_id=room_id, create=False)
+
+        if not queue:
+            return False
+
+        return True
+
     async def add_member(self, new_member: UserID):
         """If the config value for `acd.queue.user_add_method` is `join`, then join the user,
         otherwise invite the user
@@ -167,7 +188,7 @@ class Queue(DBQueue, MatrixRoom):
             UserID
 
         """
-        agents: List[User] = await self.get_agents(self.room_id)
+        agents: List[User] = await self.get_agents()
 
         if not agents:
             self.log.debug(f"There's no agent in room: {self.room_id}")

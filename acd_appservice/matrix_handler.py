@@ -290,15 +290,24 @@ class MatrixHandler:
         # as there can't be two acd[n] users in the same room, this will affect
         # the performance of the software
 
-        if not Portal.is_portal(evt.room_id):
+        if not await Portal.is_portal(evt.room_id):
             if not puppet:
-                await self.az.intent.join_room(evt.room_id)
+
+                if evt.state_key == self.az.bot_mxid:
+                    await self.az.intent.join_room(evt.room_id)
+                    return
+
+                if await Queue.is_queue(evt.room_id):
+                    self.log.debug(f"The user {evt.state_key} has joined the queue {evt.room_id}")
+                    return
+
+                # Everything that arrives here is different from a queue room or portal.
                 if user and user.is_admin:
                     await self.send_welcome_message(room_id=evt.room_id, inviter=user)
                 else:
                     await self.send_goodbye_message(room_id=evt.room_id)
-
-            await puppet.intent.join_room(evt.room_id)
+            else:
+                await puppet.intent.join_room(evt.room_id)
 
             return
 
@@ -362,7 +371,7 @@ class MatrixHandler:
                 # Si el que se unió es el bot principal, debemos sacarlo para que no dañe
                 # el comportamiento del puppet
                 await portal.kick_user(
-                    member=user_id, reason="The main acd should not be in the customer's room"
+                    user_id=user_id, reason="The main acd should not be in the customer's room"
                 )
 
             # Generamos llaves para buscar en PENDING_INVITES (acd, transfer)
