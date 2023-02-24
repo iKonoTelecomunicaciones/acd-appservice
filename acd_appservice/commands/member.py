@@ -129,7 +129,7 @@ async def member(evt: CommandEvent) -> Dict:
         state = QueueMembershipState.ONLINE if action == "login" else QueueMembershipState.OFFLINE
 
         if membership.state == state:
-            msg = f"Agent {agent_id} is already {state}"
+            msg = f"Agent {agent_id} is already {state.value}"
             await evt.reply(text=msg)
             evt.log.warning(msg)
             json_response.get("data")["detail"] = msg
