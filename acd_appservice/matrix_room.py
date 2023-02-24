@@ -99,7 +99,7 @@ class MatrixRoom:
 
         return info.get("topic")
 
-    async def get_joined_users(self) -> List[User]:
+    async def get_joined_users(self) -> List[User] | None:
         """`get_joined_users` returns a list of all the users in the room
 
         Returns
@@ -107,7 +107,12 @@ class MatrixRoom:
             A list of User objects
 
         """
-        members = await self.main_intent.get_joined_members(room_id=self.room_id)
+        try:
+            members = await self.main_intent.get_joined_members(room_id=self.room_id)
+        except Exception as e:
+            self.log.error(e)
+            return
+
         users: List[User] = []
 
         for member in members:

@@ -87,14 +87,15 @@ class Portal(DBPortal, MatrixRoom):
         """
         users: List[User] = await self.get_joined_users()
 
-        if not users:
-            return
+        # If it is None, it is because something has gone wrong.
+        if users is None:
+            return False
 
         for user in users:
             if user.is_agent:
                 return user
 
-    async def is_online_agents(self) -> bool | str:
+    async def has_online_agents(self) -> bool | str:
         """It checks if the agent is online
 
         Returns
@@ -105,8 +106,11 @@ class Portal(DBPortal, MatrixRoom):
 
         agent = await self.get_current_agent()
 
-        if not agent:
+        if agent == False:
             return "unlock"
+
+        if agent is None:
+            return False
 
         state = await agent.is_online()
 
