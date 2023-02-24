@@ -544,6 +544,13 @@ class MatrixHandler:
         message.body = message.body.strip()
 
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+
+        if sender == self.config["bridges.mautrix.mxid"] and self.is_logout_message(message.body):
+            puppet.phone = ""
+            await puppet.update()
+            if puppet.phone and puppet.by_phone[puppet.phone]:
+                del puppet.by_phone[puppet.phone]
+
         user: User = await User.get_by_mxid(sender)
 
         # Checking if the message is a command, and if it is,
@@ -772,3 +779,24 @@ class MatrixHandler:
         )
 
         return True
+
+    def is_logout_message(self, msg: str) -> bool:
+        """If the message starts with any of the logout messages in the config, return True
+
+        Parameters
+        ----------
+        msg : str
+            The message to check
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+
+        for logout_message in self.config["bridge.mautrix.logout_messages"]:
+
+            if msg.startswith(logout_message):
+                return True
+
+        return False
