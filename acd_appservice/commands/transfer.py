@@ -146,6 +146,7 @@ async def transfer_user(evt: CommandEvent) -> str:
     portal: Portal = await Portal.get_by_room_id(
         room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent
     )
+
     agent: User = await User.get_by_mxid(agent_id)
 
     try:
@@ -176,8 +177,8 @@ async def transfer_user(evt: CommandEvent) -> str:
 
     # Checking if the agent is already in the room, if so, it sends a message to the room.
     if transfer_author.mxid == agent.mxid:
-        msg = f"The {agent.mxid} agent is already in the room {portal.room_id}"
-        await evt.intent.send_notice(room_id=portal.room_id, text=msg)
+        msg = f"The agent [{await agent.get_displayname()}][{agent.mxid}] is already in the room {portal.room_id}"
+        await portal.send_notice(text=msg)
     else:
         if await agent.is_online() or force == "yes":
             await puppet.agent_manager.force_invite_agent(
@@ -186,7 +187,11 @@ async def transfer_user(evt: CommandEvent) -> str:
                 transfer_author=transfer_author or evt.sender.mxid,
             )
         else:
-            msg = f"Agent {agent.mxid} is not available"
-            await evt.intent.send_notice(room_id=portal.room_id, text=msg)
+            msg = f"Agent [{await agent.get_displayname()}][{agent.mxid}] is not available"
+            await portal.send_notice(text=msg)
 
-    puppet.room_manager.unlock_room(room_id=portal.room_id, transfer=True)
+    future_key = puppet.room_manager.get_future_key(
+        room_id=portal.room_id, agent_id=agent.mxid, transfer=True
+    )
+    if future_key not in puppet.agent_manager.PENDING_INVITES:
+        puppet.room_manager.unlock_room(room_id=portal.room_id, transfer=True)
