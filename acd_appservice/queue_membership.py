@@ -85,7 +85,7 @@ class QueueMembership(DBMembership):
             if prev_membership:
                 # Set prev membership state to new membership
                 # to keep all membership status congruence
-                queue_membership.state = prev_membership[0]["state"]
+                queue_membership.state = QueueMembershipState(prev_membership[0]["state"])
                 queue_membership.paused = prev_membership[0]["paused"]
                 queue_membership.pause_reason = prev_membership[0]["pause_reason"]
                 queue_membership.state_date = (
