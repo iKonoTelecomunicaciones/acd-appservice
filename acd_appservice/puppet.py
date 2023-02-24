@@ -28,6 +28,8 @@ class Puppet(DBPuppet, BasePuppet):
     by_custom_mxid: dict[UserID, Puppet] = {}
     by_email: dict[str, Puppet] = {}
     by_phone: dict[str, Puppet] = {}
+    by_control_room_id: dict[RoomID, Puppet] = {}
+
     hs_domain: str
     mxid_template: SimpleTemplate[int]
 
@@ -225,6 +227,8 @@ class Puppet(DBPuppet, BasePuppet):
             self.by_email[self.email] = self
         if self.custom_mxid:
             self.by_custom_mxid[self.custom_mxid] = self
+        if self.control_room_id:
+            self.by_control_room_id[self.control_room_id] = self
 
     async def save(self) -> None:
         self._add_to_cache()
@@ -412,33 +416,29 @@ class Puppet(DBPuppet, BasePuppet):
         return puppet
 
     @classmethod
-    async def get_by_control_room_id(cls, control_room_id: RoomID):
-        """Get the puppet from a customer room
+    @async_getter_lock
+    async def get_by_control_room_id(cls, control_room_id: RoomID) -> Puppet:
+        """It adds the puppet to the cache
 
         Parameters
         ----------
         control_room_id : RoomID
-            Customer room_id
+            The room ID of the room that the puppet is controlling.
 
         Returns
         -------
-            A puppet
+            A puppet object
 
         """
-
-        puppet: Puppet = None
-
         try:
-            portal = await Portal.get_by_room_id(room_id=control_room_id)
-            if not (portal and portal.fk_puppet):
-                return
+            return cls.by_control_room_id[control_room_id]
+        except KeyError:
+            pass
 
-            puppet = await Puppet.get_by_pk(portal.fk_puppet)
-        except Exception as e:
-            cls.log.exception(e)
-            return
-
-        return puppet
+        puppet = cast(cls, await super().get_by_control_room_id(control_room_id))
+        if puppet:
+            puppet._add_to_cache()
+            return puppet
 
     @classmethod
     @async_getter_lock
@@ -452,8 +452,6 @@ class Puppet(DBPuppet, BasePuppet):
         if puppet:
             puppet._add_to_cache()
             return puppet
-
-        return None
 
     @classmethod
     async def get_puppets_from_mautrix(cls) -> List[Puppet]:
