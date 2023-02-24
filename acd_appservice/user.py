@@ -35,7 +35,6 @@ class User(DBUser, BaseUser):
         BaseUser.__init__(self)
         perms = self.config.get_permissions(mxid)
         self.is_whitelisted, self.is_admin, self.permission_level = perms
-        self.log = self.log.getChild(mxid)
 
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> None:
