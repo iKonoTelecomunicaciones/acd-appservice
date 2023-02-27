@@ -88,12 +88,18 @@ async def transfer(evt: CommandEvent) -> str:
     # Locking the room so that no other transfer can be made to the room.
     puppet.room_manager.lock_room(room_id=customer_room_id, transfer=True)
 
-    # Checking if the sender is an agent, if not, it gets the agent id from the room.
+    # Getting the current agent in the room, if the sender is an agent,
+    # it sets the transfer author to the sender,
+    # if not, it sets the transfer author to the agent in the room,
+    # if there is no agent in the room, it sets the transfer author to the sender.
+    agent_in_portal = await portal.get_current_agent()
+
     if evt.sender.is_agent:
         transfer_author = evt.sender
+    elif agent_in_portal:
+        transfer_author = agent_in_portal
     else:
-        agent = await portal.get_current_agent()
-        transfer_author = agent
+        transfer_author = evt.sender
 
     queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
 
@@ -184,7 +190,7 @@ async def transfer_user(evt: CommandEvent) -> str:
             await puppet.agent_manager.force_invite_agent(
                 portal=portal,
                 agent_id=agent.mxid,
-                transfer_author=transfer_author or evt.sender.mxid,
+                transfer_author=transfer_author or evt.sender,
             )
         else:
             msg = f"Agent [{await agent.get_displayname()}][{agent.mxid}] is not available"

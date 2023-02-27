@@ -272,11 +272,6 @@ async def create(
     if isinstance(invitees, str):
         invitees: List[UserID] = [invitee.strip() for invitee in invitees.split(",")]
 
-    # user_add_method can be 'invite' or 'join'.
-    # When it's 'join' the agente will be force joined to the queue
-    if evt.config["acd.queues.user_add_method"] == "invite":
-        invitees = invitees + evt.config["acd.queues.invitees"]
-
     # Checking if the config value is set to public. If it is, it sets the visibility to public.
     if evt.config["acd.queues.visibility"] == "public":
         visibility = RoomDirectoryVisibility.PUBLIC
@@ -285,9 +280,6 @@ async def create(
 
         room_id = await evt.intent.create_room(
             name=name,
-            invitees=invitees
-            if evt.config["acd.queues.user_add_method"] == "invite"
-            else evt.config["acd.queues.invitees"],
             topic=description.strip(),
             visibility=visibility,
         )
@@ -303,7 +295,16 @@ async def create(
     queue.description = description if description else None
     await queue.save()
 
+    # user_add_method can be 'invite' or 'join'.
+    # When it's 'join' the agente will be force joined to the queue
+    if evt.config["acd.queues.user_add_method"] == "invite":
+        for user_id in evt.config["acd.queues.invitees"]:
+            await queue.invite_user(user_id=user_id)
+    else:
+        invitees += evt.config["acd.queues.invitees"]
+
     for invitee in invitees:
+
         try:
             await queue.add_member(new_member=invitee)
         except Exception as e:
