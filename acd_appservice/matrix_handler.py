@@ -34,6 +34,7 @@ from acd_appservice import acd_program
 
 from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
+from .db.user import UserRoles
 from .message import Message
 from .portal import Portal
 from .puppet import Puppet
@@ -452,7 +453,12 @@ class MatrixHandler:
                 return
 
             # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
-            if not room_id in puppet.BIC_ROOMS and not puppet.destination:
+            if not room_id in puppet.BIC_ROOMS:
+                if puppet.destination:
+                    portal: Portal = Portal.get_by_room_id(room_id=room_id, create=False)
+                    if await self.process_destination(portal):
+                        return
+
                 # invite menubot to show menu
                 # this is done with create_task because with no official API set-pl can take
                 # a while so several invite attempts are made without blocking
@@ -777,14 +783,24 @@ class MatrixHandler:
         if not puppet:
             return False
 
-        user: User = await User.get_by_mxid(puppet.custom_mxid)
-
         # If destination exists, distribute chat using it.
-        # Destination can be user_id or room_id.
+        # Destination can be menubot, agent or queue.
         if not Util.is_room_id(puppet.destination) and not Util.is_user_id(puppet.destination):
             self.log.debug(f"Wrong destination for room id {portal.room_id}")
             return False
 
+        # Verify if destination is a menubot and init the process to invite them to chat room
+        if Util.is_user_id(puppet.destination):
+            probably_menubot: User = await User.get_by_mxid(puppet.destination, create=False)
+            if probably_menubot and probably_menubot.role == UserRoles.MENU:
+                asyncio.create_task(
+                    puppet.room_manager.invite_menu_bot(
+                        room_id=portal.room_id, menubot_id=puppet.destination
+                    )
+                )
+                return True
+
+        user: User = await User.get_by_mxid(puppet.custom_mxid, create=False)
         args = [portal.room_id, puppet.destination]
         command = "acd" if Util.is_room_id(puppet.destination) else "transfer_user"
         await self.commands.handle(

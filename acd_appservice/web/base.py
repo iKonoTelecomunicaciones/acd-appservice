@@ -101,7 +101,7 @@ async def _resolve_puppet_identifier(request: web.Request) -> Puppet | None:
         if _util.is_email(email=puppet_mxid):
             puppet = await Puppet.get_by_email(puppet_mxid)
         else:
-            raise web.HTTPNotAcceptable(text=f"{INVALID_EMAIL}")
+            raise web.json_response(**INVALID_EMAIL)
 
     if request.rel_url.query.get("user_id") or data.get("user_id"):
         puppet = await Puppet.get_by_custom_mxid(
