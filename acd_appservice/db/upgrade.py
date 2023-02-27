@@ -104,3 +104,9 @@ async def upgrade_v3(conn: Connection) -> None:
 async def upgrade_v4(conn: Connection) -> None:
     await conn.execute("ALTER TABLE room RENAME TO portal")
     await conn.execute("ALTER TABLE portal ADD COLUMN state TEXT NOT NULL DEFAULT 'INIT'")
+
+
+@upgrade_table.register(description="Add column role to user table")
+async def upgrade_v5(conn: Connection) -> None:
+    await conn.execute('ALTER TABLE "user" ADD role VARCHAR(30)')
+    await conn.execute('CREATE INDEX idx_role_user ON "user"(role)')

@@ -10,7 +10,7 @@ NOT_EMAIL = {
     "status": 400,
 }
 
-INVALID_EMAIL = {"error": "Not a valid email"}
+INVALID_EMAIL = {"data": {"error": "Not a valid email"}, "status": 406}
 
 INVALID_PHONE = {
     "data": {"error": "Not a valid phone"},
@@ -99,3 +99,9 @@ FORBIDDEN_OPERATION = {
     "data": {"error": "Forbidden operation"},
     "status": 403,
 }
+
+INVALID_USER_ROLE = {"data": {"error": "User role does not exist"}, "status": 404}
+
+PUPPET_DOESNOT_EXIST = {"data": {"error": "Puppet with given mxid was not found."}, "status": 404}
+
+INVALID_DESTINATION = {"data": {"error": "Given destination is invalid"}, "status": 409}
