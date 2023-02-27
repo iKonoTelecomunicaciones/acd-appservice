@@ -205,12 +205,12 @@ async def update_puppet(request: web.Request) -> web.Response:
         return web.json_response(**INVALID_USER_ID)
 
     puppet: Puppet = await Puppet.get_puppet_by_mxid(puppet_mxid, create=False)
+    if not puppet:
+        return web.json_response(**PUPPET_DOESNOT_EXIST)
+
     _utils = Util(config=puppet.config)
     if data.get("email") and not _utils.is_email(email=data.get("email")):
         return web.json_response(**INVALID_EMAIL)
-
-    if not puppet:
-        return web.json_response(**PUPPET_DOESNOT_EXIST)
 
     puppet.destination = data.get("destination")
     puppet.email = data.get("email") or puppet.email
