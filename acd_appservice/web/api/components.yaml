@@ -802,14 +802,14 @@ components:
             $ref: '#/components/schemas/Error'
 
     UsersByRole:
-      description: User obtained successfully.
+      description: Users obtained successfully.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/UsersByRoleDataOk'
 
     GetPuppetInfoSuccess:
-      description: Information not found.
+      description: Puppet information obtained successfully.
       content:
         application/json:
           schema:

@@ -104,7 +104,7 @@ class Puppet:
     @classmethod
     async def get_info_by_custom_mxid(cls, mxid: UserID) -> Dict | None:
         columns_to_remove = ["access_token", "next_batch", "base_url"]
-        q = f"""{cls.query} custom_mxid=$1"""
+        q = f"{cls.query} custom_mxid=$1"
         row = await cls.db.fetchrow(q, mxid)
         if not row:
             return None

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Dict, List
 
 import asyncpg
 from attr import dataclass
@@ -74,8 +74,8 @@ class User:
         return cls._from_row(row)
 
     @classmethod
-    async def get_users_by_role(cls, role: str):
-        q = f"""SELECT id, {cls._columns} FROM "user" WHERE role=$1 ORDER BY mxid"""
+    async def get_users_by_role(cls, role: str) -> List[Dict]:
+        q = f'SELECT id, {cls._columns} FROM "user" WHERE role=$1 ORDER BY mxid'
         rows = await cls.db.fetch(q, role)
         if not rows:
             return None

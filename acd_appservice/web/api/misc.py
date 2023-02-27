@@ -133,7 +133,7 @@ async def get_users_by_role(request: web.Request) -> web.Response:
 async def get_puppet(request: web.Request) -> web.Response:
     """
     ---
-    summary:        Get users by role.
+    summary:        Get puppet information.
     tags:
         - Mis
 
@@ -177,6 +177,8 @@ async def update_puppet(request: web.Request) -> web.Response:
                             type: string
                     example:
                         destination: "!foo:foo.com | @agent1:foo.com | @menubot1:foo.com"
+                        email: "sample@foo.com"
+                        phone: "573106978412"
 
     responses:
         '200':
@@ -199,10 +201,10 @@ async def update_puppet(request: web.Request) -> web.Response:
         return web.json_response(**INVALID_DESTINATION)
 
     puppet_mxid = request.match_info.get("puppet_mxid", "")
-    puppet: Puppet = await Puppet.get_puppet_by_mxid(puppet_mxid, create=False)
     if not Util.is_user_id(puppet_mxid):
         return web.json_response(**INVALID_USER_ID)
 
+    puppet: Puppet = await Puppet.get_puppet_by_mxid(puppet_mxid, create=False)
     _utils = Util(config=puppet.config)
     if data.get("email") and not _utils.is_email(email=data.get("email")):
         return web.json_response(**INVALID_EMAIL)
