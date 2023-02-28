@@ -114,15 +114,17 @@ async def create(evt: CommandEvent) -> Puppet:
         control_room_id = await puppet.intent.create_room(
             name=f"{evt.config[f'bridge.puppet_control_room.name']}({puppet.email or puppet.custom_mxid})",
             topic=f"{evt.config[f'bridge.puppet_control_room.topic']}",
-            invitees=invitees,
         )
+
+        puppet.control_room_id = control_room_id
+        # Now if we store the control room in the puppet.control_room_id
+        await puppet.save()
+
+        for invite in invitees:
+            await puppet.intent.invite_user(room_id=control_room_id, user_id=invite)
 
         await puppet.intent.set_power_levels(room_id=control_room_id, content=power_level_content)
 
-        puppet.control_room_id = control_room_id
-
-        # Now if we store the control room in the puppet.control_room_id
-        await puppet.save()
         # If you want to set the initial state of the puppets, you can do it in this
         # function
         await puppet.sync_puppet_account()
