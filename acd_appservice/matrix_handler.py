@@ -292,17 +292,34 @@ class MatrixHandler:
         # the performance of the software
 
         if not await Portal.is_portal(evt.room_id):
+
             if not puppet:
 
+                # Checking if the event is a room invite and if the invite is for the bot.
+                # If it is, it joins the room.
                 if evt.state_key == self.az.bot_mxid:
                     await self.az.intent.join_room(evt.room_id)
                     return
 
+                # Checking if the room is a queue or not.
                 if await Queue.is_queue(evt.room_id):
-                    self.log.debug(f"The user {evt.state_key} has joined the queue {evt.room_id}")
+                    self.log.debug(
+                        f"The user {evt.state_key} was invited to the queue {evt.room_id}"
+                    )
                     return
 
-                # Everything that arrives here is different from a queue room or portal.
+                # Checking if the room is a control room.
+                if await Puppet.is_control_room(room_id=evt.room_id):
+                    self.log.debug(
+                        f"The user {evt.state_key} was invited to the control room {evt.room_id}"
+                    )
+                    return
+
+                self.log.debug(
+                    f"The user {evt.state_key} was invited to the ACD Management room {evt.room_id}"
+                )
+
+                # At this point only ACD Management rooms can be reached.
                 if user and user.is_admin:
                     await self.send_welcome_message(room_id=evt.room_id, inviter=user)
                 else:
@@ -326,7 +343,9 @@ class MatrixHandler:
         puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.state_key)
         self.log.debug(f"The user {puppet.intent.mxid} is trying join in the room {evt.room_id}")
 
-        await Portal.get_by_room_id(evt.room_id, fk_puppet=puppet.pk, intent=puppet.intent)
+        await Portal.get_by_room_id(
+            evt.room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
+        )
         await puppet.intent.join_room(evt.room_id)
 
     async def handle_join(self, room_id: RoomID, user_id: UserID) -> None:
@@ -446,7 +465,10 @@ class MatrixHandler:
                         # en la tabla rooms
                         self.log.debug(f"The puppet {user_id} has already in the room {room_id}")
                         await Portal.get_by_room_id(
-                            room_id, fk_puppet=puppet.pk, intent=puppet.intent
+                            room_id,
+                            fk_puppet=puppet.pk,
+                            intent=puppet.intent,
+                            bridge=puppet.bridge,
                         )
             else:
                 return
@@ -458,7 +480,9 @@ class MatrixHandler:
         # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
         if not room_id in puppet.BIC_ROOMS:
             if puppet.destination:
-                portal: Portal = Portal.get_by_room_id(room_id=room_id, create=False)
+                portal: Portal = Portal.get_by_room_id(
+                    room_id=room_id, create=False, bridge=puppet.bridge
+                )
                 if await self.process_destination(portal):
                     return
 
@@ -504,7 +528,12 @@ class MatrixHandler:
             The ID of the event that triggered the call.
 
         """
-        puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
+        puppet: Puppet = await Puppet.get_by_control_room_id(room_id)
+
+        if self.is_logout_message(message.body):
+            await puppet.reset_phone()
+            return
+
         if puppet and not puppet.phone:
             bridge_conector = ProvisionBridge(session=self.az.http_session, config=self.config)
             response = await bridge_conector.ping(user_id=puppet.custom_mxid)
@@ -515,10 +544,10 @@ class MatrixHandler:
             ):
                 # Actualizamos el numero registrado para este puppet
                 # sin el +
-                puppet.phone = response.get("whatsapp").get("phone").replace("+", "")
+                puppet.phone = response.get("whatsapp", {}).get("phone", "").replace("+", "")
                 await puppet.save()
 
-    async def handle_room_name(self, evt: Event):
+    async def handle_room_name(self, evt: StrippedStateEvent):
         queue: Queue = await Queue.get_by_room_id(room_id=evt.room_id, create=False)
         if queue:
             if evt.type == EventType.ROOM_NAME:
@@ -576,19 +605,17 @@ class MatrixHandler:
 
         message.body = message.body.strip()
 
-        puppet: Puppet = await Puppet.get_by_portal(room_id=room_id)
+        puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
 
-        if sender == self.config["bridges.mautrix.mxid"] and self.is_logout_message(message.body):
+        if sender.mxid == self.config["bridges.mautrix.mxid"] and self.is_logout_message(
+            message.body
+        ):
+            puppet = await Puppet.get_by_control_room_id(control_room_id=room_id)
             self.log.warning(
                 f"The puppet {puppet.custom_mxid} with phone {puppet.phone} was logged out :: {message.body}"
             )
-            if puppet.phone and puppet.phone in puppet.by_phone:
-                del puppet.by_phone[puppet.phone]
-
-            puppet.phone = ""
-            await puppet.update()
-
-        user: User = await User.get_by_mxid(sender)
+            await puppet.reset_phone()
+            return
 
         # Checking if the message is a command, and if it is,
         # it is sending the command to the command processor.
@@ -654,7 +681,7 @@ class MatrixHandler:
             return
 
         # Checking if the room is a control room.
-        if await puppet.is_a_control_room(room_id=room_id):
+        if await puppet.is_control_room(room_id=room_id):
             return
 
         # ignore messages other than commands from menu bot
@@ -666,7 +693,7 @@ class MatrixHandler:
             return
 
         portal: Portal = await Portal.get_by_room_id(
-            room_id=room_id, fk_puppet=puppet.pk, intent=puppet.intent
+            room_id=room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
         )
 
         if not portal:
@@ -735,7 +762,7 @@ class MatrixHandler:
 
             if not await room_agent.is_online():
                 await puppet.agent_manager.process_offline_agent(
-                    room_id=portal.room_id,
+                    portal=portal,
                     room_agent=room_agent,
                 )
             return
