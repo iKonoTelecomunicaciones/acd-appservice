@@ -15,7 +15,10 @@ NOT_USERNAME = {
     "status": 400,
 }
 
-INVALID_EMAIL = {"data": {"error": "Not a valid email"}, "status": 406}
+INVALID_EMAIL = {
+    "data": {"error": "Not a valid email"},
+    "status": 406,
+}
 
 INVALID_PHONE = {
     "data": {"error": "Not a valid phone"},
