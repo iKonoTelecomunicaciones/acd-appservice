@@ -318,7 +318,10 @@ class ProvisionBridge(Base):
         bridge: str
             The bridge of Facebook or Instagram
         type_2fa: str
-            Two factor authentication type (TOTP, SMS or checkpoint)
+            Two factor authentication type (TOTP, SMS or checkpoint):
+                - totp_2fa
+                - sms_2fa
+                - checkpoint
         id_2fa: str
             Two factor authentication identifier
 
@@ -335,7 +338,14 @@ class ProvisionBridge(Base):
                 if type_2fa == "checkpoint":
                     # Resolve with checkpoint code
                     path = "login_checkpoint"
-                elif type_2fa in ["totp_2fa", "sms_2fa"]:
+                elif type_2fa == "sms_2fa" and resend_2fa_sms:
+                    # Re-send 2FA SMS code
+                    path = "login_resend_2fa_sms"
+                    data = {
+                        "username": username,
+                        "2fa_identifier": id_2fa,
+                    }
+                else:
                     # Resolve with 2FA code
                     data = {
                         "username": username,
@@ -343,13 +353,6 @@ class ProvisionBridge(Base):
                         "2fa_identifier": id_2fa,
                         "is_totp": True if type_2fa == "totp_2fa" else False,
                     }
-                    if type_2fa == "sms_2fa" and resend_2fa_sms:
-                        # Re-send 2FA SMS code
-                        path = "login_resend_2fa_sms"
-                        data = {
-                            "username": username,
-                            "2fa_identifier": id_2fa,
-                        }
             elif self.bridge == "facebook":
                 data = {
                     "email": email,
