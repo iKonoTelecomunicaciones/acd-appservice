@@ -23,7 +23,6 @@ from ..base import (
 from ..error_responses import (
     AGENT_DOESNOT_HAVE_QUEUES,
     BRIDGE_INVALID,
-    FORBIDDEN_OPERATION,
     INVALID_ACTION,
     INVALID_USER_ID,
     NOT_DATA,
