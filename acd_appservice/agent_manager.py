@@ -31,6 +31,7 @@ class AgentManager:
     def __init__(
         self,
         puppet_pk: int,
+        bridge: str,
         control_room_id: RoomID,
         intent: IntentAPI,
         config: Config,
@@ -39,6 +40,7 @@ class AgentManager:
         self.intent = intent
         self.config = config
         self.puppet_pk = puppet_pk
+        self.bridge = bridge
         self.control_room_id = control_room_id
         self.signaling = Signaling(intent=self.intent, config=self.config)
         self.business_hours = BusinessHour(
@@ -156,6 +158,8 @@ class AgentManager:
 
                     for portal in enqueued_portals:
                         portal.main_intent = self.intent
+                        portal.bridge = self.bridge
+
                         # Se actualiza el puppet dada la sala que se tenga en pending_rooms :)
                         # que bug tan maluco le digo
                         result = await portal.get_current_agent()
@@ -267,7 +271,7 @@ class AgentManager:
                         f"The room [{portal.room_id}] tried to be transferred to "
                         f"[{queue.room_id}] but it has no agents"
                     )
-                    await self.intent.send_notice(room_id=portal.room_id, text=msg)
+                    await portal.send_notice(text=msg)
                     json_response["data"]["detail"] = msg
                 else:
                     await self.show_no_agents_message(
@@ -340,7 +344,7 @@ class AgentManager:
                 if transfer_author:
                     msg = self.config["acd.no_agents_for_transfer"]
                     json_response["status"] = 404
-                    await self.intent.send_notice(room_id=portal.room_id, text=msg)
+                    await portal.send_notice(text=msg)
                 else:
                     msg = (
                         "The chat could not be distributed, however, it was saved in pending rooms"
@@ -568,7 +572,7 @@ class AgentManager:
                     )
 
                 if msg:
-                    await self.room_manager.send_formatted_message(room_id=portal.room_id, msg=msg)
+                    await portal.send_formatted_message(text=msg)
 
             except Exception as e:
                 self.log.exception(e)
@@ -787,16 +791,16 @@ class AgentManager:
 
         return True
 
-    async def process_offline_agent(self, room_id: RoomID, room_agent: UserID):
+    async def process_offline_agent(self, portal: Portal, room_agent: User):
         """If the agent is offline, the bot will send a message to the user and then either
         transfer the user to another agent in the same campaign or put the user in the offline menu
 
         Parameters
         ----------
-        room_id : RoomID
-            The room ID of the room where the agent is offline.
-        room_agent : UserID
-            The user ID of the agent who is offline
+        portal : Portal
+            The room of the room where the agent is offline.
+        room_agent : User
+            The user of the agent who is offline
         last_active_ago : int
             The time in milliseconds since the agent was last active in the room.
 
@@ -808,37 +812,38 @@ class AgentManager:
         """
 
         action = self.config["acd.offline.agent_action"]
-        self.log.debug(f"Agent {room_agent} OFFLINE in {room_id} --> {action}")
+        self.log.debug(f"Agent {room_agent.mxid} OFFLINE in {portal.room_id} --> {action}")
 
-        agent_displayname = await self.intent.get_displayname(user_id=room_agent)
+        agent_displayname = await room_agent.get_displayname()
         msg = self.config["acd.offline.agent_message"].format(agentname=agent_displayname)
         if msg:
-            await self.room_manager.send_formatted_message(room_id=room_id, msg=msg)
+            await portal.send_formatted_message(text=msg)
 
         if action == "keep":
             return
         elif action == "transfer":
             # transfer to another agent in same campaign
-            user_selected_campaign = await self.room_manager.get_campaign_of_room(room_id=room_id)
+            user_selected_campaign = portal.selected_option
             if not user_selected_campaign:
                 # this can happen if the database is deleted
                 user_selected_campaign = self.config["acd.available_agents_room"]
+
             self.log.debug(f"Transferring to {user_selected_campaign}")
 
-            user: User = await User.get_by_mxid(room_agent)
-
             await self.commands.handle(
-                room_id=room_id,
-                sender=user,
+                room_id=portal,
+                sender=room_agent,
                 command="transfer",
-                args_list=f"{room_id} {user_selected_campaign}".split(),
+                args_list=f"{portal.room_id} {user_selected_campaign}".split(),
                 intent=self.intent,
-                is_management=room_id == user.management_room,
+                is_management=portal.room_id == room_agent.management_room,
             )
 
         elif action == "menu":
-            self.room_manager.put_in_offline_menu(room_id)
-            await self.show_offline_menu(agent_displayname=agent_displayname, room_id=room_id)
+            self.room_manager.put_in_offline_menu(portal.room_id)
+            await self.show_offline_menu(
+                agent_displayname=agent_displayname, room_id=portal.room_id
+            )
 
     async def show_offline_menu(self, agent_displayname: str, room_id: RoomID):
         """It takes the agent's display name and returns a formatted string containing the offline menu
