@@ -536,6 +536,75 @@ components:
             state: online
             paused: true
 
+    UsersByRoleDataOk:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              mxid:
+                type: string
+              management_room:
+                type: string
+              role:
+                type: string
+      example:
+        users:
+          - id: 1
+            mxid: "@user:localhost"
+            management_room: ""
+            role: "agent"
+          - id: 2
+            mxid: "@user2:localhost"
+            management_room: ""
+            role: "agent"
+          - id: 3
+            mxid: "@user3:localhost"
+            management_room: ""
+            role: "agent"
+
+    GetPuppetInfoOk:
+      type: object
+      properties:
+        pk:
+          type: integer
+        email:
+          type: string
+        phone:
+          type: string
+        bridge:
+          type: string
+        destination:
+          type: string
+        photo_mxc:
+          type: string
+        name_set:
+          type: boolean
+        avatar_set:
+          type: boolean
+        is_registered:
+          type: boolean
+        custom_mxid:
+          type: string
+        control_room_id:
+          type: string
+      example:
+        pk: 1
+        email:
+        phone: "573009121831"
+        bridge: "mautrix"
+        destination: "@agent1:foo.com"
+        photo_mxc:
+        name_set: false
+        avatar_set: false
+        is_registered: false
+        custom_mxid: "@acd1:foo.com"
+        control_room_id: "!JdnIUgdsspvfpVSndG:foo.com"
+
 
   # Respuestas de la API
   responses:
@@ -748,3 +817,17 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+
+    UsersByRole:
+      description: Users obtained successfully.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UsersByRoleDataOk'
+
+    GetPuppetInfoSuccess:
+      description: Puppet information obtained successfully.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GetPuppetInfoOk'

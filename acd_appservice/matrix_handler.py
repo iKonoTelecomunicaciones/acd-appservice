@@ -34,6 +34,7 @@ from acd_appservice import acd_program
 
 from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
+from .db.user import UserRoles
 from .message import Message
 from .portal import Portal
 from .puppet import Puppet
@@ -452,7 +453,12 @@ class MatrixHandler:
                 return
 
             # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
-            if not room_id in puppet.BIC_ROOMS and not puppet.destination:
+            if not room_id in puppet.BIC_ROOMS:
+                if puppet.destination:
+                    portal: Portal = Portal.get_by_room_id(room_id=room_id, create=False)
+                    if await self.process_destination(portal):
+                        return
+
                 # invite menubot to show menu
                 # this is done with create_task because with no official API set-pl can take
                 # a while so several invite attempts are made without blocking
@@ -556,6 +562,17 @@ class MatrixHandler:
         message.body = message.body.strip()
 
         puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+
+        if sender == self.config["bridges.mautrix.mxid"] and self.is_logout_message(message.body):
+            self.log.warning(
+                f"The puppet {puppet.custom_mxid} with phone {puppet.phone} was logged out :: {message.body}"
+            )
+            if puppet.phone and puppet.phone in puppet.by_phone:
+                del puppet.by_phone[puppet.phone]
+
+            puppet.phone = ""
+            await puppet.update()
+
         user: User = await User.get_by_mxid(sender)
 
         # Checking if the message is a command, and if it is,
@@ -766,14 +783,24 @@ class MatrixHandler:
         if not puppet:
             return False
 
-        user: User = await User.get_by_mxid(puppet.custom_mxid)
-
         # If destination exists, distribute chat using it.
-        # Destination can be user_id or room_id.
+        # Destination can be menubot, agent or queue.
         if not Util.is_room_id(puppet.destination) and not Util.is_user_id(puppet.destination):
             self.log.debug(f"Wrong destination for room id {portal.room_id}")
             return False
 
+        # Verify if destination is a menubot and init the process to invite them to chat room
+        if Util.is_user_id(puppet.destination):
+            probably_menubot: User = await User.get_by_mxid(puppet.destination, create=False)
+            if probably_menubot and probably_menubot.role == UserRoles.MENU:
+                asyncio.create_task(
+                    puppet.room_manager.invite_menu_bot(
+                        room_id=portal.room_id, menubot_id=puppet.destination
+                    )
+                )
+                return True
+
+        user: User = await User.get_by_mxid(puppet.custom_mxid, create=False)
         args = [portal.room_id, puppet.destination]
         command = "acd" if Util.is_room_id(puppet.destination) else "transfer_user"
         await self.commands.handle(
@@ -781,3 +808,24 @@ class MatrixHandler:
         )
 
         return True
+
+    def is_logout_message(self, msg: str) -> bool:
+        """If the message starts with any of the logout messages in the config, return True
+
+        Parameters
+        ----------
+        msg : str
+            The message to check
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+
+        for logout_message in self.config["bridges.mautrix.logout_messages"]:
+
+            if msg.startswith(logout_message):
+                return True
+
+        return False

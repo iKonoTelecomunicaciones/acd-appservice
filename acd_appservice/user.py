@@ -11,9 +11,11 @@ from mautrix.util.logging import TraceLogger
 
 from .config import Config
 from .db import User as DBUser
+from .db.user import UserRoles
 
 if TYPE_CHECKING:
     from .__main__ import ACDAppService
+import re
 
 
 class User(DBUser, BaseUser):
@@ -27,13 +29,35 @@ class User(DBUser, BaseUser):
     by_mxid: dict[UserID, User] = {}
     by_id: dict[int, User] = {}
 
-    def __init__(self, mxid: UserID, management_room: RoomID = None, id: int = None):
+    def __init__(
+        self,
+        mxid: UserID,
+        management_room: RoomID = None,
+        id: int = None,
+        role: UserRoles = None,
+    ):
         self.mxid = mxid
-        super().__init__(id=id, mxid=mxid, management_room=management_room)
+        super().__init__(id=id, mxid=mxid, management_room=management_room, role=role)
         BaseUser.__init__(self)
         perms = self.config.get_permissions(mxid)
         self.is_whitelisted, self.is_admin, self.permission_level = perms
         self.log = self.log.getChild(mxid)
+
+    @property
+    def is_agent(self) -> bool:
+        return True if self.mxid.startswith(self.config["acd.agent_prefix"]) else False
+
+    @property
+    def is_customer(self) -> bool:
+        return bool(re.match(self.config["utils.username_regex"], self.mxid))
+
+    @property
+    def is_supervisor(self) -> bool:
+        return True if self.mxid.startswith(self.config["acd.supervisor_prefix"]) else False
+
+    @property
+    def is_menubot(self) -> bool:
+        return True if self.mxid.startswith(self.config["acd.menubot_prefix"]) else False
 
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> None:
@@ -41,6 +65,18 @@ class User(DBUser, BaseUser):
         cls.config = bridge.config
         cls.az = bridge.az
         cls.loop = bridge.loop
+
+    async def post_init(self):
+        if not self.role:
+            role_map = {
+                self.is_agent: UserRoles.AGENT,
+                self.is_supervisor: UserRoles.SUPERVISOR,
+                self.is_menubot: UserRoles.MENU,
+                self.is_customer: UserRoles.CUSTOMER,
+            }
+            role = role_map.get(True)
+            self.role = role
+            await self.update()
 
     def _add_to_cache(self) -> None:
         self.by_mxid[self.mxid] = self
@@ -65,7 +101,6 @@ class User(DBUser, BaseUser):
     @classmethod
     @async_getter_lock
     async def get_by_mxid(cls, mxid: UserID, *, create: bool = True) -> User | None:
-
         try:
             return cls.by_mxid[mxid]
         except KeyError:
@@ -74,13 +109,17 @@ class User(DBUser, BaseUser):
         user = cast(cls, await super().get_by_mxid(mxid))
         if user is not None:
             user._add_to_cache()
+            await user.post_init()
             return user
 
         if create:
             user = cls(mxid)
+            if user.is_menubot:
+                user.role = UserRoles.MENU
             await user.insert()
             user = await super().get_by_mxid(mxid)
             user._add_to_cache()
+            await user.post_init()
             return user
 
         return None
@@ -88,7 +127,6 @@ class User(DBUser, BaseUser):
     @classmethod
     @async_getter_lock
     async def get_by_id(cls, id: int) -> User | None:
-
         try:
             return cls.by_id[id]
         except KeyError:

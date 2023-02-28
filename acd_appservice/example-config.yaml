@@ -217,6 +217,10 @@ bridges:
     notice_messages:
       # When I can't create a chat with WhatsApp
         phone_is_not_on_whatsapp: "^The server said \\+(?P<phone_number>[0-9]+) is not on WhatsApp$"
+    logout_messages:
+        - "You were logged out from another device. Please link the bridge to your phone again."
+        - "Connecting to WhatsApp failed as the device was unlinked"
+
     # If you are already a room administrator, configure your power levels.
     initial_state:
         # if enabled, these power levels will be configured at room initialization.
