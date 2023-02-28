@@ -290,6 +290,7 @@ class Portal(DBPortal, MatrixRoom):
         create: bool = True,
         fk_puppet: int = None,
         intent: IntentAPI = None,
+        bridge: str = None,
     ) -> Portal | None:
         try:
             portal = cls.by_room_id[room_id]
@@ -304,6 +305,8 @@ class Portal(DBPortal, MatrixRoom):
         if portal is not None:
             if fk_puppet:
                 portal.fk_puppet = fk_puppet
+
+            portal.bridge = bridge
 
             await portal._add_to_cache()
             await portal.post_init()
@@ -321,6 +324,7 @@ class Portal(DBPortal, MatrixRoom):
 
             await portal.insert()
             portal = cast(cls, await super().get_by_room_id(room_id))
+            portal.bridge = bridge
             await portal._add_to_cache()
             await portal.post_init()
 

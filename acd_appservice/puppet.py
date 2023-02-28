@@ -98,6 +98,7 @@ class Puppet(DBPuppet, BasePuppet):
         )
         self.agent_manager = AgentManager(
             puppet_pk=self.pk,
+            bridge=self.bridge,
             control_room_id=self.control_room_id,
             intent=self.intent,
             config=self.config,
@@ -188,7 +189,7 @@ class Puppet(DBPuppet, BasePuppet):
             if not mx_joined_room in db_joined_rooms:
                 if await Portal.is_portal(mx_joined_room):
                     await Portal.get_by_room_id(
-                        mx_joined_room, fk_puppet=self.pk, intent=self.intent
+                        mx_joined_room, fk_puppet=self.pk, intent=self.intent, bridge=self.bridge
                     )
 
     async def sync_puppet_account(self):
@@ -229,6 +230,14 @@ class Puppet(DBPuppet, BasePuppet):
             self.by_custom_mxid[self.custom_mxid] = self
         if self.control_room_id:
             self.by_control_room_id[self.control_room_id] = self
+
+    async def reset_phone(self):
+
+        if self.phone and self.phone in self.by_phone:
+            del self.by_phone[self.phone]
+
+        self.phone = ""
+        await self.update()
 
     async def save(self) -> None:
         self._add_to_cache()
@@ -476,7 +485,7 @@ class Puppet(DBPuppet, BasePuppet):
         return all_puppets
 
     @classmethod
-    async def is_a_control_room(cls, room_id: RoomID) -> bool:
+    async def is_control_room(cls, room_id: RoomID) -> bool:
         """If the room ID is in the list of control rooms,
         or if the room ID is in the list of control room IDs,
         then the room is a control room

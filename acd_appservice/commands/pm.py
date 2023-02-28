@@ -122,7 +122,10 @@ async def pm(evt: CommandEvent) -> Dict:
     if customer_room_id:
         # TODO WORKAROUND FOR NOT LINKING TO THE MENU IN A BIC
         portal = await Portal.get_by_room_id(
-            room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent
+            room_id=customer_room_id,
+            fk_puppet=puppet.pk,
+            intent=puppet.intent,
+            bridge=puppet.bridge,
         )
 
         puppet.BIC_ROOMS.add(portal.room_id)

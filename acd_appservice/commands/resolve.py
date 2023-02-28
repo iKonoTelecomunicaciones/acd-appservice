@@ -95,7 +95,7 @@ async def resolve(evt: CommandEvent) -> Dict:
         return
 
     portal = await Portal.get_by_room_id(
-        room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent
+        room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
     )
     agent = await portal.get_current_agent()
 

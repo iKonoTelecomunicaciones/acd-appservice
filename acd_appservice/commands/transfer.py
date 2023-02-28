@@ -72,7 +72,7 @@ async def transfer(evt: CommandEvent) -> str:
 
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     portal: Portal = await Portal.get_by_room_id(
-        room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent
+        room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
     )
 
     if not puppet:
@@ -150,7 +150,7 @@ async def transfer_user(evt: CommandEvent) -> str:
 
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     portal: Portal = await Portal.get_by_room_id(
-        room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent
+        room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
     )
 
     agent: User = await User.get_by_mxid(agent_id)

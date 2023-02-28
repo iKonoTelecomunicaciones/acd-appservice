@@ -61,7 +61,7 @@ async def acd(evt: CommandEvent) -> str:
 
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     portal: Portal = await Portal.get_by_room_id(
-        room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent
+        room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
     )
     queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
 
