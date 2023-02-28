@@ -14,7 +14,7 @@ joined_message = CommandArg(
     name="joined_message",
     help_text="Message that will be sent when the agent joins the customer room",
     is_required=False,
-    example="{agentname} join to room",
+    example='"{agentname} join to room"',
 )
 
 customer_room_id = CommandArg(
