@@ -220,6 +220,7 @@ bridges:
     logout_messages:
         - "You were logged out from another device. Please link the bridge to your phone again."
         - "Connecting to WhatsApp failed as the device was unlinked"
+        - "Logged out successfully."
 
     # If you are already a room administrator, configure your power levels.
     initial_state:
