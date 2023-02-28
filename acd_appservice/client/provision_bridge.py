@@ -242,7 +242,7 @@ class ProvisionBridge(Base):
 
     async def metainc_login(
         self, user_id: UserID, email: str, username: str, password: str
-    ) -> Dict:
+    ) -> tuple(int, Dict):
         """It sends a POST request to the login endpoint with the user's
         Instagram username (or Facebook email) and password
 
@@ -259,65 +259,120 @@ class ProvisionBridge(Base):
 
         Returns
         -------
-            A dictionary with the key "error" and the value of the error message.
+            A tuple with status and dictionary with the key "error" and the value of the error message.
 
         """
         try:
+            if self.bridge == "instagram":
+                data = {
+                    "username": username,
+                    "password": password,
+                }
+            elif self.bridge == "facebook":
+                data = {
+                    "email": email,
+                    "password": password,
+                }
+            self.log.debug(
+                f"Logging with {user_id} and ({email or username}) in the {self.bridge} bridge."
+            )
             response = await self.session.post(
                 url=f"{self.url_base}{self.endpoints['login']}",
                 headers=self.headers,
-                json={
-                    "email": email,
-                    "username": username,
-                    "password": password,
-                },
+                json=data,
                 params={"user_id": user_id},
             )
         except Exception as e:
             self.log.error(e)
-            return {"error": str(e)}
+            return 500, {"error": str(e)}
 
         data = await response.json()
-        if not response.status in [200, 201]:
+        if response.status not in [200, 201]:
             self.log.error(await response.text())
 
-        return data
+        return response.status, data
 
-    async def metainc_challenge(self, user_id: UserID, email: str, code: str) -> Dict:
-        """It sends a POST request to the Instagram API with the user's ID and the code they entered
+    async def metainc_challenge(
+        self,
+        user_id: UserID,
+        username: str,
+        email: str,
+        code: str,
+        type_2fa: str = None,
+        id_2fa: str = None,
+        resend_2fa_sms: bool = False,
+    ) -> tuple(int, Dict):
+        """It sends a POST request to the Instagram API with the user's ID and the
+        code they entered
 
         Parameters
         ----------
         user_id : UserID
             The user ID of the puppet account you're trying to log into.
+        username: str
+            The username of the Instagram account you're trying to log into
         email: str
-            The email of the account you're trying to log into
+            The email of the Facebook account you're trying to log into
         code : str
-            The code you received from the challenge.
+            The code number to challenge (TOTP, SMS or checkpoint)
+        bridge: str
+            The bridge of Facebook or Instagram
+        type_2fa: str
+            Two factor authentication type (TOTP, SMS or checkpoint)
+        id_2fa: str
+            Two factor authentication identifier
 
         Returns
         -------
-            A dictionary with the key "error" and the value of the error message.
+            A tuple with status code and a dictionary with the response data or key "error"
+            and the value of the error message.
 
         """
-        path = "checkpoint" if self.bridge == "instagram" else "login_2fa"
-
         try:
+            path: str = "login_2fa"
+            data: dict = {"code": code}
+            if self.bridge == "instagram":
+                if type_2fa == "checkpoint":
+                    # Resolve with checkpoint code
+                    path = "login_checkpoint"
+                elif type_2fa in ["totp_2fa", "sms_2fa"]:
+                    # Resolve with 2FA code
+                    data = {
+                        "username": username,
+                        "code": code,
+                        "2fa_identifier": id_2fa,
+                        "is_totp": True if type_2fa == "totp_2fa" else False,
+                    }
+                    if type_2fa == "sms_2fa" and resend_2fa_sms:
+                        # Re-send 2FA SMS code
+                        path = "login_resend_2fa_sms"
+                        data = {
+                            "username": username,
+                            "2fa_identifier": id_2fa,
+                        }
+            elif self.bridge == "facebook":
+                data = {
+                    "email": email,
+                    "code": code,
+                }
+            self.log.debug(
+                f"Challenge with {user_id} and ({email or username}) in the {self.bridge} bridge."
+            )
             response = await self.session.post(
                 url=f"{self.url_base}{self.endpoints[path]}",
                 headers=self.headers,
-                json={"email": email, "code": code},
+                json=data,
                 params={"user_id": user_id},
             )
         except Exception as e:
             self.log.error(e)
-            return {"error": str(e)}
+            return 500, {"error": str(e)}
 
         data = await response.json()
         if not response.status in [200, 201]:
             self.log.error(await response.text())
 
-        return data
+        return response.status, data
 
     async def logout(self, user_id: UserID) -> tuple(int, Dict):
         """It logs out a user.

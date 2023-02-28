@@ -272,7 +272,9 @@ bridges:
         shared_secret: ""
         endpoints:
             login: "/v1/api/login"
-            checkpoint: "/v1/api/login/checkpoint"
+            login_2fa: "/v1/api/login/2fa"
+            login_resend_2fa_sms: "/v1/api/login/resend_2fa_sms"
+            login_checkpoint: "/v1/api/login/checkpoint"
             logout: "/v1/api/logout"
             ping: "/v1/api/whoami"
 
@@ -310,6 +312,10 @@ bridges:
         endpoints:
             login: "/api/login"
             login_2fa: "/api/login/2fa"
+            login_check_approved: "/api/login/check_approved"
+            login_approved: "/api/login/approved"
+            reconnect: "/api/reconnect"
+            refresh: "/api/refresh"
             logout: "/api/logout"
             ping: "/api/whoami"
 

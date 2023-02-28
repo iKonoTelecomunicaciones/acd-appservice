@@ -18,6 +18,8 @@ from ..error_responses import (
     MESSAGE_NOT_FOUND,
     MESSAGE_TYPE_NOT_SUPPORTED,
     NOT_DATA,
+    NOT_EMAIL,
+    NOT_USERNAME,
     REQUIRED_VARIABLES,
     SERVER_ERROR,
     USER_DOESNOT_EXIST,
@@ -307,7 +309,6 @@ async def metainc_login(request: web.Request) -> web.Response:
                     email:
                         description: "To login with Facebook account"
                         type: string
-                        format: email
                     username:
                         description: "To login with Instagram account"
                         type: string
@@ -331,10 +332,14 @@ async def metainc_login(request: web.Request) -> web.Response:
                         password: secretfoo
 
     responses:
+        '202':
+            $ref: '#/components/responses/Login2faRequired'
         '400':
             $ref: '#/components/responses/BadRequest'
         '404':
             $ref: '#/components/responses/NotExist'
+        '422':
+            $ref: '#/components/responses/RequiredVariables'
     """
     await _resolve_user_identifier(request=request)
 
@@ -352,16 +357,42 @@ async def metainc_login(request: web.Request) -> web.Response:
     bridge_meta = request.match_info.get("bridge_meta", "")
     if bridge_meta != puppet.bridge:
         return web.json_response(**BRIDGE_INVALID)
+    elif bridge_meta == "instagram" and not username:
+        return web.json_response(**NOT_USERNAME)
+    elif bridge_meta == "facebook" and not email:
+        return web.json_response(**NOT_EMAIL)
+    elif not password:
+        return web.json_response(**REQUIRED_VARIABLES)
 
     bridge_connector = ProvisionBridge(
         session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
     )
 
-    response = await bridge_connector.metainc_login(
+    status, response = await bridge_connector.metainc_login(
         user_id=puppet.custom_mxid, email=email, username=username, password=password
     )
 
-    return web.json_response(data=response)
+    if response.get("status") == "two-factor":
+        data = {"status": response.get("status")}
+        if bridge_meta == "instagram":
+            _2f_info = response.get("response").get("two_factor_info")
+            data_2f_info = {}
+            data_2f_info["sms_two_factor_on"] = _2f_info.get("sms_two_factor_on")
+            data_2f_info["totp_two_factor_on"] = _2f_info.get("totp_two_factor_on")
+            data_2f_info["obfuscated_phone_number"] = _2f_info.get("obfuscated_phone_number")
+            data_2f_info["two_factor_identifier"] = _2f_info.get("two_factor_identifier")
+            data["two_factor_info"] = data_2f_info
+        elif bridge_meta == "facebook":
+            err = response.get("error")
+            data_err = {}
+            data_err["message"] = err.get("message")
+            data_err["type"] = err.get("type")
+            data_err["error_user_title"] = err.get("error_user_title")
+            data_err["error_user_msg"] = err.get("error_user_msg")
+            data["error"] = data_err
+        return web.json_response(data=data, status=202)
+
+    return web.json_response(data=response, status=status)
 
 
 @routes.patch("/v1/{bridge_meta}/challenge")
@@ -407,12 +438,26 @@ async def metainc_challenge(request: web.Request) -> web.Response:
                     description: "The login data for two factor authentication (2FA)"
                     type: object
                     properties:
+                        username:
+                            description: "To login with Instagram account"
+                            type: string
                         email:
                             description: "To login with Facebook account"
                             type: string
-                            format: email
                         code:
+                            description: "The code number to challenge (TOTP, SMS or checkpoint)"
                             type: string
+                        type_2fa:
+                            type: string
+                            enum:
+                              - sms_2fa
+                              - totp_2fa
+                              - checkpoint
+                        id_2fa:
+                            description: "Two factor authentication identifier"
+                            type: string
+                        resend_2fa_sms:
+                            type: boolean
                     required:
                         - code
           examples:
@@ -420,7 +465,11 @@ async def metainc_challenge(request: web.Request) -> web.Response:
                 value:
                     user_id: "@puppet:somewhere.com"
                     challenge:
+                        username: johndoe987
                         code: 54862
+                        type_2fa: sms_2fa
+                        id_2fa: abcdEju9yATxCPs3TzgvjEFR1234abcd9bRjbeQGznHf6JoBo6xvd3W1234
+                        resend_2fa_sms: false
             Facebook:
                 value:
                     user_id: "@puppet:somewhere.com"
@@ -433,6 +482,8 @@ async def metainc_challenge(request: web.Request) -> web.Response:
             $ref: '#/components/responses/BadRequest'
         '404':
             $ref: '#/components/responses/NotExist'
+        '422':
+            $ref: '#/components/responses/RequiredVariables'
     """
     await _resolve_user_identifier(request=request)
 
@@ -441,24 +492,45 @@ async def metainc_challenge(request: web.Request) -> web.Response:
 
     data = await request.json()
     challenge = data.get("challenge")
+    username = challenge.get("username")
     email = challenge.get("email")
     code = challenge.get("code")
+    type_2fa = challenge.get("type_2fa")
+    id_2fa = challenge.get("id_2fa")
+    resend_2fa_sms = challenge.get("resend_2fa_sms")
 
     puppet = await _resolve_puppet_identifier(request=request)
 
     bridge_meta = request.match_info.get("bridge_meta", "")
     if bridge_meta != puppet.bridge:
         return web.json_response(**BRIDGE_INVALID)
+    elif bridge_meta == "instagram":
+        if not username:
+            return web.json_response(**NOT_USERNAME)
+        elif type_2fa in ["sms_2fa", "totp_2fa"] and not id_2fa:
+            return web.json_response(
+                data={"error": "Two factor authentication ID is required"}, status=422
+            )
+    elif bridge_meta == "facebook" and not email:
+        return web.json_response(**NOT_EMAIL)
+    elif not code:
+        return web.json_response(**REQUIRED_VARIABLES)
 
     bridge_connector = ProvisionBridge(
         session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
     )
 
-    response = await bridge_connector.metainc_challenge(
-        user_id=puppet.custom_mxid, email=email, code=code
+    status, response = await bridge_connector.metainc_challenge(
+        user_id=puppet.custom_mxid,
+        username=username,
+        email=email,
+        code=code,
+        type_2fa=type_2fa,
+        id_2fa=id_2fa,
+        resend_2fa_sms=resend_2fa_sms,
     )
 
-    return web.json_response(data=response)
+    return web.json_response(data=response, status=status)
 
 
 @routes.post("/v1/gupshup/register")
