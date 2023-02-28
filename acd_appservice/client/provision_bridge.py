@@ -259,7 +259,8 @@ class ProvisionBridge(Base):
 
         Returns
         -------
-            A tuple with status and dictionary with the key "error" and the value of the error message.
+            A tuple with the status code and dictionary with the response data or key "error"
+            and the value of the error message.
 
         """
         try:
@@ -315,8 +316,6 @@ class ProvisionBridge(Base):
             The email of the Facebook account you're trying to log into
         code : str
             The code number to challenge (TOTP, SMS or checkpoint)
-        bridge: str
-            The bridge of Facebook or Instagram
         type_2fa: str
             Two factor authentication type (TOTP, SMS or checkpoint):
                 - totp_2fa
@@ -324,6 +323,8 @@ class ProvisionBridge(Base):
                 - checkpoint
         id_2fa: str
             Two factor authentication identifier
+        resend_2fa_sms: bool
+            Re-send SMS with the 2FA code
 
         Returns
         -------
