@@ -231,7 +231,7 @@ async def queue(evt: CommandEvent) -> Dict:
 
         return await update(evt=evt, room_id=room_id, name=name, description=description)
 
-    elif action == "info":
+    elif action in ["info", "ingo"]:
         try:
             room_id = evt.args_list[1]
         except IndexError:
@@ -391,7 +391,7 @@ async def delete(evt: CommandEvent, queue_id: RoomID, force: Optional[bool] = Fa
 
     """
     json_response = {}
-    queue = await Queue.get_by_room_id(room_id=queue_id, create=False)
+    queue: Queue = await Queue.get_by_room_id(room_id=queue_id, create=False)
 
     if not queue:
         detail = "The queue has not been found"
@@ -401,26 +401,31 @@ async def delete(evt: CommandEvent, queue_id: RoomID, force: Optional[bool] = Fa
         await evt.reply(detail)
         return json_response
 
-    members = await evt.intent.get_joined_members(room_id=queue_id)
+    members = await queue.get_joined_users()
 
-    if len(members) > 1:
-        if force:
-            await queue.clean_up()
-            detail = "The queue has been deleted"
-            json_response["status"] = 200
-            json_response["data"] = {"detail": detail}
-            evt.log.debug(detail)
-            return json_response
-        else:
-            detail = (
-                "You can only delete the queues in which you are alone "
-                "or send the argument force in `yes`"
-            )
-            json_response["data"] = {"error": detail}
-            json_response["status"] = 422
-            evt.log.error(detail)
-            await evt.reply(detail)
-            return json_response
+    async def delete_queue() -> Dict:
+        await queue.clean_up()
+        detail = "The queue has been deleted"
+        json_response["status"] = 200
+        json_response["data"] = {"detail": detail}
+        evt.log.debug(detail)
+        return json_response
+
+    if force:
+        return await delete_queue()
+
+    if len(members) == 1 and members[0].mxid == evt.intent.bot.mxid:
+        return await delete_queue()
+
+    detail = (
+        "You can only delete the queues in which you are alone "
+        "or send the argument force in `yes`"
+    )
+    json_response["data"] = {"error": detail}
+    json_response["status"] = 422
+    evt.log.error(detail)
+    await evt.reply(detail)
+    return json_response
 
 
 async def update(
