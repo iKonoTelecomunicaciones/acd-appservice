@@ -120,8 +120,8 @@ async def create(evt: CommandEvent) -> Puppet:
         # Now if we store the control room in the puppet.control_room_id
         await puppet.save()
 
-        for invite in invitees:
-            await puppet.intent.invite_user(room_id=control_room_id, user_id=invite)
+        for invitee in invitees:
+            await puppet.intent.invite_user(room_id=control_room_id, user_id=invitee)
 
         await puppet.intent.set_power_levels(room_id=control_room_id, content=power_level_content)
 
