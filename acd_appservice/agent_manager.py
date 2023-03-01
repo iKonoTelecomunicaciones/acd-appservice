@@ -832,10 +832,10 @@ class AgentManager:
             self.log.debug(f"Transferring to {user_selected_campaign}")
 
             await self.commands.handle(
-                room_id=portal,
+                room_id=portal.room_id,
                 sender=room_agent,
                 command="transfer",
-                args_list=f"{portal.room_id} {user_selected_campaign}".split(),
+                args_list=[portal.room_id, user_selected_campaign],
                 intent=self.intent,
                 is_management=portal.room_id == room_agent.management_room,
             )
