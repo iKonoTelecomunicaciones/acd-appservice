@@ -7,7 +7,6 @@ nest_asyncio.apply()
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip
 class TestMatrixRoom:
     async def test_set_creator(self, matrix_room: MatrixRoom):
         await matrix_room.set_creator()
