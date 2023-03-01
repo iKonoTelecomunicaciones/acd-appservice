@@ -272,7 +272,7 @@ class ProvisionBridge(Base):
                 "facebook": {
                     "email": email,
                     "password": password,
-                }
+                },
             }
             data = bridge_credentials.get(self.bridge, {})
             self.log.debug(
