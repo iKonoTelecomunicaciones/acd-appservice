@@ -83,16 +83,13 @@ async def resolve(evt: CommandEvent) -> Dict:
         )
     )
 
-    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
-
-    if customer_room_id == puppet.control_room_id or (
-        not await Portal.is_portal(customer_room_id)
-        and not await puppet.room_manager.is_guest_room(room_id=customer_room_id)
-    ):
-        detail = "Group rooms or control rooms cannot be resolved."
+    if not await Portal.is_portal(customer_room_id):
+        detail = "Group queues or control rooms cannot be resolved."
         evt.log.error(detail)
-        await puppet.intent.send_notice(room_id=customer_room_id, text=detail)
+        await evt.intent.send_notice(room_id=customer_room_id, text=detail)
         return
+
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
 
     portal = await Portal.get_by_room_id(
         room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
