@@ -154,14 +154,12 @@ class AgentManager:
 
                 if len(enqueued_portals) > 0:
                     last_campaign_room_id = None
-                    first_online_agent = None
+                    queue_has_online_agent = None
 
                     for portal in enqueued_portals:
                         portal.main_intent = self.intent
                         portal.bridge = self.bridge
 
-                        # Se actualiza el puppet dada la sala que se tenga en pending_rooms :)
-                        # que bug tan maluco le digo
                         result = await portal.get_current_agent()
                         if result:
                             self.log.debug(
@@ -184,7 +182,7 @@ class AgentManager:
                             )
 
                             if queue.room_id != last_campaign_room_id:
-                                first_online_agent = await queue.get_first_online_agent()
+                                queue_has_online_agent = await queue.get_first_online_agent()
                             else:
                                 self.log.debug(
                                     f"Same campaign, continue with other room waiting "
@@ -192,9 +190,9 @@ class AgentManager:
                                 )
                                 continue
 
-                            if first_online_agent:
+                            if queue_has_online_agent:
                                 self.log.debug(
-                                    f"The agent {first_online_agent.mxid} is online to join "
+                                    f"The agent {queue_has_online_agent.mxid} is online to join "
                                     f"room: {portal.room_id}"
                                 )
                                 try:
@@ -285,7 +283,6 @@ class AgentManager:
 
             agent: User = await User.get_by_mxid(mxid=agent_id)
 
-            # Usar get_room_members porque regresa solo una lista de UserIDs
             joined_members = await portal.get_joined_users()
             if not joined_members:
                 self.log.debug(f"No joined members in the room [{portal.room_id}]")
@@ -301,21 +298,25 @@ class AgentManager:
                 RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
                 break
 
-            aux_transfer_author_mxid = transfer_author.mxid if transfer_author else ""
+            transfer_author_mxid = transfer_author.mxid if transfer_author else ""
+            if agent.mxid != transfer_author_mxid:
 
-            if agent.mxid != aux_transfer_author_mxid:
                 # Switch between presence and agent operation login using config parameter
                 # to verify if agent is available to be assigned to the chat
+                if self.config["acd.use_presence"]:
+                    is_agent_available_for_assignment = await agent.is_online(queue_id=queue.id)
+                else:
+                    is_agent_available_for_assignment = await agent.is_online(
+                        queue_id=queue.id
+                    ) and not await agent.is_paused(queue_id=queue.id)
 
-                is_agent_available_for_assignment = await agent.is_online(queue_id=queue.id)
-
-                if not self.config["acd.use_presence"]:
-                    membership = await queue.get_membership(agent)
-
-                    if is_agent_available_for_assignment:
-                        is_agent_available_for_assignment = (
-                            not membership.paused
-                        ) and is_agent_available_for_assignment
+                    self.log.debug(
+                        (
+                            f"The agent {agent.mxid} is paused "
+                            f"[{await agent.is_paused(queue_id=queue.id)}] in the queue "
+                            f"[{queue.room_id}]"
+                        )
+                    )
 
                 if is_agent_available_for_assignment:
                     online_agents += 1
