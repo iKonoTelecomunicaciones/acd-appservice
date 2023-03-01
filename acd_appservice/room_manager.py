@@ -1004,21 +1004,3 @@ class RoomManager:
             return
 
         return room_info
-
-    @classmethod
-    async def get_campaign_of_room(cls, room_id: RoomID) -> RoomID:
-        """Given a room, its selected campaign is obtained.
-        Parameters
-        ----------
-        room_id: RoomID
-            Portal to query.
-
-        Returns
-        -------
-        RoomID
-            RoomID if successful, None otherwise.
-        """
-        try:
-            return await Portal.get_user_selected_menu(room_id=room_id)
-        except Exception as e:
-            cls.log.exception(e)
