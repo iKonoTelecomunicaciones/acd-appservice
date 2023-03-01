@@ -135,9 +135,7 @@ class User(DBUser, BaseUser):
             return state.presence == PresenceState.ONLINE
         else:
             if queue_id:
-                membership = await QueueMembership.get_by_queue_and_user(
-                    fk_user=self.id, fk_queue=queue_id, create=False
-                )
+                membership = await self.get_membership(queue_id=queue_id)
 
                 if not membership:
                     return False
@@ -154,9 +152,50 @@ class User(DBUser, BaseUser):
                 )
             )
             self.log.debug(
-                f"PRESENCE RESPONSE: [{self.mxid}] -> [{'online' if state else 'offline'}] in some queue"
+                (
+                    f"PRESENCE RESPONSE: [{self.mxid}] -> [{'online' if state else 'offline'}] "
+                    "in some queue"
+                )
             )
             return state
+
+    async def is_paused(self, queue_id: int) -> bool:
+        """This function returns a boolean value that indicates
+        whether or not the user is paused in the queue
+
+        Parameters
+        ----------
+        queue_id : int
+            The ID of the queue you want to check.
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+        membership = await self.get_membership(queue_id=queue_id)
+
+        if not membership:
+            return False
+
+        return membership.paused
+
+    async def get_membership(self, queue_id: int) -> QueueMembership:
+        """It gets a queue membership object for a user and a queue
+
+        Parameters
+        ----------
+        queue_id : int
+            The ID of the queue to get the membership for.
+
+        Returns
+        -------
+            A user membership
+
+        """
+        return await QueueMembership.get_by_queue_and_user(
+            fk_user=self.id, fk_queue=queue_id, create=False
+        )
 
     @property
     def account_id(self) -> str | None:
