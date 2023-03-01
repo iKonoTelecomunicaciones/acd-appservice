@@ -120,7 +120,6 @@ async def pm(evt: CommandEvent) -> Dict:
     customer_room_id = data.get("room_id")
     agent = None
     if customer_room_id:
-        # TODO WORKAROUND FOR NOT LINKING TO THE MENU IN A BIC
         portal = await Portal.get_by_room_id(
             room_id=customer_room_id,
             fk_puppet=puppet.pk,
@@ -128,6 +127,7 @@ async def pm(evt: CommandEvent) -> Dict:
             bridge=puppet.bridge,
         )
 
+        # TODO WORKAROUND FOR NOT LINKING TO THE MENU IN A BIC
         puppet.BIC_ROOMS.add(portal.room_id)
 
         agent = await portal.get_current_agent()
