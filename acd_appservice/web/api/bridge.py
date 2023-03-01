@@ -375,22 +375,26 @@ async def metainc_login(request: web.Request) -> web.Response:
     if response.get("status") == "two-factor":
         data = {"status": response.get("status")}
         if bridge_meta == "instagram":
-            _2f_info = response.get("response").get("two_factor_info")
-            data_2f_info = {}
-            data_2f_info["sms_two_factor_on"] = _2f_info.get("sms_two_factor_on")
-            data_2f_info["totp_two_factor_on"] = _2f_info.get("totp_two_factor_on")
-            data_2f_info["obfuscated_phone_number"] = _2f_info.get("obfuscated_phone_number")
-            data_2f_info["two_factor_identifier"] = _2f_info.get("two_factor_identifier")
-            data["two_factor_info"] = data_2f_info
+            _two_factor_info = response.get("response").get("two_factor_info")
+            data["two_factor_info"] = {
+                "sms_two_factor_on": _two_factor_info.get("sms_two_factor_on"),
+                "totp_two_factor_on": _two_factor_info.get("totp_two_factor_on"),
+                "obfuscated_phone_number": _two_factor_info.get("obfuscated_phone_number"),
+                "two_factor_identifier": _two_factor_info.get("two_factor_identifier"),
+            }
         elif bridge_meta == "facebook":
-            err = response.get("error")
-            data_err = {}
-            data_err["message"] = err.get("message")
-            data_err["type"] = err.get("type")
-            data_err["error_user_title"] = err.get("error_user_title")
-            data_err["error_user_msg"] = err.get("error_user_msg")
-            data["error"] = data_err
+            _error = response.get("error")
+            data["error"] = {
+                "message": _error.get("message"),
+                "type": _error.get("type"),
+                "error_user_title": _error.get("error_user_title"),
+                "error_user_msg": _error.get("error_user_msg"),
+            }
+        puppet.log.info(f"Login with ({email or username}) in {bridge_meta} bridge requires 2FA")
         return web.json_response(data=data, status=202)
+
+    if status not in [200, 201]:
+        puppet.log.error(f"Login with ({email or username}) in {bridge_meta} bridge has failed")
 
     return web.json_response(data=response, status=status)
 
@@ -529,6 +533,11 @@ async def metainc_challenge(request: web.Request) -> web.Response:
         id_2fa=id_2fa,
         resend_2fa_sms=resend_2fa_sms,
     )
+
+    if status not in [200, 201]:
+        puppet.log.error(
+            f"Challenge ({type_2fa}) with ({email or username}) to {bridge_meta} bridge has failed."
+        )
 
     return web.json_response(data=response, status=status)
 

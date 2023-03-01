@@ -264,18 +264,19 @@ class ProvisionBridge(Base):
 
         """
         try:
-            if self.bridge == "instagram":
-                data = {
+            bridge_credentials = {
+                "instagram": {
                     "username": username,
                     "password": password,
-                }
-            elif self.bridge == "facebook":
-                data = {
+                },
+                "facebook": {
                     "email": email,
                     "password": password,
                 }
+            }
+            data = bridge_credentials.get(self.bridge, {})
             self.log.debug(
-                f"Logging with {user_id} and ({email or username}) in the {self.bridge} bridge."
+                f"Login with {user_id} and ({email or username}) in the {self.bridge} bridge."
             )
             response = await self.session.post(
                 url=f"{self.url_base}{self.endpoints['login']}",
@@ -333,12 +334,11 @@ class ProvisionBridge(Base):
 
         """
         try:
-            path: str = "login_2fa"
-            data: dict = {"code": code}
             if self.bridge == "instagram":
                 if type_2fa == "checkpoint":
                     # Resolve with checkpoint code
                     path = "login_checkpoint"
+                    data = {"code": code}
                 elif type_2fa == "sms_2fa" and resend_2fa_sms:
                     # Re-send 2FA SMS code
                     path = "login_resend_2fa_sms"
@@ -346,8 +346,10 @@ class ProvisionBridge(Base):
                         "username": username,
                         "2fa_identifier": id_2fa,
                     }
+                    self.log.debug(f"Re-send 2FA SMS code to ({username}).")
                 else:
                     # Resolve with 2FA code
+                    path = "login_2fa"
                     data = {
                         "username": username,
                         "code": code,
@@ -355,6 +357,7 @@ class ProvisionBridge(Base):
                         "is_totp": True if type_2fa == "totp_2fa" else False,
                     }
             elif self.bridge == "facebook":
+                path = "login_2fa"
                 data = {
                     "email": email,
                     "code": code,
@@ -373,7 +376,7 @@ class ProvisionBridge(Base):
             return 500, {"error": str(e)}
 
         data = await response.json()
-        if not response.status in [200, 201]:
+        if response.status not in [200, 201]:
             self.log.error(await response.text())
 
         return response.status, data
