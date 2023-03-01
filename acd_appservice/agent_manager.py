@@ -767,7 +767,7 @@ class AgentManager:
                 command="transfer",
                 args_list=f"{portal.room_id} {selected_queue.room_id}".split(),
                 intent=self.intent,
-                is_management=portal == room_agent.management_room,
+                is_management=portal.room_id == room_agent.management_room,
             )
 
         elif offline_menu_option == "2":
