@@ -65,6 +65,16 @@ components:
         success:
           type: boolean
 
+    Login2faRequired:
+      type: object
+      properties:
+        status:
+          type: string
+        error:
+          type: object
+        data:
+          type: object
+
     Pm:
       type: object
       properties:
@@ -695,6 +705,13 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/LoginDataOk'
+
+    Login2faRequired:
+      description: Two factor code required to login.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Login2faRequired'
 
     QrNoGenerated:
       description: QR has not been generated.
