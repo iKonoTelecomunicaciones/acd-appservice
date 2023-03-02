@@ -159,10 +159,24 @@ class Queue(DBQueue, MatrixRoom):
         await self.save()
 
     async def get_agent_count(self) -> int:
+        """It returns the number of agents in the system
+
+        Returns
+        -------
+            The number of agents in the system.
+
+        """
         agents = await self.get_agents() or []
         return len(agents)
 
     async def get_agents(self) -> List[User]:
+        """Get all the users in the channel, remove the bots, and return the remaining users
+
+        Returns
+        -------
+            A list of users
+
+        """
         members = []
 
         try:
@@ -177,6 +191,18 @@ class Queue(DBQueue, MatrixRoom):
         return self.remove_not_agents(members)
 
     def remove_not_agents(self, members: List[User]) -> List[User]:
+        """Removes non-agents from a list of users
+
+        Parameters
+        ----------
+        members : List[User]
+            List[User]
+
+        Returns
+        -------
+            A list of users that are agents.
+
+        """
         only_agents: List[User] = []
         if members:
             # Removes non-agents

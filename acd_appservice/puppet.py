@@ -232,6 +232,9 @@ class Puppet(DBPuppet, BasePuppet):
             self.by_control_room_id[self.control_room_id] = self
 
     async def reset_phone(self):
+        """It deletes the user's phone number from the database,
+        and then updates the user's information
+        """
 
         if self.phone and self.phone in self.by_phone:
             del self.by_phone[self.phone]

@@ -100,11 +100,11 @@ class MatrixRoom:
         return info.get("topic")
 
     async def get_joined_users(self) -> List[User] | None:
-        """`get_joined_users` returns a list of all the users in the room
+        """get a list of all users in the room
 
         Returns
         -------
-            A list of User objects
+            A list of User objects.
 
         """
         try:
