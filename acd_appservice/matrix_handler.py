@@ -421,7 +421,7 @@ class MatrixHandler:
 
             # If the joined user is a supervisor and the room is a customer room,
             # then send set-pl in the room
-            if user.is_supervisor:
+            if user.is_admin:
                 bridge = await puppet.room_manager.get_room_bridge(room_id=portal.room_id)
                 if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
                     await puppet.room_manager.send_cmd_set_pl(
