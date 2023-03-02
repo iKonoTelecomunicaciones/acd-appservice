@@ -14,7 +14,7 @@ joined_message = CommandArg(
     name="joined_message",
     help_text="Message that will be sent when the agent joins the customer room",
     is_required=False,
-    example="{agentname} join to room",
+    example='"{agentname} join to room"',
 )
 
 customer_room_id = CommandArg(
@@ -59,8 +59,10 @@ async def acd(evt: CommandEvent) -> str:
     except IndexError:
         joined_message = ""
 
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=customer_room_id)
-    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id, fk_puppet=puppet.pk)
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
+    portal: Portal = await Portal.get_by_room_id(
+        room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
+    )
     queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
 
     if not puppet:

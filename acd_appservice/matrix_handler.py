@@ -18,7 +18,6 @@ from mautrix.types import (
     MessageEvent,
     MessageEventContent,
     MessageType,
-    PresenceState,
     ReceiptEvent,
     ReceiptType,
     RoomID,
@@ -39,7 +38,7 @@ from .message import Message
 from .portal import Portal
 from .puppet import Puppet
 from .queue import Queue
-from .queue_membership import QueueMembership, QueueMembershipState
+from .queue_membership import QueueMembership
 from .signaling import Signaling
 from .user import User
 from .util import Util
@@ -146,13 +145,13 @@ class MatrixHandler:
                     pass
             elif evt.content.membership == Membership.JOIN:
                 if prev_membership != Membership.JOIN:
-                    await self.handle_join(evt.room_id, UserID(evt.state_key), evt.event_id)
+                    await self.handle_join(evt.room_id, UserID(evt.state_key))
                 else:
                     # Setting the room name to the customer's name.
-                    puppet: Puppet = await Puppet.get_customer_room_puppet(evt.room_id)
+                    puppet: Puppet = await Puppet.get_by_portal(evt.room_id)
                     if not puppet:
                         return
-                    if await puppet.room_manager.is_customer_room(room_id=evt.room_id):
+                    if await Portal.is_portal(room_id=evt.room_id):
                         self.log.debug(f"The room name for the room {evt.room_id} will be changed")
                         unsigned: StateUnsigned = evt.unsigned
                         await puppet.room_manager.put_name_customer_room(room_id=evt.room_id)
@@ -173,7 +172,8 @@ class MatrixHandler:
                 await self.handle_notice(evt.room_id, evt.sender, evt.content, evt.event_id)
                 return
 
-            await self.handle_message(evt.room_id, evt.sender, evt.content, evt.event_id)
+            sender: User = await User.get_by_mxid(evt.sender)
+            await self.handle_message(evt.room_id, sender, evt.content)
 
         elif evt.type == EventType.ROOM_NAME or evt.type == EventType.ROOM_TOPIC:
             await self.handle_room_name(evt=evt)
@@ -281,15 +281,7 @@ class MatrixHandler:
 
         self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
 
-        user: User = await User.get_by_mxid(evt.sender)
-
-        if self.az.bot_mxid == evt.state_key:
-            if user and user.is_admin:
-                await self.send_welcome_message(room_id=evt.room_id, inviter=user)
-            else:
-                await self.send_goodbye_message(room_id=evt.room_id)
-
-            return
+        puppet: Puppet = await Puppet.get_by_custom_mxid(evt.state_key)
 
         # We verify that the user to be joined is an acd[n].
         # and that there is no other puppet in the room
@@ -297,38 +289,71 @@ class MatrixHandler:
         # NOTE: If there is another puppet in the room, then we will have problems
         # as there can't be two acd[n] users in the same room, this will affect
         # the performance of the software
-        puppet_inside: Puppet = await Puppet.get_customer_room_puppet(room_id=evt.room_id)
-
-        if not Puppet.get_id_from_mxid(mxid=evt.state_key) or puppet_inside:
-            detail = (
-                f"There is already a puppet {puppet_inside.custom_mxid} in the room {evt.room_id}"
-                if puppet_inside
-                else f"{evt.state_key} is not a puppet"
-            )
-            self.log.warning(detail)
-            return
-
-        puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.state_key)
-        self.log.debug(f"The user {puppet.intent.mxid} is trying join in the room {evt.room_id}")
 
         if await Portal.is_portal(evt.room_id):
-            await Portal.get_by_room_id(evt.room_id, fk_puppet=puppet.pk)
 
-        await puppet.intent.join_room(evt.room_id)
+            if not puppet:
+                self.log.warning(f"{evt.state_key} is not a puppet")
+                return
 
-    async def handle_leave(self, evt: Event):
-        self.log.debug(f"The user {evt.state_key} leave from to room {evt.room_id}")
+            # Checking if there is already a puppet in the room.
+            # If there is, it will leave the room.
+            puppet_inside: Puppet = await Puppet.get_by_portal(portal_room_id=evt.room_id)
+            if puppet_inside:
+                detail = (
+                    f"There is already a puppet {puppet_inside.custom_mxid} "
+                    f"in the room {evt.room_id}"
+                )
+                self.log.warning(detail)
 
-        user: User = await User.get_by_mxid(evt.state_key)
+                # Refuse the invitation
+                await puppet.intent.leave_room(room_id=evt.room_id, reason=detail)
+                return
 
-        is_queue: Queue = await Queue.get_by_room_id(room_id=evt.room_id, create=False)
+            self.log.debug(
+                f"The puppet {puppet.intent.mxid} is trying join in the room {evt.room_id}"
+            )
 
-        if is_queue:
-            queue_membership = await QueueMembership.get_by_queue_and_user(user.id, is_queue.id)
-            await queue_membership._delete()
-            return
+            # Creates the portal and join it
+            await Portal.get_by_room_id(
+                evt.room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
+            )
+            await puppet.intent.join_room(evt.room_id)
 
-    async def handle_join(self, room_id: RoomID, user_id: UserID, event_id: EventID) -> None:
+        else:
+            if puppet:
+                await puppet.intent.join_room(evt.room_id)
+                return
+
+            # Checking if the room is a queue or not.
+            if await Queue.is_queue(evt.room_id):
+                self.log.debug(f"The user {evt.state_key} was invited to the queue {evt.room_id}")
+                return
+
+            # Checking if the room is a control room.
+            if await Puppet.is_control_room(room_id=evt.room_id):
+                self.log.debug(
+                    f"The user {evt.state_key} was invited to the control room {evt.room_id}"
+                )
+                return
+
+            # At this point only ACD Management rooms can be reached.
+            self.log.debug(
+                f"The user {evt.state_key} was invited to the ACD Management room {evt.room_id}"
+            )
+
+            # Checking if the event is a room invite and if the invite is for the bot.
+            # If it is, it joins the room.
+            if evt.state_key == self.az.bot_mxid:
+                await self.az.intent.join_room(evt.room_id)
+
+                sender: User = await User.get_by_mxid(evt.sender)
+                if sender and sender.is_admin:
+                    await self.send_welcome_message(room_id=evt.room_id, inviter=sender)
+                else:
+                    await self.send_goodbye_message(room_id=evt.room_id)
+
+    async def handle_join(self, room_id: RoomID, user_id: UserID) -> None:
         """If the user who has joined the room is the bot, then the room is initialized
 
         Parameters
@@ -337,13 +362,6 @@ class MatrixHandler:
             The ID of the room the user has joined.
         user_id : UserID
             The user who has joined the room
-        event_id : EventID
-            The ID of the event that triggered this call.
-
-        Returns
-        -------
-            The intent of the user who has joined the room
-
         """
         self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
 
@@ -357,7 +375,64 @@ class MatrixHandler:
             await QueueMembership.get_by_queue_and_user(user.id, is_queue.id)
             return
 
-        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+        # Ignoring join events in a non-portal room
+        if not await Portal.is_portal(room_id=room_id):
+            return
+
+        portal = await Portal.get_by_room_id(room_id=room_id)
+
+        if not Puppet.get_id_from_mxid(user_id):
+            puppet = await Puppet.get_by_portal(room_id)
+
+            # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
+            if puppet.intent and puppet.intent.bot and puppet.intent.bot.mxid == user.mxid:
+                # Si el que se unió es el bot principal, debemos sacarlo para que no dañe
+                # el comportamiento del puppet
+                await portal.kick_user(
+                    user_id=user_id, reason="The main acd should not be in the customer's room"
+                )
+
+            # Generamos llaves para buscar en PENDING_INVITES (acd, transfer)
+            future_key = puppet.room_manager.get_future_key(
+                room_id=portal.room_id, agent_id=user_id
+            )
+            transfer_future_key = puppet.room_manager.get_future_key(
+                room_id=portal.room_id, agent_id=user_id, transfer=True
+            )
+
+            # Buscamos promesas pendientes relacionadas con el comando acd
+            if (
+                future_key in puppet.agent_manager.PENDING_INVITES
+                and not puppet.agent_manager.PENDING_INVITES[future_key].done()
+            ):
+                # when the agent accepts the invite, the Future is resolved and the waiting
+                # timer stops
+                self.log.debug(f"Resolving to True the promise [{future_key}]")
+                puppet.agent_manager.PENDING_INVITES[future_key].set_result(True)
+
+            # Buscamos promesas pendientes relacionadas con las transferencia
+            if (
+                transfer_future_key in puppet.agent_manager.PENDING_INVITES
+                and not puppet.agent_manager.PENDING_INVITES[transfer_future_key].done()
+            ):
+                # when the agent accepts the invite, the Future is resolved and the waiting
+                # timer stops
+                puppet.agent_manager.PENDING_INVITES[transfer_future_key].set_result(True)
+
+            # If the joined user is a supervisor and the room is a customer room,
+            # then send set-pl in the room
+            if user.is_admin:
+                bridge = await puppet.room_manager.get_room_bridge(room_id=portal.room_id)
+                if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
+                    await puppet.room_manager.send_cmd_set_pl(
+                        room_id=portal.room_id,
+                        bridge=bridge,
+                        user_id=user_id,
+                        power_level=self.config["acd.supervisors_to_invite.power_level"],
+                    )
+            return
+
+        puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
 
         if not puppet:
             self.log.warning(f"I can't get a puppet for the room {room_id}  in [DB]")
@@ -387,88 +462,50 @@ class MatrixHandler:
                         # Como se encontró el acd[n] dentro de la sala, entonces la guardamos
                         # en la tabla rooms
                         self.log.debug(f"The puppet {user_id} has already in the room {room_id}")
-                        if await Portal.is_portal(room_id):
-                            await Portal.get_by_room_id(room_id, fk_puppet=puppet.pk)
+                        await Portal.get_by_room_id(
+                            room_id,
+                            fk_puppet=puppet.pk,
+                            intent=puppet.intent,
+                            bridge=puppet.bridge,
+                        )
             else:
                 return
 
-        # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
-        if user_id == self.az.bot_mxid or Puppet.get_id_from_mxid(user_id):
-            if await Portal.is_portal(room_id):
-                await Portal.get_by_room_id(room_id, fk_puppet=puppet.pk)
-
-        if puppet.intent and puppet.intent.bot and puppet.intent.bot.mxid == user_id:
-            # Si el que se unió es el bot principal, debemos sacarlo para que no dañe
-            # el comportamiento del puppet
-            await puppet.intent.kick_user(room_id=room_id, user_id=user_id)
-
-        # Generamos llaves para buscar en PENDING_INVITES (acd, transfer)
-        future_key = puppet.room_manager.get_future_key(room_id=room_id, agent_id=user_id)
-        transfer_future_key = puppet.room_manager.get_future_key(
-            room_id=room_id, agent_id=user_id, transfer=True
-        )
-
-        # Buscamos promesas pendientes relacionadas con el comando acd
-        if (
-            future_key in puppet.agent_manager.PENDING_INVITES
-            and not puppet.agent_manager.PENDING_INVITES[future_key].done()
-        ):
-            # when the agent accepts the invite, the Future is resolved and the waiting
-            # timer stops
-            self.log.debug(f"Resolving to True the promise [{future_key}]")
-            puppet.agent_manager.PENDING_INVITES[future_key].set_result(True)
-
-        # Buscamos promesas pendientes relacionadas con las transferencia
-        if (
-            transfer_future_key in puppet.agent_manager.PENDING_INVITES
-            and not puppet.agent_manager.PENDING_INVITES[transfer_future_key].done()
-        ):
-            # when the agent accepts the invite, the Future is resolved and the waiting
-            # timer stops
-            puppet.agent_manager.PENDING_INVITES[transfer_future_key].set_result(True)
-
-        # If the joined user is a supervisor and the room is a customer room,
-        # then send set-pl in the room
-        if user_id.startswith(self.config["acd.supervisor_prefix"]):
-            if not await puppet.room_manager.is_customer_room(room_id=room_id):
-                return
-
-            bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
-            if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
-                await puppet.room_manager.send_cmd_set_pl(
-                    room_id=room_id,
-                    bridge=bridge,
-                    user_id=user_id,
-                    power_level=self.config["acd.supervisors_to_invite.power_level"],
-                )
-
-        if not puppet.intent:
-            self.log.debug(f"The user who has joined is neither a puppet nor the appservice_bot")
+        if not await puppet.room_manager.initialize_room(room_id=portal.room_id):
+            self.log.critical(f"Room {portal.room_id} initialization has failed")
             return
 
-        # Solo se inicializa la sala si el que se une es el usuario acd[n]
-        if Puppet.get_id_from_mxid(user_id):
-            if not await puppet.room_manager.initialize_room(room_id=room_id):
-                self.log.debug(f"Room {room_id} initialization has failed")
-                return
+        # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
+        if not room_id in puppet.BIC_ROOMS:
+            if puppet.destination:
+                portal: Portal = Portal.get_by_room_id(
+                    room_id=room_id, create=False, bridge=puppet.bridge
+                )
+                if await self.process_destination(portal):
+                    return
 
-            # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
-            if not room_id in puppet.BIC_ROOMS:
-                if puppet.destination:
-                    portal: Portal = Portal.get_by_room_id(room_id=room_id, create=False)
-                    if await self.process_destination(portal):
-                        return
+            # invite menubot to show menu
+            # this is done with create_task because with no official API set-pl can take
+            # a while so several invite attempts are made without blocking
+            menubot_id = await puppet.room_manager.get_menubot_id()
+            if menubot_id:
+                asyncio.create_task(
+                    puppet.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)
+                )
 
-                # invite menubot to show menu
-                # this is done with create_task because with no official API set-pl can take
-                # a while so several invite attempts are made without blocking
-                menubot_id = await puppet.room_manager.get_menubot_id()
-                if menubot_id:
-                    asyncio.create_task(
-                        puppet.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)
-                    )
+            puppet.BIC_ROOMS.discard(portal.room_id)
 
-            puppet.BIC_ROOMS.discard(room_id)
+    async def handle_leave(self, evt: Event):
+        self.log.debug(f"The user {evt.state_key} leave from to room {evt.room_id}")
+
+        user: User = await User.get_by_mxid(evt.state_key)
+
+        is_queue: Queue = await Queue.get_by_room_id(room_id=evt.room_id, create=False)
+
+        if is_queue:
+            queue_membership = await QueueMembership.get_by_queue_and_user(user.id, is_queue.id)
+            await queue_membership._delete()
+            return
 
     async def handle_notice(
         self, room_id: RoomID, sender: UserID, message: MessageEventContent, event_id: EventID
@@ -489,7 +526,12 @@ class MatrixHandler:
             The ID of the event that triggered the call.
 
         """
-        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+        puppet: Puppet = await Puppet.get_by_control_room_id(room_id)
+
+        if self.is_logout_message(message.body):
+            await puppet.reset_phone()
+            return
+
         if puppet and not puppet.phone:
             bridge_conector = ProvisionBridge(session=self.az.http_session, config=self.config)
             response = await bridge_conector.ping(user_id=puppet.custom_mxid)
@@ -500,10 +542,10 @@ class MatrixHandler:
             ):
                 # Actualizamos el numero registrado para este puppet
                 # sin el +
-                puppet.phone = response.get("whatsapp").get("phone").replace("+", "")
+                puppet.phone = response.get("whatsapp", {}).get("phone", "").replace("+", "")
                 await puppet.save()
 
-    async def handle_room_name(self, evt: Event):
+    async def handle_room_name(self, evt: StrippedStateEvent):
         queue: Queue = await Queue.get_by_room_id(room_id=evt.room_id, create=False)
         if queue:
             if evt.type == EventType.ROOM_NAME:
@@ -534,7 +576,7 @@ class MatrixHandler:
         return is_command, text
 
     async def handle_message(
-        self, room_id: RoomID, sender: UserID, message: MessageEventContent, event_id: EventID
+        self, room_id: RoomID, sender: User, message: MessageEventContent
     ) -> None:
         """If the message is a command, process it. If not, ignore it
 
@@ -542,8 +584,8 @@ class MatrixHandler:
         ----------
         room_id : RoomID
             The room ID of the room the message was sent in.
-        sender : UserID
-            The user ID of the user who sent the message.
+        sender : User
+            The user who sent the message.
         message : MessageEventContent
             The message that was sent.
         event_id : EventID
@@ -561,25 +603,30 @@ class MatrixHandler:
 
         message.body = message.body.strip()
 
-        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=room_id)
+        puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
 
-        if sender == self.config["bridges.mautrix.mxid"] and self.is_logout_message(message.body):
+        if sender.mxid == self.config["bridges.mautrix.mxid"] and self.is_logout_message(
+            message.body
+        ):
+            puppet = await Puppet.get_by_control_room_id(control_room_id=room_id)
             self.log.warning(
                 f"The puppet {puppet.custom_mxid} with phone {puppet.phone} was logged out :: {message.body}"
             )
-            if puppet.phone and puppet.phone in puppet.by_phone:
-                del puppet.by_phone[puppet.phone]
-
-            puppet.phone = ""
-            await puppet.update()
-
-        user: User = await User.get_by_mxid(sender)
+            await puppet.reset_phone()
+            return
 
         # Checking if the message is a command, and if it is,
         # it is sending the command to the command processor.
         is_command, text = self.is_command(message=message)
 
-        if is_command:
+        if is_command and not await Portal.is_portal(room_id):
+            puppet = await Puppet.get_by_control_room_id(control_room_id=room_id)
+
+            if not puppet:
+                intent = self.az.intent
+            else:
+                intent = puppet.intent
+
             try:
                 command, arguments = text.split(" ", 1)
                 args = split(arguments)
@@ -590,13 +637,21 @@ class MatrixHandler:
 
             await self.commands.handle(
                 room_id=room_id,
-                sender=user,
+                sender=sender,
                 command=command,
                 args_list=args,
                 content=message,
-                intent=puppet.intent if puppet else self.az.intent,
-                is_management=room_id == user.management_room,
+                intent=intent,
+                is_management=room_id == sender.management_room,
             )
+
+            return
+
+        # Ignoring message events in a non-portal room
+        if not await Portal.is_portal(room_id=room_id):
+            return
+
+        puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
 
         if not puppet:
             self.log.warning(f"I can't get an puppet for the room {room_id}")
@@ -609,10 +664,8 @@ class MatrixHandler:
         # Dado un user_id obtenemos el número y buscamos que el número no sea uno de los ya
         # registrados en el ACD - AZ, si es así lo agregamos a la lista negra
         # luego se envía un mensaje indicando personalizado.
-        customer_match = re.match(self.config["utils.username_regex"], sender)
-        if customer_match:
-            customer_phone = customer_match.group("number")
-            if await puppet.is_another_puppet(phone=customer_phone):
+        if sender.is_customer and sender.account_id:
+            if await puppet.is_another_puppet(phone=sender.account_id):
                 self.log.error(self.config["utils.message_bot_war"])
                 await puppet.intent.send_text(
                     room_id=room_id, text=self.config["utils.message_bot_war"]
@@ -622,19 +675,27 @@ class MatrixHandler:
 
         # Ignore messages from whatsapp bots
         bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
-        if bridge and sender == self.config[f"bridges.{bridge}.mxid"]:
+        if bridge and sender.mxid == self.config[f"bridges.{bridge}.mxid"]:
             return
 
         # Checking if the room is a control room.
-        if await puppet.is_a_control_room(room_id=room_id):
+        if await puppet.is_control_room(room_id=room_id):
             return
 
         # ignore messages other than commands from menu bot
-        if sender.startswith(self.config["acd.menubot_prefix"]):
+        if sender.is_menubot:
             return
 
         # ignore messages other than commands from supervisor
-        if sender.startswith(self.config["acd.supervisor_prefix"]):
+        if sender.is_supervisor:
+            return
+
+        portal: Portal = await Portal.get_by_room_id(
+            room_id=room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
+        )
+
+        if not portal:
+            self.log.error(f"The portal could not be obtained {room_id}")
             return
 
         # if it is a voice call, let the customer know that the company doesn't receive calls
@@ -644,7 +705,7 @@ class MatrixHandler:
                 and self.config["acd.voice_call.no_voice_call"]
             ):
                 no_call_message = self.config["acd.voice_call.no_voice_call"]
-                await puppet.intent.send_text(room_id=room_id, text=no_call_message)
+                await portal.send_text(text=no_call_message)
                 return
 
         # Ignorar la sala de status broadcast
@@ -652,118 +713,99 @@ class MatrixHandler:
             self.log.debug(f"Ignoring the room {room_id} because it is whatsapp_status_broadcast")
             return
 
-        is_agent = puppet.agent_manager.is_agent(agent_id=sender)
-
         # Ignore messages from ourselves or agents if not a command
-        if is_agent:
+        if sender.is_agent:
             await puppet.agent_manager.signaling.set_chat_status(
-                room_id=room_id, status=Signaling.FOLLOWUP, agent=sender
+                room_id=room_id, status=Signaling.FOLLOWUP, agent=sender.mxid
             )
             return
 
-        # The below code is checking if the room is a customer room, if it is,
-        # it is getting the room name, and the creator of the room.
         # If the room name is empty, it is setting the room name to the new room name.
-        user_prefix_guest = re.search(self.config[f"acd.username_regex_guest"], sender)
-        if await puppet.room_manager.is_customer_room(room_id=room_id) or user_prefix_guest:
-            portal: Portal = await Portal.get_by_room_id(room_id=room_id, fk_puppet=puppet.pk)
+        if not await portal.get_room_name():
+            await portal.update_room_name()
+            self.log.info(
+                f"User {portal.room_id} has changed the name of the room {puppet.intent.mxid}"
+            )
 
-            room_name = await puppet.room_manager.get_room_name(room_id=portal.room_id)
-            if not room_name:
-                await puppet.room_manager.put_name_customer_room(room_id=portal.room_id)
-                self.log.info(
-                    f"User {portal.room_id} has changed the name of the room {puppet.intent.mxid}"
-                )
+        if puppet.intent.mxid == sender.mxid:
+            self.log.debug(f"Ignoring {sender.mxid} messages, is acd[n]")
+            return
 
-            if puppet.intent.mxid == sender:
-                self.log.debug(f"Ignoring {sender} messages, is acd[n]")
+        # the user entered the offline agent menu and selected some option
+        if puppet.room_manager.in_offline_menu(portal.room_id):
+            puppet.room_manager.pull_from_offline_menu(portal.room_id)
+            valid_option = await puppet.agent_manager.process_offline_selection(
+                portal=portal, msg=message.body
+            )
+            if valid_option:
                 return
 
-            # the user entered the offline agent menu and selected some option
-            if puppet.room_manager.in_offline_menu(portal.room_id):
-                puppet.room_manager.pull_from_offline_menu(portal.room_id)
-                valid_option = await puppet.agent_manager.process_offline_selection(
-                    room_id=portal.room_id, msg=message.body
-                )
-                if valid_option:
-                    return
+        # room_agent = await puppet.agent_manager.get_room_agent(room_id=portal.room_id)
+        room_agent = await portal.get_current_agent()
 
-            room_agent = await puppet.agent_manager.get_room_agent(room_id=portal.room_id)
-            if room_agent:
-                # if message is not from agents, bots or ourselves, it is from the customer
-                await puppet.agent_manager.signaling.set_chat_status(
-                    room_id=portal.room_id, status=Signaling.PENDING, agent=room_agent
-                )
+        if room_agent:
+            # if message is not from agents, bots or ourselves, it is from the customer
+            await puppet.agent_manager.signaling.set_chat_status(
+                room_id=portal.room_id, status=Signaling.PENDING, agent=room_agent.mxid
+            )
 
-                if await puppet.agent_manager.business_hours.is_not_business_hour():
-                    await puppet.agent_manager.business_hours.send_business_hours_message(
-                        room_id=portal.room_id
-                    )
-                    return
-
-                # Switch between presence and agent operation login
-                # using config parameter to show offline menu
-                if self.config["acd.use_presence"]:
-                    presence = await puppet.agent_manager.get_agent_presence(agent_id=room_agent)
-                    is_agent_offline = presence and presence.presence == PresenceState.OFFLINE
-                else:
-                    presence = await puppet.agent_manager.get_agent_status(agent_id=room_agent)
-                    is_agent_offline = (
-                        presence.get("presence") == QueueMembershipState.Offline.value
-                    )
-
-                if is_agent_offline:
-                    await puppet.agent_manager.process_offline_agent(
-                        room_id=portal.room_id,
-                        room_agent=room_agent,
-                    )
-                return
-
-            if await puppet.room_manager.has_menubot(room_id=portal.room_id):
-                self.log.debug("Menu bot is here...")
-                return
-
-            if await puppet.room_manager.is_group_room(room_id=portal.room_id):
-                self.log.debug(f"{portal.room_id} is a group room, ignoring message")
-                return
-
-            # Send an informative message if the conversation started no within the business hour
             if await puppet.agent_manager.business_hours.is_not_business_hour():
                 await puppet.agent_manager.business_hours.send_business_hours_message(
                     room_id=portal.room_id
                 )
-                if not self.config["utils.business_hours.show_menu"]:
-                    return
+                return
 
-            if not puppet.room_manager.is_room_locked(room_id=portal.room_id):
-                await puppet.agent_manager.signaling.set_chat_status(
-                    room_id=portal.room_id, status=Signaling.OPEN
+            # Switch between presence and agent operation login
+            # using config parameter to show offline menu
+
+            if not await room_agent.is_online():
+                await puppet.agent_manager.process_offline_agent(
+                    portal=portal,
+                    room_agent=room_agent,
                 )
+            return
 
-                if self.config["acd.supervisors_to_invite.invite"]:
-                    asyncio.create_task(
-                        puppet.room_manager.invite_supervisors(room_id=portal.room_id)
-                    )
+        if await puppet.room_manager.has_menubot(room_id=portal.room_id):
+            self.log.debug("Menu bot is here...")
+            return
 
-                # clear campaign in the ik.chat.campaign_selection state event
-                await puppet.agent_manager.signaling.set_selected_campaign(
-                    room_id=portal.room_id, campaign_room_id=None
-                )
+        if await puppet.room_manager.is_group_room(room_id=portal.room_id):
+            self.log.debug(f"{portal.room_id} is a group room, ignoring message")
+            return
 
-            if puppet.destination:
-                if await self.process_destination(portal=portal):
-                    return
+        # Send an informative message if the conversation started no within the business hour
+        if await puppet.agent_manager.business_hours.is_not_business_hour():
+            await puppet.agent_manager.business_hours.send_business_hours_message(
+                room_id=portal.room_id
+            )
+            if not self.config["utils.business_hours.show_menu"]:
+                return
 
-            # invite menubot to show menu
-            # this is done with create_task because with no official API set-pl can take
-            # a while so several invite attempts are made without blocking
-            menubot_id = await puppet.room_manager.get_menubot_id()
-            if menubot_id:
-                asyncio.create_task(
-                    puppet.room_manager.invite_menu_bot(
-                        room_id=portal.room_id, menubot_id=menubot_id
-                    )
-                )
+        if not puppet.room_manager.is_room_locked(room_id=portal.room_id):
+            await puppet.agent_manager.signaling.set_chat_status(
+                room_id=portal.room_id, status=Signaling.OPEN
+            )
+
+            if self.config["acd.supervisors_to_invite.invite"]:
+                asyncio.create_task(puppet.room_manager.invite_supervisors(room_id=portal.room_id))
+
+            # clear campaign in the ik.chat.campaign_selection state event
+            await puppet.agent_manager.signaling.set_selected_campaign(
+                room_id=portal.room_id, campaign_room_id=None
+            )
+
+        if puppet.destination:
+            if await self.process_destination(portal=portal):
+                return
+
+        # invite menubot to show menu
+        # this is done with create_task because with no official API set-pl can take
+        # a while so several invite attempts are made without blocking
+        menubot_id = await puppet.room_manager.get_menubot_id()
+        if menubot_id:
+            asyncio.create_task(
+                puppet.room_manager.invite_menu_bot(room_id=portal.room_id, menubot_id=menubot_id)
+            )
 
     async def process_destination(self, portal: Portal) -> bool:
         """Distribute the chat using puppet destination, destination can be a user_id or room_id
@@ -778,7 +820,7 @@ class MatrixHandler:
             A boolean value.
 
         """
-        puppet: Puppet = await Puppet.get_customer_room_puppet(room_id=portal.room_id)
+        puppet: Puppet = await Puppet.get_by_portal(portal_room_id=portal.room_id)
 
         if not puppet:
             return False

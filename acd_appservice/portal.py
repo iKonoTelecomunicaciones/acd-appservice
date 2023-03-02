@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 from enum import Enum
-from typing import cast
+from typing import List, cast
 
 from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI
@@ -14,6 +14,7 @@ from .config import Config
 from .db.portal import Portal as DBPortal
 from .db.portal import PortalState
 from .matrix_room import MatrixRoom
+from .user import User
 from .util import Util
 
 
@@ -75,6 +76,91 @@ class Portal(DBPortal, MatrixRoom):
             return
 
         await self.main_intent.set_room_name(room_id=self.room_id, name=updated_room_name)
+
+    async def get_current_agent(self) -> User | None:
+        """Get the current agent, if there is one.
+
+        Returns
+        -------
+            A User object
+
+        """
+        users: List[User] = await self.get_joined_users()
+
+        # If it is None, it is because something has gone wrong.
+        if users is None:
+            return False
+
+        for user in users:
+            if user.is_agent:
+                return user
+
+    async def has_online_agents(self) -> bool | str:
+        """It checks if the agent is online
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+
+        agent = await self.get_current_agent()
+
+        if agent == False:
+            return "unlock"
+
+        if agent is None:
+            return False
+
+        state = await agent.is_online()
+
+        self.log.debug(
+            f"Agent {agent.mxid} in the room [{self.room_id}] is [{'online' if state else 'offline'}]"
+        )
+
+        return state
+
+    @classmethod
+    async def is_portal(cls, room_id: RoomID) -> bool:
+        """It checks if the room is a portal by checking if the creator of the room is a
+        user with a user ID that starts with the user prefix of any of the bridges
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to check.
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+        try:
+            response = await cls.az.intent.api.request(
+                method=Method.GET, path=SynapseAdminPath.v1.rooms[room_id]
+            )
+        except Exception as e:
+            cls.log.exception(e)
+            return False
+
+        creator: UserID = response.get("creator", "")
+
+        if not creator:
+            return False
+
+        is_customer_guest = re.search(cls.config[f"acd.username_regex_guest"], creator)
+
+        if is_customer_guest:
+            return True
+
+        bridges = cls.config["bridges"]
+
+        for bridge in bridges:
+            user_prefix = cls.config[f"bridges.{bridge}.user_prefix"]
+            if creator.startswith(f"@{user_prefix}"):
+                return True
+
+        return False
 
     async def get_update_name(self) -> str:
         """It gets the room name from the creator's display name,
@@ -204,9 +290,14 @@ class Portal(DBPortal, MatrixRoom):
         create: bool = True,
         fk_puppet: int = None,
         intent: IntentAPI = None,
+        bridge: str = None,
     ) -> Portal | None:
         try:
-            return cls.by_room_id[room_id]
+            portal = cls.by_room_id[room_id]
+            if intent:
+                portal.main_intent = intent
+
+            return portal
         except KeyError:
             pass
 
@@ -215,11 +306,14 @@ class Portal(DBPortal, MatrixRoom):
             if fk_puppet:
                 portal.fk_puppet = fk_puppet
 
-            if intent:
-                portal.main_intent = intent
+            portal.bridge = bridge
 
             await portal._add_to_cache()
             await portal.post_init()
+
+            if intent:
+                portal.main_intent = intent
+
             return portal
 
         if create:
@@ -228,37 +322,13 @@ class Portal(DBPortal, MatrixRoom):
             if fk_puppet:
                 portal.fk_puppet = fk_puppet
 
+            await portal.insert()
+            portal = cast(cls, await super().get_by_room_id(room_id))
+            portal.bridge = bridge
+            await portal._add_to_cache()
+            await portal.post_init()
+
             if intent:
                 portal.main_intent = intent
 
-            await portal.insert()
-            portal = cast(cls, await super().get_by_room_id(room_id))
-            await portal._add_to_cache()
-            await portal.post_init()
             return portal
-
-        return None
-
-    @classmethod
-    async def is_portal(cls, room_id: RoomID) -> bool:
-        try:
-            response = await cls.az.intent.api.request(
-                method=Method.GET, path=SynapseAdminPath.v1.rooms[room_id]
-            )
-        except Exception as e:
-            cls.log.exception(e)
-            return False
-
-        creator: UserID = response.get("creator", "")
-
-        if not creator:
-            return False
-
-        bridges = cls.config["bridges"]
-
-        for bridge in bridges:
-            user_prefix = cls.config[f"bridges.{bridge}.user_prefix"]
-            if creator.startswith(f"@{user_prefix}"):
-                return True
-
-        return False

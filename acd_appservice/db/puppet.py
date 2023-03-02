@@ -132,6 +132,14 @@ class Puppet:
         return cls._from_row(row)
 
     @classmethod
+    async def get_by_control_room_id(cls, control_room_id: RoomID) -> Puppet | None:
+        q = f"{cls.query} control_room_id=$1"
+        row = await cls.db.fetchrow(q, control_room_id)
+        if not row:
+            return None
+        return cls._from_row(row)
+
+    @classmethod
     async def get_all_puppets(cls) -> list[UserID]:
         q = "SELECT * FROM puppet WHERE custom_mxid IS NOT NULL"
         rows = await cls.db.fetch(q)

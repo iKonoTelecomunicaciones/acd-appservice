@@ -41,7 +41,7 @@ async def template(evt: CommandEvent):
         await evt.reply(detail)
         return {"data": {"error": detail}, "status": 422}
 
-    puppet: Puppet = await Puppet.get_customer_room_puppet(room_id)
+    puppet: Puppet = await Puppet.get_by_portal(room_id)
 
     if not puppet:
         return

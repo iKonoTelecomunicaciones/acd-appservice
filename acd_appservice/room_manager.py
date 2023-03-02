@@ -28,7 +28,6 @@ from .util import Util
 
 
 class RoomManager:
-
     log: TraceLogger = logging.getLogger("acd.room_manager")
     ROOMS: dict[RoomID, Dict] = {}
 
@@ -601,7 +600,6 @@ class RoomManager:
                     new_room_name = new_room_name.replace(f" {postfix_template}", "")
                     if self.config["acd.numbers_in_rooms"]:
                         try:
-
                             emoji_number = self.get_emoji_number(number=str(self.puppet_pk))
 
                             if emoji_number:
@@ -686,7 +684,6 @@ class RoomManager:
         if menubot_id:
             await self.send_menubot_command(menubot_id, "cancel_task", room_id)
             try:
-
                 self.log.debug(f"Menubot [{menubot_id}] is leaving the room {room_id}")
                 await self.remove_user_from_room(
                     room_id=room_id, user_id=menubot_id, reason=reason
@@ -1007,82 +1004,3 @@ class RoomManager:
             return
 
         return room_info
-
-    @classmethod
-    async def get_puppet_rooms(cls, puppet_pk: int) -> Dict[RoomID]:
-        """`get_puppet_rooms` returns a dictionary of rooms that are associated with a puppet
-
-        Parameters
-        ----------
-        puppet_pk : int
-            The primary key of the puppet.
-
-        Returns
-        -------
-            A dictionary of room ids and room names.
-
-        """
-        try:
-            rooms = await Portal.get_rooms_by_puppet(puppet_pk)
-        except Exception as e:
-            cls.log.exception(e)
-            return
-        if not rooms:
-            return {}
-
-        return rooms
-
-    @classmethod
-    async def get_campaign_of_room(cls, room_id: RoomID) -> RoomID:
-        """Given a room, its selected campaign is obtained.
-        Parameters
-        ----------
-        room_id: RoomID
-            Portal to query.
-
-        Returns
-        -------
-        RoomID
-            RoomID if successful, None otherwise.
-        """
-        try:
-            return await Portal.get_user_selected_menu(room_id=room_id)
-        except Exception as e:
-            cls.log.exception(e)
-
-    @classmethod
-    async def get_room(cls, room_id: RoomID) -> Portal:
-        """If the room is in the cache, return it.
-        If not, get it from the database and add it to the cache.
-
-        The first thing we do is check if the room is in the cache.
-        If it is, we return it. If not, we get it from the database
-
-        Parameters
-        ----------
-        room_id : RoomID
-            The room ID of the room you want to get.
-
-        Returns
-        -------
-            A room object
-
-        """
-
-        try:
-            return cls.by_room_id[room_id]
-        except KeyError:
-            pass
-        room = None
-
-        try:
-            room = await Portal.get_by_room_id(room_id=room_id)
-        except Exception as e:
-            cls.log.exception(e)
-
-        if not room:
-            return
-
-        cls._add_to_cache(room_id=room_id, room=room)
-
-        return room

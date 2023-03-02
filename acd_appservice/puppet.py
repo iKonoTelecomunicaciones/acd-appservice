@@ -28,6 +28,8 @@ class Puppet(DBPuppet, BasePuppet):
     by_custom_mxid: dict[UserID, Puppet] = {}
     by_email: dict[str, Puppet] = {}
     by_phone: dict[str, Puppet] = {}
+    by_control_room_id: dict[RoomID, Puppet] = {}
+
     hs_domain: str
     mxid_template: SimpleTemplate[int]
 
@@ -96,6 +98,7 @@ class Puppet(DBPuppet, BasePuppet):
         )
         self.agent_manager = AgentManager(
             puppet_pk=self.pk,
+            bridge=self.bridge,
             control_room_id=self.control_room_id,
             intent=self.intent,
             config=self.config,
@@ -185,7 +188,9 @@ class Puppet(DBPuppet, BasePuppet):
         for mx_joined_room in matrix_joined_rooms:
             if not mx_joined_room in db_joined_rooms:
                 if await Portal.is_portal(mx_joined_room):
-                    await Portal.get_by_room_id(mx_joined_room, fk_puppet=self.pk)
+                    await Portal.get_by_room_id(
+                        mx_joined_room, fk_puppet=self.pk, intent=self.intent, bridge=self.bridge
+                    )
 
     async def sync_puppet_account(self):
         """It updates the puppet account's password and email address
@@ -223,6 +228,19 @@ class Puppet(DBPuppet, BasePuppet):
             self.by_email[self.email] = self
         if self.custom_mxid:
             self.by_custom_mxid[self.custom_mxid] = self
+        if self.control_room_id:
+            self.by_control_room_id[self.control_room_id] = self
+
+    async def reset_phone(self):
+        """It deletes the user's phone number from the database,
+        and then updates the user's information
+        """
+
+        if self.phone and self.phone in self.by_phone:
+            del self.by_phone[self.phone]
+
+        self.phone = ""
+        await self.update()
 
     async def save(self) -> None:
         self._add_to_cache()
@@ -381,12 +399,12 @@ class Puppet(DBPuppet, BasePuppet):
         return next_puppet
 
     @classmethod
-    async def get_customer_room_puppet(cls, room_id: RoomID):
+    async def get_by_portal(cls, portal_room_id: RoomID):
         """Get the puppet from a customer room
 
         Parameters
         ----------
-        room_id : RoomID
+        portal_room_id : RoomID
             Customer room_id
 
         Returns
@@ -398,16 +416,41 @@ class Puppet(DBPuppet, BasePuppet):
         puppet: Puppet = None
 
         try:
-            room = await RoomManager.get_room(room_id)
-            if not (room and room.fk_puppet):
+            portal = await Portal.get_by_room_id(room_id=portal_room_id, create=False)
+            if not (portal and portal.fk_puppet):
                 return
 
-            puppet = await Puppet.get_by_pk(room.fk_puppet)
+            puppet = await Puppet.get_by_pk(portal.fk_puppet)
         except Exception as e:
             cls.log.exception(e)
             return
 
         return puppet
+
+    @classmethod
+    @async_getter_lock
+    async def get_by_control_room_id(cls, control_room_id: RoomID) -> Puppet:
+        """It adds the puppet to the cache
+
+        Parameters
+        ----------
+        control_room_id : RoomID
+            The room ID of the room that the puppet is controlling.
+
+        Returns
+        -------
+            A puppet object
+
+        """
+        try:
+            return cls.by_control_room_id[control_room_id]
+        except KeyError:
+            pass
+
+        puppet = cast(cls, await super().get_by_control_room_id(control_room_id))
+        if puppet:
+            puppet._add_to_cache()
+            return puppet
 
     @classmethod
     @async_getter_lock
@@ -421,8 +464,6 @@ class Puppet(DBPuppet, BasePuppet):
         if puppet:
             puppet._add_to_cache()
             return puppet
-
-        return None
 
     @classmethod
     async def get_puppets_from_mautrix(cls) -> List[Puppet]:
@@ -447,7 +488,7 @@ class Puppet(DBPuppet, BasePuppet):
         return all_puppets
 
     @classmethod
-    async def is_a_control_room(cls, room_id: RoomID) -> bool:
+    async def is_control_room(cls, room_id: RoomID) -> bool:
         """If the room ID is in the list of control rooms,
         or if the room ID is in the list of control room IDs,
         then the room is a control room

@@ -14,8 +14,8 @@ import asyncpg
 
 
 class QueueMembershipState(Enum):
-    Online = "online"
-    Offline = "offline"
+    ONLINE = "online"
+    OFFLINE = "offline"
 
 
 # @dataclass
@@ -37,7 +37,7 @@ class QueueMembership:
     state_date: datetime | None = None  # Last change of state
     pause_date: datetime | None = None  # Last pause record
     pause_reason: str = None
-    state: str = QueueMembershipState.Offline.value
+    state: QueueMembershipState = QueueMembershipState.OFFLINE
     paused: bool = False
 
     # penalty: int = 0
@@ -53,7 +53,7 @@ class QueueMembership:
             self.state_date,
             self.pause_date,
             self.pause_reason,
-            self.state,
+            self.state.value,
             self.paused,
         )
 
@@ -63,7 +63,9 @@ class QueueMembership:
 
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> QueueMembership:
-        return cls(**row)
+        data = {**row}
+        state = QueueMembershipState(data.pop("state"))
+        return cls(state=state, **data)
 
     async def insert(self) -> None:
         q = f"""INSERT INTO queue_membership ({self._columns})
@@ -102,6 +104,18 @@ class QueueMembership:
         if not row:
             return None
         return cls._from_row(row)
+
+    @classmethod
+    async def get_count_by_queue_and_state(cls, fk_queue: int, state: QueueMembershipState) -> int:
+        q = f"SELECT COUNT(*) FROM queue_membership WHERE fk_queue=$1 AND state=$2"
+        result = await cls.db.fetchval(q, fk_queue, state.value)
+        return result
+
+    @classmethod
+    async def get_count_by_user_and_state(cls, fk_user: int, state: QueueMembershipState) -> int:
+        q = f"SELECT COUNT(*) FROM queue_membership WHERE fk_user=$1 AND state=$2"
+        result = await cls.db.fetchval(q, fk_user, state.value)
+        return result
 
     @classmethod
     async def get_by_queue(cls, fk_queue: int) -> List[QueueMembership] | None:

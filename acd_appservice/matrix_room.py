@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, List
 
 from markdown import markdown
 from mautrix.api import Method, SynapseAdminPath
@@ -9,6 +9,7 @@ from mautrix.appservice import AppService, IntentAPI
 from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent, UserID
 from mautrix.util.logging import TraceLogger
 
+from .user import User
 from .util import Util
 
 if TYPE_CHECKING:
@@ -16,7 +17,6 @@ if TYPE_CHECKING:
 
 
 class MatrixRoom:
-
     room_id: RoomID
     bridge: str
     log: TraceLogger = logging.getLogger("acd.matrix_room")
@@ -26,10 +26,9 @@ class MatrixRoom:
     creator: UserID = None
     main_intent: IntentAPI = None
 
-    def __init__(self, room_id: RoomID, intent: IntentAPI = None):
+    def __init__(self, room_id: RoomID):
         self.log = self.log.getChild(room_id)
         self.room_id = room_id
-        self.main_intent = intent or self.az.intent
 
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> None:
@@ -60,8 +59,6 @@ class MatrixRoom:
 
     async def set_creator(self) -> None:
         """It sets the creator of the channel"""
-        if self.creator:
-            return self.creator
 
         info = await self.get_info()
 
@@ -102,6 +99,28 @@ class MatrixRoom:
 
         return info.get("topic")
 
+    async def get_joined_users(self) -> List[User] | None:
+        """get a list of all users in the room
+
+        Returns
+        -------
+            A list of User objects.
+
+        """
+        try:
+            members = await self.main_intent.get_joined_members(room_id=self.room_id)
+        except Exception as e:
+            self.log.error(e)
+            return
+
+        users: List[User] = []
+
+        for member in members:
+            user = await User.get_by_mxid(member)
+            users.append(user)
+
+        return users
+
     async def remove_member(self, member: UserID, reason: str = None):
         """If the config value for "acd.remove_method" is "leave", then leave the user,
         otherwise kick the user
@@ -119,7 +138,7 @@ class MatrixRoom:
         else:
             await self.kick_user(user_id=member, reason=reason)
 
-    async def formatted_room_id(self) -> str:
+    async def get_formatted_room_id(self) -> str:
         """It returns a string that contains the room ID, but with a link to the room
 
         Returns
@@ -215,7 +234,7 @@ class MatrixRoom:
             The HTML version of the message body.
 
         """
-        await self.az.intent.send_text(
+        await self.main_intent.send_text(
             room_id=self.room_id,
             text=text,
             html=html,
@@ -232,7 +251,7 @@ class MatrixRoom:
             The HTML version of the message.
 
         """
-        await self.az.intent.send_notice(
+        await self.main_intent.send_notice(
             room_id=self.room_id,
             text=text,
             html=html,

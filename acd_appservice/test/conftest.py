@@ -14,6 +14,7 @@ from pytest_mock import MockerFixture
 from ..commands.handler import CommandEvent, CommandProcessor
 from ..config import Config
 from ..db import upgrade_table
+from ..matrix_room import MatrixRoom
 from ..queue import Queue
 from ..queue_membership import QueueMembership
 from ..room_manager import RoomManager
@@ -69,7 +70,6 @@ async def db(config: Config):
 
 @pytest_asyncio.fixture
 async def acd_init(config: Config, db: Database):
-
     for table in [User, Queue, QueueMembership]:
         table.db = db
         table.config = config
@@ -90,7 +90,6 @@ async def room_manager_mock(config: Config):
 
 @pytest_asyncio.fixture
 async def get_room_info_mock(mocker, room_manager_mock: RoomManager):
-
     room_info = {
         "room_id": "!mscvqgqpHYjBGDxNym:matrix.org",
         "name": "The big bang Theory",
@@ -158,6 +157,89 @@ async def agent_user(
         return_value=User(mxid="@agent1:dominio_cliente.com", id=int(time.time())),
     )
     return await User.get_by_mxid("@agent1:dominio_cliente.com")
+
+
+@pytest_asyncio.fixture
+async def matrix_room(mocker: MockerFixture) -> MatrixRoom:
+    mocker.patch.object(
+        MatrixRoom,
+        "get_info",
+        return_value={
+            "room_id": "!mscvqgqpHYjBGDxNym:matrix.org",
+            "name": "Mauricio Valderrama (3123456789)",
+            "avatar": "mxc://matrix.org/AQDaVFlbkQoErdOgqWRgiGSV",
+            "topic": "Theory, Composition, Notation, Analysis",
+            "canonical_alias": "#thebigbangtheory:matrix.org",
+            "joined_members": 2,
+            "joined_local_members": 2,
+            "joined_local_devices": 2,
+            "version": "1",
+            "creator": "@mxwa_3123456789:matrix.org",
+            "encryption": None,
+            "federatable": True,
+            "public": True,
+            "join_rules": "invite",
+            "guest_access": None,
+            "history_visibility": "shared",
+            "state_events": 93534,
+        },
+    )
+    return MatrixRoom(room_id="!mscvqgqpHYjBGDxNym:matrix.org")
+
+
+@pytest_asyncio.fixture
+async def customer(
+    acd_init,
+    intent: IntentAPI,
+    mocker: MockerFixture,
+) -> User:
+    mocker.patch.object(
+        User,
+        "get_by_mxid",
+        return_value=User(mxid="@mxwa_3123456789:dominio_cliente.com", id=int(time.time())),
+    )
+    mocker.patch.object(
+        User,
+        "get_displayname",
+        return_value="Mauricio Valderrama",
+    )
+    return await User.get_by_mxid("@mxwa_3123456789:dominio_cliente.com")
+
+
+@pytest_asyncio.fixture
+async def menubot(
+    acd_init,
+    mocker: MockerFixture,
+) -> User:
+    mocker.patch.object(
+        User,
+        "get_by_mxid",
+        return_value=User(mxid="@menubot1:dominio_cliente.com", id=int(time.time())),
+    )
+    mocker.patch.object(
+        User,
+        "get_displayname",
+        return_value="Menubot",
+    )
+    return await User.get_by_mxid("@menubot1:dominio_cliente.com")
+
+
+@pytest_asyncio.fixture
+async def supervisor(
+    acd_init,
+    mocker: MockerFixture,
+) -> User:
+    mocker.patch.object(
+        User,
+        "get_by_mxid",
+        return_value=User(mxid="@supervisor1:dominio_cliente.com", id=int(time.time())),
+    )
+    mocker.patch.object(
+        User,
+        "get_displayname",
+        return_value="Supervisor",
+    )
+    return await User.get_by_mxid("@supervisor1:dominio_cliente.com")
 
 
 @pytest_asyncio.fixture

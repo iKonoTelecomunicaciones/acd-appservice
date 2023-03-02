@@ -126,14 +126,10 @@ async def member(evt: CommandEvent) -> Dict:
         return json_response
 
     if action in ["login", "logout"]:
-        state = (
-            QueueMembershipState.Online.value
-            if action == "login"
-            else QueueMembershipState.Offline.value
-        )
+        state = QueueMembershipState.ONLINE if action == "login" else QueueMembershipState.OFFLINE
 
         if membership.state == state:
-            msg = f"Agent {agent_id} is already {state}"
+            msg = f"Agent {agent_id} is already {state.value}"
             await evt.reply(text=msg)
             evt.log.warning(msg)
             json_response.get("data")["detail"] = msg
@@ -151,7 +147,7 @@ async def member(evt: CommandEvent) -> Dict:
 
     elif action in ["pause", "unpause"]:
         # An offline agent is unable to use pause or unpause operations
-        if membership.state == QueueMembershipState.Offline.value:
+        if membership.state == QueueMembershipState.OFFLINE:
             msg = f"You should be logged in to execute `{action}` operation"
             await evt.reply(text=msg)
             evt.log.warning(msg)

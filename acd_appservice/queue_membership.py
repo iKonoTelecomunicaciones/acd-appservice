@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime as dt
-from typing import cast
+from typing import Dict, cast
 
 from mautrix.util.logging import TraceLogger
 
@@ -17,7 +17,7 @@ class QueueMembership(DBMembership):
     state_date: dt | None = None
     pause_date: dt | None = None
     pause_reason: str | None = None
-    state: str = QueueMembershipState.Offline.value
+    state: QueueMembershipState = QueueMembershipState.OFFLINE
     paused: bool = False
 
     log: TraceLogger = logging.getLogger("acd.queue_membership")
@@ -33,7 +33,7 @@ class QueueMembership(DBMembership):
         state_date: dt | None = None,
         pause_date: dt | None = None,
         pause_reason: str | None = None,
-        state: str = QueueMembershipState.Offline.value,
+        state: str = QueueMembershipState.OFFLINE,
         paused: bool = False,
         id: int | None = None,
     ):
@@ -85,7 +85,7 @@ class QueueMembership(DBMembership):
             if prev_membership:
                 # Set prev membership state to new membership
                 # to keep all membership status congruence
-                queue_membership.state = prev_membership[0]["state"]
+                queue_membership.state = QueueMembershipState(prev_membership[0]["state"])
                 queue_membership.paused = prev_membership[0]["paused"]
                 queue_membership.pause_reason = prev_membership[0]["pause_reason"]
                 queue_membership.state_date = (
@@ -102,7 +102,7 @@ class QueueMembership(DBMembership):
         return None
 
     @classmethod
-    async def get_serialized_memberships(cls, fk_user: int) -> list[dict] | None:
+    async def get_serialized_memberships(cls, fk_user: int) -> list[Dict] | None:
         """Get all user serialized memberships and formatted date
 
         Parameters

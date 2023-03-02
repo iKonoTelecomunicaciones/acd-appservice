@@ -231,7 +231,7 @@ async def queue(evt: CommandEvent) -> Dict:
 
         return await update(evt=evt, room_id=room_id, name=name, description=description)
 
-    elif action == "info":
+    elif action in ["info", "ingo"]:
         try:
             room_id = evt.args_list[1]
         except IndexError:
@@ -272,11 +272,6 @@ async def create(
     if isinstance(invitees, str):
         invitees: List[UserID] = [invitee.strip() for invitee in invitees.split(",")]
 
-    # user_add_method can be 'invite' or 'join'.
-    # When it's 'join' the agente will be force joined to the queue
-    if evt.config["acd.queues.user_add_method"] == "invite":
-        invitees = invitees + evt.config["acd.queues.invitees"]
-
     # Checking if the config value is set to public. If it is, it sets the visibility to public.
     if evt.config["acd.queues.visibility"] == "public":
         visibility = RoomDirectoryVisibility.PUBLIC
@@ -285,9 +280,6 @@ async def create(
 
         room_id = await evt.intent.create_room(
             name=name,
-            invitees=invitees
-            if evt.config["acd.queues.user_add_method"] == "invite"
-            else evt.config["acd.queues.invitees"],
             topic=description.strip(),
             visibility=visibility,
         )
@@ -303,7 +295,16 @@ async def create(
     queue.description = description if description else None
     await queue.save()
 
+    # user_add_method can be 'invite' or 'join'.
+    # When it's 'join' the agente will be force joined to the queue
+    if evt.config["acd.queues.user_add_method"] == "invite":
+        for user_id in evt.config["acd.queues.invitees"]:
+            await queue.invite_user(user_id=user_id)
+    else:
+        invitees += evt.config["acd.queues.invitees"]
+
     for invitee in invitees:
+
         try:
             await queue.add_member(new_member=invitee)
         except Exception as e:
@@ -390,7 +391,7 @@ async def delete(evt: CommandEvent, queue_id: RoomID, force: Optional[bool] = Fa
 
     """
     json_response = {}
-    queue = await Queue.get_by_room_id(room_id=queue_id, create=False)
+    queue: Queue = await Queue.get_by_room_id(room_id=queue_id, create=False)
 
     if not queue:
         detail = "The queue has not been found"
@@ -400,26 +401,31 @@ async def delete(evt: CommandEvent, queue_id: RoomID, force: Optional[bool] = Fa
         await evt.reply(detail)
         return json_response
 
-    members = await evt.intent.get_joined_members(room_id=queue_id)
+    members = await queue.get_joined_users()
 
-    if len(members) > 1:
-        if force:
-            await queue.clean_up()
-            detail = "The queue has been deleted"
-            json_response["status"] = 200
-            json_response["data"] = {"detail": detail}
-            evt.log.debug(detail)
-            return json_response
-        else:
-            detail = (
-                "You can only delete the queues in which you are alone "
-                "or send the argument force in `yes`"
-            )
-            json_response["data"] = {"error": detail}
-            json_response["status"] = 422
-            evt.log.error(detail)
-            await evt.reply(detail)
-            return json_response
+    async def delete_queue() -> Dict:
+        await queue.clean_up()
+        detail = "The queue has been deleted"
+        json_response["status"] = 200
+        json_response["data"] = {"detail": detail}
+        evt.log.debug(detail)
+        return json_response
+
+    if force:
+        return await delete_queue()
+
+    if len(members) == 1 and members[0].mxid == evt.intent.bot.mxid:
+        return await delete_queue()
+
+    detail = (
+        "You can only delete the queues in which you are alone "
+        "or send the argument force in `yes`"
+    )
+    json_response["data"] = {"error": detail}
+    json_response["status"] = 422
+    evt.log.error(detail)
+    await evt.reply(detail)
+    return json_response
 
 
 async def update(
@@ -492,8 +498,8 @@ async def info(evt: CommandEvent, room_id: RoomID) -> Dict:
         await evt.reply(detail)
         return json_response
 
-    memberships = await QueueMembership.get_by_queue(fk_queue=queue.id)
-    text = f"#### Room: {await queue.formatted_room_id()}"
+    memberships: List[QueueMembership] = await QueueMembership.get_by_queue(fk_queue=queue.id)
+    text = f"#### Room: {await queue.get_formatted_room_id()}"
 
     _memberships: List[Dict[str:Any]] = []
 
@@ -501,13 +507,13 @@ async def info(evt: CommandEvent, room_id: RoomID) -> Dict:
         text += "\n#### Current memberships:"
         for membership in memberships:
             user: User = await User.get_by_id(membership.fk_user)
-            text += f"\n\n- {await user.formatted_displayname()} -> state: {membership.state} || paused: {membership.paused}"
+            text += f"\n\n- {await user.get_formatted_displayname()} -> state: {membership.state.value} || paused: {membership.paused}"
             _memberships.append(
                 {
                     "user_id": user.mxid,
                     "displayname": await user.get_displayname(),
                     "is_admin": user.is_admin,
-                    "state": membership.state,
+                    "state": membership.state.value,
                     "paused": membership.paused,
                     "creation_date": membership.creation_date.strftime("%Y-%m-%d %H:%M:%S%z")
                     if membership.creation_date
@@ -549,7 +555,7 @@ async def _list(evt: CommandEvent) -> Dict:
         A dictionary with a status code and a data key.
 
     """
-    queues = await Queue.get_all()
+    queues: List[Queue] = await Queue.get_all()
 
     text = "#### Registered queues"
 
@@ -563,7 +569,7 @@ async def _list(evt: CommandEvent) -> Dict:
     _queues = []
 
     for queue in queues:
-        text += f"\n- {await queue.formatted_room_id()}" + (
+        text += f"\n- {await queue.get_formatted_room_id()}" + (
             f"-> `{queue.description}`" if queue.description else ""
         )
         _queues.append(
