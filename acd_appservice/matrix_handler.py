@@ -325,12 +325,6 @@ class MatrixHandler:
                 await puppet.intent.join_room(evt.room_id)
                 return
 
-            # Checking if the event is a room invite and if the invite is for the bot.
-            # If it is, it joins the room.
-            if evt.state_key == self.az.bot_mxid:
-                await self.az.intent.join_room(evt.room_id)
-                return
-
             # Checking if the room is a queue or not.
             if await Queue.is_queue(evt.room_id):
                 self.log.debug(f"The user {evt.state_key} was invited to the queue {evt.room_id}")
@@ -347,6 +341,11 @@ class MatrixHandler:
             self.log.debug(
                 f"The user {evt.state_key} was invited to the ACD Management room {evt.room_id}"
             )
+
+            # Checking if the event is a room invite and if the invite is for the bot.
+            # If it is, it joins the room.
+            if evt.state_key == self.az.bot_mxid:
+                await self.az.intent.join_room(evt.room_id)
 
             sender: User = await User.get_by_mxid(evt.sender)
             if sender and sender.is_admin:
