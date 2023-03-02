@@ -588,12 +588,6 @@ class MatrixHandler:
             The user who sent the message.
         message : MessageEventContent
             The message that was sent.
-        event_id : EventID
-            The ID of the event that triggered this call.
-
-        Returns
-        -------
-
         """
 
         # Discard reply blocks
