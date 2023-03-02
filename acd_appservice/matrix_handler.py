@@ -362,13 +362,6 @@ class MatrixHandler:
             The ID of the room the user has joined.
         user_id : UserID
             The user who has joined the room
-        event_id : EventID
-            The ID of the event that triggered this call.
-
-        Returns
-        -------
-            The intent of the user who has joined the room
-
         """
         self.log.debug(f"{user_id} HAS JOINED THE ROOM {room_id}")
 
