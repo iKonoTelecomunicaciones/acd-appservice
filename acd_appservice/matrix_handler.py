@@ -281,8 +281,7 @@ class MatrixHandler:
 
         self.log.debug(f"{evt.sender} invited {evt.state_key} to {evt.room_id}")
 
-        puppet = await Puppet.get_by_custom_mxid(evt.state_key)
-        user: User = await User.get_by_mxid(evt.sender)
+        puppet: Puppet = await Puppet.get_by_custom_mxid(evt.state_key)
 
         # We verify that the user to be joined is an acd[n].
         # and that there is no other puppet in the room
@@ -291,62 +290,69 @@ class MatrixHandler:
         # as there can't be two acd[n] users in the same room, this will affect
         # the performance of the software
 
-        if not await Portal.is_portal(evt.room_id):
+        if await Portal.is_portal(evt.room_id):
 
             if not puppet:
+                self.log.warning(f"{evt.state_key} is not a puppet")
+                return
 
-                # Checking if the event is a room invite and if the invite is for the bot.
-                # If it is, it joins the room.
-                if evt.state_key == self.az.bot_mxid:
-                    await self.az.intent.join_room(evt.room_id)
-                    return
-
-                # Checking if the room is a queue or not.
-                if await Queue.is_queue(evt.room_id):
-                    self.log.debug(
-                        f"The user {evt.state_key} was invited to the queue {evt.room_id}"
-                    )
-                    return
-
-                # Checking if the room is a control room.
-                if await Puppet.is_control_room(room_id=evt.room_id):
-                    self.log.debug(
-                        f"The user {evt.state_key} was invited to the control room {evt.room_id}"
-                    )
-                    return
-
-                self.log.debug(
-                    f"The user {evt.state_key} was invited to the ACD Management room {evt.room_id}"
+            # Checking if there is already a puppet in the room.
+            # If there is, it will leave the room.
+            puppet_inside: Puppet = await Puppet.get_by_portal(portal_room_id=evt.room_id)
+            if puppet_inside:
+                detail = (
+                    f"There is already a puppet {puppet_inside.custom_mxid} "
+                    f"in the room {evt.room_id}"
                 )
+                self.log.warning(detail)
 
-                # At this point only ACD Management rooms can be reached.
-                if user and user.is_admin:
-                    await self.send_welcome_message(room_id=evt.room_id, inviter=user)
-                else:
-                    await self.send_goodbye_message(room_id=evt.room_id)
-            else:
-                await puppet.intent.join_room(evt.room_id)
+                # Refuse the invitation
+                await puppet.intent.leave_room(room_id=evt.room_id, reason=detail)
+                return
 
-            return
-
-        puppet_inside: Puppet = await Puppet.get_by_portal(portal_room_id=evt.room_id)
-
-        if not Puppet.get_id_from_mxid(mxid=evt.state_key) or puppet_inside:
-            detail = (
-                f"There is already a puppet {puppet_inside.custom_mxid} in the room {evt.room_id}"
-                if puppet_inside
-                else f"{evt.state_key} is not a puppet"
+            self.log.debug(
+                f"The puppet {puppet.intent.mxid} is trying join in the room {evt.room_id}"
             )
-            self.log.warning(detail)
-            return
 
-        puppet: Puppet = await Puppet.get_puppet_by_mxid(evt.state_key)
-        self.log.debug(f"The user {puppet.intent.mxid} is trying join in the room {evt.room_id}")
+            # Creates the portal and join it
+            await Portal.get_by_room_id(
+                evt.room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
+            )
+            await puppet.intent.join_room(evt.room_id)
 
-        await Portal.get_by_room_id(
-            evt.room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
-        )
-        await puppet.intent.join_room(evt.room_id)
+        else:
+            if puppet:
+                await puppet.intent.join_room(evt.room_id)
+                return
+
+            # Checking if the event is a room invite and if the invite is for the bot.
+            # If it is, it joins the room.
+            if evt.state_key == self.az.bot_mxid:
+                await self.az.intent.join_room(evt.room_id)
+                return
+
+            # Checking if the room is a queue or not.
+            if await Queue.is_queue(evt.room_id):
+                self.log.debug(f"The user {evt.state_key} was invited to the queue {evt.room_id}")
+                return
+
+            # Checking if the room is a control room.
+            if await Puppet.is_control_room(room_id=evt.room_id):
+                self.log.debug(
+                    f"The user {evt.state_key} was invited to the control room {evt.room_id}"
+                )
+                return
+
+            # At this point only ACD Management rooms can be reached.
+            self.log.debug(
+                f"The user {evt.state_key} was invited to the ACD Management room {evt.room_id}"
+            )
+
+            sender: User = await User.get_by_mxid(evt.sender)
+            if sender and sender.is_admin:
+                await self.send_welcome_message(room_id=evt.room_id, inviter=sender)
+            else:
+                await self.send_goodbye_message(room_id=evt.room_id)
 
     async def handle_join(self, room_id: RoomID, user_id: UserID) -> None:
         """If the user who has joined the room is the bot, then the room is initialized
