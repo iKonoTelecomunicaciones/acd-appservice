@@ -347,11 +347,11 @@ class MatrixHandler:
             if evt.state_key == self.az.bot_mxid:
                 await self.az.intent.join_room(evt.room_id)
 
-            sender: User = await User.get_by_mxid(evt.sender)
-            if sender and sender.is_admin:
-                await self.send_welcome_message(room_id=evt.room_id, inviter=sender)
-            else:
-                await self.send_goodbye_message(room_id=evt.room_id)
+                sender: User = await User.get_by_mxid(evt.sender)
+                if sender and sender.is_admin:
+                    await self.send_welcome_message(room_id=evt.room_id, inviter=sender)
+                else:
+                    await self.send_goodbye_message(room_id=evt.room_id)
 
     async def handle_join(self, room_id: RoomID, user_id: UserID) -> None:
         """If the user who has joined the room is the bot, then the room is initialized
