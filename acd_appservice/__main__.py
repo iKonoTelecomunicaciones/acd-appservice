@@ -13,6 +13,7 @@ from .matrix_handler import MatrixHandler
 from .matrix_room import MatrixRoom
 from .puppet import Puppet
 from .user import User
+from .util import ACDState, Reporter
 from .version import linkified_version, version
 from .web.provisioning_api import ProvisioningAPI
 
@@ -49,6 +50,9 @@ class ACDAppService(ACD):
         init_db(self.db)
 
     async def start(self) -> None:
+        report = Reporter(acd_state=ACDState.STARTING)
+        report.fill()
+        await report.send()
         # Se cargan las acciones iniciales que deberán ser ejecutadas
         self.add_startup_actions(Puppet.init_cls(self))
         User.init_cls(self)
@@ -74,6 +78,9 @@ class ACDAppService(ACD):
 
         self.matrix.commands = commands
         asyncio.create_task(self.checking_whatsapp_connection())
+        report = Reporter(acd_state=ACDState.RUNNING)
+        report.fill()
+        await report.send()
 
     def prepare_stop(self) -> None:
         # Detenemos todos los puppets que se estén sincronizando con el Synapse
