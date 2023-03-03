@@ -35,7 +35,7 @@ from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
 from .db.user import UserRoles
 from .message import Message
-from .portal import Portal
+from .portal import Portal, PortalState
 from .puppet import Puppet
 from .queue import Queue
 from .queue_membership import QueueMembership
@@ -709,8 +709,9 @@ class MatrixHandler:
 
         # Ignore messages from ourselves or agents if not a command
         if sender.is_agent:
+            await portal.update_state(PortalState.FOLLOWUP)
             await puppet.agent_manager.signaling.set_chat_status(
-                room_id=room_id, status=Signaling.FOLLOWUP, agent=sender.mxid
+                room_id=portal.room_id, status=Signaling.FOLLOWUP, agent=sender.mxid
             )
             return
 
@@ -739,6 +740,7 @@ class MatrixHandler:
 
         if room_agent:
             # if message is not from agents, bots or ourselves, it is from the customer
+            await portal.update_state(PortalState.PENDING)
             await puppet.agent_manager.signaling.set_chat_status(
                 room_id=portal.room_id, status=Signaling.PENDING, agent=room_agent.mxid
             )
