@@ -545,14 +545,14 @@ async def transfer_user(request: web.Request) -> web.Response:
     if data.get("force"):
         args.append(data.get("force"))
 
-    await get_commands().handle(
+    command_response = await get_commands().handle(
         sender=user,
         command="transfer_user",
         args_list=args,
         intent=puppet.intent,
         is_management=False,
     )
-    return web.json_response()
+    return web.json_response(**command_response)
 
 
 @routes.post("/v1/cmd/queue/create")
