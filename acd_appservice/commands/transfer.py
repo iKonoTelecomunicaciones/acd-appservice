@@ -202,7 +202,10 @@ async def transfer_user(evt: CommandEvent) -> str:
     try:
         # Checking if the agent is already in the room, if so, it sends a message to the room.
         if transfer_author.mxid == agent.mxid:
-            msg = f"The agent [{agent_displayname}][{agent.mxid}] is already in the room {portal.room_id}"
+            msg = (
+                f"The agent [{agent_displayname}][{agent.mxid}] "
+                f"is already in the room {portal.room_id}"
+            )
             await portal.send_notice(text=msg)
             json_response["data"]["detail"] = msg
             json_response["status"] = 409
@@ -216,9 +219,10 @@ async def transfer_user(evt: CommandEvent) -> str:
                 )
 
                 if not agent_is_online:
-                    json_response["data"][
-                        "detail"
-                    ] = f"The agent [{agent_displayname}] has been assigned, but is not available to attend the chat."
+                    json_response["data"]["detail"] = (
+                        f"The agent [{agent_displayname}] has been assigned, "
+                        "but they are not available to attend the chat."
+                    )
                     json_response["status"] = 202
                 else:
                     json_response["data"]["detail"] = evt.config["acd.transfer_message"].format(
