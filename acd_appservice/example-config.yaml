@@ -125,6 +125,8 @@ acd:
     transfer_message: "Has sido transferido a {agentname}."
     # Message to show when a chat is asigned an agent
     joined_agent_message: "{agentname} se ha unido al chat."
+    # Message to swhow when a chat was forced transfer and arget agent is not available.
+    unavailabe_agent_in_transfer: "{agentname} se contactará con tigo lo mas pronto posible"
     # Supervisors to invite
     supervisors_to_invite:
         power_level: 99
