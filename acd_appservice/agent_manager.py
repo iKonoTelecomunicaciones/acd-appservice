@@ -51,7 +51,11 @@ class AgentManager:
         self.commands = CommandProcessor(config=self.config)
 
     async def process_distribution(
-        self, portal: Portal, queue: Queue = None, joined_message: str = None
+        self,
+        portal: Portal,
+        queue: Queue = None,
+        joined_message: str = None,
+        put_in_pending_room: bool = False,
     ) -> None:
         """If there are no online agents in the room, then loop over the agents in the campaign room
         (or control room if no campaign is provided) and invite them to the customer room
@@ -83,8 +87,9 @@ class AgentManager:
         # Send an informative message if the conversation started no within the business hour
         if await self.business_hours.is_not_business_hour():
             await self.business_hours.send_business_hours_message(room_id=portal.room_id)
-            self.log.debug(f"Saving room {portal.room_id} in pending list")
-            await portal.update_state(state=PortalState.ENQUEUED)
+            if put_in_pending_room:
+                self.log.debug(f"Saving room {portal.room_id} in pending list")
+                await portal.update_state(state=PortalState.ENQUEUED)
             portal.selected_option = queue.room_id
             await portal.update()
 
@@ -119,6 +124,7 @@ class AgentManager:
                 queue=queue,
                 agent_id=self.CURRENT_AGENT.get(queue.room_id),
                 joined_message=joined_message,
+                put_in_pending_room=put_in_pending_room,
             )
         else:
             self.log.debug(f"This room [{portal.room_id}] has online agents")
@@ -219,6 +225,7 @@ class AgentManager:
         agent_id: UserID,
         joined_message: str | None = None,
         transfer_author: Optional[User] = None,
+        put_in_pending_room: bool = False,
     ) -> Dict:
         """It loops through all the agents in a queue, and if it finds one that is online,
         it invites them to the room
@@ -300,7 +307,6 @@ class AgentManager:
 
             transfer_author_mxid = transfer_author.mxid if transfer_author else ""
             if agent.mxid != transfer_author_mxid:
-
                 # Switch between presence and agent operation login using config parameter
                 # to verify if agent is available to be assigned to the chat
                 if self.config["acd.use_presence"]:
@@ -347,15 +353,15 @@ class AgentManager:
                     json_response["status"] = 404
                     await portal.send_notice(text=msg)
                 else:
-                    msg = (
-                        "The chat could not be distributed, however, it was saved in pending rooms"
-                    )
+                    msg = "The chat could not be distributed"
                     json_response["status"] = 202
                     await self.show_no_agents_message(
                         customer_room_id=portal.room_id, campaign_room_id=queue.room_id
                     )
-                    self.log.debug(f"Saving room [{portal.room_id}] in pending list")
-                    await portal.update_state(state=PortalState.ENQUEUED)
+                    if put_in_pending_room:
+                        msg = f"{msg}, however, it was saved in pending rooms"
+                        self.log.debug(f"Saving room [{portal.room_id}] in pending list")
+                        await portal.update_state(state=PortalState.ENQUEUED)
 
                     portal.selected_option = queue.room_id
                     await portal.update()

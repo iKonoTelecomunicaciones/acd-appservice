@@ -1,3 +1,5 @@
+from re import match
+
 from ..portal import Portal
 from ..puppet import Puppet
 from ..queue import Queue
@@ -17,12 +19,19 @@ joined_message = CommandArg(
     example='"{agentname} join to room"',
 )
 
+put_in_pending_room = CommandArg(
+    name="put_in_pending_room",
+    help_text="If the chat was not distributed, should put the room in pending?",
+    is_required=False,
+    example="`yes` | `no`",
+)
+
 customer_room_id = CommandArg(
     name="customer_room_id",
     help_text="Customer room_id to be distributed",
     is_required=True,
     example="`!foo:foo.com`",
-    sub_args=[campaign_room_id, joined_message],
+    sub_args=[campaign_room_id, joined_message, put_in_pending_room],
 )
 
 
@@ -53,11 +62,16 @@ async def acd(evt: CommandEvent) -> str:
 
     customer_room_id = evt.args_list[0]
     campaign_room_id = evt.args_list[1]
+    joined_message = ""
+    put_in_pending_room = False
 
-    try:
-        joined_message = evt.args_list[2]
-    except IndexError:
-        joined_message = ""
+    if len(evt.args_list) > 2:
+        try:
+            put_in_pending_room = True if evt.args_list[3] == "yes" else False
+            joined_message = evt.args_list[2]
+        except IndexError:
+            if match("no|yes", evt.args_list[2]):
+                put_in_pending_room = True if evt.args_list[2] == "yes" else False
 
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     portal: Portal = await Portal.get_by_room_id(
@@ -73,6 +87,7 @@ async def acd(evt: CommandEvent) -> str:
             portal=portal,
             queue=queue,
             joined_message=joined_message,
+            put_in_pending_room=put_in_pending_room,
         )
     except Exception as e:
         evt.log.exception(e)

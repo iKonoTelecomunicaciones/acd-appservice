@@ -969,12 +969,15 @@ async def acd(request: web.Request) -> web.Response:
                             type: string
                         joined_message:
                             type: string
+                        put_in_pending_room:
+                            type: string
                     required:
                         - customer_room_id
                     example:
                         customer_room_id: "!duOWDQQCshKjQvbyoh:example.com"
                         campaign_room_id: "!TXMsaIzbeURlKPeCxJ:example.com"
                         joined_message: "{agentname} has joined the chat."
+                        put_in_pending_room: "`yes` | `no`"
 
     responses:
         '400':
@@ -998,13 +1001,14 @@ async def acd(request: web.Request) -> web.Response:
     customer_room_id = data.get("customer_room_id")
     campaign_room_id = data.get("campaign_room_id") or ""
     joined_message = data.get("joined_message") or ""
+    put_in_pending_room = data.get("put_in_pending_room") or False
 
     # Get the puppet from customer_room_id if exists
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     if not puppet:
         return web.json_response(**USER_DOESNOT_EXIST)
 
-    args = [customer_room_id, campaign_room_id, joined_message]
+    args = [customer_room_id, campaign_room_id, joined_message, put_in_pending_room]
 
     response = await get_commands().handle(
         sender=user, command="acd", args_list=args, intent=puppet.intent, is_management=False
