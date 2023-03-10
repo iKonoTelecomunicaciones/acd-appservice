@@ -63,7 +63,7 @@ async def acd(evt: CommandEvent) -> str:
     customer_room_id = evt.args_list[0]
     campaign_room_id = evt.args_list[1]
     joined_message = ""
-    put_in_pending_room = False
+    put_in_pending_room = True
 
     if len(evt.args_list) > 2:
         try:
@@ -72,6 +72,8 @@ async def acd(evt: CommandEvent) -> str:
         except IndexError:
             if match("no|yes", evt.args_list[2]):
                 put_in_pending_room = True if evt.args_list[2] == "yes" else False
+            else:
+                joined_message = evt.args_list[2]
 
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     portal: Portal = await Portal.get_by_room_id(

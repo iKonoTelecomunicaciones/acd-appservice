@@ -55,7 +55,7 @@ class AgentManager:
         portal: Portal,
         queue: Queue = None,
         joined_message: str = None,
-        put_in_pending_room: bool = False,
+        put_in_pending_room: bool = True,
     ) -> None:
         """If there are no online agents in the room, then loop over the agents in the campaign room
         (or control room if no campaign is provided) and invite them to the customer room
@@ -225,7 +225,7 @@ class AgentManager:
         agent_id: UserID,
         joined_message: str | None = None,
         transfer_author: Optional[User] = None,
-        put_in_pending_room: bool = False,
+        put_in_pending_room: bool = True,
     ) -> Dict:
         """It loops through all the agents in a queue, and if it finds one that is online,
         it invites them to the room
