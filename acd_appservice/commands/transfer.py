@@ -224,8 +224,8 @@ async def transfer_user(evt: CommandEvent) -> str:
                         "but they are not available to attend the chat."
                     )
                     json_response["status"] = 202
-                    if evt.config["acd.unavailabe_agent_in_transfer"]:
-                        msg = evt.config["acd.unavailabe_agent_in_transfer"].format(
+                    if evt.config["acd.unavailable_agent_in_transfer"]:
+                        msg = evt.config["acd.unavailable_agent_in_transfer"].format(
                             agentname=agent_displayname
                         )
                         await portal.send_formatted_message(msg)
