@@ -19,9 +19,9 @@ joined_message = CommandArg(
     example='"{agentname} join to room"',
 )
 
-put_in_pending_room = CommandArg(
-    name="put_in_pending_room",
-    help_text="If the chat was not distributed, should put the room in pending?",
+put_enqueued_portal = CommandArg(
+    name="put_enqueued_portal",
+    help_text="If the chat was not distributed, should the portal be enqueued?",
     is_required=False,
     example="`yes` | `no`",
 )
@@ -31,7 +31,7 @@ customer_room_id = CommandArg(
     help_text="Customer room_id to be distributed",
     is_required=True,
     example="`!foo:foo.com`",
-    sub_args=[campaign_room_id, joined_message, put_in_pending_room],
+    sub_args=[campaign_room_id, joined_message, put_enqueued_portal],
 )
 
 
@@ -63,15 +63,15 @@ async def acd(evt: CommandEvent) -> str:
     customer_room_id = evt.args_list[0]
     campaign_room_id = evt.args_list[1]
     joined_message = ""
-    put_in_pending_room = True
+    put_enqueued_portal = True
 
     if len(evt.args_list) > 2:
         try:
-            put_in_pending_room = True if evt.args_list[3] == "yes" else False
+            put_enqueued_portal = True if evt.args_list[3] == "yes" else False
             joined_message = evt.args_list[2]
         except IndexError:
             if match("no|yes", evt.args_list[2]):
-                put_in_pending_room = True if evt.args_list[2] == "yes" else False
+                put_enqueued_portal = True if evt.args_list[2] == "yes" else False
             else:
                 joined_message = evt.args_list[2]
 
@@ -89,7 +89,7 @@ async def acd(evt: CommandEvent) -> str:
             portal=portal,
             queue=queue,
             joined_message=joined_message,
-            put_in_pending_room=put_in_pending_room,
+            put_enqueued_portal=put_enqueued_portal,
         )
     except Exception as e:
         evt.log.exception(e)
