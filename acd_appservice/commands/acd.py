@@ -67,11 +67,11 @@ async def acd(evt: CommandEvent) -> str:
 
     if len(evt.args_list) > 2:
         try:
-            put_enqueued_portal = True if evt.args_list[3] == "yes" else False
+            put_enqueued_portal = False if evt.args_list[3] == "no" else True
             joined_message = evt.args_list[2]
         except IndexError:
             if match("no|yes", evt.args_list[2]):
-                put_enqueued_portal = True if evt.args_list[2] == "yes" else False
+                put_enqueued_portal = False if evt.args_list[2] == "no" else True
             else:
                 joined_message = evt.args_list[2]
 
