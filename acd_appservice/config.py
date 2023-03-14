@@ -81,6 +81,7 @@ class Config(BaseBridgeConfig):
         copy("acd.frontend_command_prefix")
         copy("acd.transfer_message")
         copy("acd.joined_agent_message")
+        copy("acd.unavailable_agent_in_transfer")
         copy("acd.supervisors_to_invite.invite")
         copy("acd.supervisors_to_invite.invitees")
         copy("acd.supervisors_to_invite.power_level")
@@ -92,7 +93,6 @@ class Config(BaseBridgeConfig):
         copy("acd.remove_method")
         copy("acd.bulk_resolve.block_size")
         copy("acd.available_agents_room")
-
         copy("acd.queues.user_add_method")
         copy("acd.queues.visibility")
         copy("acd.queues.invitees")
