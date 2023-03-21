@@ -1,13 +1,22 @@
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 import re
 from enum import Enum
-from typing import List, cast
+from typing import Dict, List, cast
 
 from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI
-from mautrix.types import RoomID, UserID
+from mautrix.types import (
+    EventType,
+    JoinRule,
+    PowerLevelStateEventContent,
+    RoomDirectoryVisibility,
+    RoomID,
+    UserID,
+)
 from mautrix.util.logging import TraceLogger
 
 from .config import Config
@@ -43,6 +52,105 @@ class Portal(DBPortal, MatrixRoom):
         DBPortal.__init__(self, id=id, room_id=room_id, fk_puppet=fk_puppet)
         MatrixRoom.__init__(self, room_id=room_id, intent=intent)
         self.log = self.log.getChild(room_id)
+
+    @property
+    def is_locked(self) -> bool:
+        return self.room_id in self.LOCKED_PORTALS
+
+    @classmethod
+    async def is_portal(cls, room_id: RoomID) -> bool:
+        """It checks if the room is a portal by checking if the creator of the room is a
+        user with a user ID that starts with the user prefix of any of the bridges
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to check.
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+        try:
+            response = await cls.az.intent.api.request(
+                method=Method.GET, path=SynapseAdminPath.v1.rooms[room_id]
+            )
+        except Exception as e:
+            cls.log.exception(e)
+            return False
+
+        creator: UserID = response.get("creator", "")
+
+        if not creator:
+            return False
+
+        is_customer_guest = re.search(cls.config[f"acd.username_regex_guest"], creator)
+
+        if is_customer_guest:
+            return True
+
+        bridges = cls.config["bridges"]
+
+        for bridge in bridges:
+            user_prefix = cls.config[f"bridges.{bridge}.user_prefix"]
+            if creator.startswith(f"@{user_prefix}"):
+                return True
+
+        return False
+
+    @classmethod
+    async def get_by_room_id(
+        cls,
+        room_id: RoomID,
+        *,
+        create: bool = True,
+        fk_puppet: int = None,
+        intent: IntentAPI = None,
+        bridge: str = None,
+    ) -> Portal | None:
+        try:
+            portal = cls.by_room_id[room_id]
+            if intent:
+                portal.main_intent = intent
+
+            if bridge:
+                portal.bridge = bridge
+            return portal
+        except KeyError:
+            pass
+
+        portal = cast(cls, await super().get_by_room_id(room_id))
+        if portal is not None:
+            if fk_puppet:
+                portal.fk_puppet = fk_puppet
+
+            portal.bridge = bridge
+
+            await portal._add_to_cache()
+            await portal.post_init()
+
+            if intent:
+                portal.main_intent = intent
+
+            return portal
+
+        if create:
+            portal = cls(room_id)
+
+            if fk_puppet:
+                portal.fk_puppet = fk_puppet
+
+            await portal.insert()
+            portal = cast(cls, await super().get_by_room_id(room_id))
+            portal.bridge = bridge
+            await portal._add_to_cache()
+            await portal.post_init()
+
+            if intent:
+                portal.main_intent = intent
+
+            return portal
 
     async def _add_to_cache(self) -> None:
         self.by_id[self.id] = self
@@ -95,6 +203,24 @@ class Portal(DBPortal, MatrixRoom):
             if user.is_agent:
                 return user
 
+    async def get_current_menu(self) -> User | None:
+        """Get the current menu, if there is one.
+
+        Returns
+        -------
+            A User object
+
+        """
+        users: List[User] = await self.get_joined_users()
+
+        # If it is None, it is because something has gone wrong.
+        if users is None:
+            return False
+
+        for user in users:
+            if user.is_menubot:
+                return user
+
     async def has_online_agents(self) -> bool | str:
         """It checks if the agent is online
 
@@ -119,48 +245,6 @@ class Portal(DBPortal, MatrixRoom):
         )
 
         return state
-
-    @classmethod
-    async def is_portal(cls, room_id: RoomID) -> bool:
-        """It checks if the room is a portal by checking if the creator of the room is a
-        user with a user ID that starts with the user prefix of any of the bridges
-
-        Parameters
-        ----------
-        room_id : RoomID
-            The room ID of the room you want to check.
-
-        Returns
-        -------
-            A boolean value.
-
-        """
-        try:
-            response = await cls.az.intent.api.request(
-                method=Method.GET, path=SynapseAdminPath.v1.rooms[room_id]
-            )
-        except Exception as e:
-            cls.log.exception(e)
-            return False
-
-        creator: UserID = response.get("creator", "")
-
-        if not creator:
-            return False
-
-        is_customer_guest = re.search(cls.config[f"acd.username_regex_guest"], creator)
-
-        if is_customer_guest:
-            return True
-
-        bridges = cls.config["bridges"]
-
-        for bridge in bridges:
-            user_prefix = cls.config[f"bridges.{bridge}.user_prefix"]
-            if creator.startswith(f"@{user_prefix}"):
-                return True
-
-        return False
 
     async def get_update_name(self) -> str:
         """It gets the room name from the creator's display name,
@@ -220,10 +304,6 @@ class Portal(DBPortal, MatrixRoom):
 
         return None
 
-    @property
-    def is_locked(self) -> bool:
-        return self.room_id in self.LOCKED_PORTALS
-
     def lock(self, transfer: bool = False):
         """If the room is already locked, return.
         If the room is being locked for a transfer,
@@ -240,7 +320,7 @@ class Portal(DBPortal, MatrixRoom):
             A set of strings.
 
         """
-        if self.is_lock:
+        if self.is_locked:
             self.log.debug(f"The room {self.room_id} already locked")
             return
 
@@ -265,7 +345,7 @@ class Portal(DBPortal, MatrixRoom):
 
         """
 
-        if not self.is_lock:
+        if not self.is_locked:
             self.log.debug(f"The room {self.room_id} already unlocked")
             return
 
@@ -282,53 +362,160 @@ class Portal(DBPortal, MatrixRoom):
         await self._add_to_cache()
         await self.update()
 
-    @classmethod
-    async def get_by_room_id(
-        cls,
-        room_id: RoomID,
-        *,
-        create: bool = True,
-        fk_puppet: int = None,
-        intent: IntentAPI = None,
-        bridge: str = None,
-    ) -> Portal | None:
+    async def set_relay(self) -> None:
+        """Send the command set-relay to a portal."""
+
+        bridge = self.config[f"bridges.{self.bridge}"]
+
+        cmd = f"{bridge['prefix']} {bridge['set_relay']}"
         try:
-            portal = cls.by_room_id[room_id]
-            if intent:
-                portal.main_intent = intent
+            await self.send_text(text=cmd)
+        except ValueError as e:
+            self.log.exception(e)
 
-            return portal
-        except KeyError:
-            pass
+        self.log.info(f"The command {cmd} has been sent to room {self.room_id}")
 
-        portal = cast(cls, await super().get_by_room_id(room_id))
-        if portal is not None:
-            if fk_puppet:
-                portal.fk_puppet = fk_puppet
+    async def set_pl(self, user_id: UserID, power_level: int) -> None:
+        """Send the command set-pl to a portal
 
-            portal.bridge = bridge
+        Parameters
+        ----------
+        user_id: UserID
+            Target user to set power level.
+        power_level: int
+            Power level
 
-            await portal._add_to_cache()
-            await portal.post_init()
+        Returns
+        -------
+        """
 
-            if intent:
-                portal.main_intent = intent
+        bridge = self.config[f"bridges.{self.bridge}"]
+        cmd = (
+            f"{bridge['prefix']} "
+            f"{bridge['set_permissions'].format(mxid=user_id, power_level=power_level)}"
+        )
 
-            return portal
+        try:
+            await self.send_text(text=cmd)
+        except ValueError as e:
+            self.log.exception(e)
 
-        if create:
-            portal = cls(room_id)
+        self.log.info(f"The command {cmd} has been sent to room {self.room_id}")
 
-            if fk_puppet:
-                portal.fk_puppet = fk_puppet
+    async def initialize_room(self) -> bool:
+        """Initializing a room.
 
-            await portal.insert()
-            portal = cast(cls, await super().get_by_room_id(room_id))
-            portal.bridge = bridge
-            await portal._add_to_cache()
-            await portal.post_init()
+        A room is configured, the room must be a room of a client.
+        The acd is given permissions of 100, and a task is run that runs 10 times,
+        it tries to add the room to the directory, that the room has a public join,
+        and the history of the room is made public.
 
-            if intent:
-                portal.main_intent = intent
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
 
-            return portal
+        self.log.debug(f"This room will be set up :: {self.room_id}")
+
+        bridge = self.bridge
+        if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
+            self.log.debug(f"Sending set-relay, set-pt commands to the room :: {self.room_id}")
+            await self.set_pl(
+                user_id=self.main_intent.mxid,
+                power_level=100,
+            )
+            await self.set_relay()
+
+        await asyncio.create_task(self.initial_room_setup())
+
+        self.log.info(f"Portal {self.room_id} initialization is complete")
+        return True
+
+    async def initial_room_setup(self):
+        """Initializing a room visibility.
+
+        it tries to add the room to the directory, that the room has a public join,
+        and the history of the room is made public.
+
+        Returns
+        -------
+        """
+
+        for attempt in range(0, 10):
+            self.log.debug(f"Attempt # {attempt} of room configuration")
+            try:
+                bridge = self.bridge
+                if self.config[f"bridges.{bridge}.initial_state.enabled"]:
+                    await self.set_portal_default_power_levels(room_id=self.room_id)
+                await self.main_intent.set_room_directory_visibility(
+                    room_id=self.room_id, visibility=RoomDirectoryVisibility.PUBLIC
+                )
+                await self.main_intent.set_join_rule(
+                    room_id=self.room_id, join_rule=JoinRule.PUBLIC
+                )
+                await self.main_intent.send_state_event(
+                    room_id=self.room_id,
+                    event_type=EventType.ROOM_HISTORY_VISIBILITY,
+                    content={"history_visibility": "world_readable"},
+                )
+                break
+            except Exception as e:
+                self.log.warning(e)
+
+            await asyncio.sleep(1)
+
+    async def set_portal_default_power_levels(self) -> None:
+        """This function sets the default power levels for the portal"""
+
+        self.log.debug(f"Setting the default power levels in the room :: {self.room_id}")
+        levels = await self.main_intent.get_power_levels(room_id=self.room_id)
+        current_levels: Dict = levels.serialize()
+        current_levels.update(
+            json.loads(
+                json.dumps(self.config[f"bridges.{self.bridge}.initial_state.power_levels"])
+            )
+        )
+        content_current_levels = PowerLevelStateEventContent.deserialize(current_levels)
+        await self.main_intent.set_power_levels(
+            room_id=self.room_id, content=content_current_levels
+        )
+
+    async def invite_supervisors(self) -> None:
+        """Invite supervisors to the room, and if it fails,
+        it waits a couple of seconds and tries again.
+        """
+
+        invitees = self.config["acd.supervisors_to_invite.invitees"]
+        for user_id in invitees:
+            for attempt in range(10):
+                self.log.debug(f"Inviting supervisor {user_id} to {self.room_id}...")
+                try:
+                    await self.add_member(user_id=user_id)
+                    self.log.debug("Supervisor invite OK")
+                    break
+                except Exception as e:
+                    self.log.warning(f"Failed to invite supervisor attempt {attempt}: {e}")
+
+                await asyncio.sleep(2)
+
+    async def add_menubot(self, menubot_mxid: UserID):
+        """It tries to invite the menubot to the portal, and if it fails,
+        it waits a couple of seconds and tries again
+
+        Parameters
+        ----------
+        menubot_id : UserID
+            The user ID of the menubot.
+
+        """
+        for attempt in range(10):
+            self.log.debug(f"Inviting menubot {menubot_mxid} to {self.room_id}...")
+            try:
+                await self.invite_user(menubot_mxid)
+                self.log.debug("Menubot invite OK")
+                break
+            except Exception as e:
+                self.log.warning(f"Failed to invite menubot attempt {attempt}: {e}")
+
+            await asyncio.sleep(2)

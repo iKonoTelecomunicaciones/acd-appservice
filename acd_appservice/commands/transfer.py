@@ -5,6 +5,7 @@ from ..portal import Portal
 from ..puppet import Puppet
 from ..queue import Queue
 from ..user import User
+from ..util import Util
 from .handler import CommandArg, CommandEvent, command_handler
 
 agent_id = CommandArg(
@@ -80,14 +81,14 @@ async def transfer(evt: CommandEvent) -> str:
         return
 
     # Checking if the room is locked, if it is, it returns.
-    if puppet.room_manager.is_room_locked(room_id=customer_room_id, transfer=True):
+    if portal.is_locked:
         evt.log.debug(f"Room: {customer_room_id} LOCKED by Transfer room")
         return
 
     evt.log.debug(f"INIT TRANSFER for {customer_room_id} to ROOM {campaign_room_id}")
 
     # Locking the room so that no other transfer can be made to the room.
-    puppet.room_manager.lock_room(room_id=customer_room_id, transfer=True)
+    portal.lock(transfer=True)
 
     # Getting the current agent in the room, if the sender is an agent,
     # it sets the transfer author to the sender,
@@ -181,14 +182,14 @@ async def transfer_user(evt: CommandEvent) -> str:
         return
 
     # Checking if the room is locked, if it is, it returns.
-    if puppet.room_manager.is_room_locked(room_id=portal.room_id, transfer=True):
+    if portal.is_locked:
         evt.log.debug(f"Room: {portal.room_id} LOCKED by Transfer user")
         return
 
     evt.log.debug(f"INIT TRANSFER for {portal.room_id} to AGENT {agent.mxid}")
 
     # Locking the room so that no other transfer can be made to the room.
-    puppet.room_manager.lock_room(room_id=portal.room_id, transfer=True)
+    portal.lock(transfer=True)
 
     # Checking if the sender is an agent, if not, it gets the agent id from the room.
     if evt.sender.is_agent:
@@ -242,10 +243,8 @@ async def transfer_user(evt: CommandEvent) -> str:
     except Exception as e:
         evt.log.exception(e)
 
-    future_key = puppet.room_manager.get_future_key(
-        room_id=portal.room_id, agent_id=agent.mxid, transfer=True
-    )
+    future_key = Util.get_future_key(room_id=portal.room_id, agent_id=agent.mxid, transfer=True)
     if future_key not in puppet.agent_manager.PENDING_INVITES:
-        puppet.room_manager.unlock_room(room_id=portal.room_id, transfer=True)
+        portal.unlock(transfer=True)
 
     return json_response

@@ -129,3 +129,23 @@ class Util:
         )
 
         return emoji_number
+
+    @classmethod
+    def get_future_key(cls, room_id: RoomID, agent_id: UserID, transfer: bool = False) -> str:
+        """It returns a string that is used as a key to store the future in the cache
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to transfer the user to.
+        agent_id : UserID
+            The user ID of the agent who is being transferred to.
+        transfer : bool, optional
+            If True, the key will be for a transfer. If False, the key will be for a future.
+
+        Returns
+        -------
+            A string
+
+        """
+        return f"transfer-{room_id}-{agent_id}" if transfer else f"{room_id}-{agent_id}"

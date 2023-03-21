@@ -120,7 +120,7 @@ async def pm(evt: CommandEvent) -> Dict:
     customer_room_id = data.get("room_id")
     agent = None
     if customer_room_id:
-        portal = await Portal.get_by_room_id(
+        portal: Portal = await Portal.get_by_room_id(
             room_id=customer_room_id,
             fk_puppet=puppet.pk,
             intent=puppet.intent,
@@ -210,14 +210,18 @@ async def pm(evt: CommandEvent) -> Dict:
             room_id=portal.room_id, campaign_room_id=None
         )
         if puppet.config["acd.supervisors_to_invite.invite"]:
-            asyncio.create_task(puppet.room_manager.invite_supervisors(room_id=portal.room_id))
+            asyncio.create_task(portal.invite_supervisors())
 
         # kick menu bot
         evt.log.debug(f"Kicking the menubot out of the room {portal.room_id}")
         try:
-            await puppet.room_manager.menubot_leaves(
-                room_id=portal.room_id,
-                reason=f"{evt.sender.mxid} pm existing room {portal.room_id}",
+            menubot = await portal.get_current_menu()
+            # TODO Remove when all clients have menuflow
+            await puppet.room_manager.send_menubot_command(
+                menubot_id=menubot.mxid, command="cancel_task"
+            )
+            await portal.remove_member(
+                member=menubot.mxid, reason=f"{evt.sender.mxid} pm existing room {portal.room_id}"
             )
         except Exception as e:
             evt.log.exception(e)

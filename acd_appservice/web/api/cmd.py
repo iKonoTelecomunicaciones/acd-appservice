@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import datetime
 from typing import Dict, List
 
 from aiohttp import web
 from mautrix.types import RoomID, UserID
 
+from ...portal import Portal
 from ...puppet import Puppet
 from ...queue import Queue
 from ...queue_membership import QueueMembership
@@ -229,11 +229,14 @@ async def resolve(request: web.Request) -> web.Response:
 
     # Obtenemos el puppet de este email si existe
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
+    portal: Portal = await Portal.get_by_room_id(
+        room_id=room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
+    )
 
-    if not puppet:
+    if not puppet or not portal:
         return web.json_response(**USER_DOESNOT_EXIST)
 
-    bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
+    bridge = portal.bridge
 
     if not bridge:
         return web.json_response(**BRIDGE_INVALID)
