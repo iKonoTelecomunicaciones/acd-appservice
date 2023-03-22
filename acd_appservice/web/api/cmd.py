@@ -236,12 +236,10 @@ async def resolve(request: web.Request) -> web.Response:
     if not puppet or not portal:
         return web.json_response(**USER_DOESNOT_EXIST)
 
-    bridge = portal.bridge
-
-    if not bridge:
+    if not portal.bridge:
         return web.json_response(**BRIDGE_INVALID)
 
-    args = [room_id, user_id, send_message, puppet.config[f"bridges.{bridge}.prefix"]]
+    args = [room_id, user_id, send_message, puppet.config[f"bridges.{portal.bridge}.prefix"]]
 
     await get_commands().handle(
         sender=user,

@@ -752,7 +752,7 @@ class MatrixHandler:
                 )
             return
 
-        if await portal.get_current_menu():
+        if await portal.get_current_menubot():
             self.log.debug("Menu bot is here...")
             return
 

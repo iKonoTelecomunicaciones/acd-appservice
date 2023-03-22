@@ -4,7 +4,6 @@ import asyncio
 import json
 import logging
 import re
-from enum import Enum
 from typing import Dict, List, cast
 
 from mautrix.api import Method, SynapseAdminPath
@@ -27,11 +26,6 @@ from .user import User
 from .util import Util
 
 
-class LockedReason(Enum):
-    GENERAL = "{room_id}"
-    TRANSFER = "TRANSFER-{room_id}"
-
-
 class Portal(DBPortal, MatrixRoom):
     log: TraceLogger = logging.getLogger("acd.portal")
     config: Config
@@ -52,105 +46,6 @@ class Portal(DBPortal, MatrixRoom):
         DBPortal.__init__(self, id=id, room_id=room_id, fk_puppet=fk_puppet)
         MatrixRoom.__init__(self, room_id=room_id, intent=intent)
         self.log = self.log.getChild(room_id)
-
-    @property
-    def is_locked(self) -> bool:
-        return self.room_id in self.LOCKED_PORTALS
-
-    @classmethod
-    async def is_portal(cls, room_id: RoomID) -> bool:
-        """It checks if the room is a portal by checking if the creator of the room is a
-        user with a user ID that starts with the user prefix of any of the bridges
-
-        Parameters
-        ----------
-        room_id : RoomID
-            The room ID of the room you want to check.
-
-        Returns
-        -------
-            A boolean value.
-
-        """
-        try:
-            response = await cls.az.intent.api.request(
-                method=Method.GET, path=SynapseAdminPath.v1.rooms[room_id]
-            )
-        except Exception as e:
-            cls.log.exception(e)
-            return False
-
-        creator: UserID = response.get("creator", "")
-
-        if not creator:
-            return False
-
-        is_customer_guest = re.search(cls.config[f"acd.username_regex_guest"], creator)
-
-        if is_customer_guest:
-            return True
-
-        bridges = cls.config["bridges"]
-
-        for bridge in bridges:
-            user_prefix = cls.config[f"bridges.{bridge}.user_prefix"]
-            if creator.startswith(f"@{user_prefix}"):
-                return True
-
-        return False
-
-    @classmethod
-    async def get_by_room_id(
-        cls,
-        room_id: RoomID,
-        *,
-        create: bool = True,
-        fk_puppet: int = None,
-        intent: IntentAPI = None,
-        bridge: str = None,
-    ) -> Portal | None:
-        try:
-            portal = cls.by_room_id[room_id]
-            if intent:
-                portal.main_intent = intent
-
-            if bridge:
-                portal.bridge = bridge
-            return portal
-        except KeyError:
-            pass
-
-        portal = cast(cls, await super().get_by_room_id(room_id))
-        if portal is not None:
-            if fk_puppet:
-                portal.fk_puppet = fk_puppet
-
-            portal.bridge = bridge
-
-            await portal._add_to_cache()
-            await portal.post_init()
-
-            if intent:
-                portal.main_intent = intent
-
-            return portal
-
-        if create:
-            portal = cls(room_id)
-
-            if fk_puppet:
-                portal.fk_puppet = fk_puppet
-
-            await portal.insert()
-            portal = cast(cls, await super().get_by_room_id(room_id))
-            portal.bridge = bridge
-            await portal._add_to_cache()
-            await portal.post_init()
-
-            if intent:
-                portal.main_intent = intent
-
-            return portal
 
     async def _add_to_cache(self) -> None:
         self.by_id[self.id] = self
@@ -203,7 +98,7 @@ class Portal(DBPortal, MatrixRoom):
             if user.is_agent:
                 return user
 
-    async def get_current_menu(self) -> User | None:
+    async def get_current_menubot(self) -> User | None:
         """Get the current menu, if there is one.
 
         Returns
@@ -326,10 +221,10 @@ class Portal(DBPortal, MatrixRoom):
 
         if transfer:
             self.log.debug(f"[TRANSFER] - LOCKING PORTAL {self.room_id}...")
-            self.LOCKED_PORTALS.add(LockedReason.TRANSFER.value.format(room_id=self.room_id))
         else:
             self.log.debug(f"LOCKING PORTAL {self.room_id}...")
-            self.LOCKED_PORTALS.add(LockedReason.GENERAL.value.format(room_id=self.room_id))
+
+        self.LOCKED_PORTALS.add(self.room_id)
 
     def unlock(self, transfer: bool = False):
         """If the room is locked, remove the lock from the list of locked rooms
@@ -351,12 +246,10 @@ class Portal(DBPortal, MatrixRoom):
 
         if transfer:
             self.log.debug(f"[TRANSFER] - UNLOCKING PORTAL {self.room_id}...")
-            self.LOCKED_PORTALS.remove(
-                LockedReason.TRANSFER.value.replace("room_id", self.room_id)
-            )
         else:
             self.log.debug(f"UNLOCKING PORTAL {self.room_id}...")
-            self.LOCKED_PORTALS.remove(LockedReason.GENERAL.value.replace("room_id", self.room_id))
+
+        self.LOCKED_PORTALS.remove(self.room_id)
 
     async def save(self) -> None:
         await self._add_to_cache()
@@ -519,3 +412,108 @@ class Portal(DBPortal, MatrixRoom):
                 self.log.warning(f"Failed to invite menubot attempt {attempt}: {e}")
 
             await asyncio.sleep(2)
+
+    async def remove_menubot(self, reason):
+        """It removes the current menubot from the room"""
+        current_menubot: User = await self.get_current_menubot()
+        if current_menubot:
+            await self.remove_member(current_menubot.mxid, reason=reason)
+
+    @classmethod
+    async def is_portal(cls, room_id: RoomID) -> bool:
+        """It checks if the room is a portal by checking if the creator of the room is a
+        user with a user ID that starts with the user prefix of any of the bridges
+
+        Parameters
+        ----------
+        room_id : RoomID
+            The room ID of the room you want to check.
+
+        Returns
+        -------
+            A boolean value.
+
+        """
+        try:
+            response = await cls.az.intent.api.request(
+                method=Method.GET, path=SynapseAdminPath.v1.rooms[room_id]
+            )
+        except Exception as e:
+            cls.log.exception(e)
+            return False
+
+        creator: UserID = response.get("creator", "")
+
+        if not creator:
+            return False
+
+        is_customer_guest = re.search(cls.config[f"acd.username_regex_guest"], creator)
+
+        if is_customer_guest:
+            return True
+
+        bridges = cls.config["bridges"]
+
+        for bridge in bridges:
+            user_prefix = cls.config[f"bridges.{bridge}.user_prefix"]
+            if creator.startswith(f"@{user_prefix}"):
+                return True
+
+        return False
+
+    @classmethod
+    async def get_by_room_id(
+        cls,
+        room_id: RoomID,
+        *,
+        create: bool = True,
+        fk_puppet: int = None,
+        intent: IntentAPI = None,
+        bridge: str = None,
+    ) -> Portal | None:
+        try:
+            portal = cls.by_room_id[room_id]
+            if intent:
+                portal.main_intent = intent
+
+            if bridge:
+                portal.bridge = bridge
+            return portal
+        except KeyError:
+            pass
+
+        portal = cast(cls, await super().get_by_room_id(room_id))
+        if portal is not None:
+            if fk_puppet:
+                portal.fk_puppet = fk_puppet
+
+            portal.bridge = bridge
+
+            await portal._add_to_cache()
+            await portal.post_init()
+
+            if intent:
+                portal.main_intent = intent
+
+            return portal
+
+        if create:
+            portal = cls(room_id)
+
+            if fk_puppet:
+                portal.fk_puppet = fk_puppet
+
+            await portal.insert()
+            portal = cast(cls, await super().get_by_room_id(room_id))
+            portal.bridge = bridge
+            await portal._add_to_cache()
+            await portal.post_init()
+
+            if intent:
+                portal.main_intent = intent
+
+            return portal
+
+    @property
+    def is_locked(self) -> bool:
+        return self.room_id in self.LOCKED_PORTALS

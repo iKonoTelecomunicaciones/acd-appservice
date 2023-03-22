@@ -559,14 +559,14 @@ class AgentManager:
                 # kick menu bot
                 self.log.debug(f"Kicking the menubot out of the room {portal.room_id}")
                 try:
-                    menubot = await portal.get_current_menu()
+                    # TODO remove this code when all clients have menuflow implemented
+                    menubot = await portal.get_current_menubot()
                     if menubot:
-                        # TODO remove this code when all clients have menuflow implemented
                         await self.room_manager.send_menubot_command(
                             menubot_id=menubot.mxid, command="cancel_task"
                         )
-                        await portal.remove_member(
-                            member=menubot.mxid,
+                        # --------- end remove -----------
+                        await portal.remove_menubot(
                             reason=detail if detail else f"agent [{agent_id}] accepted invite",
                         )
                 except Exception as e:
@@ -699,7 +699,7 @@ class AgentManager:
             The room ID of the campaign room.
 
         """
-        menubot = await portal.get_current_menu()
+        menubot = await portal.get_current_menubot()
         if menubot:
             await self.room_manager.send_menubot_command(
                 menubot.mxid,
