@@ -9,12 +9,15 @@ import pytest_asyncio
 from dotenv import load_dotenv
 from mautrix.appservice import IntentAPI
 from mautrix.util.async_db import Database
+from mautrix.util.simple_template import SimpleTemplate
 from pytest_mock import MockerFixture
 
 from ..commands.handler import CommandEvent, CommandProcessor
 from ..config import Config
 from ..db import upgrade_table
 from ..matrix_room import MatrixRoom
+from ..portal import Portal
+from ..puppet import Puppet
 from ..queue import Queue
 from ..queue_membership import QueueMembership
 from ..room_manager import RoomManager
@@ -70,7 +73,7 @@ async def db(config: Config):
 
 @pytest_asyncio.fixture
 async def acd_init(config: Config, db: Database):
-    for table in [User, Queue, QueueMembership]:
+    for table in [User, Queue, QueueMembership, Portal, Puppet]:
         table.db = db
         table.config = config
         table.az = None
