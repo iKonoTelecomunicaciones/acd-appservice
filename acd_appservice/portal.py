@@ -91,7 +91,7 @@ class Portal(DBPortal, MatrixRoom):
         users: List[User] = await self.get_joined_users()
 
         # If it is None, it is because something has gone wrong.
-        if users is None:
+        if not users:
             return False
 
         for user in users:
@@ -109,7 +109,7 @@ class Portal(DBPortal, MatrixRoom):
         users: List[User] = await self.get_joined_users()
 
         # If it is None, it is because something has gone wrong.
-        if users is None:
+        if not users:
             return False
 
         for user in users:

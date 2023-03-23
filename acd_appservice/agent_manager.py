@@ -794,8 +794,8 @@ class AgentManager:
                 room_id=portal.room_id, campaign_room_id=None
             )
 
-            menubot = await self.room_manager.get_menubot_id()
-            await portal.add_menubot(menubot)
+            menubot_id = await self.room_manager.get_menubot_id()
+            await portal.add_menubot(menubot_id)
         else:
             # if user enters an invalid option, shows offline menu again
             return False

@@ -147,6 +147,7 @@ class MatrixHandler:
                 if prev_membership != Membership.JOIN:
                     await self.handle_join(evt.room_id, UserID(evt.state_key))
                 else:
+                    # If prev_membership == JOIN then it is a user's name change
                     # Setting the room name to the customer's name.
                     puppet: Puppet = await Puppet.get_by_portal(evt.room_id)
                     if not puppet:
@@ -480,9 +481,9 @@ class MatrixHandler:
             # invite menubot to show menu
             # this is done with create_task because with no official API set-pl can take
             # a while so several invite attempts are made without blocking
-            menubot = await puppet.menubot_id
-            if menubot:
-                asyncio.create_task(portal.add_menubot(menubot_mxid=menubot))
+            menubot_id = await puppet.menubot_id
+            if menubot_id:
+                asyncio.create_task(portal.add_menubot(menubot_mxid=menubot_id))
 
             puppet.BIC_ROOMS.discard(portal.room_id)
 
@@ -788,9 +789,9 @@ class MatrixHandler:
             # invite menubot to show menu
             # this is done with create_task because with no official API set-pl can take
             # a while so several invite attempts are made without blocking
-            menubot = await puppet.menubot_id
-            if menubot:
-                asyncio.create_task(portal.add_menubot(menubot_mxid=menubot))
+            menubot_id = await puppet.menubot_id
+            if menubot_id:
+                asyncio.create_task(portal.add_menubot(menubot_mxid=menubot_id))
 
     async def process_destination(self, portal: Portal) -> bool:
         """Distribute the chat using puppet destination, destination can be a user_id or room_id
