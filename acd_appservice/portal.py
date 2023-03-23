@@ -314,7 +314,7 @@ class Portal(DBPortal, MatrixRoom):
 
         bridge = self.bridge
         if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
-            self.log.debug(f"Sending set-relay, set-pt commands to the room :: {self.room_id}")
+            self.log.debug(f"Sending set-relay, set-pl commands to the room :: {self.room_id}")
             await self.set_pl(
                 user_id=self.main_intent.mxid,
                 power_level=100,
@@ -342,17 +342,21 @@ class Portal(DBPortal, MatrixRoom):
                 bridge = self.bridge
                 if self.config[f"bridges.{bridge}.initial_state.enabled"]:
                     await self.set_portal_default_power_levels(room_id=self.room_id)
+
                 await self.main_intent.set_room_directory_visibility(
                     room_id=self.room_id, visibility=RoomDirectoryVisibility.PUBLIC
                 )
+
                 await self.main_intent.set_join_rule(
                     room_id=self.room_id, join_rule=JoinRule.PUBLIC
                 )
+
                 await self.main_intent.send_state_event(
                     room_id=self.room_id,
                     event_type=EventType.ROOM_HISTORY_VISIBILITY,
                     content={"history_visibility": "world_readable"},
                 )
+
                 break
             except Exception as e:
                 self.log.warning(e)
@@ -386,10 +390,13 @@ class Portal(DBPortal, MatrixRoom):
                 self.log.debug(f"Inviting supervisor {user_id} to {self.room_id}...")
                 try:
                     await self.add_member(user_id=user_id)
-                    self.log.debug("Supervisor invite OK")
+                    self.log.debug(f"Supervisor {user_id} invited OK to room {self.room_id}")
                     break
                 except Exception as e:
-                    self.log.warning(f"Failed to invite supervisor attempt {attempt}: {e}")
+                    self.log.warning(
+                        f"Failed to invite supervisor {user_id} "
+                        f"to room {self.room_id} attempt {attempt}: {e}"
+                    )
 
                 await asyncio.sleep(2)
 
@@ -407,10 +414,13 @@ class Portal(DBPortal, MatrixRoom):
             self.log.debug(f"Inviting menubot {menubot_mxid} to {self.room_id}...")
             try:
                 await self.invite_user(menubot_mxid)
-                self.log.debug("Menubot invite OK")
+                self.log.debug(f"Menubot {menubot_mxid} invited OK to room {self.room_id}")
                 break
             except Exception as e:
-                self.log.warning(f"Failed to invite menubot attempt {attempt}: {e}")
+                self.log.warning(
+                    f"Failed to invite menubot {menubot_mxid} "
+                    f"to room {self.room_id} attempt {attempt}: {e}"
+                )
 
             await asyncio.sleep(2)
 
