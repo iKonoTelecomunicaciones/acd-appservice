@@ -9,7 +9,6 @@ import pytest_asyncio
 from dotenv import load_dotenv
 from mautrix.appservice import IntentAPI
 from mautrix.util.async_db import Database
-from mautrix.util.simple_template import SimpleTemplate
 from pytest_mock import MockerFixture
 
 from ..commands.handler import CommandEvent, CommandProcessor
