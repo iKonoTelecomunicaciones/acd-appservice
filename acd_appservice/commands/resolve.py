@@ -110,11 +110,13 @@ async def resolve(evt: CommandEvent) -> Dict:
     except Exception as e:
         evt.log.warning(e)
 
-    # When the supervisor resolves an open chat, menubot is still in the chat
-    await puppet.room_manager.menubot_leaves(
-        room_id=portal.room_id,
-        reason=puppet.config["acd.resolve_chat.notice"],
-    )
+    # TODO Remove when all clients have menuflow
+    menubot = await portal.get_current_menubot()
+    if menubot:
+        await puppet.room_manager.send_menubot_command(menubot.mxid, "cancel_task", portal.room_id)
+        # -------- end remove -------
+        # When the supervisor resolves an open chat, menubot is still in the chat
+        await portal.remove_menubot(reason=puppet.config["acd.resolve_chat.notice"])
 
     await puppet.agent_manager.signaling.set_chat_status(
         room_id=portal.room_id, status=Signaling.RESOLVED, agent=user_id

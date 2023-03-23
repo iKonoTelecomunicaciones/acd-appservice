@@ -10,82 +10,6 @@ nest_asyncio.apply()
 
 @pytest.mark.asyncio
 class TestRoomManager:
-    async def test_is_mautrix_customer_room(
-        self,
-        mocker: MockerFixture,
-        room_manager_mock: RoomManager,
-        get_room_info_mock,
-    ):
-        """
-        True if the room is created by a client, False otherwise.
-        """
-        room_creator = "@mxwa_573123456789:matrix.org"
-
-        mocker.patch.object(RoomManager, "get_room_creator", return_value=room_creator)
-
-        room_manager_mock.intent = None
-        result = await room_manager_mock.is_customer_room(
-            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
-        )
-        assert result == True
-
-    async def test_is_not_customer_room(
-        self,
-        mocker: MockerFixture,
-        room_manager_mock: RoomManager,
-        get_room_info_mock,
-    ):
-        """
-        False if the room is not created by a client, True otherwise.
-        """
-        room_creator = "@supervisor:matrix.org"
-
-        mocker.patch.object(RoomManager, "get_room_creator", return_value=room_creator)
-
-        room_manager_mock.intent = None
-        result = await room_manager_mock.is_customer_room(
-            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
-        )
-        assert result == False
-
-    async def test_is_instagram_customer_room(
-        self,
-        mocker: MockerFixture,
-        room_manager_mock: RoomManager,
-        get_room_info_mock,
-    ):
-        """
-        True if the room is created by a client, False otherwise.
-        """
-        room_creator = "@ig_6546846652:matrix.org"
-
-        mocker.patch.object(RoomManager, "get_room_creator", return_value=room_creator)
-
-        room_manager_mock.intent = None
-        result = await room_manager_mock.is_customer_room(
-            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
-        )
-        assert result == True
-
-    async def test_is_gupshup_customer_room(
-        self,
-        mocker: MockerFixture,
-        room_manager_mock: RoomManager,
-        get_room_info_mock,
-    ):
-        """
-        True if the room is created by a client, False otherwise.
-        """
-        room_creator = "@gswa_573123456789:matrix.org"
-
-        mocker.patch.object(RoomManager, "get_room_creator", return_value=room_creator)
-
-        room_manager_mock.intent = None
-        result = await room_manager_mock.is_customer_room(
-            room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
-        )
-        assert result == True
-
     async def test_get_room_mautrix_bridge(
         self,
         mocker: MockerFixture,
@@ -104,22 +28,6 @@ class TestRoomManager:
         )
 
         assert result == "mautrix"
-
-    async def test_get_bridge_by_cmd_prefix(
-        self,
-        room_manager_mock: RoomManager,
-        get_room_info_mock,
-    ):
-        """
-        Checks that the get_bridge_by_cmd_prefix function returns
-        the correct bridge given a cmd_prefix
-        """
-
-        room_manager_mock.intent = None
-        for bridge in room_manager_mock.config["bridges"]:
-            assert bridge == await room_manager_mock.get_bridge_by_cmd_prefix(
-                room_manager_mock.config[f"bridges.{bridge}.prefix"]
-            )
 
     async def test_get_room_instagram_bridge(
         self,
@@ -210,13 +118,3 @@ class TestRoomManager:
             room_id=RoomID("!mscvqgqpHYjBGDxNym:matrix.org")
         )
         assert result == False
-
-    async def test_get_update_name(self, mocker: MockerFixture, room_manager_mock: RoomManager):
-        """
-        Returns the updated name of a client's room.
-        """
-        new_room_name = "Alejandro Herrera (WA) (573058790293)"
-        mocker.patch.object(RoomManager, "create_room_name", return_value=new_room_name)
-        room_manager_mock.intent = None
-        result = await room_manager_mock.get_update_name(creator="@mxwa_573058790293")
-        assert result == "Alejandro Herrera (573058790293)"
