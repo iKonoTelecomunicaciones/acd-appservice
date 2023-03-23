@@ -115,21 +115,6 @@ class Queue(DBQueue, MatrixRoom):
 
         return True
 
-    async def add_member(self, new_member: UserID):
-        """If the config value for `acd.queue.user_add_method` is `join`, then join the user,
-        otherwise invite the user
-
-        Parameters
-        ----------
-        new_member : UserID
-            The user ID of the user to add to the queue.
-
-        """
-        if self.config["acd.queues.user_add_method"] == "join":
-            await self.join_user(user_id=new_member)
-        else:
-            await self.invite_user(user_id=new_member)
-
     async def update_description(self, new_description: str):
         """It updates the description of the room
 

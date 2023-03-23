@@ -572,3 +572,19 @@ class Puppet(DBPuppet, BasePuppet):
             except KeyError:
                 puppet._add_to_cache()
                 yield puppet
+
+    @property
+    async def menubot_id(self) -> UserID | None:
+        """It gets the ID of the menubot in the control room
+
+        Returns
+        -------
+            The user_id of the menubot.
+
+        """
+
+        members = await self.intent.get_joined_members(room_id=self.control_room_id)
+
+        for user_id in members:
+            if user_id.startswith(self.config["acd.menubot_prefix"]):
+                return user_id
