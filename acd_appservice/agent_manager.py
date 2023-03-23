@@ -563,7 +563,7 @@ class AgentManager:
                     menubot = await portal.get_current_menubot()
                     if menubot:
                         await self.room_manager.send_menubot_command(
-                            menubot_id=menubot.mxid, command="cancel_task"
+                            menubot.mxid, "cancel_task", portal.room_id
                         )
                         # --------- end remove -----------
                         await portal.remove_menubot(

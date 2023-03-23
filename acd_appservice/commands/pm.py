@@ -217,13 +217,14 @@ async def pm(evt: CommandEvent) -> Dict:
         try:
             # TODO Remove when all clients have menuflow
             menubot = await portal.get_current_menubot()
-            await puppet.room_manager.send_menubot_command(
-                menubot_id=menubot.mxid, command="cancel_task"
-            )
-            # ------  end remove -------
-            await portal.remove_menubot(
-                reason=f"{evt.sender.mxid} pm existing room {portal.room_id}"
-            )
+            if menubot:
+                await puppet.room_manager.send_menubot_command(
+                    menubot.mxid, "cancel_task", portal.room_id
+                )
+                # ------  end remove -------
+                await portal.remove_menubot(
+                    reason=f"{evt.sender.mxid} pm existing room {portal.room_id}"
+                )
         except Exception as e:
             evt.log.exception(e)
 

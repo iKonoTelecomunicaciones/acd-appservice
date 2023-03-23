@@ -150,6 +150,7 @@ class Portal(DBPortal, MatrixRoom):
             The new room name.
 
         """
+
         new_room_name = None
         emoji_number = ""
         bridges = self.config["bridges"]
