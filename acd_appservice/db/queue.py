@@ -53,9 +53,9 @@ class Queue:
         return cls._from_row(row)
 
     @classmethod
-    async def get_by_name(cls, name: str) -> Queue | None:
+    async def get_by_slugyfied_name(cls, name_slugyfied: str) -> Queue | None:
         q = f"SELECT id, {cls._columns} FROM queue WHERE REPLACE(LOWER(name), ' ', '_') LIKE $1"
-        row = await cls.db.fetchrow(q, f"%{name}%")
+        row = await cls.db.fetchrow(q, f"%{name_slugyfied}%")
         if not row:
             return None
         return cls._from_row(row)

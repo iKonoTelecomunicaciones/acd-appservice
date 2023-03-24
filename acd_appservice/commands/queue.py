@@ -268,7 +268,7 @@ async def create(
     json_response = {"data": None, "status": 0}
 
     name_slugified = slugify(text=name, separator="_")
-    queue_exists = await Queue.get_by_name(name=name_slugified)
+    queue_exists = await Queue.get_by_slugyfied_name(name_slugyfied=name_slugified)
 
     if queue_exists:
         detail = "Queue with same name already exists"
@@ -460,7 +460,7 @@ async def update(
     queue = await Queue.get_by_room_id(room_id=room_id, create=False)
 
     name_slugified = slugify(text=name, separator="_")
-    queue_exists = await Queue.get_by_name(name=name_slugified)
+    queue_exists = await Queue.get_by_slugyfied_name(name_slugyfied=name_slugified)
 
     if queue_exists and queue_exists.room_id != room_id:
         detail = "Queue with same name already exists"
