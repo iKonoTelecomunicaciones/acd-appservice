@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional
 
 from mautrix.types import RoomDirectoryVisibility, RoomID, UserID
+from slugify import slugify
 
 from ..queue import Queue
 from ..queue_membership import QueueMembership
@@ -102,7 +103,6 @@ async def queue(evt: CommandEvent) -> Dict:
 
     # Creating a queue.
     if action == "create":
-
         # Checking if the invitees are specified.
         # If they are, it will split them by comma and strip them.
         if len(evt.args_list) < 3:
@@ -155,7 +155,6 @@ async def queue(evt: CommandEvent) -> Dict:
         return await add_remove(evt=evt, action=action, member=member, queue_id=queue_id)
 
     elif action == "delete":
-
         # Checking if the second argument is a room id. If it is,
         # it sets the queue_id to the second argument and the force to the third argument.
         # If it is not, it sets the queue_id to the room id and the force to the second argument.
@@ -184,7 +183,6 @@ async def queue(evt: CommandEvent) -> Dict:
         return await delete(evt=evt, queue_id=queue_id, force=force)
 
     elif action == "update":
-
         try:
             # Checking if the room_id is valid.
             # If it is, it will set the room_id to the first argument,
@@ -267,7 +265,18 @@ async def create(
 
     """
     visibility = RoomDirectoryVisibility.PRIVATE
-    json_response = {}
+    json_response = {"data": None, "status": 0}
+
+    name_slugified = slugify(text=name, separator="_")
+    queue_exists = await Queue.get_by_name(name=name_slugified)
+
+    if queue_exists:
+        detail = "Queue with same name already exists"
+        evt.log.error(detail)
+        await evt.reply(detail)
+        json_response["data"] = {"detail": detail}
+        json_response["status"] = 409
+        return json_response
 
     if isinstance(invitees, str):
         invitees: List[UserID] = [invitee.strip() for invitee in invitees.split(",")]
@@ -277,7 +286,6 @@ async def create(
         visibility = RoomDirectoryVisibility.PUBLIC
 
     try:
-
         room_id = await evt.intent.create_room(
             name=name,
             topic=description.strip(),
@@ -304,7 +312,6 @@ async def create(
         invitees += evt.config["acd.queues.invitees"]
 
     for invitee in invitees:
-
         try:
             await queue.add_member(new_member=invitee)
         except Exception as e:
@@ -449,8 +456,19 @@ async def update(
         A dictionary with the status code and the data.
 
     """
-    json_response = {}
+    json_response = {"data": None, "status": 0}
     queue = await Queue.get_by_room_id(room_id=room_id, create=False)
+
+    name_slugified = slugify(text=name, separator="_")
+    queue_exists = await Queue.get_by_name(name=name_slugified)
+
+    if queue_exists and queue_exists.room_id != room_id:
+        detail = "Queue with same name already exists"
+        evt.log.error(detail)
+        await evt.reply(detail)
+        json_response["data"] = {"detail": detail}
+        json_response["status"] = 409
+        return json_response
 
     if not queue:
         detail = "It's not a queue"
