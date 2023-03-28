@@ -600,8 +600,9 @@ async def queue(request: web.Request) -> web.Response:
         return web.json_response(**NOT_DATA)
 
     data: Dict = await request.json()
+    invitees = ",".join(data.get("invitees", "")) if data.get("invitees", "") else ""
 
-    args = ["create", data.get("name", ""), data.get("invitees", ""), data.get("description", "")]
+    args = ["create", data.get("name", ""), invitees, data.get("description", "")]
 
     result: Dict = await get_commands().handle(
         sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
