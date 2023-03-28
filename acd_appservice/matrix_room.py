@@ -184,7 +184,7 @@ class MatrixRoom:
             The user ID of the user to join the room.
 
         """
-        await self.main_intent.api.request(
+        await self.az.intent.api.request(
             method=Method.POST,
             path=SynapseAdminPath.v1.join[self.room_id],
             content={"user_id": user_id},
