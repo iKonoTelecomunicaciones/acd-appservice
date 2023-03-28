@@ -29,7 +29,7 @@ from ..error_responses import (
 @routes.get("/v1/mautrix/ws_link_phone", allow_head=False)
 async def ws_link_phone(request: web.Request) -> web.Response:
     """
-    A QR code is requested to WhatsApp in order to login an email account with a phone number.
+    A QR code is requested to WhatsApp in order to join an email or MxID with a WhatsApp account.
     ---
     summary:        Generates a QR code for an existing user in order to create a QR image and
                     link the WhatsApp number by scanning the QR code with the cell phone.
@@ -45,7 +45,13 @@ async def ws_link_phone(request: web.Request) -> web.Response:
       schema:
           type: string
       required: false
-      description: user_email address previously created
+      description: Email address of the user previously created
+    - in: query
+      name: user_id
+      schema:
+          type: string
+      required: false
+      description: MxID of the user previously created
 
     responses:
         '200':
@@ -86,7 +92,7 @@ async def send_message(request: web.Request) -> web.Response:
 
     requestBody:
       required: false
-      description: A json with `phone`, `message`, `msg_type` (only supports [`text`]), `user_email`
+      description: A json with `phone`, `message`, `msg_type` (only supports [`text`]), `user_email` or `user_id`
       content:
         application/json:
           schema:
@@ -107,6 +113,7 @@ async def send_message(request: web.Request) -> web.Response:
                 message: Hello World!
                 msg_type: text
                 user_email: nobody@somewhere.com
+                user_id: '@acd1:somewhere.com'
 
     responses:
         '201':
@@ -186,7 +193,6 @@ async def send_message(request: web.Request) -> web.Response:
 
     try:
         if puppet.config[f"bridges.{bridge}.send_template_command"]:
-
             # If another bridge must send templates, make this method (gupshup_template) generic.
             status, data = await bridge_connector.gupshup_template(
                 room_id=customer_room_id, user_id=puppet.custom_mxid, template=message
@@ -226,7 +232,7 @@ async def send_message(request: web.Request) -> web.Response:
 @routes.get("/v1/mautrix/link_phone")
 async def link_phone(request: web.Request) -> web.Response:
     """
-    A QR code is requested to WhatsApp in order to login an email account with a phone number.
+    A QR code is requested to WhatsApp in order to join an email or MxID with a WhatsApp account.
     ---
     summary:        Generates a QR code for an existing user in order to create a QR image and
                     link the WhatsApp number by scanning the QR code with the cell phone.
@@ -239,7 +245,13 @@ async def link_phone(request: web.Request) -> web.Response:
       schema:
           type: string
       required: false
-      description: user_email address previously created
+      description: Email address of the user previously created
+    - in: query
+      name: user_id
+      schema:
+          type: string
+      required: false
+      description: MxID of the user previously created
 
     responses:
         '200':
