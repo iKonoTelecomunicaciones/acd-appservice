@@ -389,11 +389,11 @@ class Portal(DBPortal, MatrixRoom):
             for attempt in range(10):
                 self.log.debug(f"Inviting supervisor {user_id} to {self.room_id}...")
                 try:
-                    await self.add_member(user_id=user_id)
+                    await self.add_member(new_member=user_id)
                     self.log.debug(f"Supervisor {user_id} invited OK to room {self.room_id}")
                     break
                 except Exception as e:
-                    self.log.warning(
+                    self.log.error(
                         f"Failed to invite supervisor {user_id} "
                         f"to room {self.room_id} attempt {attempt}: {e}"
                     )
