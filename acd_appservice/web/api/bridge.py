@@ -90,24 +90,43 @@ async def send_message(request: web.Request) -> web.Response:
     tags:
         - Bridge
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
       required: false
-      description: A json with `phone`, `message`, `msg_type` (only supports [`text`]), `user_email` or `user_id`
+      description: A json with `phone`, `message`, `msg_type`,
+                   `user_email` or `user_id` (You must use one of them)
       content:
         application/json:
           schema:
             type: object
             properties:
               phone:
+                description: "Target phone number to send message, (use country code)"
                 type: string
               message:
+                description: "Message that will be sent"
                 type: string
               msg_type:
+                description: "Message type, (only supports [`text`])"
                 type: string
               user_email:
+                description: "Puppet email"
                 type: string
               user_id:
+                description: "Puppet user_id"
                 type: string
+            required:
+              - phone
+              - message
+              - msg_type
             example:
                 phone: "573123456789"
                 message: Hello World!
@@ -240,6 +259,13 @@ async def link_phone(request: web.Request) -> web.Response:
         - Bridge
 
     parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
     - in: query
       name: user_email
       schema:
@@ -288,15 +314,22 @@ async def metainc_login(request: web.Request) -> web.Response:
         - Bridge
 
     parameters:
-      - name: bridge_meta
-        description: 'The Facebook or Instagram bridge'
-        in: path
-        required: true
-        schema:
-          type: string
-          enum:
-            - instagram
-            - facebook
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+    - name: bridge_meta
+      description: 'The Facebook or Instagram bridge'
+      in: path
+      required: true
+      schema:
+        type: string
+        enum:
+          - instagram
+          - facebook
 
     requestBody:
       required: true
@@ -424,15 +457,22 @@ async def metainc_challenge(request: web.Request) -> web.Response:
         - Bridge
 
     parameters:
-      - name: bridge_meta
-        description: 'The Facebook or Instagram bridge'
-        in: path
-        required: true
-        schema:
-          type: string
-          enum:
-            - instagram
-            - facebook
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+    - name: bridge_meta
+      description: 'The Facebook or Instagram bridge'
+      in: path
+      required: true
+      schema:
+        type: string
+        enum:
+        - instagram
+        - facebook
 
     requestBody:
       required: true
@@ -564,28 +604,50 @@ async def gupshup_register(request: web.Request) -> web.Response:
     tags:
         - Bridge
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
-        description: A json with `user_email`
+        description: A json with `user_email` or `user_id` of the puppet
+                     (You must use one of them), `gs_app_name`, `gs_app_phone`, `api_key`, `app_id`
         content:
           application/json:
               schema:
                 type: object
                 properties:
                     user_email:
+                        description: "Puppet email"
                         type: string
                     user_id:
+                        description: "Puppet user_id"
                         type: string
                     gs_app_name:
+                        description: "Name of the application in gupshup platform"
                         type: string
                     gs_app_phone:
+                        description: "Phone of the guspshup application"
                         type: string
                     api_key:
+                        description: "Api key provided by gupshup partner"
                         type: string
                     app_id:
+                        description: "Gupshup application id registered in gupshup platform"
                         type: string
+                required:
+                    - gs_app_name
+                    - gs_app_phone
+                    - api_key
+                    - app_id
                 example:
                     user_email: nobody@somewhere.com
+                    user_id: '@acd1:somewhere.com'
                     gs_app_name: AppName
                     gs_app_phone: 573123456789
                     api_key: your_api_key
@@ -673,6 +735,15 @@ async def get_bridges_status(request: web.Request) -> web.Response:
     tags:
         - Bridge
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: true
         description: A json with `puppet_list`
@@ -726,17 +797,29 @@ async def logout(request: web.Request) -> web.Response:
     tags:
         - Bridge
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
-        required: true
-        description: A json with user to unlog
+        required: false
+        description: A json with `user_id`or `user_email` to unlog
         content:
             application/json:
                 schema:
                     type: object
                     properties:
+                        user_email:
+                            type: string
                         user_id:
                             type: string
                     example:
+                        user_email: "acd1@example.com"
                         user_id: "@acd1:example.com"
 
     responses:

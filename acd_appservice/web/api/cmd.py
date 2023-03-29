@@ -37,24 +37,48 @@ from ..error_responses import (
 @routes.post("/v1/cmd/create")
 async def create(request: web.Request) -> web.Response:
     """
-    Receives a user_email and creates a user in the User table and its respective puppet
+    Creates a user in the User table and its respective puppet
     ---
-    summary: Creates a user in the platform to be able to scan the WhatsApp QR code and send messages later using the API endpoints.
+    summary: Creates a user in the platform to be able to scan the WhatsApp QR code
+             and send messages later using the API endpoints.
     tags:
         - Commands
 
+    parameters:
+      - in: header
+        name: Authorization
+        description: User that makes the request
+        required: true
+        schema:
+          type: string
+        example: Mxid @user:example.com
+
     requestBody:
         required: false
-        description: A json with `user_email`
+        description: A json with all optional parameter,
+                     `user_email`, `control_room_id`, `destination`, `bridge`
         content:
           application/json:
             schema:
               type: object
               properties:
                 user_email:
+                  description: "User email"
                   type: string
-                user_id:
+                control_room_id:
+                  description: "If already exists a control room, you can chain it with the new acd user"
                   type: string
+                destination:
+                  description: "It can be a queue, an user or a menu"
+                  type: string
+                bridge:
+                  description: "What kind of bridge you will be used with him?"
+                  type: string
+                  enum:
+                    - mautrix
+                    - gupshup
+                    - instagram
+                    - facebook
               example:
                   user_email: "@acd1:somewhere.com"
                   control_room_id: "!foo:somewhere.com"
@@ -116,24 +140,41 @@ async def pm(request: web.Request) -> web.Response:
     Command that allows send a message to a customer.
     ---
     summary:    It takes a phone number and a message,
-                and sends the message to the phone number.
+                and sends the message to the phone number and join the sender to the conversation.
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
-        description: A json with `user_email`
+        description: A json with `customer_phone`, `company_phone`, `template_message`
         content:
             application/json:
                 schema:
                     type: object
                     properties:
                         customer_phone:
+                            description: "Target phone number to send message, (use country code)"
                             type: string
                         company_phone:
+                            description: "Phone number that will be used to send the message,
+                                         (use country code)"
                             type: string
                         template_message:
+                            description: "Message that will be sent"
                             type: string
+                    required:
+                        - customer_phone
+                        - company_phone
+                        - template_message
                     example:
                         customer_phone: "573123456789"
                         company_phone: "57398765432"
@@ -188,20 +229,36 @@ async def resolve(request: web.Request) -> web.Response:
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
-        description: A json with `user_email`
+        description: A json with `room_id`, `user_id`, `send_message`
         content:
             application/json:
                 schema:
                     type: object
                     properties:
                         room_id:
+                            description: "The portal that will be resolved"
                             type: string
                         user_id:
+                            description: "The user that makes the action"
                             type: string
                         send_message:
+                            description: "You want to notify the customer his room was resolved?"
                             type: string
+                    required:
+                        - room_id
+                        - user_id
+                        - send_message
                     example:
                         room_id: "!foo:foo.com"
                         user_id: "@acd_1:foo.com"

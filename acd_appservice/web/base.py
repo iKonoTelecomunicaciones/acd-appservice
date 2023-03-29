@@ -95,18 +95,16 @@ async def _resolve_puppet_identifier(request: web.Request) -> Puppet | None:
     if data.get("company_phone"):
         puppet = await Puppet.get_by_phone(data.get("company_phone"))
 
-    puppet_mxid = request.rel_url.query.get("user_email") or data.get("user_email")
-
-    if puppet_mxid:
-        if _util.is_email(email=puppet_mxid):
-            puppet = await Puppet.get_by_email(puppet_mxid)
+    puppet_email = request.rel_url.query.get("user_email") or data.get("user_email")
+    if puppet_email:
+        if _util.is_email(email=puppet_email):
+            puppet = await Puppet.get_by_email(puppet_email)
         else:
             raise web.json_response(**INVALID_EMAIL)
 
-    if request.rel_url.query.get("user_id") or data.get("user_id"):
-        puppet = await Puppet.get_by_custom_mxid(
-            request.rel_url.query.get("user_id") or data.get("user_id")
-        )
+    puppet_mxid = request.rel_url.query.get("user_id") or data.get("user_id")
+    if puppet_mxid:
+        puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
 
     if not puppet:
         raise web.HTTPBadRequest(text='{"error": "Invalid Authorization"}')
