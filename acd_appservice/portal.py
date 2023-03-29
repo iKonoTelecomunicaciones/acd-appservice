@@ -67,12 +67,6 @@ class Portal(DBPortal, MatrixRoom):
 
         """
 
-        if self.config["acd.keep_room_name"]:
-            self.log.debug(
-                f"The portal {self.room_id} name hasn't been updated because keep_room_name is true."
-            )
-            return
-
         updated_room_name = await self.get_update_name()
 
         if not updated_room_name:
@@ -341,7 +335,7 @@ class Portal(DBPortal, MatrixRoom):
             try:
                 bridge = self.bridge
                 if self.config[f"bridges.{bridge}.initial_state.enabled"]:
-                    await self.set_portal_default_power_levels(room_id=self.room_id)
+                    await self.set_portal_default_power_levels()
 
                 await self.main_intent.set_room_directory_visibility(
                     room_id=self.room_id, visibility=RoomDirectoryVisibility.PUBLIC
@@ -389,11 +383,11 @@ class Portal(DBPortal, MatrixRoom):
             for attempt in range(10):
                 self.log.debug(f"Inviting supervisor {user_id} to {self.room_id}...")
                 try:
-                    await self.add_member(user_id=user_id)
+                    await self.add_member(new_member=user_id)
                     self.log.debug(f"Supervisor {user_id} invited OK to room {self.room_id}")
                     break
                 except Exception as e:
-                    self.log.warning(
+                    self.log.error(
                         f"Failed to invite supervisor {user_id} "
                         f"to room {self.room_id} attempt {attempt}: {e}"
                     )

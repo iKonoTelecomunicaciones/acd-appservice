@@ -63,6 +63,15 @@ async def transfer(evt: CommandEvent) -> str:
     evt : CommandEvent
         Incoming CommandEvent
     """
+
+    json_response: Dict = {
+        "data": {
+            "detail": "",
+            "room_id": "",
+        },
+        "status": 0,
+    }
+
     try:
         customer_room_id = evt.args_list[0]
         campaign_room_id = evt.args_list[1]
@@ -70,12 +79,17 @@ async def transfer(evt: CommandEvent) -> str:
         detail = "You have not sent the argument customer_room_id"
         evt.log.error(detail)
         await evt.reply(detail)
-        return {"data": {"error": detail}, "status": 422}
+        json_response["data"]["detail"] = detail
+        json_response["status"] = 422
+        return json_response
 
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     portal: Portal = await Portal.get_by_room_id(
         room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
     )
+
+    # Set room ID attribute of  json_response, that will be used to return process response.
+    json_response["data"]["room_id"] = portal.room_id
 
     if not puppet:
         return
@@ -83,7 +97,9 @@ async def transfer(evt: CommandEvent) -> str:
     # Checking if the room is locked, if it is, it returns.
     if portal.is_locked:
         evt.log.debug(f"Room: {customer_room_id} LOCKED by Transfer room")
-        return
+        json_response["data"]["detail"] = "Current portal is locked by transfer"
+        json_response["status"] = 409
+        return json_response
 
     evt.log.debug(f"INIT TRANSFER for {customer_room_id} to ROOM {campaign_room_id}")
 
@@ -184,7 +200,9 @@ async def transfer_user(evt: CommandEvent) -> str:
     # Checking if the room is locked, if it is, it returns.
     if portal.is_locked:
         evt.log.debug(f"Room: {portal.room_id} LOCKED by Transfer user")
-        return
+        json_response["data"]["detail"] = "Current portal is locked by transfer"
+        json_response["status"] = 409
+        return json_response
 
     evt.log.debug(f"INIT TRANSFER for {portal.room_id} to AGENT {agent.mxid}")
 
