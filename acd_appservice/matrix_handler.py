@@ -153,6 +153,12 @@ class MatrixHandler:
                     if not puppet:
                         return
                     if await Portal.is_portal(room_id=evt.room_id):
+                        if self.config["acd.keep_room_name"]:
+                            self.log.debug(
+                                f"The portal {evt.room_id} name hasn't been updated "
+                                "because keep_room_name is true."
+                            )
+                            return
                         self.log.debug(f"The room name for the room {evt.room_id} will be changed")
                         portal: Portal = await Portal.get_by_room_id(
                             evt.room_id,
