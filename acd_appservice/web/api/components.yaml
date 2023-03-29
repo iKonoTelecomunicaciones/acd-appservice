@@ -700,7 +700,7 @@ components:
             $ref: '#/components/schemas/ControlRoomDataOk'
 
     LoginSuccessful:
-      description: QR has been generated.
+      description: QR has been read.
       content:
         application/json:
           schema:
