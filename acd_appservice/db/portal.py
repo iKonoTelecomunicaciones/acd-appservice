@@ -13,6 +13,7 @@ fake_db = Database.create("") if TYPE_CHECKING else None
 
 class PortalState(Enum):
     INIT = "INIT"
+    START = "START"
     PENDING = "PENDING"
     FOLLOWUP = "FOLLOWUP"
     RESOLVED = "RESOLVED"

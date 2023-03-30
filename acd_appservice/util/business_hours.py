@@ -12,17 +12,16 @@ from ..client import IkonoAPI
 from ..config import Config
 
 if TYPE_CHECKING:
-    from ..room_manager import RoomManager
+    from ..portal import Portal
 
 
 class BusinessHour:
     log: TraceLogger = logging.getLogger("acd.business_hour")
     HOLIDAY_INFO = {}
 
-    def __init__(self, intent: IntentAPI, config: Config, room_manager: RoomManager) -> None:
+    def __init__(self, intent: IntentAPI, config: Config) -> None:
         self.intent = intent
         self.config = config
-        self.room_manager = room_manager
         self.ikono_api = IkonoAPI(
             session=intent.api.session, config=config, user_id=self.intent.mxid
         )
@@ -82,7 +81,7 @@ class BusinessHour:
 
         return self.HOLIDAY_INFO.get("is_holiday")
 
-    async def send_business_hours_message(self, room_id) -> None:
+    async def send_business_hours_message(self, portal: Portal) -> None:
         """This function sends a message to the room_id provided, if the message is set in the config
 
         Parameters
@@ -93,6 +92,4 @@ class BusinessHour:
         """
         if self.config["utils.business_hours.business_hours_message"]:
             business_hour_message = self.config["utils.business_hours.business_hours_message"]
-            await self.room_manager.send_formatted_message(
-                room_id=room_id, msg=business_hour_message
-            )
+            await portal.send_formatted_message(text=business_hour_message)

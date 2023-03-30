@@ -6,7 +6,7 @@ from typing import Dict
 from markdown import markdown
 
 from ..client import ProvisionBridge
-from ..portal import Portal
+from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..signaling import Signaling
 from .handler import CommandArg, CommandEvent, command_handler
@@ -120,7 +120,7 @@ async def pm(evt: CommandEvent) -> Dict:
     customer_room_id = data.get("room_id")
     agent = None
     if customer_room_id:
-        portal = await Portal.get_by_room_id(
+        portal: Portal = await Portal.get_by_room_id(
             room_id=customer_room_id,
             fk_puppet=puppet.pk,
             intent=puppet.intent,
@@ -140,6 +140,7 @@ async def pm(evt: CommandEvent) -> Dict:
             ] = "The agent <agent_displayname> is already in room with [number]"
         else:
             # If the agent is already in the room, it returns a message to the frontend.
+            await portal.update_state(PortalState.FOLLOWUP)
             await puppet.agent_manager.signaling.set_chat_status(
                 room_id=portal.room_id, status=Signaling.FOLLOWUP, agent=evt.sender.mxid
             )
@@ -196,6 +197,7 @@ async def pm(evt: CommandEvent) -> Dict:
     if not return_params.get("reply"):
         # the room is marked as followup and campaign from previous room state
         # is not kept
+        await portal.update_state(PortalState.FOLLOWUP)
         await puppet.agent_manager.signaling.set_chat_status(
             room_id=portal.room_id,
             status=Signaling.FOLLOWUP,
@@ -208,15 +210,21 @@ async def pm(evt: CommandEvent) -> Dict:
             room_id=portal.room_id, campaign_room_id=None
         )
         if puppet.config["acd.supervisors_to_invite.invite"]:
-            asyncio.create_task(puppet.room_manager.invite_supervisors(room_id=portal.room_id))
+            asyncio.create_task(portal.invite_supervisors())
 
         # kick menu bot
         evt.log.debug(f"Kicking the menubot out of the room {portal.room_id}")
         try:
-            await puppet.room_manager.menubot_leaves(
-                room_id=portal.room_id,
-                reason=f"{evt.sender.mxid} pm existing room {portal.room_id}",
-            )
+            # TODO Remove when all clients have menuflow
+            menubot = await portal.get_current_menubot()
+            if menubot:
+                await puppet.room_manager.send_menubot_command(
+                    menubot.mxid, "cancel_task", portal.room_id
+                )
+                # ------  end remove -------
+                await portal.remove_menubot(
+                    reason=f"{evt.sender.mxid} pm existing room {portal.room_id}"
+                )
         except Exception as e:
             evt.log.exception(e)
 

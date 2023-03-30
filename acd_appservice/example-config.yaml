@@ -125,6 +125,8 @@ acd:
     transfer_message: "Has sido transferido a {agentname}."
     # Message to show when a chat is asigned an agent
     joined_agent_message: "{agentname} se ha unido al chat."
+    # Message to show when a chat was forced transfer and target agent is not available.
+    unavailable_agent_in_transfer: "{agentname} no se encuentra disponible en este momento. El agente se contactará contigo lo más pronto posible"
     # Supervisors to invite
     supervisors_to_invite:
         power_level: 99
@@ -194,7 +196,7 @@ acd:
 
     # Do you want to use synapse presence to distribute chat?,
     # if not, you can use agent operation login to do it.
-    use_presence: true
+    use_presence: false
 
 # ACD will send below commands to interact with any WA bridge
 bridges:

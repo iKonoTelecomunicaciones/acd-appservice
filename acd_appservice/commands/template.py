@@ -1,4 +1,5 @@
 from ..client import ProvisionBridge
+from ..portal import Portal
 from ..puppet import Puppet
 from .handler import CommandArg, CommandEvent, command_handler
 
@@ -42,8 +43,11 @@ async def template(evt: CommandEvent):
         return {"data": {"error": detail}, "status": 422}
 
     puppet: Puppet = await Puppet.get_by_portal(room_id)
+    portal: Portal = await Portal.get_by_room_id(
+        room_id, create=False, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
+    )
 
-    if not puppet:
+    if not puppet or not portal:
         return
 
     if puppet.config[f"bridges.{puppet.bridge}.send_template_command"]:
@@ -57,4 +61,4 @@ async def template(evt: CommandEvent):
         )
     else:
         # If there's no send_template_command the message send directly to client
-        await puppet.room_manager.send_formatted_message(room_id=room_id, msg=message)
+        await portal.send_formatted_message(text=message)

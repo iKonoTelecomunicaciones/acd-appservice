@@ -35,7 +35,7 @@ from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
 from .db.user import UserRoles
 from .message import Message
-from .portal import Portal
+from .portal import Portal, PortalState
 from .puppet import Puppet
 from .queue import Queue
 from .queue_membership import QueueMembership
@@ -147,24 +147,29 @@ class MatrixHandler:
                 if prev_membership != Membership.JOIN:
                     await self.handle_join(evt.room_id, UserID(evt.state_key))
                 else:
+                    # If prev_membership == JOIN then it is a user's name change
                     # Setting the room name to the customer's name.
                     puppet: Puppet = await Puppet.get_by_portal(evt.room_id)
                     if not puppet:
                         return
                     if await Portal.is_portal(room_id=evt.room_id):
+                        if self.config["acd.keep_room_name"]:
+                            self.log.debug(
+                                f"The portal {evt.room_id} name hasn't been updated "
+                                "because keep_room_name is true."
+                            )
+                            return
                         self.log.debug(f"The room name for the room {evt.room_id} will be changed")
+                        portal: Portal = await Portal.get_by_room_id(
+                            evt.room_id,
+                            create=False,
+                            fk_puppet=puppet.pk,
+                            intent=puppet.intent,
+                            bridge=puppet.bridge,
+                        )
                         unsigned: StateUnsigned = evt.unsigned
-                        await puppet.room_manager.put_name_customer_room(room_id=evt.room_id)
+                        await portal.update_room_name()
 
-                    # Cuando el cliente cambia su perfil, ya sea que se quiera conservar el viejo
-                    # nombre o no, este código, se encarga de actualizar el nombre
-                    # en la caché de salas, si y solo si, la sala está cacheada en el
-                    # diccionario puppet.room_manager.ROOMS
-                    try:
-                        content: MemberStateEventContent = evt.content
-                        puppet.room_manager.ROOMS[evt.room_id]["name"] = content.displayname
-                    except KeyError:
-                        pass
         elif evt.type in (EventType.ROOM_MESSAGE, EventType.STICKER):
             evt: MessageEvent = evt
             if evt.content.msgtype == MessageType.NOTICE:
@@ -291,7 +296,6 @@ class MatrixHandler:
         # the performance of the software
 
         if await Portal.is_portal(evt.room_id):
-
             if not puppet:
                 self.log.warning(f"{evt.state_key} is not a puppet")
                 return
@@ -393,10 +397,8 @@ class MatrixHandler:
                 )
 
             # Generamos llaves para buscar en PENDING_INVITES (acd, transfer)
-            future_key = puppet.room_manager.get_future_key(
-                room_id=portal.room_id, agent_id=user_id
-            )
-            transfer_future_key = puppet.room_manager.get_future_key(
+            future_key = Util.get_future_key(room_id=portal.room_id, agent_id=user_id)
+            transfer_future_key = Util.get_future_key(
                 room_id=portal.room_id, agent_id=user_id, transfer=True
             )
 
@@ -422,11 +424,9 @@ class MatrixHandler:
             # If the joined user is a supervisor and the room is a customer room,
             # then send set-pl in the room
             if user.is_admin:
-                bridge = await puppet.room_manager.get_room_bridge(room_id=portal.room_id)
+                bridge = portal.bridge
                 if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
-                    await puppet.room_manager.send_cmd_set_pl(
-                        room_id=portal.room_id,
-                        bridge=bridge,
+                    await portal.set_pl(
                         user_id=user_id,
                         power_level=self.config["acd.supervisors_to_invite.power_level"],
                     )
@@ -471,15 +471,15 @@ class MatrixHandler:
             else:
                 return
 
-        if not await puppet.room_manager.initialize_room(room_id=portal.room_id):
+        if not await portal.initialize_room():
             self.log.critical(f"Room {portal.room_id} initialization has failed")
             return
 
         # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
         if not room_id in puppet.BIC_ROOMS:
             if puppet.destination:
-                portal: Portal = Portal.get_by_room_id(
-                    room_id=room_id, create=False, bridge=puppet.bridge
+                portal: Portal = await Portal.get_by_room_id(
+                    room_id=room_id, create=False, intent=puppet.intent, bridge=puppet.bridge
                 )
                 if await self.process_destination(portal):
                     return
@@ -487,11 +487,9 @@ class MatrixHandler:
             # invite menubot to show menu
             # this is done with create_task because with no official API set-pl can take
             # a while so several invite attempts are made without blocking
-            menubot_id = await puppet.room_manager.get_menubot_id()
+            menubot_id = await puppet.menubot_id
             if menubot_id:
-                asyncio.create_task(
-                    puppet.room_manager.invite_menu_bot(room_id=room_id, menubot_id=menubot_id)
-                )
+                asyncio.create_task(portal.add_menubot(menubot_mxid=menubot_id))
 
             puppet.BIC_ROOMS.discard(portal.room_id)
 
@@ -709,8 +707,9 @@ class MatrixHandler:
 
         # Ignore messages from ourselves or agents if not a command
         if sender.is_agent:
+            await portal.update_state(PortalState.FOLLOWUP)
             await puppet.agent_manager.signaling.set_chat_status(
-                room_id=room_id, status=Signaling.FOLLOWUP, agent=sender.mxid
+                room_id=portal.room_id, status=Signaling.FOLLOWUP, agent=sender.mxid
             )
             return
 
@@ -739,13 +738,14 @@ class MatrixHandler:
 
         if room_agent:
             # if message is not from agents, bots or ourselves, it is from the customer
+            await portal.update_state(PortalState.PENDING)
             await puppet.agent_manager.signaling.set_chat_status(
                 room_id=portal.room_id, status=Signaling.PENDING, agent=room_agent.mxid
             )
 
             if await puppet.agent_manager.business_hours.is_not_business_hour():
                 await puppet.agent_manager.business_hours.send_business_hours_message(
-                    room_id=portal.room_id
+                    portal=portal
                 )
                 return
 
@@ -759,7 +759,7 @@ class MatrixHandler:
                 )
             return
 
-        if await puppet.room_manager.has_menubot(room_id=portal.room_id):
+        if await portal.get_current_menubot():
             self.log.debug("Menu bot is here...")
             return
 
@@ -769,37 +769,35 @@ class MatrixHandler:
 
         # Send an informative message if the conversation started no within the business hour
         if await puppet.agent_manager.business_hours.is_not_business_hour():
-            await puppet.agent_manager.business_hours.send_business_hours_message(
-                room_id=portal.room_id
-            )
+            await puppet.agent_manager.business_hours.send_business_hours_message(portal=portal)
+
             if not self.config["utils.business_hours.show_menu"]:
                 return
 
-        if not puppet.room_manager.is_room_locked(room_id=portal.room_id):
+        if not portal.is_locked:
             await puppet.agent_manager.signaling.set_chat_status(
                 room_id=portal.room_id, status=Signaling.OPEN
             )
 
             if self.config["acd.supervisors_to_invite.invite"]:
-                asyncio.create_task(puppet.room_manager.invite_supervisors(room_id=portal.room_id))
+                asyncio.create_task(portal.invite_supervisors())
 
             # clear campaign in the ik.chat.campaign_selection state event
             await puppet.agent_manager.signaling.set_selected_campaign(
                 room_id=portal.room_id, campaign_room_id=None
             )
 
-        if puppet.destination:
-            if await self.process_destination(portal=portal):
-                return
+            if puppet.destination:
+                if await self.process_destination(portal=portal):
+                    return
 
-        # invite menubot to show menu
-        # this is done with create_task because with no official API set-pl can take
-        # a while so several invite attempts are made without blocking
-        menubot_id = await puppet.room_manager.get_menubot_id()
-        if menubot_id:
-            asyncio.create_task(
-                puppet.room_manager.invite_menu_bot(room_id=portal.room_id, menubot_id=menubot_id)
-            )
+            # TODO remove this code when all the clients will be using destination
+            # invite menubot to show menu
+            # this is done with create_task because with no official API set-pl can take
+            # a while so several invite attempts are made without blocking
+            menubot_id = await puppet.menubot_id
+            if menubot_id:
+                asyncio.create_task(portal.add_menubot(menubot_mxid=menubot_id))
 
     async def process_destination(self, portal: Portal) -> bool:
         """Distribute the chat using puppet destination, destination can be a user_id or room_id
@@ -829,11 +827,7 @@ class MatrixHandler:
         if Util.is_user_id(puppet.destination):
             probably_menubot: User = await User.get_by_mxid(puppet.destination, create=False)
             if probably_menubot and probably_menubot.role == UserRoles.MENU:
-                asyncio.create_task(
-                    puppet.room_manager.invite_menu_bot(
-                        room_id=portal.room_id, menubot_id=puppet.destination
-                    )
-                )
+                asyncio.create_task(portal.add_menubot(probably_menubot.mxid))
                 return True
 
         user: User = await User.get_by_mxid(puppet.custom_mxid, create=False)
@@ -860,7 +854,6 @@ class MatrixHandler:
         """
 
         for logout_message in self.config["bridges.mautrix.logout_messages"]:
-
             if msg.startswith(logout_message):
                 return True
 

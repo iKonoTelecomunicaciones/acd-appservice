@@ -8,6 +8,7 @@ import pytest
 import pytest_asyncio
 from dotenv import load_dotenv
 from mautrix.appservice import IntentAPI
+from mautrix.types import RoomID
 from mautrix.util.async_db import Database
 from pytest_mock import MockerFixture
 
@@ -15,6 +16,8 @@ from ..commands.handler import CommandEvent, CommandProcessor
 from ..config import Config
 from ..db import upgrade_table
 from ..matrix_room import MatrixRoom
+from ..portal import Portal
+from ..puppet import Puppet
 from ..queue import Queue
 from ..queue_membership import QueueMembership
 from ..room_manager import RoomManager
@@ -70,7 +73,7 @@ async def db(config: Config):
 
 @pytest_asyncio.fixture
 async def acd_init(config: Config, db: Database):
-    for table in [User, Queue, QueueMembership]:
+    for table in [User, Queue, QueueMembership, Portal, Puppet]:
         table.db = db
         table.config = config
         table.az = None
@@ -268,3 +271,16 @@ async def queue_membership(
         ),
     )
     return await QueueMembership.get_by_queue_and_user(fk_user=agent_user.id, fk_queue=queue.id)
+
+
+@pytest_asyncio.fixture
+async def db_puppet(db: Database) -> int:
+    # Create a puppet in database
+    query = "INSERT INTO puppet (custom_mxid) values ($1) RETURNING pk"
+    return await db.fetchval(query, "@acd1:example.com")
+
+
+@pytest_asyncio.fixture
+async def portal(db_puppet: Puppet) -> Portal:
+    room_id: RoomID = "!qVKwlyUXOCrBfZJOdh:example.com"
+    return await Portal.get_by_room_id(room_id=room_id, fk_puppet=db_puppet)

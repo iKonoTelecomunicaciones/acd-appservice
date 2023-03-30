@@ -17,7 +17,7 @@ from .queue import Queue
 from .room_manager import RoomManager
 from .signaling import Signaling
 from .user import User
-from .util import BusinessHour
+from .util import BusinessHour, Util
 
 
 class AgentManager:
@@ -43,15 +43,17 @@ class AgentManager:
         self.bridge = bridge
         self.control_room_id = control_room_id
         self.signaling = Signaling(intent=self.intent, config=self.config)
-        self.business_hours = BusinessHour(
-            intent=self.intent.bot, config=self.config, room_manager=room_manager
-        )
+        self.business_hours = BusinessHour(intent=self.intent.bot, config=self.config)
         self.log = self.log.getChild(self.intent.mxid)
         self.room_manager = room_manager
         self.commands = CommandProcessor(config=self.config)
 
     async def process_distribution(
-        self, portal: Portal, queue: Queue = None, joined_message: str = None
+        self,
+        portal: Portal,
+        queue: Queue = None,
+        joined_message: str = None,
+        put_enqueued_portal: bool = True,
     ) -> None:
         """If there are no online agents in the room, then loop over the agents in the campaign room
         (or control room if no campaign is provided) and invite them to the customer room
@@ -64,7 +66,8 @@ class AgentManager:
             The queue that the customer is being distributed to.
         joined_message : str
             The message that will be sent to the customer when the agent joins the room.
-
+        put_enqueued_portal : bool
+            If the chat was not distributed, should the portal be enqueued?
         """
         json_response: Dict = {
             "data": {
@@ -74,7 +77,7 @@ class AgentManager:
             "status": 0,
         }
 
-        if RoomManager.is_room_locked(room_id=portal.room_id):
+        if portal.is_locked:
             self.log.debug(f"Room [{portal.room_id}] LOCKED")
             json_response["data"]["detail"] = f"Room [{portal.room_id}] LOCKED"
             json_response["status"] = 409
@@ -82,9 +85,10 @@ class AgentManager:
 
         # Send an informative message if the conversation started no within the business hour
         if await self.business_hours.is_not_business_hour():
-            await self.business_hours.send_business_hours_message(room_id=portal.room_id)
-            self.log.debug(f"Saving room {portal.room_id} in pending list")
-            await portal.update_state(state=PortalState.ENQUEUED)
+            await self.business_hours.send_business_hours_message(portal=portal)
+            if put_enqueued_portal:
+                self.log.debug(f"Portal [{portal.room_id}] state has been changed to ENQUEUED")
+                await portal.update_state(state=PortalState.ENQUEUED)
             portal.selected_option = queue.room_id
             await portal.update()
 
@@ -95,12 +99,12 @@ class AgentManager:
         self.log.debug(f"Init process distribution for [{portal.room_id}]")
 
         # lock the room
-        RoomManager.lock_room(room_id=portal.room_id)
+        portal.lock()
 
         online_agents_in_room = await portal.has_online_agents()
 
         if online_agents_in_room == "unlock":
-            RoomManager.unlock_room(room_id=portal.room_id)
+            portal.unlock()
             json_response["data"]["detail"] = f"No joined members in the room [{portal.room_id}]"
             json_response["status"] = 409
             return json_response
@@ -119,10 +123,11 @@ class AgentManager:
                 queue=queue,
                 agent_id=self.CURRENT_AGENT.get(queue.room_id),
                 joined_message=joined_message,
+                put_enqueued_portal=put_enqueued_portal,
             )
         else:
             self.log.debug(f"This room [{portal.room_id}] has online agents")
-            RoomManager.unlock_room(room_id=portal.room_id)
+            portal.unlock()
             json_response["data"]["detail"] = f"This room [{portal.room_id}] has online agents"
             json_response["status"] = 409
             return json_response
@@ -219,6 +224,7 @@ class AgentManager:
         agent_id: UserID,
         joined_message: str | None = None,
         transfer_author: Optional[User] = None,
+        put_enqueued_portal: bool = True,
     ) -> Dict:
         """It loops through all the agents in a queue, and if it finds one that is online,
         it invites them to the room
@@ -235,6 +241,8 @@ class AgentManager:
             str | None = None
         transfer_author : Optional[User]
             The user who initiated the transfer.
+        put_enqueued_portal : bool
+            If the chat was not distributed, should the portal be enqueued?
 
         """
 
@@ -272,13 +280,11 @@ class AgentManager:
                     await portal.send_notice(text=msg)
                     json_response["data"]["detail"] = msg
                 else:
-                    await self.show_no_agents_message(
-                        customer_room_id=portal.room_id, campaign_room_id=queue.room_id
-                    )
+                    await self.show_no_agents_message(portal=portal, queue=queue)
                     json_response["data"]["detail"] = "There are no agents in queue room"
 
                 json_response["status"] = 404
-                RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
+                portal.unlock(transfer)
                 break
 
             agent: User = await User.get_by_mxid(mxid=agent_id)
@@ -286,7 +292,7 @@ class AgentManager:
             joined_members = await portal.get_joined_users()
             if not joined_members:
                 self.log.debug(f"No joined members in the room [{portal.room_id}]")
-                RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
+                portal.unlock(transfer)
                 break
 
             if len(joined_members) == 1 and joined_members[0].mxid == self.intent.mxid:
@@ -295,12 +301,11 @@ class AgentManager:
 
                 await portal.leave(reason="NOBODY IN THIS ROOM, I'M LEAVING")
 
-                RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
+                portal.unlock(transfer)
                 break
 
             transfer_author_mxid = transfer_author.mxid if transfer_author else ""
             if agent.mxid != transfer_author_mxid:
-
                 # Switch between presence and agent operation login using config parameter
                 # to verify if agent is available to be assigned to the chat
                 if self.config["acd.use_presence"]:
@@ -347,20 +352,20 @@ class AgentManager:
                     json_response["status"] = 404
                     await portal.send_notice(text=msg)
                 else:
-                    msg = (
-                        "The chat could not be distributed, however, it was saved in pending rooms"
-                    )
+                    msg = "The chat could not be distributed"
                     json_response["status"] = 202
-                    await self.show_no_agents_message(
-                        customer_room_id=portal.room_id, campaign_room_id=queue.room_id
-                    )
-                    self.log.debug(f"Saving room [{portal.room_id}] in pending list")
-                    await portal.update_state(state=PortalState.ENQUEUED)
+                    await self.show_no_agents_message(portal=portal, queue=queue)
+                    if put_enqueued_portal:
+                        msg = f"{msg}, however, it was enqueued"
+                        self.log.debug(
+                            f"Portal [{portal.room_id}] state has been changed to ENQUEUED"
+                        )
+                        await portal.update_state(state=PortalState.ENQUEUED)
 
                     portal.selected_option = queue.room_id
                     await portal.update()
 
-                RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
+                portal.unlock(transfer)
                 json_response["data"]["detail"] = msg
                 break
 
@@ -448,7 +453,7 @@ class AgentManager:
 
         transfer = True if transfer_author else False
 
-        future_key = RoomManager.get_future_key(
+        future_key = Util.get_future_key(
             room_id=portal.room_id, agent_id=agent_id, transfer=transfer
         )
         # mantain an array of futures for every invite to get notification of joins
@@ -516,7 +521,7 @@ class AgentManager:
             await sleep(1)
 
         agent_joined = pending_invite.result()
-        future_key = RoomManager.get_future_key(portal.room_id, agent_id, transfer)
+        future_key = Util.get_future_key(portal.room_id, agent_id, transfer)
         if future_key in self.PENDING_INVITES:
             del self.PENDING_INVITES[future_key]
         self.log.debug(f"futures left: {self.PENDING_INVITES}")
@@ -546,19 +551,24 @@ class AgentManager:
 
             # transfer_author can be a supervisor or admin when an open chat is transferred.
             if transfer_author is not None and transfer_author.is_agent:
-                await self.room_manager.remove_user_from_room(
-                    room_id=portal.room_id,
-                    user_id=transfer_author.mxid,
+                await portal.remove_member(
+                    member=transfer_author.mxid,
                     reason=self.config["acd.transfer_message"].format(agentname=agent_displayname),
                 )
             else:
                 # kick menu bot
                 self.log.debug(f"Kicking the menubot out of the room {portal.room_id}")
                 try:
-                    await self.room_manager.menubot_leaves(
-                        room_id=portal.room_id,
-                        reason=detail if detail else f"agent [{agent_id}] accepted invite",
-                    )
+                    # TODO remove this code when all clients have menuflow implemented
+                    menubot = await portal.get_current_menubot()
+                    if menubot:
+                        await self.room_manager.send_menubot_command(
+                            menubot.mxid, "cancel_task", portal.room_id
+                        )
+                        # --------- end remove -----------
+                        await portal.remove_menubot(
+                            reason=detail if detail else f"agent [{agent_id}] accepted invite",
+                        )
                 except Exception as e:
                     self.log.exception(e)
             try:
@@ -579,6 +589,7 @@ class AgentManager:
                 self.log.exception(e)
 
             # set chat status to pending when the agent is asigned to the chat
+            await portal.update_state(PortalState.PENDING)
             if transfer_author:
                 await self.signaling.set_chat_status(
                     room_id=portal.room_id,
@@ -617,10 +628,10 @@ class AgentManager:
                     campaign_room_id=queue.room_id if queue else None,
                 )
 
-            RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
+            portal.unlock(transfer)
 
         elif await portal.get_current_agent() and transfer_author is None:
-            RoomManager.unlock_room(room_id=portal.room_id)
+            portal.unlock(transfer)
             self.log.debug(f"Unlocking room {portal.room_id}..., agent {agent_id} already in room")
         else:
             self.log.debug(f"[{agent_id}] DID NOT ACCEPT the invite. Inviting next agent ...")
@@ -640,7 +651,7 @@ class AgentManager:
                 # if it is a direct transfer, unlock the room
                 msg = f"{agent_id} no aceptó la transferencia."
                 await portal.send_notice(text=msg)
-                RoomManager.unlock_room(room_id=portal.room_id, transfer=transfer)
+                portal.unlock(transfer)
 
     async def force_join_agent(
         self, room_id: RoomID, agent_id: UserID, room_alias: RoomAlias = None
@@ -676,7 +687,8 @@ class AgentManager:
 
             await sleep(1)
 
-    async def show_no_agents_message(self, customer_room_id, campaign_room_id) -> None:
+    # TODO remove this code when all clients have menuflow implemented
+    async def show_no_agents_message(self, portal: Portal, queue: Queue) -> None:
         """It asks the menubot to show a message to the customer saying that there are no agents available
 
         Parameters
@@ -687,13 +699,13 @@ class AgentManager:
             The room ID of the campaign room.
 
         """
-        menubot_id = await self.room_manager.get_menubot_id()
-        if menubot_id:
+        menubot = await portal.get_current_menubot()
+        if menubot:
             await self.room_manager.send_menubot_command(
-                menubot_id,
+                menubot.mxid,
                 "no_agents_message",
-                customer_room_id,
-                campaign_room_id,
+                portal.room_id,
+                queue.room_id,
             )
 
     def remove_not_agents(self, members: dict[UserID, Member]) -> List[UserID]:
@@ -772,9 +784,8 @@ class AgentManager:
 
         elif offline_menu_option == "2":
             # user selected kick current offline agent and see the main menu
-            await self.room_manager.remove_user_from_room(
-                room_id=portal.room_id,
-                user_id=room_agent.mxid,
+            await portal.remove_member(
+                member=room_agent.mxid,
                 reason=self.config["acd.offline.menu_user_selection"],
             )
             await self.signaling.set_chat_status(portal.room_id, Signaling.OPEN)
@@ -784,8 +795,7 @@ class AgentManager:
             )
 
             menubot_id = await self.room_manager.get_menubot_id()
-            await self.room_manager.invite_menu_bot(room_id=portal.room_id, menubot_id=menubot_id)
-
+            await portal.add_menubot(menubot_id)
         else:
             # if user enters an invalid option, shows offline menu again
             return False
@@ -842,19 +852,17 @@ class AgentManager:
 
         elif action == "menu":
             self.room_manager.put_in_offline_menu(portal.room_id)
-            await self.show_offline_menu(
-                agent_displayname=agent_displayname, room_id=portal.room_id
-            )
+            await self.show_offline_menu(agent_displayname=agent_displayname, portal=portal)
 
-    async def show_offline_menu(self, agent_displayname: str, room_id: RoomID):
+    async def show_offline_menu(self, agent_displayname: str, portal: Portal):
         """It takes the agent's display name and returns a formatted string containing the offline menu
 
         Parameters
         ----------
         agent_displayname : str
             The name of the agent that the user is chatting with.
-        room_id: RoomID
-            The room where will be send the offline menu
+        portal: Portal
+            The portal where will be send the offline menu
 
         Returns
         -------
@@ -868,4 +876,4 @@ class AgentManager:
             menu += f"<b>{key}</b>. "
             menu += f"{value['text']}<br>"
 
-        await self.room_manager.send_formatted_message(room_id=room_id, msg=menu)
+        await portal.send_formatted_message(text=menu)

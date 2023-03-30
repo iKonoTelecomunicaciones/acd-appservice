@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import datetime
 from typing import Dict, List
 
 from aiohttp import web
 from mautrix.types import RoomID, UserID
 
+from ...portal import Portal
 from ...puppet import Puppet
 from ...queue import Queue
 from ...queue_membership import QueueMembership
@@ -37,24 +37,48 @@ from ..error_responses import (
 @routes.post("/v1/cmd/create")
 async def create(request: web.Request) -> web.Response:
     """
-    Receives a user_email and creates a user in the User table and its respective puppet
+    Creates a user in the User table and its respective puppet
     ---
-    summary: Creates a user in the platform to be able to scan the WhatsApp QR code and send messages later using the API endpoints.
+    summary: Creates a user in the platform to be able to scan the WhatsApp QR code
+             and send messages later using the API endpoints.
     tags:
         - Commands
 
+    parameters:
+      - in: header
+        name: Authorization
+        description: User that makes the request
+        required: true
+        schema:
+          type: string
+        example: Mxid @user:example.com
+
     requestBody:
         required: false
-        description: A json with `user_email`
+        description: A json with all optional parameter,
+                     `user_email`, `control_room_id`, `destination`, `bridge`
         content:
           application/json:
             schema:
               type: object
               properties:
                 user_email:
+                  description: "User email"
                   type: string
-                user_id:
+                control_room_id:
+                  description: "If already exists a control room, you can chain it with the new acd user"
                   type: string
+                destination:
+                  description: "It can be a queue, an user or a menu"
+                  type: string
+                bridge:
+                  description: "What kind of bridge you will be used with him?"
+                  type: string
+                  enum:
+                    - mautrix
+                    - gupshup
+                    - instagram
+                    - facebook
               example:
                   user_email: "@acd1:somewhere.com"
                   control_room_id: "!foo:somewhere.com"
@@ -116,24 +140,41 @@ async def pm(request: web.Request) -> web.Response:
     Command that allows send a message to a customer.
     ---
     summary:    It takes a phone number and a message,
-                and sends the message to the phone number.
+                and sends the message to the phone number and join the sender to the conversation.
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
-        description: A json with `user_email`
+        description: A json with `customer_phone`, `company_phone`, `template_message`
         content:
             application/json:
                 schema:
                     type: object
                     properties:
                         customer_phone:
+                            description: "Target phone number to send message, (use country code)"
                             type: string
                         company_phone:
+                            description: "Phone number that will be used to send the message,
+                                         (use country code)"
                             type: string
                         template_message:
+                            description: "Message that will be sent"
                             type: string
+                    required:
+                        - customer_phone
+                        - company_phone
+                        - template_message
                     example:
                         customer_phone: "573123456789"
                         company_phone: "57398765432"
@@ -188,20 +229,36 @@ async def resolve(request: web.Request) -> web.Response:
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
-        description: A json with `user_email`
+        description: A json with `room_id`, `user_id`, `send_message`
         content:
             application/json:
                 schema:
                     type: object
                     properties:
                         room_id:
+                            description: "The portal that will be resolved"
                             type: string
                         user_id:
+                            description: "The user that makes the action"
                             type: string
                         send_message:
+                            description: "You want to notify the customer his room was resolved?"
                             type: string
+                    required:
+                        - room_id
+                        - user_id
+                        - send_message
                     example:
                         room_id: "!foo:foo.com"
                         user_id: "@acd_1:foo.com"
@@ -229,16 +286,17 @@ async def resolve(request: web.Request) -> web.Response:
 
     # Obtenemos el puppet de este email si existe
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
+    portal: Portal = await Portal.get_by_room_id(
+        room_id=room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
+    )
 
-    if not puppet:
+    if not puppet or not portal:
         return web.json_response(**USER_DOESNOT_EXIST)
 
-    bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
-
-    if not bridge:
+    if not portal.bridge:
         return web.json_response(**BRIDGE_INVALID)
 
-    args = [room_id, user_id, send_message, puppet.config[f"bridges.{bridge}.prefix"]]
+    args = [room_id, user_id, send_message, puppet.config[f"bridges.{portal.bridge}.prefix"]]
 
     await get_commands().handle(
         sender=user,
@@ -545,14 +603,14 @@ async def transfer_user(request: web.Request) -> web.Response:
     if data.get("force"):
         args.append(data.get("force"))
 
-    await get_commands().handle(
+    command_response = await get_commands().handle(
         sender=user,
         command="transfer_user",
         args_list=args,
         intent=puppet.intent,
         is_management=False,
     )
-    return web.json_response()
+    return web.json_response(**command_response)
 
 
 @routes.post("/v1/cmd/queue/create")
@@ -599,8 +657,9 @@ async def queue(request: web.Request) -> web.Response:
         return web.json_response(**NOT_DATA)
 
     data: Dict = await request.json()
+    invitees = ",".join(data.get("invitees", "")) if data.get("invitees", "") else ""
 
-    args = ["create", data.get("name", ""), data.get("invitees", ""), data.get("description", "")]
+    args = ["create", data.get("name", ""), invitees, data.get("description", "")]
 
     result: Dict = await get_commands().handle(
         sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
@@ -969,12 +1028,15 @@ async def acd(request: web.Request) -> web.Response:
                             type: string
                         joined_message:
                             type: string
+                        put_enqueued_portal:
+                            type: string
                     required:
                         - customer_room_id
                     example:
                         customer_room_id: "!duOWDQQCshKjQvbyoh:example.com"
                         campaign_room_id: "!TXMsaIzbeURlKPeCxJ:example.com"
                         joined_message: "{agentname} has joined the chat."
+                        put_enqueued_portal: "`yes` | `no`"
 
     responses:
         '400':
@@ -998,13 +1060,14 @@ async def acd(request: web.Request) -> web.Response:
     customer_room_id = data.get("customer_room_id")
     campaign_room_id = data.get("campaign_room_id") or ""
     joined_message = data.get("joined_message") or ""
+    put_enqueued_portal = data.get("put_enqueued_portal") or True
 
     # Get the puppet from customer_room_id if exists
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     if not puppet:
         return web.json_response(**USER_DOESNOT_EXIST)
 
-    args = [customer_room_id, campaign_room_id, joined_message]
+    args = [customer_room_id, campaign_room_id, joined_message, put_enqueued_portal]
 
     response = await get_commands().handle(
         sender=user, command="acd", args_list=args, intent=puppet.intent, is_management=False
