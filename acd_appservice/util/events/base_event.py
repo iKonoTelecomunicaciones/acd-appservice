@@ -1,40 +1,50 @@
 import logging
-import time
-from typing import ClassVar, Optional
+from datetime import datetime
+from typing import Optional
 
 from aiohttp import ClientSession
-from attr import dataclass
+from attr import dataclass, ib
 from mautrix.api import HTTPAPI
 from mautrix.types import SerializableAttrs, SerializableEnum, UserID
 from mautrix.util.logging import TraceLogger
 
-log: TraceLogger = logging.getLogger("report")
+from ...portal import PortalState
+
+log: TraceLogger = logging.getLogger("acd.events")
 
 
-class ACDState(SerializableEnum):
-    STARTING = "STARTING"
-    RUNNING = "RUNNING"
+class ACDEventsType(SerializableEnum):
+    PORTAL = "PORTAL"
 
 
-@dataclass(kw_only=True)
-class Reporter(SerializableAttrs):
+class ACDPortalEvents(SerializableEnum):
+    Create = "Create"
+    UIC = "UIC"
+    EnterQueue = "EnterQueue"
+    Connect = "Connect"
+    AgentMessage = "AgentMessage"
+    CustomerMessage = "CustomerMessage"
+    Resolve = "Resolve"
+    Transfer = "Transfer"
 
-    default_source: ClassVar[str] = "state"
-    acd_state: ACDState
-    user_id: Optional[UserID] = None
-    timestamp: Optional[int] = None
-    source: Optional[str] = None
 
-    def fill(self) -> "Reporter":
-        self.timestamp = self.timestamp or int(time.time())
-        self.source = self.source or self.default_source
+@dataclass
+class BaseEvent(SerializableAttrs):
+    type: ACDEventsType = ib(default=None)
+    event: ACDPortalEvents = ib(default=None)
+    timestamp: float = ib(default=datetime.utcnow().timestamp())
+    state: PortalState = ib(default=None)
+    prev_state: Optional[PortalState] = ib(default=None)
+    sender: UserID = ib(factory=str)
+
+    def fill(self) -> "BaseEvent":
         return self
 
     async def send(self):
         await self.http_send()
 
     async def http_send(self):
-        log.info(f"Sending event {self.serialize()}")
+        log.error(f"Sending event {self.serialize()}")
         # headers = {"User-Agent": HTTPAPI.default_ua}
         # url = ""
         # try:

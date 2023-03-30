@@ -23,7 +23,7 @@ from .db.portal import Portal as DBPortal
 from .db.portal import PortalState
 from .matrix_room import MatrixRoom
 from .user import User
-from .util import Util
+from .util import ACDEventsType, ACDPortalEvents, CreateEvent, Util
 
 
 class Portal(DBPortal, MatrixRoom):
@@ -185,7 +185,7 @@ class Portal(DBPortal, MatrixRoom):
         if phone_match:
             self.log.debug(f"Formatting phone number {phone_match[0]}")
 
-            customer_displayname = await self.main_intent.get_displayname(self.creator)
+            customer_displayname = await self.creator_displayname()
             if customer_displayname:
                 room_name = f"{customer_displayname.strip()} ({phone_match[0].strip()})"
             else:
@@ -305,6 +305,7 @@ class Portal(DBPortal, MatrixRoom):
         """
 
         self.log.debug(f"This room will be set up :: {self.room_id}")
+        await self.send_create_portal_event()
 
         bridge = self.bridge
         if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
@@ -423,6 +424,51 @@ class Portal(DBPortal, MatrixRoom):
         current_menubot: User = await self.get_current_menubot()
         if current_menubot:
             await self.remove_member(current_menubot.mxid, reason=reason)
+
+    async def creator_displayname(self) -> str | None:
+        """It returns the display name of the creator of the portal
+
+        Returns
+        -------
+            The displayname of the creator of the question.
+
+        """
+        return await self.main_intent.get_displayname(self.creator)
+
+    def creator_identifier(self) -> str | None:
+        """The function takes a creator mxid and returns the his identifier
+
+        Returns
+        -------
+            The creator's identifier.
+
+        """
+        creator_identifier = re.findall(r"\d+", self.creator)
+        if not creator_identifier:
+            return
+
+        return creator_identifier[0]
+
+    async def send_create_portal_event(self):
+        customer = {
+            "mxid": self.creator,
+            "account_id": self.creator_identifier(),
+            "name": await self.creator_displayname(),
+            "username": None,
+        }
+        create_event = CreateEvent(
+            type=ACDEventsType.PORTAL,
+            event=ACDPortalEvents.Create,
+            state=PortalState.INIT,
+            prev_state=None,
+            sender=self.creator,
+            room_id=self.room_id,
+            acd=self.main_intent.mxid,
+            customer=customer,
+            bridge=self.bridge,
+        )
+
+        await create_event.send()
 
     @classmethod
     async def is_portal(cls, room_id: RoomID) -> bool:

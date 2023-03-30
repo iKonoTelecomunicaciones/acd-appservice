@@ -41,7 +41,7 @@ from .queue import Queue
 from .queue_membership import QueueMembership
 from .signaling import Signaling
 from .user import User
-from .util import Util
+from .util import ACDEventsType, ACDPortalEvents, UICEvent, Util
 
 
 class MatrixHandler:
@@ -786,6 +786,18 @@ class MatrixHandler:
             await puppet.agent_manager.signaling.set_selected_campaign(
                 room_id=portal.room_id, campaign_room_id=None
             )
+
+            uic_event = UICEvent(
+                type=ACDEventsType.PORTAL,
+                event=ACDPortalEvents.UIC,
+                state=PortalState.START,
+                prev_state=portal.state,
+                sender=portal.creator,
+                room_id=portal.room_id,
+                acd=puppet.mxid,
+                customer_mxid=portal.creator,
+            )
+            uic_event.send()
 
             if puppet.destination:
                 if await self.process_destination(portal=portal):
