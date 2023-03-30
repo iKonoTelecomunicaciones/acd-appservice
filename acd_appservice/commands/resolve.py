@@ -8,7 +8,7 @@ from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
 from ..config import Config
-from ..portal import Portal
+from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..signaling import Signaling
 from ..user import User
@@ -117,6 +117,9 @@ async def resolve(evt: CommandEvent) -> Dict:
         # -------- end remove -------
         # When the supervisor resolves an open chat, menubot is still in the chat
         await portal.remove_menubot(reason=puppet.config["acd.resolve_chat.notice"])
+
+    # set chat status to resolved
+    await portal.update_state(PortalState.RESOLVED)
 
     await puppet.agent_manager.signaling.set_chat_status(
         room_id=portal.room_id, status=Signaling.RESOLVED, agent=user_id
