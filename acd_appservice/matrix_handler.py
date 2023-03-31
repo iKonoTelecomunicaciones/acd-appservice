@@ -44,9 +44,9 @@ from .user import User
 from .util import (
     ACDEventsType,
     ACDPortalEvents,
-    UICEvent,
     AgentMessageEvent,
     CustomerMessageEvent,
+    UICEvent,
     Util,
 )
 

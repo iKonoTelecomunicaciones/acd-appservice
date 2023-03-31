@@ -1,14 +1,16 @@
 from __future__ import annotations
+
 import asyncio
 from typing import Dict
+
+from mautrix.types import RoomID, UserID
 
 from ..portal import Portal
 from ..puppet import Puppet
 from ..queue import Queue
 from ..user import User
-from ..util import Util, ACDEventsType, ACDPortalEvents, TransferEvent
+from ..util import ACDEventsType, ACDPortalEvents, TransferEvent, Util
 from .handler import CommandArg, CommandEvent, command_handler
-from mautrix.types import UserID, RoomID
 
 agent_id = CommandArg(
     name="agent_id",

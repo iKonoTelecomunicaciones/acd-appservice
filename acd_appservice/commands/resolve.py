@@ -12,8 +12,8 @@ from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..signaling import Signaling
 from ..user import User
-from .handler import CommandArg, CommandEvent, CommandProcessor, command_handler
 from ..util import ACDEventsType, ACDPortalEvents, ResolveEvent
+from .handler import CommandArg, CommandEvent, CommandProcessor, command_handler
 
 user_id = CommandArg(
     name="user_id",

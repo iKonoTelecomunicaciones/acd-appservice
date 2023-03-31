@@ -17,7 +17,7 @@ from .queue import Queue
 from .room_manager import RoomManager
 from .signaling import Signaling
 from .user import User
-from .util import BusinessHour, Util, ACDEventsType, ACDPortalEvents, ConnectEvent
+from .util import ACDEventsType, ACDPortalEvents, BusinessHour, ConnectEvent, Util
 
 
 class AgentManager:

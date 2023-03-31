@@ -3,8 +3,8 @@ from re import match
 from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..queue import Queue
-from .handler import CommandArg, CommandEvent, command_handler
 from ..util import ACDEventsType, ACDPortalEvents, EnterQueueEvent
+from .handler import CommandArg, CommandEvent, command_handler
 
 campaign_room_id = CommandArg(
     name="campaign_room_id",

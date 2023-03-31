@@ -1,6 +1,7 @@
 from __future__ import annotations
+
 from attr import dataclass, ib
-from mautrix.types import RoomID, UserID, EventID
+from mautrix.types import EventID, RoomID, UserID
 
 from .base_event import BaseEvent
 
