@@ -17,7 +17,7 @@ from .queue import Queue
 from .room_manager import RoomManager
 from .signaling import Signaling
 from .user import User
-from .util import BusinessHour, Util
+from .util import BusinessHour, Util, ACDEventsType, ACDPortalEvents, ConnectEvent
 
 
 class AgentManager:
@@ -541,7 +541,21 @@ class AgentManager:
                 portal.selected_option = queue.room_id
                 await portal.save()
 
+            connect_event = ConnectEvent(
+                type=ACDEventsType.PORTAL,
+                event=ACDPortalEvents.Connect,
+                state=PortalState.PENDING,
+                prev_state=portal.state,
+                sender=portal.main_intent.mxid,
+                room_id=portal.room_id,
+                acd=portal.main_intent.mxid,
+                customer_mxid=portal.creator,
+                agent_mxid=agent_id,
+            )
+            await connect_event.send()
+
             self.log.debug(f"Removing room [{portal.room_id}] from pending list")
+
             await portal.update_state(PortalState.PENDING)
 
             agent_displayname = await self.intent.get_displayname(user_id=agent_id)
@@ -588,8 +602,6 @@ class AgentManager:
             except Exception as e:
                 self.log.exception(e)
 
-            # set chat status to pending when the agent is asigned to the chat
-            await portal.update_state(PortalState.PENDING)
             if transfer_author:
                 await self.signaling.set_chat_status(
                     room_id=portal.room_id,

@@ -41,7 +41,14 @@ from .queue import Queue
 from .queue_membership import QueueMembership
 from .signaling import Signaling
 from .user import User
-from .util import ACDEventsType, ACDPortalEvents, UICEvent, Util
+from .util import (
+    ACDEventsType,
+    ACDPortalEvents,
+    UICEvent,
+    AgentMessageEvent,
+    CustomerMessageEvent,
+    Util,
+)
 
 
 class MatrixHandler:
@@ -178,7 +185,7 @@ class MatrixHandler:
                 return
 
             sender: User = await User.get_by_mxid(evt.sender)
-            await self.handle_message(evt.room_id, sender, evt.content)
+            await self.handle_message(evt.event_id, evt.room_id, sender, evt.content)
 
         elif evt.type == EventType.ROOM_NAME or evt.type == EventType.ROOM_TOPIC:
             await self.handle_room_name(evt=evt)
@@ -477,6 +484,21 @@ class MatrixHandler:
 
         # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
         if not room_id in puppet.BIC_ROOMS:
+            uic_event = UICEvent(
+                type=ACDEventsType.PORTAL,
+                event=ACDPortalEvents.UIC,
+                state=PortalState.START,
+                prev_state=portal.state,
+                sender=portal.creator,
+                room_id=portal.room_id,
+                acd=puppet.mxid,
+                customer_mxid=portal.creator,
+            )
+            await uic_event.send()
+
+            # set chat status to start before process the destination
+            await portal.update_state(PortalState.START)
+
             if puppet.destination:
                 portal: Portal = await Portal.get_by_room_id(
                     room_id=room_id, create=False, intent=puppet.intent, bridge=puppet.bridge
@@ -491,7 +513,7 @@ class MatrixHandler:
             if menubot_id:
                 asyncio.create_task(portal.add_menubot(menubot_mxid=menubot_id))
 
-            puppet.BIC_ROOMS.discard(portal.room_id)
+        puppet.BIC_ROOMS.discard(portal.room_id)
 
     async def handle_leave(self, evt: Event):
         self.log.debug(f"The user {evt.state_key} leave from to room {evt.room_id}")
@@ -574,7 +596,7 @@ class MatrixHandler:
         return is_command, text
 
     async def handle_message(
-        self, room_id: RoomID, sender: User, message: MessageEventContent
+        self, event_id: EventID, room_id: RoomID, sender: User, message: MessageEventContent
     ) -> None:
         """If the message is a command, process it. If not, ignore it
 
@@ -707,6 +729,19 @@ class MatrixHandler:
 
         # Ignore messages from ourselves or agents if not a command
         if sender.is_agent:
+            agent_message_event = AgentMessageEvent(
+                type=ACDEventsType.PORTAL,
+                event=ACDPortalEvents.AgentMessage,
+                state=PortalState.FOLLOWUP,
+                prev_state=portal.state,
+                sender=sender.mxid,
+                room_id=portal.room_id,
+                acd=puppet.mxid,
+                customer_mxid=portal.creator,
+                event_mxid=event_id,
+                agent_mxid=sender.mxid,
+            )
+            await agent_message_event.send()
             await portal.update_state(PortalState.FOLLOWUP)
             await puppet.agent_manager.signaling.set_chat_status(
                 room_id=portal.room_id, status=Signaling.FOLLOWUP, agent=sender.mxid
@@ -737,6 +772,19 @@ class MatrixHandler:
         room_agent = await portal.get_current_agent()
 
         if room_agent:
+            customer_message_event = CustomerMessageEvent(
+                type=ACDEventsType.PORTAL,
+                event=ACDPortalEvents.CustomerMessage,
+                state=PortalState.PENDING,
+                prev_state=portal.state,
+                sender=portal.creator,
+                room_id=portal.room_id,
+                acd=puppet.mxid,
+                customer_mxid=portal.creator,
+                event_mxid=event_id,
+                agent_mxid=room_agent.mxid,
+            )
+            await customer_message_event.send()
             # if message is not from agents, bots or ourselves, it is from the customer
             await portal.update_state(PortalState.PENDING)
             await puppet.agent_manager.signaling.set_chat_status(
@@ -797,7 +845,10 @@ class MatrixHandler:
                 acd=puppet.mxid,
                 customer_mxid=portal.creator,
             )
-            uic_event.send()
+            await uic_event.send()
+
+            # set chat status to start before process the destination
+            await portal.update_state(PortalState.START)
 
             if puppet.destination:
                 if await self.process_destination(portal=portal):

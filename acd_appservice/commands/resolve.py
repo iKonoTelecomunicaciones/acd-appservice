@@ -8,11 +8,12 @@ from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
 from ..config import Config
-from ..portal import Portal
+from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..signaling import Signaling
 from ..user import User
 from .handler import CommandArg, CommandEvent, CommandProcessor, command_handler
+from ..util import ACDEventsType, ACDPortalEvents, ResolveEvent
 
 user_id = CommandArg(
     name="user_id",
@@ -117,6 +118,23 @@ async def resolve(evt: CommandEvent) -> Dict:
         # -------- end remove -------
         # When the supervisor resolves an open chat, menubot is still in the chat
         await portal.remove_menubot(reason=puppet.config["acd.resolve_chat.notice"])
+
+    resolve_event = ResolveEvent(
+        type=ACDEventsType.PORTAL,
+        event=ACDPortalEvents.Resolve,
+        state=PortalState.RESOLVED,
+        prev_state=portal.state,
+        sender=evt.sender.mxid,
+        room_id=portal.room_id,
+        acd=puppet.mxid,
+        customer_mxid=portal.creator,
+        agent_mxid=user_id,
+        reason=None,
+    )
+    await resolve_event.send()
+
+    # set chat status to resolved
+    await portal.update_state(PortalState.RESOLVED)
 
     await puppet.agent_manager.signaling.set_chat_status(
         room_id=portal.room_id, status=Signaling.RESOLVED, agent=user_id

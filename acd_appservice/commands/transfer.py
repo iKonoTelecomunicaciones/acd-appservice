@@ -1,3 +1,4 @@
+from __future__ import annotations
 import asyncio
 from typing import Dict
 
@@ -5,8 +6,9 @@ from ..portal import Portal
 from ..puppet import Puppet
 from ..queue import Queue
 from ..user import User
-from ..util import Util
+from ..util import Util, ACDEventsType, ACDPortalEvents, TransferEvent
 from .handler import CommandArg, CommandEvent, command_handler
+from mautrix.types import UserID, RoomID
 
 agent_id = CommandArg(
     name="agent_id",
@@ -121,6 +123,9 @@ async def transfer(evt: CommandEvent) -> str:
 
     queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
 
+    await send_transfer_event(
+        portal=portal, puppet=puppet, sender=transfer_author, destination=queue.room_id
+    )
     # Creating a task that will be executed in the background.
     asyncio.create_task(
         puppet.agent_manager.loop_agents(
@@ -231,6 +236,9 @@ async def transfer_user(evt: CommandEvent) -> str:
         else:
             agent_is_online = await agent.is_online()
             if agent_is_online or force == "yes":
+                await send_transfer_event(
+                    portal=portal, puppet=puppet, sender=transfer_author, destination=agent.mxid
+                )
                 await puppet.agent_manager.force_invite_agent(
                     portal=portal,
                     agent_id=agent.mxid,
@@ -266,3 +274,35 @@ async def transfer_user(evt: CommandEvent) -> str:
         portal.unlock(transfer=True)
 
     return json_response
+
+
+async def send_transfer_event(
+    portal: Portal, puppet: Puppet, sender: UserID, destination: UserID | RoomID
+):
+    """It sends a transfer event
+
+    Parameters
+    ----------
+    portal : Portal
+        The Portal object that is being transferred
+    puppet : Puppet
+        The puppet that is sending the event
+    sender : UserID
+        The user who initiated the transfer.
+    destination : UserID | RoomID
+        The user ID or room ID of the destination.
+
+    """
+
+    transfer_event = TransferEvent(
+        type=ACDEventsType.PORTAL,
+        event=ACDPortalEvents.Transfer,
+        state=Portal.state.PENDING,
+        prev_state=portal.state,
+        sender=sender,
+        room_id=portal.room_id,
+        acd=puppet.mxid,
+        customer_mxid=portal.creator,
+        destination=destination,
+    )
+    await transfer_event.send()

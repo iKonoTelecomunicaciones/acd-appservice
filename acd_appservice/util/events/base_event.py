@@ -35,7 +35,7 @@ class BaseEvent(SerializableAttrs):
     timestamp: float = ib(default=datetime.utcnow().timestamp())
     state: PortalState = ib(default=None)
     prev_state: Optional[PortalState] = ib(default=None)
-    sender: UserID = ib(factory=str)
+    sender: UserID = ib(factory=UserID)
 
     def fill(self) -> "BaseEvent":
         return self

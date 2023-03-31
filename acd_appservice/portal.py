@@ -306,6 +306,7 @@ class Portal(DBPortal, MatrixRoom):
 
         self.log.debug(f"This room will be set up :: {self.room_id}")
         await self.send_create_portal_event()
+        await self.update_state(PortalState.INIT)
 
         bridge = self.bridge
         if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
@@ -409,6 +410,8 @@ class Portal(DBPortal, MatrixRoom):
             self.log.debug(f"Inviting menubot {menubot_mxid} to {self.room_id}...")
             try:
                 await self.invite_user(menubot_mxid)
+                # When menubot enters to the portal, set the portal state in ONMENU
+                await self.update_state(PortalState.ONMENU)
                 self.log.debug(f"Menubot {menubot_mxid} invited OK to room {self.room_id}")
                 break
             except Exception as e:

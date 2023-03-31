@@ -1,9 +1,10 @@
 from re import match
 
-from ..portal import Portal
+from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..queue import Queue
 from .handler import CommandArg, CommandEvent, command_handler
+from ..util import ACDEventsType, ACDPortalEvents, EnterQueueEvent
 
 campaign_room_id = CommandArg(
     name="campaign_room_id",
@@ -85,6 +86,19 @@ async def acd(evt: CommandEvent) -> str:
         return
 
     try:
+        enter_queue_event = EnterQueueEvent(
+            type=ACDEventsType.PORTAL,
+            event=ACDPortalEvents.EnterQueue,
+            state=PortalState.ENQUEUED,
+            prev_state=portal.state,
+            sender=evt.sender.mxid,
+            room_id=portal.room_id,
+            acd=puppet.mxid,
+            customer_mxid=portal.creator,
+            queue=queue.room_id,
+        )
+        await enter_queue_event.send()
+
         return await puppet.agent_manager.process_distribution(
             portal=portal,
             queue=queue,
