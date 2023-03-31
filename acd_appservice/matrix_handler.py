@@ -477,6 +477,9 @@ class MatrixHandler:
 
         # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
         if not room_id in puppet.BIC_ROOMS:
+            # set chat status to start before process the destination
+            await portal.update_state(PortalState.START)
+
             if puppet.destination:
                 portal: Portal = await Portal.get_by_room_id(
                     room_id=room_id, create=False, intent=puppet.intent, bridge=puppet.bridge
@@ -786,6 +789,9 @@ class MatrixHandler:
             await puppet.agent_manager.signaling.set_selected_campaign(
                 room_id=portal.room_id, campaign_room_id=None
             )
+
+            # set chat status to start before process the destination
+            await portal.update_state(PortalState.START)
 
             if puppet.destination:
                 if await self.process_destination(portal=portal):
