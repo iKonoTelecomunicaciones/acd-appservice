@@ -5,7 +5,7 @@ from typing import Dict
 
 from mautrix.types import RoomID, UserID
 
-from ..portal import Portal
+from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..queue import Queue
 from ..user import User
@@ -126,8 +126,12 @@ async def transfer(evt: CommandEvent) -> str:
     queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
 
     await send_transfer_event(
-        portal=portal, puppet=puppet, sender=transfer_author, destination=queue.room_id
+        portal=portal, puppet=puppet, sender=transfer_author.mxid, destination=queue.room_id
     )
+
+    # Changing portal state to ENQUEUED by transfer command
+    await portal.update_state(PortalState.ENQUEUED)
+
     # Creating a task that will be executed in the background.
     asyncio.create_task(
         puppet.agent_manager.loop_agents(
@@ -239,7 +243,10 @@ async def transfer_user(evt: CommandEvent) -> str:
             agent_is_online = await agent.is_online()
             if agent_is_online or force == "yes":
                 await send_transfer_event(
-                    portal=portal, puppet=puppet, sender=transfer_author, destination=agent.mxid
+                    portal=portal,
+                    puppet=puppet,
+                    sender=transfer_author.mxid,
+                    destination=agent.mxid,
                 )
                 await puppet.agent_manager.force_invite_agent(
                     portal=portal,
@@ -299,7 +306,7 @@ async def send_transfer_event(
     transfer_event = TransferEvent(
         type=ACDEventsType.PORTAL,
         event=ACDPortalEvents.Transfer,
-        state=Portal.state.PENDING,
+        state=PortalState.PENDING,
         prev_state=portal.state,
         sender=sender,
         room_id=portal.room_id,

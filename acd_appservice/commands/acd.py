@@ -99,6 +99,8 @@ async def acd(evt: CommandEvent) -> str:
         )
         await enter_queue_event.send()
 
+        # Changing room state to ENQUEUED by acd command
+        await portal.update_state(PortalState.ENQUEUED)
         return await puppet.agent_manager.process_distribution(
             portal=portal,
             queue=queue,

@@ -10,7 +10,7 @@ from mautrix.util.logging import TraceLogger
 
 from ...portal import PortalState
 
-log: TraceLogger = logging.getLogger("acd.events")
+log: TraceLogger = logging.getLogger("report.events")
 
 
 class ACDEventsType(SerializableEnum):
