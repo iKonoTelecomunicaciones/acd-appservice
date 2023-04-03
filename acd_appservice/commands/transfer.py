@@ -66,7 +66,7 @@ async def transfer(evt: CommandEvent) -> str:
 
     json_response: Dict = {
         "data": {
-            "detail": "",
+            "error": "",
             "room_id": "",
         },
         "status": 0,
@@ -79,7 +79,7 @@ async def transfer(evt: CommandEvent) -> str:
         detail = "You have not sent the argument customer_room_id"
         evt.log.error(detail)
         await evt.reply(detail)
-        json_response["data"]["detail"] = detail
+        json_response["data"]["error"] = detail
         json_response["status"] = 422
         return json_response
 
@@ -97,8 +97,8 @@ async def transfer(evt: CommandEvent) -> str:
     # Checking if the room is locked, if it is, it returns.
     if portal.is_locked:
         evt.log.debug(f"Room: {customer_room_id} LOCKED by Transfer room")
-        json_response["data"]["detail"] = "Current portal is locked by transfer"
-        json_response["status"] = 409
+        json_response["data"]["error"] = "Current portal is locked by transfer"
+        json_response["status"] = 423
         return json_response
 
     evt.log.debug(f"INIT TRANSFER for {customer_room_id} to ROOM {campaign_room_id}")
@@ -130,6 +130,10 @@ async def transfer(evt: CommandEvent) -> str:
             transfer_author=transfer_author,
         )
     )
+
+    json_response["data"]["error"] = "Transfer action in process"
+    json_response["status"] = 200
+    return json_response
 
 
 @command_handler(
@@ -172,7 +176,7 @@ async def transfer_user(evt: CommandEvent) -> str:
         detail = "You have not sent the all arguments"
         evt.log.error(detail)
         await evt.reply(detail)
-        json_response["data"]["detail"] = detail
+        json_response["data"]["error"] = detail
         json_response["status"] = 422
         return json_response
 
@@ -185,7 +189,7 @@ async def transfer_user(evt: CommandEvent) -> str:
 
     agent: User = await User.get_by_mxid(agent_id, create=False)
     if not agent:
-        json_response["data"]["detail"] = "Agent with given user id does not exist"
+        json_response["data"]["error"] = "Agent with given user id does not exist"
         json_response["status"] = 404
         return json_response
 
@@ -200,8 +204,8 @@ async def transfer_user(evt: CommandEvent) -> str:
     # Checking if the room is locked, if it is, it returns.
     if portal.is_locked:
         evt.log.debug(f"Room: {portal.room_id} LOCKED by Transfer user")
-        json_response["data"]["detail"] = "Current portal is locked by transfer"
-        json_response["status"] = 409
+        json_response["data"]["error"] = "Current portal is locked by transfer"
+        json_response["status"] = 423
         return json_response
 
     evt.log.debug(f"INIT TRANSFER for {portal.room_id} to AGENT {agent.mxid}")
@@ -226,7 +230,7 @@ async def transfer_user(evt: CommandEvent) -> str:
                 f"is already in the room {portal.room_id}"
             )
             await portal.send_notice(text=msg)
-            json_response["data"]["detail"] = msg
+            json_response["data"]["error"] = msg
             json_response["status"] = 409
         else:
             agent_is_online = await agent.is_online()
@@ -238,8 +242,8 @@ async def transfer_user(evt: CommandEvent) -> str:
                 )
 
                 if not agent_is_online:
-                    json_response["data"]["detail"] = (
-                        f"The agent [{agent_displayname}] has been assigned, "
+                    json_response["data"]["error"] = (
+                        f"The agent {agent_displayname} has been assigned, "
                         "but they are not available to attend the chat."
                     )
                     json_response["status"] = 202
@@ -249,14 +253,14 @@ async def transfer_user(evt: CommandEvent) -> str:
                         )
                         await portal.send_formatted_message(msg)
                 else:
-                    json_response["data"]["detail"] = evt.config["acd.transfer_message"].format(
+                    json_response["data"]["error"] = evt.config["acd.transfer_message"].format(
                         agentname=agent_displayname
                     )
                     json_response["status"] = 200
             else:
                 msg = f"Agent [{agent_displayname}][{agent.mxid}] is not available"
                 await portal.send_notice(text=msg)
-                json_response["data"]["detail"] = msg
+                json_response["data"]["error"] = msg
                 json_response["status"] = 404
     except Exception as e:
         evt.log.exception(e)
