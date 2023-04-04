@@ -542,7 +542,7 @@ class AgentManager:
                 await portal.save()
 
             connect_event = ConnectEvent(
-                type=ACDEventsType.PORTAL,
+                event_type=ACDEventsType.PORTAL,
                 event=ACDPortalEvents.Connect,
                 state=PortalState.PENDING,
                 prev_state=portal.state,

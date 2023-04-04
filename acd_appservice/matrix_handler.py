@@ -485,7 +485,7 @@ class MatrixHandler:
         # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
         if not room_id in puppet.BIC_ROOMS:
             uic_event = UICEvent(
-                type=ACDEventsType.PORTAL,
+                event_type=ACDEventsType.PORTAL,
                 event=ACDPortalEvents.UIC,
                 state=PortalState.START,
                 prev_state=portal.state,
@@ -730,7 +730,7 @@ class MatrixHandler:
         # Ignore messages from ourselves or agents if not a command
         if sender.is_agent:
             agent_message_event = AgentMessageEvent(
-                type=ACDEventsType.PORTAL,
+                event_type=ACDEventsType.PORTAL,
                 event=ACDPortalEvents.AgentMessage,
                 state=PortalState.FOLLOWUP,
                 prev_state=portal.state,
@@ -773,7 +773,7 @@ class MatrixHandler:
 
         if room_agent:
             customer_message_event = CustomerMessageEvent(
-                type=ACDEventsType.PORTAL,
+                event_type=ACDEventsType.PORTAL,
                 event=ACDPortalEvents.CustomerMessage,
                 state=PortalState.PENDING,
                 prev_state=portal.state,
@@ -836,7 +836,7 @@ class MatrixHandler:
             )
 
             uic_event = UICEvent(
-                type=ACDEventsType.PORTAL,
+                event_type=ACDEventsType.PORTAL,
                 event=ACDPortalEvents.UIC,
                 state=PortalState.START,
                 prev_state=portal.state,

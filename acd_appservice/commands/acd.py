@@ -87,7 +87,7 @@ async def acd(evt: CommandEvent) -> str:
 
     try:
         enter_queue_event = EnterQueueEvent(
-            type=ACDEventsType.PORTAL,
+            event_type=ACDEventsType.PORTAL,
             event=ACDPortalEvents.EnterQueue,
             state=PortalState.ENQUEUED,
             prev_state=portal.state,

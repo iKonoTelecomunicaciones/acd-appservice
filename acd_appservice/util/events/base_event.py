@@ -30,7 +30,7 @@ class ACDPortalEvents(SerializableEnum):
 
 @dataclass
 class BaseEvent(SerializableAttrs):
-    type: ACDEventsType = ib(default=None)
+    event_type: ACDEventsType = ib(default=None)
     event: ACDPortalEvents = ib(default=None)
     timestamp: float = ib(default=datetime.utcnow().timestamp())
     state: PortalState = ib(default=None)

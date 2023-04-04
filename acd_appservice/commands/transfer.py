@@ -304,7 +304,7 @@ async def send_transfer_event(
     """
 
     transfer_event = TransferEvent(
-        type=ACDEventsType.PORTAL,
+        event_type=ACDEventsType.PORTAL,
         event=ACDPortalEvents.Transfer,
         state=PortalState.PENDING,
         prev_state=portal.state,

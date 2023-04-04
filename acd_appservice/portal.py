@@ -460,7 +460,7 @@ class Portal(DBPortal, MatrixRoom):
             "username": None,
         }
         create_event = CreateEvent(
-            type=ACDEventsType.PORTAL,
+            event_type=ACDEventsType.PORTAL,
             event=ACDPortalEvents.Create,
             state=PortalState.INIT,
             prev_state=None,

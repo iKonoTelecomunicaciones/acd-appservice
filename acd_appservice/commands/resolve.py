@@ -120,7 +120,7 @@ async def resolve(evt: CommandEvent) -> Dict:
         await portal.remove_menubot(reason=puppet.config["acd.resolve_chat.notice"])
 
     resolve_event = ResolveEvent(
-        type=ACDEventsType.PORTAL,
+        event_type=ACDEventsType.PORTAL,
         event=ACDPortalEvents.Resolve,
         state=PortalState.RESOLVED,
         prev_state=portal.state,
