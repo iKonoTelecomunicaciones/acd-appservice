@@ -314,7 +314,7 @@ async def resolve(request: web.Request) -> web.Response:
 async def bulk_resolve(request: web.Request) -> web.Response:
     """
     ---
-    summary: Command to resolve block chats, kicking the supervisor and the agent.
+    summary: Command to bulk resolve chats, kicking the supervisor and the agent.
     tags:
         - Commands
 
