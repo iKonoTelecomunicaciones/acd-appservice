@@ -274,7 +274,7 @@ async def create(
         detail = "Queue with same name already exists"
         evt.log.error(detail)
         await evt.reply(detail)
-        json_response["data"] = {"detail": detail}
+        json_response["data"] = {"error": detail}
         json_response["status"] = 409
         return json_response
 

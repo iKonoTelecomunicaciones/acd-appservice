@@ -10,7 +10,7 @@ components:
     Success:
       type: object
       properties:
-        message:
+        error:
           type: string
 
     UserCreatedSuccess:
@@ -831,3 +831,45 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/GetPuppetInfoOk'
+
+    NoPuppetInPortal:
+      description: Unable to find puppet into the portal.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    UnableToFindPuppet:
+      description: Unable to find puppet.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    PortalIsLocked:
+      description: Portal is locked.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    TransferQueueInProcess:
+      description: Transfer action is in process.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    TransferSuccessButAgentUnavailable:
+      description: Transfer success, but agent is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    QueueExists:
+      description: Queue with same name already exists.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
