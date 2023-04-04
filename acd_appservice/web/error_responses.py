@@ -114,6 +114,9 @@ PUPPET_DOESNOT_EXIST = {"data": {"error": "Puppet with given mxid was not found.
 
 INVALID_DESTINATION = {"data": {"error": "Given destination is invalid"}, "status": 409}
 
-NO_PUPPET_IN_PORTAL = {"data": {"error": "Unable to find puppet into the portal"}, "status": 409}
+NO_PUPPET_IN_PORTAL = {
+    "data": {"error": "Unable to find a puppet inside the portal"},
+    "status": 409,
+}
 
 UNABLE_TO_FIND_PUPPET = {"data": {"error": "Unable to find puppet"}, "status": 409}
