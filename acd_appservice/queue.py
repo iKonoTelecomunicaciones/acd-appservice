@@ -55,8 +55,8 @@ class Queue(DBQueue, MatrixRoom):
         try:
             members = await self.main_intent.get_joined_members(self.room_id)
         except Exception as error:
-            self.log.exception(f"Error getting memebers of queue {self.room_id}: {error}")
             members = None
+            self.log.exception(f"Error getting members of queue {self.room_id}: {error}")
 
         if members:
             reason = "The queue will be removed"
