@@ -12,12 +12,13 @@ from mautrix.util.logging import TraceLogger
 
 from .commands.handler import CommandProcessor
 from .config import Config
+from .events import ACDEventTypes, ACDPortalEvents, ConnectEvent
 from .portal import Portal, PortalState
 from .queue import Queue
 from .room_manager import RoomManager
 from .signaling import Signaling
 from .user import User
-from .util import ACDEventsType, ACDPortalEvents, BusinessHour, ConnectEvent, Util
+from .util import BusinessHour, Util
 
 
 class AgentManager:
@@ -542,7 +543,7 @@ class AgentManager:
                 await portal.save()
 
             connect_event = ConnectEvent(
-                event_type=ACDEventsType.PORTAL,
+                event_type=ACDEventTypes.PORTAL,
                 event=ACDPortalEvents.Connect,
                 state=PortalState.PENDING,
                 prev_state=portal.state,

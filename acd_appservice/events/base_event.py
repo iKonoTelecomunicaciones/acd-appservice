@@ -5,32 +5,18 @@ from typing import Optional
 from aiohttp import ClientSession
 from attr import dataclass, ib
 from mautrix.api import HTTPAPI
-from mautrix.types import SerializableAttrs, SerializableEnum, UserID
+from mautrix.types import SerializableAttrs, UserID
 from mautrix.util.logging import TraceLogger
 
-from ...portal import PortalState
+from ..portal import PortalState
+from .models import ACDEventTypes, ACDPortalEvents
 
 log: TraceLogger = logging.getLogger("report.events")
 
 
-class ACDEventsType(SerializableEnum):
-    PORTAL = "PORTAL"
-
-
-class ACDPortalEvents(SerializableEnum):
-    Create = "Create"
-    UIC = "UIC"
-    EnterQueue = "EnterQueue"
-    Connect = "Connect"
-    AgentMessage = "AgentMessage"
-    CustomerMessage = "CustomerMessage"
-    Resolve = "Resolve"
-    Transfer = "Transfer"
-
-
 @dataclass
 class BaseEvent(SerializableAttrs):
-    event_type: ACDEventsType = ib(default=None)
+    event_type: ACDEventTypes = ib(default=None)
     event: ACDPortalEvents = ib(default=None)
     timestamp: float = ib(default=datetime.utcnow().timestamp())
     state: PortalState = ib(default=None)

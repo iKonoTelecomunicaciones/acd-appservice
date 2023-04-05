@@ -21,9 +21,10 @@ from mautrix.util.logging import TraceLogger
 from .config import Config
 from .db.portal import Portal as DBPortal
 from .db.portal import PortalState
+from .events import ACDEventTypes, ACDPortalEvents, CreateEvent
 from .matrix_room import MatrixRoom
 from .user import User
-from .util import ACDEventsType, ACDPortalEvents, CreateEvent, Util
+from .util import Util
 
 
 class Portal(DBPortal, MatrixRoom):
@@ -460,7 +461,7 @@ class Portal(DBPortal, MatrixRoom):
             "username": None,
         }
         create_event = CreateEvent(
-            event_type=ACDEventsType.PORTAL,
+            event_type=ACDEventTypes.PORTAL,
             event=ACDPortalEvents.Create,
             state=PortalState.INIT,
             prev_state=None,

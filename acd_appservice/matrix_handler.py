@@ -34,6 +34,13 @@ from acd_appservice import acd_program
 from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
 from .db.user import UserRoles
+from .events import (
+    ACDEventTypes,
+    ACDPortalEvents,
+    AgentMessageEvent,
+    CustomerMessageEvent,
+    UICEvent,
+)
 from .message import Message
 from .portal import Portal, PortalState
 from .puppet import Puppet
@@ -41,14 +48,7 @@ from .queue import Queue
 from .queue_membership import QueueMembership
 from .signaling import Signaling
 from .user import User
-from .util import (
-    ACDEventsType,
-    ACDPortalEvents,
-    AgentMessageEvent,
-    CustomerMessageEvent,
-    UICEvent,
-    Util,
-)
+from .util import Util
 
 
 class MatrixHandler:
@@ -485,7 +485,7 @@ class MatrixHandler:
         # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
         if not room_id in puppet.BIC_ROOMS:
             uic_event = UICEvent(
-                event_type=ACDEventsType.PORTAL,
+                event_type=ACDEventTypes.PORTAL,
                 event=ACDPortalEvents.UIC,
                 state=PortalState.START,
                 prev_state=portal.state,
@@ -730,7 +730,7 @@ class MatrixHandler:
         # Ignore messages from ourselves or agents if not a command
         if sender.is_agent:
             agent_message_event = AgentMessageEvent(
-                event_type=ACDEventsType.PORTAL,
+                event_type=ACDEventTypes.PORTAL,
                 event=ACDPortalEvents.AgentMessage,
                 state=PortalState.FOLLOWUP,
                 prev_state=portal.state,
@@ -773,7 +773,7 @@ class MatrixHandler:
 
         if room_agent:
             customer_message_event = CustomerMessageEvent(
-                event_type=ACDEventsType.PORTAL,
+                event_type=ACDEventTypes.PORTAL,
                 event=ACDPortalEvents.CustomerMessage,
                 state=PortalState.PENDING,
                 prev_state=portal.state,
@@ -836,7 +836,7 @@ class MatrixHandler:
             )
 
             uic_event = UICEvent(
-                event_type=ACDEventsType.PORTAL,
+                event_type=ACDEventTypes.PORTAL,
                 event=ACDPortalEvents.UIC,
                 state=PortalState.START,
                 prev_state=portal.state,

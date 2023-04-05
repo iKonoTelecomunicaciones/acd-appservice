@@ -1,9 +1,9 @@
 from re import match
 
+from ..events import ACDEventTypes, ACDPortalEvents, EnterQueueEvent
 from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..queue import Queue
-from ..util import ACDEventsType, ACDPortalEvents, EnterQueueEvent
 from .handler import CommandArg, CommandEvent, command_handler
 
 campaign_room_id = CommandArg(
@@ -87,7 +87,7 @@ async def acd(evt: CommandEvent) -> str:
 
     try:
         enter_queue_event = EnterQueueEvent(
-            event_type=ACDEventsType.PORTAL,
+            event_type=ACDEventTypes.PORTAL,
             event=ACDPortalEvents.EnterQueue,
             state=PortalState.ENQUEUED,
             prev_state=portal.state,

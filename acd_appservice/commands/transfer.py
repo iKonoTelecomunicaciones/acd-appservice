@@ -5,11 +5,12 @@ from typing import Dict
 
 from mautrix.types import RoomID, UserID
 
+from ..events import ACDEventTypes, ACDPortalEvents, TransferEvent
 from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..queue import Queue
 from ..user import User
-from ..util import ACDEventsType, ACDPortalEvents, TransferEvent, Util
+from ..util import Util
 from .handler import CommandArg, CommandEvent, command_handler
 
 agent_id = CommandArg(
@@ -304,7 +305,7 @@ async def send_transfer_event(
     """
 
     transfer_event = TransferEvent(
-        event_type=ACDEventsType.PORTAL,
+        event_type=ACDEventTypes.PORTAL,
         event=ACDPortalEvents.Transfer,
         state=PortalState.PENDING,
         prev_state=portal.state,

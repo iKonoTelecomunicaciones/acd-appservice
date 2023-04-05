@@ -8,11 +8,11 @@ from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
 from ..config import Config
+from ..events import ACDEventTypes, ACDPortalEvents, ResolveEvent
 from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..signaling import Signaling
 from ..user import User
-from ..util import ACDEventsType, ACDPortalEvents, ResolveEvent
 from .handler import CommandArg, CommandEvent, CommandProcessor, command_handler
 
 user_id = CommandArg(
@@ -120,7 +120,7 @@ async def resolve(evt: CommandEvent) -> Dict:
         await portal.remove_menubot(reason=puppet.config["acd.resolve_chat.notice"])
 
     resolve_event = ResolveEvent(
-        event_type=ACDEventsType.PORTAL,
+        event_type=ACDEventTypes.PORTAL,
         event=ACDPortalEvents.Resolve,
         state=PortalState.RESOLVED,
         prev_state=portal.state,
