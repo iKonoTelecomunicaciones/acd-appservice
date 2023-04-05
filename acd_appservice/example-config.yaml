@@ -182,6 +182,8 @@ acd:
         user_add_method: "invite"
         # Should the queues created by the ACD be `public` or `private`?
         visibility: "private"
+        # How many chats will be distributed per agent when portals are enqueue
+        portals_per_agent: 1
         # This will always be invited even if you have `user_add_method` in `join`.
         invitees:
             - "@admin:dominio_cliente.com"

@@ -95,6 +95,7 @@ class Config(BaseBridgeConfig):
         copy("acd.available_agents_room")
         copy("acd.queues.user_add_method")
         copy("acd.queues.visibility")
+        copy("acd.queues.portals_per_agent")
         copy("acd.queues.invitees")
         copy("acd.use_presence")
 
