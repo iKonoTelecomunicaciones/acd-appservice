@@ -52,20 +52,24 @@ class Queue(DBQueue, MatrixRoom):
 
     async def clean_up(self):
         """It removes all members from the queue, leaves the queue, and deletes the queue"""
-        members = await self.main_intent.get_joined_members(self.room_id)
+        try:
+            members = await self.main_intent.get_joined_members(self.room_id)
+        except Exception as error:
+            members = None
+            self.log.exception(f"Error getting members of queue {self.room_id}: {error}")
 
-        if not members:
+        if members:
+            reason = "The queue will be removed"
+
+            for member in members.keys():
+                if self.main_intent.mxid == member:
+                    continue
+
+                await self.remove_member(member=member, reason=reason)
+
+            await self.leave(reason=reason)
+        else:
             self.log.error(f"Unable to obtain members in the queue {self.room_id}")
-
-        reason = "The queue will be removed"
-
-        for member in members.keys():
-            if self.main_intent.mxid == member:
-                continue
-
-            await self.remove_member(member=member, reason=reason)
-
-        await self.leave(reason=reason)
 
         self.clean_cache()
 

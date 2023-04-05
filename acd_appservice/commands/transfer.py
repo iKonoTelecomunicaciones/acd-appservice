@@ -163,7 +163,7 @@ async def transfer_user(evt: CommandEvent) -> str:
 
     json_response: Dict = {
         "data": {
-            "detail": "",
+            "error": "",
             "room_id": "",
         },
         "status": 0,
