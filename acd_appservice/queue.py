@@ -54,7 +54,8 @@ class Queue(DBQueue, MatrixRoom):
         """It removes all members from the queue, leaves the queue, and deletes the queue"""
         try:
             members = await self.main_intent.get_joined_members(self.room_id)
-        except:
+        except Exception as error:
+            self.log.exception(f"Error getting memebers of queue {self.room_id}: {error}")
             members = None
 
         if members:
@@ -67,6 +68,8 @@ class Queue(DBQueue, MatrixRoom):
                 await self.remove_member(member=member, reason=reason)
 
             await self.leave(reason=reason)
+        else:
+            self.log.error(f"Unable to obtain members in the queue {self.room_id}")
 
         self.clean_cache()
 
