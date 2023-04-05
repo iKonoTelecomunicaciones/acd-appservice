@@ -335,7 +335,7 @@ class CommandProcessor:
         except Exception:
             detail = (
                 "Unhandled error while handling command "
-                f"{evt.command} {' '.join(args_list)} from {sender.mxid})"
+                f"{evt.command} {' '.join([str(arg) for arg in args_list])} from {sender.mxid})"
             )
             self.log.exception(detail)
             return {"data": {"error": detail}, "status": 500}
