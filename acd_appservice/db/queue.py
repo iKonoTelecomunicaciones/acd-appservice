@@ -54,8 +54,8 @@ class Queue:
 
     @classmethod
     async def get_by_slugified_name(cls, name_slugified: str) -> Queue | None:
-        q = f"SELECT id, {cls._columns} FROM queue WHERE REPLACE(LOWER(name), ' ', '_') LIKE $1"
-        row = await cls.db.fetchrow(q, f"%{name_slugified}%")
+        q = f"SELECT id, {cls._columns} FROM queue WHERE REPLACE(LOWER(name), ' ', '_') = $1"
+        row = await cls.db.fetchrow(q, name_slugified)
         if not row:
             return None
         return cls._from_row(row)
