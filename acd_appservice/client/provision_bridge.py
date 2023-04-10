@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, Optional
 
-from aiohttp import ClientSession, WSMsgType
+from aiohttp import ClientSession, WSMsgType, client_exceptions
 from aiohttp.web import WebSocketResponse
 from mautrix.types import RoomID, UserID
 
@@ -230,12 +230,15 @@ class ProvisionBridge(Base):
                 headers=self.headers,
                 params={"user_id": user_id},
             )
+            data = await response.json()
+        except client_exceptions.ContentTypeError as err:
+            self.log.error(err)
+            data = {"error": await response.text()}
         except Exception as e:
             self.log.error(e)
             return {"error": str(e)}
 
-        data = await response.json()
-        if not response.status in [200, 201]:
+        if response.status not in [200, 201]:
             self.log.error(data)
 
         return data
