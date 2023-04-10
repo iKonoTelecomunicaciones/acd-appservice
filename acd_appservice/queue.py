@@ -197,7 +197,11 @@ class Queue(DBQueue, MatrixRoom):
         """
 
         agents: List[User] = await self.get_agents()
-        available_agents = [agent for agent in agents if agent.is_online and not agent.is_paused]
+        available_agents = [
+            agent
+            for agent in agents
+            if await agent.is_online(self.id) and not await agent.is_paused(self.id)
+        ]
         if not available_agents:
             available_agents = None
         return available_agents
