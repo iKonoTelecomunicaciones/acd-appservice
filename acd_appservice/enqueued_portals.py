@@ -34,7 +34,7 @@ class EnqueuedPortals:
         grouping them by queue, and distributing them to available agents in the queue.
 
         """
-        enqueued_iteration_count: int = 0
+        enqueued_iteration_count: int = 1
 
         try:
             while True:
@@ -88,7 +88,7 @@ class EnqueuedPortals:
                     if are_available_agents:
                         enqueued_iteration_count += 1
                 else:
-                    enqueued_iteration_count = 0
+                    enqueued_iteration_count = 1
 
                 await sleep(enqueued_interval)
 
