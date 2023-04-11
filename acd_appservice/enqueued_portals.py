@@ -40,7 +40,7 @@ class EnqueuedPortals:
             while True:
                 # If the distribution enqueued portals process took too many iterations,
                 # change the enqueued time interval to distribute it faster
-                if self.config["acd.enqueued_portals.max_iterations"] >= enqueued_iteration_count:
+                if enqueued_iteration_count >= self.config["acd.enqueued_portals.max_iterations"]:
                     enqueued_interval = self.config["acd.enqueued_portals.min_time"]
                 else:
                     enqueued_interval = self.config[
@@ -61,22 +61,32 @@ class EnqueuedPortals:
                 grouped_enqueued_portals = await self.get_grouped_enqueued_portals()
 
                 if grouped_enqueued_portals:
-                    enqueued_iteration_count += 1
-
+                    are_available_agents = False
                     for group in grouped_enqueued_portals:
                         queue: Queue = await Queue.get_by_room_id(group[0].selected_option)
                         available_agents_count = await queue.get_available_agents_count()
+
+                        # Flag to know if iteration count will be increased
+                        if available_agents_count > 0:
+                            are_available_agents = True
+
                         portals_to_distibute_count = (
                             available_agents_count
                             * self.config["acd.enqueued_portals.portals_per_agent"]
                         )
+
                         # Get a range of portals with respect to available agents in queue
                         enqueued_portals_to_distribute: List[Portal] = group[
                             :portals_to_distibute_count
                         ]
+
                         await self.distribute_enqueued_portals(
                             enqueued_portals_to_distribute, queue
                         )
+
+                    # Increase enqueued_iteration_count if there are available agents
+                    if are_available_agents:
+                        enqueued_iteration_count += 1
                 else:
                     enqueued_iteration_count = 0
 
