@@ -149,7 +149,7 @@ class AgentManager:
                             " the conversation is not within the business hour"
                         )
                     )
-                    await sleep(self.config["acd.search_pending_rooms_interval"])
+                    await sleep(self.config["acd.enqueued_portals.search_pending_rooms_interval"])
                     continue
 
                 self.log.debug(f"Searching for [{PortalState.ENQUEUED.value}] rooms...")
@@ -213,7 +213,7 @@ class AgentManager:
                 else:
                     self.log.debug(f"There's no [{PortalState.ENQUEUED.value}] rooms")
 
-                await sleep(self.config["acd.search_pending_rooms_interval"])
+                await sleep(self.config["acd.enqueued_portals.search_pending_rooms_interval"])
         except Exception as e:
             self.log.exception(e)
 
@@ -470,6 +470,9 @@ class AgentManager:
                 transfer_author=transfer_author,
             )
         )
+
+        if not transfer:
+            self.CURRENT_AGENT[queue.room_id] = agent_id
 
         await self.force_join_agent(portal.room_id, agent_id)
 

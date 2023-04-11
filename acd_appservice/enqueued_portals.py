@@ -34,8 +34,19 @@ class EnqueuedPortals:
         grouping them by queue, and distributing them to available agents in the queue.
 
         """
+        enqueued_iteration_count: int = 0
+
         try:
             while True:
+                # If the distribution enqueued portals process took too many iterations,
+                # change the enqueued time interval to distribute it faster
+                if self.config["acd.enqueued_portals.max_iterations"] >= enqueued_iteration_count:
+                    enqueued_interval = self.config["acd.enqueued_portals.min_time"]
+                else:
+                    enqueued_interval = self.config[
+                        "acd.enqueued_portals.search_pending_rooms_interval"
+                    ]
+
                 # Stop process enqueued rooms if the conversation is not within the business hour
                 if await self.business_hours.is_not_business_hour():
                     self.log.debug(
@@ -44,17 +55,20 @@ class EnqueuedPortals:
                             " the conversation is not within the business hour"
                         )
                     )
-                    await sleep(self.config["acd.search_pending_rooms_interval"])
+                    await sleep(enqueued_interval)
                     continue
 
                 grouped_enqueued_portals = await self.get_grouped_enqueued_portals()
 
                 if grouped_enqueued_portals:
+                    enqueued_iteration_count += 1
+
                     for group in grouped_enqueued_portals:
                         queue: Queue = await Queue.get_by_room_id(group[0].selected_option)
                         available_agents_count = await queue.get_available_agents_count()
                         portals_to_distibute_count = (
-                            available_agents_count * self.config["acd.queues.portals_per_agent"]
+                            available_agents_count
+                            * self.config["acd.enqueued_portals.portals_per_agent"]
                         )
                         # Get a range of portals with respect to available agents in queue
                         enqueued_portals_to_distribute: List[Portal] = group[
@@ -63,8 +77,10 @@ class EnqueuedPortals:
                         await self.distribute_enqueued_portals(
                             enqueued_portals_to_distribute, queue
                         )
+                else:
+                    enqueued_iteration_count = 0
 
-                await sleep(self.config["acd.search_pending_rooms_interval"])
+                await sleep(enqueued_interval)
 
         except Exception as error:
             self.log.exception(error)
@@ -93,7 +109,8 @@ class EnqueuedPortals:
                 )
                 continue
 
-            await self.agent_manager.process_distribution(portal=portal, queue=queue)
+            response = await self.agent_manager.process_distribution(portal=portal, queue=queue)
+            self.log.error(response)
 
     async def get_grouped_enqueued_portals(self) -> List[List[Portal]]:
         """This function groups enqueued portals by selected option in different lists to be processed later.
