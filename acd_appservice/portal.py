@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import re
+from datetime import datetime
 from typing import Dict, List, cast
 
 from mautrix.api import Method, SynapseAdminPath
@@ -56,6 +57,7 @@ class Portal(DBPortal, MatrixRoom):
             f"Updating room [{self.room_id}] state [{self.state.value}] to [{state.value}]"
         )
         self.state = state
+        self.state_date = self.now()
         await self.save()
 
     async def update_room_name(self) -> None:
@@ -521,6 +523,10 @@ class Portal(DBPortal, MatrixRoom):
                 portal.main_intent = intent
 
             return portal
+
+    @classmethod
+    def now(cls) -> str:
+        return datetime.utcnow()
 
     @property
     def is_locked(self) -> bool:

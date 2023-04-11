@@ -333,6 +333,13 @@ class AgentManager:
                         joined_message=joined_message,
                         transfer_author=transfer_author,
                     )
+
+                    # Set current agent in queue to avoid distribute
+                    # two chats to the same agent in distribution process,
+                    # it is useful in enqueued portals to have a clean distribution
+                    if not transfer:
+                        self.CURRENT_AGENT[queue.room_id] = agent_id
+
                     json_response.get("data")["detail"] = "Chat distribute successfully"
                     json_response["status"] = 200
                     break
@@ -470,9 +477,6 @@ class AgentManager:
                 transfer_author=transfer_author,
             )
         )
-
-        if not transfer:
-            self.CURRENT_AGENT[queue.room_id] = agent_id
 
         await self.force_join_agent(portal.room_id, agent_id)
 

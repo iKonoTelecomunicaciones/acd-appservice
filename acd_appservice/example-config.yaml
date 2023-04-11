@@ -191,9 +191,9 @@ acd:
         # How many chats will be distributed per agent when portals are enqueue
         portals_per_agent: 1
         # Max iterations in enqueued portals
-        max_iterations: 5
+        max_iterations: 50
         # Min time to distribute enqueued rooms
-        min_time: 10
+        min_time: 20
 
     # Use it to distribute chat when acd doesn't have the campaign selected by customer
     available_agents_room: "!PjgOHubuTvAlzPVTCr:dominio_cliente.com"
