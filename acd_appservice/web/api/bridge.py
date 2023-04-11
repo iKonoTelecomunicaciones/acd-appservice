@@ -783,8 +783,8 @@ async def get_bridges_status(request: web.Request) -> web.Response:
         bridge_conector = ProvisionBridge(
             config=puppet.config, session=puppet.intent.api.session, bridge=puppet.bridge
         )
-        status = await bridge_conector.ping(puppet.mxid)
-        bridges_status.append(status)
+        status, response = await bridge_conector.ping(puppet.mxid)
+        bridges_status.append(response)
 
     return web.json_response(data={"bridges_status": bridges_status})
 

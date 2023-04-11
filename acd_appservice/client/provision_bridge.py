@@ -210,7 +210,7 @@ class ProvisionBridge(Base):
 
         return response.status, data
 
-    async def ping(self, user_id: UserID) -> Dict:
+    async def ping(self, user_id: UserID) -> tuple[int, Dict]:
         """It sends a ping to the user with the given user_id.
 
         Parameters
@@ -220,7 +220,8 @@ class ProvisionBridge(Base):
 
         Returns
         -------
-            A dictionary with the key "error" and the value of the error message.
+            A tuple with status code and a dictionary with data or the
+            key "error" and the value of the error message.
 
         """
 
@@ -232,16 +233,18 @@ class ProvisionBridge(Base):
             )
             data = await response.json()
         except client_exceptions.ContentTypeError as err:
-            self.log.error(err)
-            data = {"error": await response.text()}
+            error_data = {"bridge": self.bridge, "mxid": user_id, "error": await response.text()}
+            self.log.error(error_data)
+            return 500, error_data
         except Exception as e:
-            self.log.error(e)
-            return {"error": str(e)}
+            error_data = {"bridge": self.bridge, "mxid": user_id, "error": str(e)}
+            self.log.error(error_data)
+            return 500, error_data
 
         if response.status not in [200, 201]:
             self.log.error(data)
 
-        return data
+        return response.status, data
 
     async def metainc_login(
         self, user_id: UserID, email: str, username: str, password: str
