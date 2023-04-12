@@ -14,18 +14,18 @@ from .util.business_hours import BusinessHour
 
 
 class EnqueuedPortals:
-    log: TraceLogger = logging.getLogger("acd.agent_manager")
+    log: TraceLogger = logging.getLogger("acd.enqueued_portals")
 
     def __init__(
         self,
         config: Config,
         intent: IntentAPI,
-        pupet_pk: int,
+        puppet_pk: int,
         agent_manager: AgentManager,
     ) -> None:
         self.config = config
         self.business_hours = BusinessHour(config=config, intent=intent)
-        self.puppet_pk = pupet_pk
+        self.puppet_pk = puppet_pk
         self.agent_manager = agent_manager
         self.intent = intent
 
@@ -38,7 +38,7 @@ class EnqueuedPortals:
 
         try:
             while True:
-                # If the distribution enqueued portals process took too many iterations,
+                # If the enqueued portals distribution process took too many iterations,
                 # change the enqueued time interval to distribute it faster
                 if enqueued_iteration_count >= self.config["acd.enqueued_portals.max_iterations"]:
                     enqueued_interval = self.config["acd.enqueued_portals.min_time"]
@@ -55,7 +55,7 @@ class EnqueuedPortals:
                             " the conversation is not within the business hour"
                         )
                     )
-                    await sleep(enqueued_interval)
+                    await sleep(self.config["acd.enqueued_portals.search_pending_rooms_interval"])
                     continue
 
                 grouped_enqueued_portals = await self.get_grouped_enqueued_portals()
@@ -64,6 +64,11 @@ class EnqueuedPortals:
                     are_available_agents = False
                     for group in grouped_enqueued_portals:
                         queue: Queue = await Queue.get_by_room_id(group[0].selected_option)
+
+                        self.log.info(
+                            f"Enqueued rooms in [{queue.name} - {queue.room_id}]: {len(group)}"
+                        )
+
                         available_agents_count = await queue.get_available_agents_count()
 
                         # Flag to know if iteration count will be increased

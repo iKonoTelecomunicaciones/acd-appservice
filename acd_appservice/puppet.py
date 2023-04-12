@@ -108,7 +108,7 @@ class Puppet(DBPuppet, BasePuppet):
         self.enqueued_portals = EnqueuedPortals(
             config=self.config,
             intent=self.intent,
-            pupet_pk=self.pk,
+            puppet_pk=self.pk,
             agent_manager=self.agent_manager,
         )
 
