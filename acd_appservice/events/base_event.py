@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from aiohttp import ClientSession
 from attr import dataclass, ib
@@ -8,7 +8,7 @@ from mautrix.api import HTTPAPI
 from mautrix.types import SerializableAttrs, UserID
 from mautrix.util.logging import TraceLogger
 
-from ..portal import PortalState
+from ..db.portal import PortalState
 from .models import ACDEventTypes, ACDPortalEvents
 
 log: TraceLogger = logging.getLogger("report.events")
