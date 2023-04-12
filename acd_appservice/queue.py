@@ -158,6 +158,17 @@ class Queue(DBQueue, MatrixRoom):
         agents = await self.get_agents() or []
         return len(agents)
 
+    async def get_available_agents_count(self) -> int:
+        """This function returns the number of available agents.
+
+        Returns
+        -------
+            An integer value which represents the count of available agents.
+
+        """
+        available_agents = await self.get_available_agents()
+        return len(available_agents) if available_agents else 0
+
     async def get_agents(self) -> List[User]:
         """Get all the users in the channel, remove the bots, and return the remaining users
 
@@ -178,6 +189,26 @@ class Queue(DBQueue, MatrixRoom):
 
         # remove bots from member list
         return self.remove_not_agents(members)
+
+    async def get_available_agents(self) -> List[User] | None:
+        """This function returns a list of available agents who are online and not paused,
+           or None if no agents are available.
+
+        Returns
+        -------
+            A list of `User` or `None` if there are no available agents.
+
+        """
+
+        agents: List[User] = await self.get_agents()
+        available_agents = [
+            agent
+            for agent in agents
+            if await agent.is_online(self.id) and not await agent.is_paused(self.id)
+        ]
+        if not available_agents:
+            available_agents = None
+        return available_agents
 
     def remove_not_agents(self, members: List[User]) -> List[User]:
         """Removes non-agents from a list of users

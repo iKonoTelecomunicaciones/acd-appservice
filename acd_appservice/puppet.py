@@ -14,6 +14,7 @@ from yarl import URL
 from .agent_manager import AgentManager
 from .config import Config
 from .db import Puppet as DBPuppet
+from .enqueued_portals import EnqueuedPortals
 from .portal import Portal
 from .room_manager import RoomManager
 
@@ -104,9 +105,17 @@ class Puppet(DBPuppet, BasePuppet):
             config=self.config,
             room_manager=self.room_manager,
         )
+        self.enqueued_portals = EnqueuedPortals(
+            config=self.config,
+            intent=self.intent,
+            puppet_pk=self.pk,
+            agent_manager=self.agent_manager,
+        )
 
         if not self.get_tasks_by_name(self.custom_mxid):
-            asyncio.create_task(self.agent_manager.process_enqueued_rooms(), name=self.custom_mxid)
+            asyncio.create_task(
+                self.enqueued_portals.process_enqueued_portals(), name=self.custom_mxid
+            )
         else:
             self.log.debug(f"The task process_pending_rooms.{self.custom_mxid} already exists")
 
