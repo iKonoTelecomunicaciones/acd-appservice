@@ -54,6 +54,10 @@ components:
       properties:
         room_id:
           type: string
+        company_phone:
+          type: string
+        user_id:
+          type: string
 
     LoginOk:
       type: object
@@ -149,6 +153,25 @@ components:
           $ref: '#/components/schemas/ControlRoom'
       example:
           room_id: "!JkbrMXRBOmnqacLMep:foo.com"
+          company_phone: 573128752478
+          user_id: "@acd1:example.com"
+
+    ControlRoomsOk:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            control_room_ids:
+              type: array
+              items:
+                type: string
+      example:
+          control_room_ids:
+            - "!JkbrMXRBOmnqacLMep:foo.com"
+            - "!KfdhsfjGHFusfYiHcH:foo.com"
+            - "!OpdfspasbGdfsGHcbD:foo.com"
+
 
     QrDataFail:
       type: object
@@ -698,6 +721,13 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ControlRoomDataOk'
+
+    ControlRooms:
+      description: ControlRoom.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ControlRoomsOk'
 
     LoginSuccessful:
       description: QR has been read.
