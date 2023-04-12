@@ -281,6 +281,6 @@ async def db_puppet(db: Database) -> int:
 
 
 @pytest_asyncio.fixture
-async def portal(db_puppet: Puppet) -> Portal:
+async def portal(db_puppet: Puppet, acd_init) -> Portal:
     room_id: RoomID = "!qVKwlyUXOCrBfZJOdh:example.com"
     return await Portal.get_by_room_id(room_id=room_id, fk_puppet=db_puppet)
