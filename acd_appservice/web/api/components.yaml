@@ -405,7 +405,7 @@ components:
       type: object
       description: "List of bridges status with connected, disconnected and error response"
       properties:
-        bridge_status:
+        bridges_status:
           type: array
           items:
             type: object
@@ -1103,7 +1103,7 @@ components:
             WhatsAppAccountDisconnected:
               summary: WhatsApp account disconnected
               value:
-                bridge_status:
+                bridges_status:
                   - admin: true
                     mxid: "@acd3:foo.com"
                     relay_whitelisted: true
@@ -1117,7 +1117,7 @@ components:
             FacebookAccountConnected:
               summary: Facebook account connected
               value:
-                bridge_status:
+                bridges_status:
                   - permissions: admin
                     mxid: "@acd4:foo.com"
                     facebook:
@@ -1153,14 +1153,14 @@ components:
             FacebookAccountDisconnected:
               summary: Facebook account disconnected
               value:
-                bridge_status:
+                bridges_status:
                   - permissions: admin
                     mxid: "@acd5:foo.com"
                     facebook: null
             InstagramAccountConnected:
               summary: Instagram account connected
               value:
-                bridge_status:
+                bridges_status:
                   - permissions: admin
                     mxid: "@acd6:foo.com"
                     instagram:
@@ -1296,21 +1296,21 @@ components:
             InstagramAccountDisconnected:
               summary: Instagram account disconnected
               value:
-                bridge_status:
+                bridges_status:
                   - permissions: admin
                     mxid: "@acd7:foo.com"
                     instagram: null
             InstagramAccountDisconnectedError:
               summary: Instagram account disconnected with error
               value:
-                bridge_status:
+                bridges_status:
                   - bridge: instagram
                     mxid: "@acd8:foo.com"
                     error: "500 Internal Server Error\n\nServer got itself in trouble"
             MultipleAccountStatus:
               summary: Multiple account status (2 WhatsApp's, 1 Instagram, 1 Facebook)
               value:
-                bridge_status:
+                bridges_status:
                   - admin: true
                     mxid: "@acd1:foo.com"
                     relay_whitelisted: true
