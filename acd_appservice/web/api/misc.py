@@ -5,8 +5,8 @@ from typing import Dict
 
 from aiohttp import web
 
-from ...db.user import User, UserRoles
 from ...puppet import Puppet
+from ...user import User, UserRoles
 from ...util import Util
 from ..base import _resolve_user_identifier, routes
 from ..error_responses import (
@@ -89,7 +89,7 @@ async def get_control_rooms() -> web.Response:
 
     responses:
         '200':
-            $ref: '#/components/responses/ControlRoomFound'
+            $ref: '#/components/responses/ControlRooms'
         '400':
             $ref: '#/components/responses/BadRequest'
         '404':
@@ -212,7 +212,21 @@ async def update_puppet(request: web.Request) -> web.Response:
     if data.get("email") and not _utils.is_email(email=data.get("email")):
         return web.json_response(**INVALID_EMAIL)
 
-    puppet.destination = data.get("destination")
+    destination = data.get("destination")
+
+    if Util.is_user_id(destination):
+        user: User = await User.get_by_mxid(destination, create=False)
+        # Check if the new destination is a menubot and
+        # if it's different from the current puppet destination.
+        # If the conditions are fulfilled,
+        # it kicks the current menubot from the control room and invites the new one.
+        if user and user.is_menubot and puppet.destination != destination:
+            current_menubot = await puppet.menubot_id
+            if current_menubot:
+                await puppet.intent.kick_user(puppet.control_room_id, current_menubot)
+            await puppet.intent.invite_user(puppet.control_room_id, destination)
+
+    puppet.destination = destination or puppet.destination
     puppet.email = data.get("email") or puppet.email
     puppet.phone = data.get("phone") or puppet.phone
     await puppet.save()

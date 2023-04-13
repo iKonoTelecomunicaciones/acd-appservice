@@ -1,6 +1,7 @@
 from mautrix.types import PowerLevelStateEventContent
 
 from ..puppet import Puppet
+from ..user import User
 from ..util import Util
 from .handler import CommandArg, CommandEvent, command_handler
 
@@ -83,10 +84,9 @@ async def create(evt: CommandEvent) -> Puppet:
 
         if destination:
             if Util.is_user_id(destination):
-                invitees.append(destination)
-            else:
-                if Util.is_room_alias(destination) or Util.is_room_id(destination):
-                    await evt.intent.bot.join_room(room_id_or_alias=destination)
+                user: User = await User.get_by_mxid(destination, create=False)
+                if user and user.is_menubot:
+                    invitees.append(destination)
 
             puppet.destination = destination
 
@@ -103,7 +103,6 @@ async def create(evt: CommandEvent) -> Puppet:
         )
 
         for user_id in evt.config["bridge.puppet_control_room.invitees"]:
-
             if user_id not in invitees:
                 invitees.append(user_id)
 
