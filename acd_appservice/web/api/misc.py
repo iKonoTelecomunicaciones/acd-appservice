@@ -175,8 +175,6 @@ async def update_puppet(request: web.Request) -> web.Response:
                             type: string
                         phone:
                             type: string
-                    required:
-                        - destination
                     example:
                         destination: "!foo:foo.com | @agent1:foo.com | @menubot1:foo.com"
                         email: "sample@foo.com"
@@ -224,7 +222,7 @@ async def update_puppet(request: web.Request) -> web.Response:
                 await puppet.intent.kick_user(puppet.control_room_id, current_menubot)
             await puppet.intent.invite_user(puppet.control_room_id, destination)
 
-    puppet.destination = destination
+    puppet.destination = destination or puppet.destination
     puppet.email = data.get("email") or puppet.email
     puppet.phone = data.get("phone") or puppet.phone
     await puppet.save()
