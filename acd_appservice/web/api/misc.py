@@ -216,6 +216,9 @@ async def update_puppet(request: web.Request) -> web.Response:
 
     if Util.is_user_id(destination):
         user: User = await User.get_by_mxid(destination, create=False)
+        # Check if  user is menubot and if it is different to the current puppet destination.
+        # If the conditions will be fulfilled,
+        # it kicks the current menubot from the control room and invite the new.
         if user and user.is_menubot and puppet.destination != destination:
             current_menubot = await puppet.menubot_id
             if current_menubot:
