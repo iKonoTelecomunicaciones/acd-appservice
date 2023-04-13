@@ -403,6 +403,7 @@ components:
 
     BridgesStatusSuccessful:
       type: object
+      description: "List of bridges status with connected, disconnected and error response"
       properties:
         bridge_status:
           type: array
@@ -415,6 +416,7 @@ components:
                 type: string
               relay_whitelisted:
                 type: boolean
+              # WhatsApp
               whatsapp:
                 type: object
                 properties:
@@ -438,37 +440,334 @@ components:
                   platform:
                     type: string
               whitelisted:
+                type: boolean
+              # Facebook
+              permissions:
+                type: string
+              facebook:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  username:
+                    type: string
+                  structured_name:
+                    type: object
+                    properties:
+                      parts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            length:
+                              type: integer
+                            offset:
+                              type: integer
+                            part:
+                              type: string
+                      text:
+                        type: string
+                      locale:
+                        type: object
+                  registration_time:
+                    type: integer
+                  is_verified:
                     type: boolean
-      example:
-        bridges_status:
-          - admin: true
-            mxid: "@acd1:foo.com"
-            relay_whitelisted: true
-            whatsapp:
-              conn:
-                is_connected: true
-                is_logged_in: true
-              device: 49
-              has_session: true
-              jid: 5730000000.0:49@s.whatsapp.net
-              management_room: "!qygKFQLVCpfPLjEWqc:foo.com"
-              phone: "+5730000000"
-              platform: smba
-            whitelisted: true
-          - admin: true
-            mxid: "@acd2:foo.com"
-            relay_whitelisted: true
-            whatsapp:
-              conn:
-                is_connected: true
-                is_logged_in: true
-              device: 25
-              has_session: true
-              jid: 573001290000.0:25@s.whatsapp.net
-              management_room: "!pCJFIiZUmWnuigitTT:foo.com"
-              phone: "+573001290000"
-              platform: smba
-            whitelisted: true
+                  squareProfilePicSmall:
+                    type: object
+                    properties:
+                      uri:
+                        type: string
+                      height:
+                        type: integer
+                      width:
+                        type: integer
+                  squareProfilePicBig:
+                    type: object
+                    properties:
+                      uri:
+                        type: string
+                      height:
+                        type: integer
+                      width:
+                        type: integer
+                  squareProfilePicHuge:
+                    type: object
+                    properties:
+                      uri:
+                        type: string
+                      height:
+                        type: integer
+                      width:
+                        type: integer
+                  connected:
+                    type: boolean
+                  device_displayname:
+                    type: string
+              # Instagram
+              instagram:
+                type: object
+                properties:
+                  pk:
+                    type: integer
+                  username:
+                    type: string
+                  full_name:
+                    type: string
+                  is_private:
+                    type: boolean
+                  is_verified:
+                    type: boolean
+                  profile_pic_url:
+                    type: string
+                  profile_pic_id:
+                    type: string
+                  has_anonymous_profile_picture:
+                    type: boolean
+                  account_badges:
+                    type: array
+                  reel_auto_archive:
+                    type: string
+                  has_highlight_reels:
+                    type: boolean
+                  phone_number:
+                    type: string
+                  country_code:
+                    type: integer
+                  national_number:
+                    type: integer
+                  allowed_commenter_type:
+                    type: string
+                  biography:
+                    type: string
+                  can_link_entities_in_bio:
+                    type: boolean
+                  biography_with_entities:
+                    type: object
+                    properties:
+                      raw_text:
+                        type: string
+                      entities:
+                        type: array
+                  external_url:
+                    type: string
+                  has_biography_translation:
+                    type: boolean
+                  hd_profile_pic_versions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        url:
+                          type: string
+                        width:
+                          type: integer
+                        height:
+                          type: integer
+                  hd_profile_pic_url_info:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                      width:
+                        type: integer
+                      height:
+                        type: integer
+                  show_conversion_edit_entry:
+                    type: boolean
+                  gender:
+                    type: integer
+                  custom_gender:
+                    type: string
+                  email:
+                    type: string
+                  profile_edit_params:
+                    type: object
+                    properties:
+                      username:
+                        type: object
+                        properties:
+                          should_show_confirmation_dialog:
+                            type: boolean
+                          is_pending_review:
+                            type: boolean
+                          confirmation_dialog_text:
+                            type: string
+                          disclaimer_text:
+                            type: string
+                      full_name:
+                        type: object
+                        properties:
+                          should_show_confirmation_dialog:
+                            type: boolean
+                          is_pending_review:
+                            type: boolean
+                          confirmation_dialog_text:
+                            type: string
+                          disclaimer_text:
+                            type: string
+                  primary_profile_link_type:
+                    type: integer
+                  show_fb_link_on_profile:
+                    type: boolean
+                  can_hide_category:
+                    type: boolean
+                  can_hide_public_contacts:
+                    type: boolean
+                  category:
+                    type: string
+                  should_show_category:
+                    type: boolean
+                  category_id:
+                    type: integer
+                  is_category_tappable:
+                    type: boolean
+                  should_show_public_contacts:
+                    type: boolean
+                  is_eligible_for_smb_support_flow:
+                    type: boolean
+                  is_eligible_for_lead_center:
+                    type: boolean
+                  is_experienced_advertiser:
+                    type: boolean
+                  lead_details_app_id:
+                    type: string
+                  is_business:
+                    type: boolean
+                  professional_conversion_suggested_account_type:
+                    type: integer
+                  account_type:
+                    type: integer
+                  direct_messaging:
+                    type: string
+                  fb_page_call_to_action_id:
+                    type: string
+                  can_claim_page:
+                    type: boolean
+                  can_crosspost_without_fb_token:
+                    type: boolean
+                  instagram_location_id:
+                    type: string
+                  address_street:
+                    type: string
+                  business_contact_method:
+                    type: string
+                  city_id:
+                    type: integer
+                  city_name:
+                    type: string
+                  contact_phone_number:
+                    type: string
+                  is_profile_audio_call_enabled:
+                    type: boolean
+                  latitude:
+                    type: integer
+                  longitude:
+                    type: integer
+                  public_email:
+                    type: string
+                  public_phone_country_code:
+                    type: string
+                  public_phone_number:
+                    type: string
+                  zip:
+                    type: string
+                  displayed_action_button_partner:
+                    type: object
+                  smb_delivery_partner:
+                    type: object
+                  smb_support_delivery_partner:
+                    type: object
+                  displayed_action_button_type:
+                    type: object
+                  smb_support_partner:
+                    type: object
+                  is_call_to_action_enabled:
+                    type: boolean
+                  num_of_admined_pages:
+                    type: integer
+                  page_id:
+                    type: object
+                  page_name:
+                    type: object
+                  ads_page_id:
+                    type: object
+                  ads_page_name:
+                    type: object
+                  bio_links:
+                    type: array
+                  can_add_fb_group_link_on_profile:
+                    type: boolean
+                  is_quiet_mode_enabled:
+                    type: boolean
+                  last_seen_timezone:
+                    type: string
+                  birthday:
+                    type: string
+                  fbid_v2:
+                    type: string
+                  interop_messaging_user_fbid:
+                    type: integer
+                  is_hide_more_comment_enabled:
+                    type: boolean
+                  is_muted_words_custom_enabled:
+                    type: boolean
+                  is_muted_words_global_enabled:
+                    type: boolean
+                  is_muted_words_spamscam_enabled:
+                    type: boolean
+                  is_supervision_features_enabled:
+                    type: boolean
+                  has_nme_badge:
+                    type: boolean
+                  pk_id:
+                    type: string
+                  pronouns:
+                    type: array
+                  supervision_info:
+                    type: object
+                    properties:
+                      is_eligible_for_supervision:
+                        type: boolean
+                      is_supervised_user:
+                        type: boolean
+                      is_guardian_user:
+                        type: boolean
+                      is_supervised_by_viewer:
+                        type: boolean
+                      is_guardian_of_viewer:
+                        type: boolean
+                      has_stated_age:
+                        type: boolean
+                      screen_time_daily_limit_seconds:
+                        type: object
+                      screen_time_daily_limit_description:
+                        type: object
+                      fc_url:
+                        type: string
+                      quiet_time_intervals:
+                        type: object
+                      is_quiet_time_feature_enabled:
+                        type: boolean
+                      daily_time_limit_without_extensions_seconds:
+                        type: object
+                      latest_valid_time_limit_extension_request:
+                        type: object
+                  trusted_username:
+                    type: string
+                  trust_days:
+                    type: integer
+                  device_displayname:
+                    type: string
+                  mqtt_is_connected:
+                    type: boolean
+              # Error
+              error:
+                type: string
+              bridge:
+                type: string
 
     AgentOperation:
       type: object
@@ -777,11 +1076,304 @@ components:
             $ref: '#/components/schemas/Error'
 
     BridgesStatus:
-      description: Bridges status.
+      description: Return a list with JSON responses of the bridges status.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/BridgesStatusSuccessful'
+          examples:
+            WhatsAppConnected:
+              summary: WhatsApp account connected
+              value:
+                bridges_status:
+                  - admin: true
+                    mxid: "@acd1:foo.com"
+                    relay_whitelisted: true
+                    whatsapp:
+                      conn:
+                        is_connected: true
+                        is_logged_in: true
+                      device: 49
+                      has_session: true
+                      jid: 5730000000.0:49@s.whatsapp.net
+                      management_room: "!qygKFQLVCpfPLjEWqc:foo.com"
+                      phone: "+573000000000"
+                      platform: android
+                    whitelisted: true
+            WhatsAppAccountDisconnected:
+              summary: WhatsApp account disconnected
+              value:
+                bridge_status:
+                  - admin: true
+                    mxid: "@acd3:foo.com"
+                    relay_whitelisted: true
+                    whatsapp:
+                      conn:
+                        is_connected: false
+                        is_logged_in: false
+                      has_session: false
+                      management_room: ''
+                    whitelisted: true
+            FacebookAccountConnected:
+              summary: Facebook account connected
+              value:
+                bridge_status:
+                  - permissions: admin
+                    mxid: "@acd4:foo.com"
+                    facebook:
+                      id: '100023458833210'
+                      name: John Doe
+                      username: ''
+                      structured_name:
+                        parts:
+                        - length: 17
+                          offset: 0
+                          part: first
+                        - length: 5
+                          offset: 18
+                          part: last
+                        text: John Doe
+                        locale: null
+                      registration_time: 1635978984
+                      is_verified: false
+                      squareProfilePicSmall:
+                        uri: https://scontent.xx.fbcdn.net/v/t1.30497-1/123456968_2856368904622192_1959732218791123456_n.png?stp=dst-webp_p111x111&_nc_cat=1&ccb=1-7&_nc_sid=7206a8&_nc_ohc=wsuZKaBJEycAX8FTFHX&_nc_ad=z-m&_nc_cid=0&_nc_ht=scontent.xx&oh=00_AfCYGVQd7sQEtU4dOfy_4aKfKnIO0F8PGLKheL-fEYXqwg&oe=123ABC321
+                        height: 111
+                        width: 111
+                      squareProfilePicBig:
+                        uri: https://scontent.xx.fbcdn.net/v/t1.30497-1/123456968_2856368904622192_1959732218791123456_n.png?stp=dst-webp&_nc_cat=1&ccb=1-7&_nc_sid=7206a8&_nc_ohc=wsuZKaBJEycAX8FTFHX&_nc_ad=z-m&_nc_cid=0&_nc_ht=scontent.xx&oh=00_AfBFnC72DhG9f5PyEd-2ahVSPCxY68qSDMZwoyQx2MHUNQ&oe=123ABC321
+                        height: 180
+                        width: 180
+                      squareProfilePicHuge:
+                        uri: https://scontent.xx.fbcdn.net/v/t1.30497-1/123456968_2856368904622192_1959732218791123456_n.png?stp=dst-webp&_nc_cat=1&ccb=1-7&_nc_sid=7206a8&_nc_ohc=wsuZKaBJEycAX8FTFHX&_nc_ad=z-m&_nc_cid=0&_nc_ht=scontent.xx&oh=00_AfBFnC72DhG9f5PyEd-2ahVSPCxY68qSDMZwoyQx2MHUNQ&oe=123ABC321
+                        height: 180
+                        width: 180
+                      connected: true
+                      device_displayname: Google Pixel 3
+            FacebookAccountDisconnected:
+              summary: Facebook account disconnected
+              value:
+                bridge_status:
+                  - permissions: admin
+                    mxid: "@acd5:foo.com"
+                    facebook: null
+            InstagramAccountConnected:
+              summary: Instagram account connected
+              value:
+                bridge_status:
+                  - permissions: admin
+                    mxid: "@acd6:foo.com"
+                    instagram:
+                      pk: 9876543210
+                      username: ikonotest
+                      full_name: "iKono Test"
+                      is_private: false
+                      is_verified: false
+                      profile_pic_url: https://scontent-bog1-1.cdninstagram.com/v/t51.2885-19/12345604_2174248376063360_9105328336028123456_n.jpg?stp=dst-jpg_s150x150&_nc_ht=scontent-bog1-1.cdninstagram.com&_nc_cat=108&_nc_ohc=Gs3Vt6mnYJ0AX9R8TuO&edm=AJlpnE4BAAAA&ccb=7-5&oh=00_AfDOQ9Od003WV2LiZLg-X-nCHU6QbsX_WNzecADD--fm-Q&oe=643B6167&_nc_sid=123456
+                      profile_pic_id: '1234562913087412495_8308123456'
+                      has_anonymous_profile_picture: false
+                      account_badges: []
+                      reel_auto_archive: 'on'
+                      has_highlight_reels: false
+                      phone_number: "+573210001234"
+                      country_code: 57
+                      national_number: 3210001234
+                      allowed_commenter_type: any
+                      biography: ''
+                      can_link_entities_in_bio: true
+                      biography_with_entities:
+                        raw_text: ''
+                        entities: []
+                      external_url: ''
+                      has_biography_translation: false
+                      hd_profile_pic_versions:
+                      - url: https://scontent-bog1-1.cdninstagram.com/v/t51.2885-19/123456804_2174248376063360_9105328336028123456_n.jpg?stp=dst-jpg_s320x320&_nc_ht=scontent-bog1-1.cdninstagram.com&_nc_cat=108&_nc_ohc=Gs3Vt6mnYJ0AX9R8TuO&edm=AJlpnE4BAAAA&ccb=7-5&oh=00_AfA8wxJkmhdrWvIY2ByKqV8JA-3C5ONZOCjgyZqoQd7v_Q&oe=643B6167&_nc_sid=123456
+                        width: 320
+                        height: 320
+                      - url: https://scontent-bog1-1.cdninstagram.com/v/t51.2885-19/123456804_2174248376063360_9105328336028123456_n.jpg?stp=dst-jpg_s640x640&_nc_ht=scontent-bog1-1.cdninstagram.com&_nc_cat=108&_nc_ohc=Gs3Vt6mnYJ0AX9R8TuO&edm=AJlpnE4BAAAA&ccb=7-5&oh=00_AfCra9th7T4bVT7hqdNU5kVhWrJH83W-QTLARivj1aeYaw&oe=643B6167&_nc_sid=123456
+                        width: 640
+                        height: 640
+                      hd_profile_pic_url_info:
+                        url: https://scontent-bog1-1.cdninstagram.com/v/t51.2885-19/123456804_2174248376063360_9105328336028123456_n.jpg?_nc_ht=scontent-bog1-1.cdninstagram.com&_nc_cat=108&_nc_ohc=Gs3Vt6mnYJ0AX9R8TuO&edm=AJlpnE4BAAAA&ccb=7-5&oh=00_AfD_1SZpA1d6KBlYRAGxI9ok85Uurzhk1MIz3bMPZG5YGw&oe=643B6167&_nc_sid=123456
+                        width: 1080
+                        height: 1080
+                      show_conversion_edit_entry: false
+                      gender: 3
+                      custom_gender: ''
+                      email: fake@email.foo.com
+                      profile_edit_params:
+                        username:
+                          should_show_confirmation_dialog: false
+                          is_pending_review: false
+                          confirmation_dialog_text: Because your account reaches a lot of people, your
+                            username change may need to be reviewed. If so, you'll be notified when we've
+                            reviewed it. If not, your username will change immediately.
+                          disclaimer_text: ''
+                        full_name:
+                          should_show_confirmation_dialog: false
+                          is_pending_review: false
+                          confirmation_dialog_text: Because your account is verified, your name change
+                            may need to be reviewed. If so, you'll be notified when we've reviewed it.
+                            If not, your name will change immediately.
+                          disclaimer_text: ''
+                      primary_profile_link_type: 0
+                      show_fb_link_on_profile: false
+                      can_hide_category: true
+                      can_hide_public_contacts: true
+                      category: ''
+                      should_show_category: true
+                      category_id: 0
+                      is_category_tappable: true
+                      should_show_public_contacts: true
+                      is_eligible_for_smb_support_flow: false
+                      is_eligible_for_lead_center: false
+                      is_experienced_advertiser: false
+                      lead_details_app_id: com.bloks.www.ig.smb.lead_gen.subpage
+                      is_business: true
+                      professional_conversion_suggested_account_type: 2
+                      account_type: 2
+                      direct_messaging: UNKNOWN
+                      fb_page_call_to_action_id: ''
+                      can_claim_page: false
+                      can_crosspost_without_fb_token: false
+                      instagram_location_id: ''
+                      address_street: ''
+                      business_contact_method: UNKNOWN
+                      city_id: 0
+                      city_name: ''
+                      contact_phone_number: ''
+                      is_profile_audio_call_enabled: false
+                      latitude: 0
+                      longitude: 0
+                      public_email: fake@email.foo.com
+                      public_phone_country_code: ''
+                      public_phone_number: ''
+                      zip: ''
+                      displayed_action_button_partner: null
+                      smb_delivery_partner: null
+                      smb_support_delivery_partner: null
+                      displayed_action_button_type: null
+                      smb_support_partner: null
+                      is_call_to_action_enabled: false
+                      num_of_admined_pages: 0
+                      page_id: null
+                      page_name: null
+                      ads_page_id: null
+                      ads_page_name: null
+                      bio_links: []
+                      can_add_fb_group_link_on_profile: false
+                      is_quiet_mode_enabled: false
+                      last_seen_timezone: ''
+                      birthday: '1999-30-01'
+                      fbid_v2: '12345608290123456'
+                      interop_messaging_user_fbid: 123456641123456
+                      is_hide_more_comment_enabled: false
+                      is_muted_words_custom_enabled: false
+                      is_muted_words_global_enabled: false
+                      is_muted_words_spamscam_enabled: false
+                      is_supervision_features_enabled: true
+                      has_nme_badge: false
+                      pk_id: '9876543210'
+                      pronouns: []
+                      supervision_info:
+                        is_eligible_for_supervision: false
+                        is_supervised_user: false
+                        is_guardian_user: false
+                        is_supervised_by_viewer: false
+                        is_guardian_of_viewer: false
+                        has_stated_age: true
+                        screen_time_daily_limit_seconds: null
+                        screen_time_daily_limit_description: null
+                        fc_url: https://familycenter.instagram.com/dashboard/
+                        quiet_time_intervals: null
+                        is_quiet_time_feature_enabled: false
+                        daily_time_limit_without_extensions_seconds: null
+                        latest_valid_time_limit_extension_request: null
+                      trusted_username: ikonotest
+                      trust_days: 14
+                      device_displayname: " Google  Pixel 6"
+                      mqtt_is_connected: true
+            InstagramAccountDisconnected:
+              summary: Instagram account disconnected
+              value:
+                bridge_status:
+                  - permissions: admin
+                    mxid: "@acd7:foo.com"
+                    instagram: null
+            InstagramAccountDisconnectedError:
+              summary: Instagram account disconnected with error
+              value:
+                bridge_status:
+                  - bridge: instagram
+                    mxid: "@acd8:foo.com"
+                    error: "500 Internal Server Error\n\nServer got itself in trouble"
+            MultipleAccountStatus:
+              summary: Multiple account status (2 WhatsApp's, 1 Instagram, 1 Facebook)
+              value:
+                bridge_status:
+                  - admin: true
+                    mxid: "@acd1:foo.com"
+                    relay_whitelisted: true
+                    whatsapp:
+                      conn:
+                        is_connected: true
+                        is_logged_in: true
+                      device: 49
+                      has_session: true
+                      jid: 5730000000.0:49@s.whatsapp.net
+                      management_room: "!qygKFQLVCpfPLjEWqc:foo.com"
+                      phone: "+573000000000"
+                      platform: android
+                    whitelisted: true
+                  - admin: true
+                    mxid: "@acd2:foo.com"
+                    relay_whitelisted: true
+                    whatsapp:
+                      conn:
+                        is_connected: true
+                        is_logged_in: true
+                      device: 25
+                      has_session: true
+                      jid: 573001290000.0:25@s.whatsapp.net
+                      management_room: "!pCJFIiZUmWnuigitTT:foo.com"
+                      phone: "+573001290000"
+                      platform: android
+                    whitelisted: true
+                  - bridge: instagram
+                    mxid: "@acd8:foo.com"
+                    error: "500 Internal Server Error\n\nServer got itself in trouble"
+                  - permissions: admin
+                    mxid: "@acd4:foo.com"
+                    facebook:
+                      id: '100023458833210'
+                      name: John Doe
+                      username: ''
+                      structured_name:
+                        parts:
+                        - length: 17
+                          offset: 0
+                          part: first
+                        - length: 5
+                          offset: 18
+                          part: last
+                        text: John Doe
+                        locale: null
+                      registration_time: 1635978984
+                      is_verified: false
+                      squareProfilePicSmall:
+                        uri: https://scontent.xx.fbcdn.net/v/t1.30497-1/123456968_2856368904622192_1959732218791123456_n.png?stp=dst-webp_p111x111&_nc_cat=1&ccb=1-7&_nc_sid=7206a8&_nc_ohc=wsuZKaBJEycAX8FTFHX&_nc_ad=z-m&_nc_cid=0&_nc_ht=scontent.xx&oh=00_AfCYGVQd7sQEtU4dOfy_4aKfKnIO0F8PGLKheL-fEYXqwg&oe=123ABC321
+                        height: 111
+                        width: 111
+                      squareProfilePicBig:
+                        uri: https://scontent.xx.fbcdn.net/v/t1.30497-1/123456968_2856368904622192_1959732218791123456_n.png?stp=dst-webp&_nc_cat=1&ccb=1-7&_nc_sid=7206a8&_nc_ohc=wsuZKaBJEycAX8FTFHX&_nc_ad=z-m&_nc_cid=0&_nc_ht=scontent.xx&oh=00_AfBFnC72DhG9f5PyEd-2ahVSPCxY68qSDMZwoyQx2MHUNQ&oe=123ABC321
+                        height: 180
+                        width: 180
+                      squareProfilePicHuge:
+                        uri: https://scontent.xx.fbcdn.net/v/t1.30497-1/123456968_2856368904622192_1959732218791123456_n.png?stp=dst-webp&_nc_cat=1&ccb=1-7&_nc_sid=7206a8&_nc_ohc=wsuZKaBJEycAX8FTFHX&_nc_ad=z-m&_nc_cid=0&_nc_ht=scontent.xx&oh=00_AfBFnC72DhG9f5PyEd-2ahVSPCxY68qSDMZwoyQx2MHUNQ&oe=123ABC321
+                        height: 180
+                        width: 180
+                      connected: true
+                      device_displayname: Google Pixel 3
 
     Logout:
       description: Successful logout.
