@@ -124,7 +124,9 @@ class EnqueuedPortals:
                 )
                 continue
 
-            response = await self.agent_manager.process_distribution(portal=portal, queue=queue)
+            response = await self.agent_manager.process_distribution(
+                portal=portal, destination=queue.room_id
+            )
             self.log.info(response)
 
     async def get_grouped_enqueued_portals(self) -> List[List[Portal]]:

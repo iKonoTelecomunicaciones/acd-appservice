@@ -1200,7 +1200,7 @@ async def acd(request: web.Request) -> web.Response:
 
     requestBody:
         required: true
-        description: A JSON with `customer_room_id`, `campaign_room_id`,
+        description: A JSON with `customer_room_id`, `destination`,
                      `joined_message` and `put_enqueued_portal`. The customer_room_id is required.
         content:
             application/json:
@@ -1210,23 +1210,30 @@ async def acd(request: web.Request) -> web.Response:
                         customer_room_id:
                             description: "Portal room id to be distributed"
                             type: string
-                        campaign_room_id:
-                            description: "Queue room id where chat will be distributed"
+                        destination:
+                            description: "Queue room id or agent mxid where chat will be distributed"
                             type: string
                         joined_message:
                             description: "Message to show client when agent will enter the room"
                             type: string
                         put_enqueued_portal:
                             description: "If the distribution process was not successful,
-                                          do you want to put portal enqueued?"
+                                          do you want to put portal enqueued?\n
+                                          Note: This parameter is only using when destination is a queue"
+                            type: string
+                        force_distribute:
+                            description: "You want to force the agent distribution?\n
+                                         Note: This parameter is only using when destination is an agent"
                             type: string
                     required:
                         - customer_room_id
+                        - destination
                     example:
                         customer_room_id: "!duOWDQQCshKjQvbyoh:example.com"
-                        campaign_room_id: "!TXMsaIzbeURlKPeCxJ:example.com"
+                        destination: "!TXMsaIzbeURlKPeCxJ:example.com | @agent1:example.com"
                         joined_message: "{agentname} has joined the chat."
                         put_enqueued_portal: "`yes` | `no`"
+                        force_distribute: "`yes` | `no`"
 
     responses:
         '400':
@@ -1250,16 +1257,21 @@ async def acd(request: web.Request) -> web.Response:
         return web.json_response(**REQUIRED_VARIABLES)
 
     customer_room_id = data.get("customer_room_id")
-    campaign_room_id = data.get("campaign_room_id") or ""
+    destination = data.get("destination") or ""
     joined_message = data.get("joined_message") or ""
-    put_enqueued_portal = data.get("put_enqueued_portal") or True
+    put_enqueued_portal = data.get("put_enqueued_portal") or "yes"
+    force_distribute = data.get("force_distribute") or "no"
 
     # Get the puppet from customer_room_id if exists
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     if not puppet:
         return web.json_response(**NO_PUPPET_IN_PORTAL)
 
-    args = [customer_room_id, campaign_room_id, joined_message, put_enqueued_portal]
+    args = [customer_room_id, destination, joined_message]
+    if Util.is_room_id(destination):
+        args.append(put_enqueued_portal)
+    elif Util.is_user_id(destination):
+        args.append(force_distribute)
 
     response = await get_commands().handle(
         sender=user, command="acd", args_list=args, intent=puppet.intent, is_management=False

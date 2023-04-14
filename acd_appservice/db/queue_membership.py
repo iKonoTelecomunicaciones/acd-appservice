@@ -118,6 +118,12 @@ class QueueMembership:
         return result
 
     @classmethod
+    async def get_count_by_user_and_paused_state(cls, fk_user: int, paused: bool) -> int:
+        q = f"SELECT COUNT(*) FROM queue_membership WHERE fk_user=$1 AND paused=$2"
+        result = await cls.db.fetchval(q, fk_user, paused)
+        return result
+
+    @classmethod
     async def get_by_queue(cls, fk_queue: int) -> List[QueueMembership] | None:
         """Get a queue membership by queue."
 
