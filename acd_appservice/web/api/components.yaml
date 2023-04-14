@@ -401,9 +401,9 @@ components:
         error: "You're not logged in"
         errcode: "not logged in"
 
-    BridgesStatusSuccessful:
+    BridgesStatusWhatsApp:
       type: object
-      description: "List of bridges status with connected, disconnected and error response"
+      description: "WhatsApp bridge status schema"
       properties:
         bridges_status:
           type: array
@@ -416,7 +416,6 @@ components:
                 type: string
               relay_whitelisted:
                 type: boolean
-              # WhatsApp
               whatsapp:
                 type: object
                 properties:
@@ -441,7 +440,18 @@ components:
                     type: string
               whitelisted:
                 type: boolean
-              # Facebook
+
+    BridgesStatusFacebook:
+      type: object
+      description: "Facebook bridge status schema"
+      properties:
+        bridges_status:
+          type: array
+          items:
+            type: object
+            properties:
+              mxid:
+                type: string
               permissions:
                 type: string
               facebook:
@@ -506,7 +516,20 @@ components:
                     type: boolean
                   device_displayname:
                     type: string
-              # Instagram
+
+    BridgesStatusInstagram:
+      type: object
+      description: "Instagram bridge status schema"
+      properties:
+        bridges_status:
+          type: array
+          items:
+            type: object
+            properties:
+              mxid:
+                type: string
+              permissions:
+                type: string
               instagram:
                 type: object
                 properties:
@@ -763,10 +786,21 @@ components:
                     type: string
                   mqtt_is_connected:
                     type: boolean
-              # Error
-              error:
-                type: string
+
+    BridgesStatusError:
+      type: object
+      description: "Bridge status with error response"
+      properties:
+        bridges_status:
+          type: array
+          items:
+            type: object
+            properties:
               bridge:
+                type: string
+              mxid:
+                type: string
+              error:
                 type: string
 
     AgentOperation:
@@ -1080,7 +1114,11 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/BridgesStatusSuccessful'
+            anyOf:
+             - $ref: '#/components/schemas/BridgesStatusWhatsApp'
+             - $ref: '#/components/schemas/BridgesStatusFacebook'
+             - $ref: '#/components/schemas/BridgesStatusInstagram'
+             - $ref: '#/components/schemas/BridgesStatusError'
           examples:
             WhatsAppConnected:
               summary: WhatsApp account connected
