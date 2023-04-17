@@ -1227,7 +1227,6 @@ async def acd(request: web.Request) -> web.Response:
                             type: string
                     required:
                         - customer_room_id
-                        - destination
                     example:
                         customer_room_id: "!duOWDQQCshKjQvbyoh:example.com"
                         destination: "!TXMsaIzbeURlKPeCxJ:example.com | @agent1:example.com"
@@ -1257,7 +1256,9 @@ async def acd(request: web.Request) -> web.Response:
         return web.json_response(**REQUIRED_VARIABLES)
 
     customer_room_id = data.get("customer_room_id")
-    destination = data.get("destination") or ""
+    # TODO change name to destination when menu will be updated
+    # TODO put required destination
+    campaign_room_id = data.get("campaign_room_id") or ""
     joined_message = data.get("joined_message") or ""
     put_enqueued_portal = data.get("put_enqueued_portal") or "yes"
     force_distribute = data.get("force_distribute") or "no"
@@ -1267,10 +1268,10 @@ async def acd(request: web.Request) -> web.Response:
     if not puppet:
         return web.json_response(**NO_PUPPET_IN_PORTAL)
 
-    args = [customer_room_id, destination, joined_message]
-    if Util.is_room_id(destination):
+    args = [customer_room_id, campaign_room_id, joined_message]
+    if Util.is_room_id(campaign_room_id):
         args.append(put_enqueued_portal)
-    elif Util.is_user_id(destination):
+    elif Util.is_user_id(campaign_room_id):
         args.append(force_distribute)
 
     response = await get_commands().handle(
