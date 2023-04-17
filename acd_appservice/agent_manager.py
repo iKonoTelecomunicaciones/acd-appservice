@@ -87,7 +87,7 @@ class AgentManager:
         # Send an informative message if the conversation started no within the business hour
         if await self.business_hours.is_not_business_hour():
             await self.business_hours.send_business_hours_message(portal=portal)
-            if Util.is_room_id():
+            if Util.is_room_id(destination):
                 if put_enqueued_portal:
                     self.log.debug(f"Portal [{portal.room_id}] state has been changed to ENQUEUED")
                     await portal.update_state(state=PortalState.ENQUEUED)
