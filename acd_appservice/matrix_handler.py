@@ -383,6 +383,18 @@ class MatrixHandler:
         if not await Portal.is_portal(room_id=room_id):
             return
 
+        # In the widget, the puppet is not invited,
+        # it joins the room directly, so the portal has not been created yet
+        if Portal.is_guest_room(room_id=room_id):
+            puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
+            if puppet:
+                await Portal.get_by_room_id(
+                    room_id=room_id,
+                    fk_puppet=puppet.pk,
+                    intent=puppet.intent,
+                    bridge=puppet.bridge,
+                )
+
         portal = await Portal.get_by_room_id(room_id=room_id)
 
         if not Puppet.get_id_from_mxid(user_id):
