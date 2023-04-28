@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import TYPE_CHECKING, Dict, List
 
 from markdown import markdown
@@ -34,6 +35,23 @@ class MatrixRoom:
     def init_cls(cls, bridge: "ACDAppService") -> None:
         cls.config = bridge.config
         cls.az = bridge.az
+
+    @classmethod
+    async def is_guest_room(self, room_id: RoomID) -> bool:
+        """Checks if this is a guest room.
+
+        Returns
+        -------
+            bool
+        """
+        username_regex = self.config["acd.username_regex_guest"]
+        members = await self.az.intent.get_room_members(room_id=room_id)
+
+        for member in members:
+            if re.search(username_regex, member):
+                return True
+
+        return False
 
     async def post_init(self) -> None:
         """If the room is a control room, then the bridge is the bridge of the puppet.

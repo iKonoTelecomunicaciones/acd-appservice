@@ -669,8 +669,7 @@ class MatrixHandler:
                 return
 
         # Ignore messages from whatsapp bots
-        bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
-        if bridge and sender.mxid == self.config[f"bridges.{bridge}.mxid"]:
+        if sender.mxid == self.config[f"bridges.{puppet.bridge}.mxid"]:
             return
 
         # Checking if the room is a control room.

@@ -457,9 +457,7 @@ class Portal(DBPortal, MatrixRoom):
         if not creator:
             return False
 
-        is_customer_guest = re.search(cls.config[f"acd.username_regex_guest"], creator)
-
-        if is_customer_guest:
+        if cls.is_guest_room(room_id=room_id):
             return True
 
         bridges = cls.config["bridges"]
