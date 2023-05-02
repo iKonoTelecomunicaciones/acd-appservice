@@ -457,7 +457,7 @@ class Portal(DBPortal, MatrixRoom):
         if not creator:
             return False
 
-        if cls.is_guest_room(room_id=room_id):
+        if await cls.is_guest_room(room_id=room_id):
             return True
 
         bridges = cls.config["bridges"]
