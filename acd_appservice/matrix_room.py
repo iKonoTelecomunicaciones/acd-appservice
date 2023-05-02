@@ -37,19 +37,28 @@ class MatrixRoom:
         cls.az = bridge.az
 
     @classmethod
-    async def is_guest_room(self, room_id: RoomID) -> bool:
+    async def is_guest_room(cls, room_id: RoomID) -> bool:
         """Checks if this is a guest room.
 
         Returns
         -------
             bool
         """
-        username_regex = self.config["acd.username_regex_guest"]
-        members = await self.az.intent.get_room_members(room_id=room_id)
 
-        for member in members:
-            if re.search(username_regex, member):
-                return True
+        username_regex = cls.config["acd.username_regex_guest"]
+        try:
+            response = await cls.az.intent.api.request(
+                method=Method.GET, path=SynapseAdminPath.v1.rooms[room_id].members
+            )
+        except Exception as e:
+            cls.log.exception(e)
+            return False
+
+        members = response.get("members")
+        if members:
+            for member in members:
+                if re.search(username_regex, member):
+                    return True
 
         return False
 
