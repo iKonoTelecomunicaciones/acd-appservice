@@ -193,6 +193,10 @@ async def send_message(request: web.Request) -> web.Response:
 
     customer_room_id = response.get("room_id")
 
+    # TODO WORKAROUND FOR NOT LINKING TO THE MENU IN A BIC
+    # This is to avoid inviting the menu to the room
+    puppet.BIC_ROOMS.add(customer_room_id)
+
     if msg_type == "text":
         content = TextMessageEventContent(
             msgtype=MessageType.TEXT,
