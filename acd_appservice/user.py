@@ -61,6 +61,10 @@ class User(DBUser, BaseUser):
     def is_menubot(self) -> bool:
         return True if self.mxid.startswith(self.config["acd.menubot_prefix"]) else False
 
+    @property
+    def is_guest(self) -> bool:
+        return bool(re.match(self.config["acd.username_regex_guest"], self.mxid))
+
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> None:
         cls.bridge = bridge

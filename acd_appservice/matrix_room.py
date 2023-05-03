@@ -37,6 +37,23 @@ class MatrixRoom:
         cls.az = bridge.az
 
     @classmethod
+    async def get_info(cls, room_id: RoomID) -> Dict:
+        """It gets the room's information
+
+        Returns
+        -------
+            A dictionary of the room's information.
+        """
+
+        try:
+            return await cls.az.intent.api.request(
+                method=Method.GET, path=SynapseAdminPath.v1.rooms[room_id]
+            )
+        except Exception as e:
+            cls.log.exception(e)
+            return
+
+    @classmethod
     async def is_guest_room(cls, room_id: RoomID) -> bool:
         """Checks if this is a guest room.
 
@@ -87,7 +104,7 @@ class MatrixRoom:
     async def set_creator(self) -> None:
         """It sets the creator of the channel"""
 
-        info = await self.get_info()
+        info = await self.get_info(self.room_id)
 
         if not info:
             return
@@ -103,7 +120,7 @@ class MatrixRoom:
 
         """
 
-        info = await self.get_info()
+        info = await self.get_info(self.room_id)
 
         if not info:
             return
@@ -119,7 +136,7 @@ class MatrixRoom:
 
         """
 
-        info = await self.get_info()
+        info = await self.get_info(self.room_id)
 
         if not info:
             return
@@ -343,19 +360,3 @@ class MatrixRoom:
             room_id=self.room_id,
             content=content,
         )
-
-    async def get_info(self) -> Dict:
-        """It gets the room's information
-
-        Returns
-        -------
-            A dictionary of the room's information.
-        """
-        intent = self.main_intent if not self.main_intent.bot else self.main_intent.bot
-        try:
-            return await intent.api.request(
-                method=Method.GET, path=SynapseAdminPath.v1.rooms[self.room_id]
-            )
-        except Exception as e:
-            self.log.exception(e)
-            return
