@@ -50,45 +50,6 @@ class RoomManager:
     def _add_to_cache(cls, room_id, room: Portal) -> None:
         cls.by_room_id[room_id] = room
 
-    async def is_guest_room(self, room_id: RoomID) -> bool:
-        """If the room is a guest room, return True.
-        If not,
-        check if any of the room members have a username that matches the regex in the config.
-        If so, return True. Otherwise, return False
-
-        Parameters
-        ----------
-        room_id : RoomID
-            The room ID of the room you want to check.
-
-        Returns
-        -------
-            A boolean value.
-
-        """
-
-        try:
-            room = self.ROOMS[room_id]
-            is_guest_room = room.get("is_guest_room")
-            # Para que ingrese aun si is_guest_room es False
-            if is_guest_room is not None:
-                return is_guest_room
-        except KeyError:
-            pass
-
-        members = await self.intent.get_joined_members(room_id=room_id)
-
-        for member in members:
-            username_regex = self.config["acd.username_regex_guest"]
-            guest_prefix = re.search(username_regex, member)
-
-            if guest_prefix:
-                self.ROOMS[room_id]["is_guest_room"] = True
-                return True
-
-        self.ROOMS[room_id]["is_guest_room"] = False
-        return False
-
     async def is_mx_whatsapp_status_broadcast(self, room_id: RoomID) -> bool:
         """Check if a room is whatsapp_status_broadcast.
 
@@ -303,44 +264,6 @@ class RoomManager:
         self.log.debug(f"This room {room_id} not is a group room, return False")
         self.ROOMS[room_id]["is_group_room"] = False
         return False
-
-    async def get_room_bridge(self, room_id: RoomID) -> str:
-        """Given a room, get its bridge.
-
-        Parameters
-        ----------
-        room_id: RoomID
-            Portal to check.
-
-        Returns
-        -------
-        str
-            Bridge if successful, None otherwise.
-        """
-        try:
-            room = self.ROOMS[room_id]
-            bridge = room.get("bridge")
-            if bridge:
-                return bridge
-        except KeyError:
-            pass
-
-        creator = await self.get_room_creator(room_id=room_id)
-
-        bridges = self.config["bridges"]
-        if creator:
-            for bridge in bridges:
-                user_prefix = self.config[f"bridges.{bridge}.user_prefix"]
-                if creator.startswith(f"@{user_prefix}"):
-                    self.log.debug(f"The bridge obtained is {bridge}")
-                    self.ROOMS[room_id]["bridge"] = bridge
-                    return bridge
-
-        if await self.is_guest_room(room_id=room_id):
-            self.ROOMS[room_id]["bridge"] = "chatterbox"
-            return "chatterbox"
-
-        return None
 
     async def get_room_name(self, room_id: RoomID) -> str:
         """Given a room, get its name.

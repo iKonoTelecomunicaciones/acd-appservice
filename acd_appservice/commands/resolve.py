@@ -213,7 +213,7 @@ class BulkResolve:
                     )
                     continue
 
-                bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
+                bridge = puppet.bridge
 
                 if not bridge:
                     self.log.warning(

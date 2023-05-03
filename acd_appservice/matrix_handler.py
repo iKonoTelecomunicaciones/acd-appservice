@@ -34,6 +34,7 @@ from acd_appservice import acd_program
 from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
 from .db.user import UserRoles
+from .matrix_room import MatrixRoom
 from .message import Message
 from .portal import Portal, PortalState
 from .puppet import Puppet
@@ -383,6 +384,18 @@ class MatrixHandler:
         if not await Portal.is_portal(room_id=room_id):
             return
 
+        # In the widget, the puppet is not invited,
+        # it joins the room directly, so the portal has not been created yet
+        if user.is_guest:
+            room_info = await MatrixRoom.get_info(room_id)
+            puppet: Puppet = await Puppet.get_by_custom_mxid(room_info.get("creator"))
+            await Portal.get_by_room_id(
+                room_id=room_id,
+                fk_puppet=puppet.pk,
+                intent=puppet.intent,
+                bridge=puppet.bridge,
+            )
+
         portal = await Portal.get_by_room_id(room_id=room_id)
 
         if not Puppet.get_id_from_mxid(user_id):
@@ -669,8 +682,7 @@ class MatrixHandler:
                 return
 
         # Ignore messages from whatsapp bots
-        bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
-        if bridge and sender.mxid == self.config[f"bridges.{bridge}.mxid"]:
+        if sender.mxid == self.config[f"bridges.{puppet.bridge}.mxid"]:
             return
 
         # Checking if the room is a control room.
