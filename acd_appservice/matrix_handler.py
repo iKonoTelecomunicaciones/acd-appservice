@@ -732,7 +732,7 @@ class MatrixHandler:
         if not await portal.get_room_name():
             await portal.update_room_name()
             self.log.info(
-                f"User {portal.room_id} has changed the name of the room {puppet.intent.mxid}"
+                f"User {puppet.intent.mxid} has changed the name of the room {portal.room_id}"
             )
 
         if puppet.intent.mxid == sender.mxid:
