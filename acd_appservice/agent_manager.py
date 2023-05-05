@@ -107,7 +107,10 @@ class AgentManager:
         if Util.is_room_id(destination):
             queue: Queue = await Queue.get_by_room_id(destination, create=False)
             return await self.distribute_to_queue(
-                portal, queue, joined_message, put_enqueued_portal
+                portal=portal,
+                queue=queue,
+                joined_message=joined_message,
+                put_enqueued_portal=put_enqueued_portal,
             )
         elif Util.is_user_id(destination):
             user: User = await User.get_by_mxid(destination, create=False)
@@ -140,7 +143,10 @@ class AgentManager:
             msg = self.config["acd.joined_agent_message"].format(
                 agentname=await agent.get_displayname()
             )
-        await portal.send_formatted_message(msg)
+
+        if msg:
+            await portal.send_formatted_message(msg)
+
         # set chat status to pending when the agent is asigned to the chat
         await portal.update_state(PortalState.PENDING)
         portal.unlock()
@@ -159,7 +165,7 @@ class AgentManager:
             self.log.exception(e)
 
         json_response = Util.create_response_data(
-            detail="Chat distribute successfully", room_id=portal.room_id, status=200
+            detail="Chat distributed successfully", room_id=portal.room_id, status=200
         )
         return json_response
 
@@ -324,7 +330,7 @@ class AgentManager:
                         self.CURRENT_AGENT[queue.room_id] = agent_id
 
                     json_response = Util.create_response_data(
-                        detail="Chat distribute successfully", room_id=portal.room_id, status=200
+                        detail="Chat distributed successfully", room_id=portal.room_id, status=200
                     )
                     break
 

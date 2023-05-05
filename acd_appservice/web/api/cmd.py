@@ -1232,7 +1232,7 @@ async def acd(request: web.Request) -> web.Response:
                         destination: "!TXMsaIzbeURlKPeCxJ:example.com | @agent1:example.com"
                         joined_message: "{agentname} has joined the chat."
                         put_enqueued_portal: "`yes` | `no`"
-                        force_distribute: "`yes` | `no`"
+                        force_distribution: "`yes` | `no`"
 
     responses:
         '400':
@@ -1261,7 +1261,7 @@ async def acd(request: web.Request) -> web.Response:
     campaign_room_id = data.get("campaign_room_id") or ""
     joined_message = data.get("joined_message") or ""
     put_enqueued_portal = data.get("put_enqueued_portal") or "yes"
-    force_distribute = data.get("force_distribute") or "no"
+    force_distribution = data.get("force_distribution") or "no"
 
     # Get the puppet from customer_room_id if exists
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
@@ -1272,7 +1272,7 @@ async def acd(request: web.Request) -> web.Response:
     if Util.is_room_id(campaign_room_id):
         args.append(put_enqueued_portal)
     elif Util.is_user_id(campaign_room_id):
-        args.append(force_distribute)
+        args.append(force_distribution)
 
     response = await get_commands().handle(
         sender=user, command="acd", args_list=args, intent=puppet.intent, is_management=False

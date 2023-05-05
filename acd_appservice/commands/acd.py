@@ -23,7 +23,7 @@ put_enqueued_portal = CommandArg(
     name="put_enqueued_portal",
     help_text=(
         "If the chat was not distributed, should the portal be enqueued?\n"
-        "Note: This parameter is only using when destination is a queue"
+        "Note: This parameter is only used when destination is a queue"
     ),
     is_required=False,
     example="`yes` | `no`",
@@ -33,7 +33,7 @@ force_distribution = CommandArg(
     name="force_distribution",
     help_text=(
         "You want to force the agent distribution?\n"
-        "Note: This parameter is only using when destination is an agent"
+        "Note: This parameter is only used when destination is an agent"
     ),
     is_required=False,
     example="`yes` | `no`",
