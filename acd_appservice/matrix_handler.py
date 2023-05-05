@@ -297,6 +297,7 @@ class MatrixHandler:
         # the performance of the software
 
         if await Portal.is_portal(evt.room_id):
+            self.log.debug(f"Room {evt.room_id} is a portal")
             if not puppet:
                 self.log.warning(f"{evt.state_key} is not a puppet")
                 return
@@ -323,10 +324,14 @@ class MatrixHandler:
             await Portal.get_by_room_id(
                 evt.room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
             )
+
+            self.log.debug(f"{puppet.mxid} is joining portal room {evt.room_id}")
             await puppet.intent.join_room(evt.room_id)
 
         else:
+            self.log.debug(f"{evt.room_id} is not a portal")
             if puppet:
+                self.log.debug(f"{puppet.mxid} is joining NOT portal room {evt.room_id}")
                 await puppet.intent.join_room(evt.room_id)
                 return
 
@@ -384,11 +389,17 @@ class MatrixHandler:
         if not await Portal.is_portal(room_id=room_id):
             return
 
-        # In the widget, the puppet is not invited,
-        # it joins the room directly, so the portal has not been created yet
-        if user.is_guest:
-            room_info = await MatrixRoom.get_info(room_id)
-            puppet: Puppet = await Puppet.get_by_custom_mxid(room_info.get("creator"))
+        if await Puppet.get_by_custom_mxid(user_id) or user.is_guest:
+            if user.is_guest:
+                # In the widget, the puppet is not invited,
+                # it joins the room directly, so the portal has not been created yet
+                room_info = await MatrixRoom.get_info(room_id)
+                puppet: Puppet = await Puppet.get_by_custom_mxid(room_info.get("creator"))
+            else:
+                # Sometimes the join event is executed before finishing the invite event handler
+                # operations, so we verify that the portal is properly created
+                puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
+
             await Portal.get_by_room_id(
                 room_id=room_id,
                 fk_puppet=puppet.pk,
@@ -489,7 +500,7 @@ class MatrixHandler:
             return
 
         # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
-        if not room_id in puppet.BIC_ROOMS:
+        if self.config["acd.process_destination_on_joining"] and not room_id in puppet.BIC_ROOMS:
             # set chat status to start before process the destination
             await portal.update_state(PortalState.START)
 
