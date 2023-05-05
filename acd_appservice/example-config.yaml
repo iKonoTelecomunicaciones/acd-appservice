@@ -207,7 +207,7 @@ acd:
     use_presence: false
 
     # When acd* joins to the room before customer message arrived, we need to process destination
-    process_destination_when_joining: true
+    process_destination_on_joining: true
 
 # ACD will send below commands to interact with any WA bridge
 bridges:

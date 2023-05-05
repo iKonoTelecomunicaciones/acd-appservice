@@ -394,7 +394,7 @@ class MatrixHandler:
                 # In the widget, the puppet is not invited,
                 # it joins the room directly, so the portal has not been created yet
                 room_info = await MatrixRoom.get_info(room_id)
-                puppet = await Puppet.get_by_custom_mxid(room_info.get("creator"))
+                puppet: Puppet = await Puppet.get_by_custom_mxid(room_info.get("creator"))
             else:
                 # Sometimes the join event is executed before finishing the invite event handler
                 # operations, so we verify that the portal is properly created
@@ -500,7 +500,7 @@ class MatrixHandler:
             return
 
         # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
-        if self.config["acd.process_destination_when_joining"] and not room_id in puppet.BIC_ROOMS:
+        if self.config["acd.process_destination_on_joining"] and not room_id in puppet.BIC_ROOMS:
             # set chat status to start before process the destination
             await portal.update_state(PortalState.START)
 
