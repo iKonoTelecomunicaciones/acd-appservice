@@ -401,7 +401,8 @@ class MatrixHandler:
         if not Puppet.get_id_from_mxid(user_id):
             puppet = await Puppet.get_by_portal(room_id)
 
-            # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
+            # If the joined user is main bot or a puppet then saving
+            # the room_id and the user_id to the database.
             if puppet.intent and puppet.intent.bot and puppet.intent.bot.mxid == user.mxid:
                 # Si el que se unió es el bot principal, debemos sacarlo para que no dañe
                 # el comportamiento del puppet
@@ -489,7 +490,7 @@ class MatrixHandler:
             return
 
         # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
-        if not room_id in puppet.BIC_ROOMS:
+        if room_id not in puppet.BIC_ROOMS:
             # set chat status to start before process the destination
             await portal.update_state(PortalState.START)
 
@@ -618,7 +619,8 @@ class MatrixHandler:
         ):
             puppet = await Puppet.get_by_control_room_id(control_room_id=room_id)
             self.log.warning(
-                f"The puppet {puppet.custom_mxid} with phone {puppet.phone} was logged out :: {message.body}"
+                f"The puppet {puppet.custom_mxid} with phone {puppet.phone} "
+                f"was logged out :: {message.body}"
             )
             await puppet.reset_phone()
             return

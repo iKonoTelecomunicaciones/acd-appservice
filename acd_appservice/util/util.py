@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from re import match
+from typing import Any, Dict
 
 from bs4 import BeautifulSoup
 from mautrix.types import RoomAlias, RoomID, UserID
@@ -149,3 +150,13 @@ class Util:
 
         """
         return f"transfer-{room_id}-{agent_id}" if transfer else f"{room_id}-{agent_id}"
+
+    @classmethod
+    def create_response_data(cls, detail: str, room_id: int, status: int) -> Dict[str, Any]:
+        return {
+            "data": {
+                "detail": detail,
+                "room_id": room_id,
+            },
+            "status": status,
+        }
