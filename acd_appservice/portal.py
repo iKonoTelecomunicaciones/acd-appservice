@@ -506,6 +506,7 @@ class Portal(DBPortal, MatrixRoom):
             return portal
 
         if create:
+            cls.log.info(f"Creating new portal {room_id}")
             portal = cls(room_id)
 
             if fk_puppet:
