@@ -5,6 +5,7 @@ import logging
 import re
 from shlex import split
 
+from asyncpg.exceptions import UniqueViolationError
 from markdown import markdown
 from mautrix.appservice import AppService
 from mautrix.bridge import config
@@ -320,10 +321,13 @@ class MatrixHandler:
                 f"The puppet {puppet.intent.mxid} is trying join in the room {evt.room_id}"
             )
 
-            # Creates the portal and join it
-            await Portal.get_by_room_id(
-                evt.room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
-            )
+            try:
+                # Creates the portal and join it
+                await Portal.get_by_room_id(
+                    evt.room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
+                )
+            except UniqueViolationError as error:
+                self.log.error(error)
 
             self.log.debug(f"{puppet.mxid} is joining portal room {evt.room_id}")
             await puppet.intent.join_room(evt.room_id)
@@ -400,12 +404,19 @@ class MatrixHandler:
                 # operations, so we verify that the portal is properly created
                 puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
 
-            await Portal.get_by_room_id(
-                room_id=room_id,
-                fk_puppet=puppet.pk,
-                intent=puppet.intent,
-                bridge=puppet.bridge,
-            )
+            # Can be occurred the error that the portal is already created,
+            # but this function does not know it and try to create it again,
+            # generating a failure UniqueViolationError.
+            try:
+                await Portal.get_by_room_id(
+                    room_id=room_id,
+                    fk_puppet=puppet.pk,
+                    intent=puppet.intent,
+                    bridge=puppet.bridge,
+                )
+            except UniqueViolationError as error:
+                await asyncio.sleep(1)
+                self.log.error(error)
 
         portal = await Portal.get_by_room_id(room_id=room_id)
 
