@@ -1533,3 +1533,10 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+
+    UpdateRoomNameSuccess:
+      description: Room name was updated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageDataOk'

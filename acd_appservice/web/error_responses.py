@@ -120,3 +120,5 @@ NO_PUPPET_IN_PORTAL = {
 }
 
 UNABLE_TO_FIND_PUPPET = {"data": {"error": "Unable to find puppet"}, "status": 409}
+
+INVALID_ROOM_ID = {"data": {"error": "Given room id is invalid"}, "status": 409}

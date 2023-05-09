@@ -12,6 +12,7 @@ from ..base import _resolve_user_identifier, routes
 from ..error_responses import (
     INVALID_DESTINATION,
     INVALID_EMAIL,
+    INVALID_ROOM_ID,
     INVALID_USER_ID,
     INVALID_USER_ROLE,
     NOT_DATA,
@@ -233,3 +234,58 @@ async def update_puppet(request: web.Request) -> web.Response:
 
     updated_puppet = await Puppet.get_info_by_custom_mxid(puppet_mxid)
     return web.json_response(data=updated_puppet)
+
+
+@routes.patch("/v1/room_name")
+async def update_room_name(request: web.Request) -> web.Response:
+    """
+    ---
+    summary:    Update the name of rooms
+    tags:
+        - Mis
+
+    requestBody:
+        required: false
+        description: A json with `room_name`
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        room_name:
+                            type: string
+                        room_id:
+                            type: string
+                    example:
+                        room_name: John Doe | Joaquin Andrés | Pablo Emilio | {1-9, a-z, A-Z}
+
+    responses:
+        '200':
+            $ref: '#/components/responses/UpdateRoomNameSuccess'
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '404':
+            $ref: '#/components/responses/NotFound'
+    """
+    # await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    data: Dict = await request.json()
+
+    if not Util.is_room_id(data.get("room_id")) and not Util.is_user_id(data.get("room_id")):
+        return web.json_response(**INVALID_ROOM_ID)
+
+    logger.debug("**************************** 1")
+
+    puppet: Puppet = await Puppet.get_by_control_room_id(control_room_id=data.get("room_id"))
+    if not puppet:
+        return web.json_response(**PUPPET_DOESNOT_EXIST)
+
+    logger.debug("**************************** 2")
+    logger.debug(f"############################# {puppet=}")
+
+    # logger.debug(f"**************************** {puppet=}")
+
+    # puppet_mxid = data.get("puppet_mxid")
