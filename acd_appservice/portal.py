@@ -5,7 +5,7 @@ import json
 import logging
 import re
 from datetime import datetime
-from typing import Dict, List, cast
+from typing import Dict, List, Optional, cast
 
 from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI
@@ -60,7 +60,7 @@ class Portal(DBPortal, MatrixRoom):
         self.state_date = self.now()
         await self.save()
 
-    async def update_room_name(self) -> None:
+    async def update_room_name(self, new_room_name: Optional[str] = None) -> None:
         """If the room name is not set to be kept, get the updated name and set it
 
         Returns
@@ -68,11 +68,13 @@ class Portal(DBPortal, MatrixRoom):
             The updated room name.
 
         """
+        if not new_room_name:
+            updated_room_name = await self.get_update_name()
 
-        updated_room_name = await self.get_update_name()
-
-        if not updated_room_name:
-            return
+            if not updated_room_name:
+                return
+        else:
+            updated_room_name = new_room_name
 
         await self.main_intent.set_room_name(room_id=self.room_id, name=updated_room_name)
 

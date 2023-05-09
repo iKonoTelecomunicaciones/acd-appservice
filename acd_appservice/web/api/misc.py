@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Dict
 
+from acd_appservice.portal import Portal
+
 from aiohttp import web
 
 from ...puppet import Puppet
@@ -274,18 +276,20 @@ async def update_room_name(request: web.Request) -> web.Response:
 
     data: Dict = await request.json()
 
-    if not Util.is_room_id(data.get("room_id")) and not Util.is_user_id(data.get("room_id")):
-        return web.json_response(**INVALID_ROOM_ID)
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=data.get("room_id"))
 
     logger.debug("**************************** 1")
-
-    puppet: Puppet = await Puppet.get_by_control_room_id(control_room_id=data.get("room_id"))
-    if not puppet:
-        return web.json_response(**PUPPET_DOESNOT_EXIST)
-
-    logger.debug("**************************** 2")
     logger.debug(f"############################# {puppet=}")
 
-    # logger.debug(f"**************************** {puppet=}")
+    portal: Portal = await Portal.get_by_room_id(
+        room_id=data.get("room_id"),
+        create=False,
+        fk_puppet=puppet.pk,
+        intent=puppet.intent,
+        bridge=puppet.bridge,
+    )
 
-    # puppet_mxid = data.get("puppet_mxid")
+    logger.debug("**************************** 2")
+    logger.debug(f"############################# {portal=}")
+
+    await portal.update_room_name(new_room_name=data.get("room_name"))
