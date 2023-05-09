@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from argparse import ArgumentParser, Namespace
 from typing import Any, Awaitable, Callable, Dict, List, NamedTuple, Type
 
 from attr import dataclass
@@ -36,7 +37,7 @@ class CommandEvent:
         intent: IntentAPI = None,
         room_id: RoomID = None,
         text: str = None,
-        args_list: List[str] = None,
+        cmd_args: Namespace = None,
     ):
         self.command = command
         self.processor = processor
@@ -48,7 +49,7 @@ class CommandEvent:
         self.room_id = room_id
         self.is_management = is_management
         self.text = text
-        self.args_list = args_list
+        self.cmd_args = cmd_args
 
     async def reply(self, text: str) -> None:
         """It sends a message to the room that the event was received from
@@ -91,7 +92,6 @@ class CommandArg:
 
     @property
     def detail(self) -> str:
-
         help_text = f"**{self._name}**: {self.help_text} -> **example**: {self.example}\n\n"
 
         if not self.sub_args:
@@ -119,7 +119,6 @@ CommandHandlerFunc = Callable[[CommandEvent], Awaitable[Any]]
 
 
 class CommandHandler:
-
     management_only: bool
     needs_admin: bool
     name: str
@@ -134,6 +133,7 @@ class CommandHandler:
         help_text: str,
         help_args: List[CommandArg],
         needs_admin: bool,
+        args_parser: ArgumentParser,
     ) -> None:
         self.management_only = management_only
         self.needs_admin = needs_admin
@@ -141,6 +141,7 @@ class CommandHandler:
         self.name = name
         self._help_text = help_text
         self._help_args = help_args
+        self._args_parser = args_parser
 
     async def get_permission_error(self, evt: CommandEvent) -> str | None:
         """Returns the reason why the command could not be issued.
@@ -278,17 +279,6 @@ class CommandProcessor:
             The return value is a dictionary with two keys: data and status.
 
         """
-        evt = self.event_class(
-            processor=self,
-            room_id=room_id,
-            config=self.config,
-            intent=intent,
-            sender=sender,
-            command=command,
-            args_list=args_list,
-            text=content.body.strip() if content else "",
-            is_management=is_management,
-        )
 
         command = command.lower()
 
@@ -300,6 +290,20 @@ class CommandProcessor:
 
         if handler is None:
             handler = command_handlers["unknown_command"]
+
+        command_arguments = handler._args_parser.parse_args(args_list)
+
+        evt = self.event_class(
+            processor=self,
+            room_id=room_id,
+            config=self.config,
+            intent=intent,
+            sender=sender,
+            command=command,
+            cmd_args=command_arguments,
+            text=content.body.strip() if content else "",
+            is_management=is_management,
+        )
 
         _args: Dict[str, CommandArg] = {}
 
@@ -349,6 +353,7 @@ def command_handler(
     help_text: str = "",
     help_args: Dict[CommandArg] = {},
     needs_admin: bool = False,
+    args_parser: ArgumentParser = None,
     _handler_class: Type[CommandHandler] = CommandHandler,
 ) -> Callable[[CommandHandlerFunc], CommandHandler]:
     """It takes a function and returns a decorator that takes a function and returns a class
@@ -367,6 +372,8 @@ def command_handler(
         The arguments that the command takes.
     needs_admin : bool, optional
         If True, the command can only be run by an admin.
+    args_parser: ArgumentParser
+        Command argument parser
     _handler_class : Type[CommandHandler]
         This is the class that will be used to create the handler.
 
@@ -385,6 +392,7 @@ def command_handler(
             help_text=help_text,
             help_args=help_args,
             needs_admin=needs_admin,
+            args_parser=args_parser,
         )
         command_handlers[handler.name] = handler
         return handler

@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 from re import match
 
 from ..portal import Portal
@@ -48,6 +49,49 @@ customer_room_id = CommandArg(
 )
 
 
+def args_parser():
+    parser = ArgumentParser(description="ACD")
+
+    # Definir argumentos obligatorios
+    parser.add_argument(
+        "--sala_cliente",
+        dest="sala_cliente",
+        type=str,
+        help="Sala del cliente donde se ejecutará el comando",
+    )
+    group = parser.add_mutually_exclusive_group(required=True)
+
+    group.add_argument(
+        "--queue",
+        dest="queue",
+        help="Cola a la que se va a distribuir",
+        required=False,
+    )
+    group.add_argument(
+        "--agent",
+        dest="agent",
+        help="Distribuir a un agente directo",
+        required=False,
+    )
+
+    parser.add_argument(
+        "--put-enqueued",
+        dest="put_enqueued",
+        help="Deseas encolar el chat si hay agentes disponibles?",
+        required=False,
+        choices=["yes", "no", "YES", "NO", "y", "n", "Y", "N"],
+    )
+    parser.add_argument(
+        "--force-distribution",
+        dest="force_distribution",
+        help="Quieres obligar al agente a entrar aunque no este disponible?",
+        required=False,
+        choices=["yes", "no", "YES", "NO", "y", "n", "Y", "N"],
+    )
+
+    return parser
+
+
 @command_handler(
     name="acd",
     help_text=(
@@ -67,11 +111,11 @@ async def acd(evt: CommandEvent) -> str:
 
     """
 
-    if len(evt.args_list) < 2:
-        detail = "You have not all arguments"
-        evt.log.error(detail)
-        await evt.reply(detail)
-        return {"data": {"error": detail}, "status": 422}
+    # if len(evt.args_list) < 2:
+    #    detail = "You have not all arguments"
+    #    evt.log.error(detail)
+    #    await evt.reply(detail)
+    #    return {"data": {"error": detail}, "status": 422}
 
     customer_room_id = evt.args_list[0]
     destination = evt.args_list[1]
