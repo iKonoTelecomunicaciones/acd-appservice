@@ -63,18 +63,35 @@ class Portal(DBPortal, MatrixRoom):
     async def update_room_name(self, new_room_name: Optional[str] = None) -> None:
         """If the room name is not set to be kept, get the updated name and set it
 
+        Parameters
+        ----------
+        new_room_name : str, optional
+            holds the new room name to update
+
         Returns
         -------
             The updated room name.
 
         """
+        emoji_number = ""
         if not new_room_name:
             updated_room_name = await self.get_update_name()
 
             if not updated_room_name:
                 return
         else:
-            updated_room_name = new_room_name
+            phone_match = re.findall(r"\d+", self.creator)
+            updated_room_name = f"{new_room_name} ({phone_match[0].strip()})"
+
+        if self.config["acd.numbers_in_rooms"]:
+            try:
+                emoji_number = Util.get_emoji_number(number=str(self.fk_puppet))
+                if emoji_number:
+                    updated_room_name = (
+                        f"{new_room_name} ({phone_match[0].strip()}) {emoji_number}"
+                    )
+            except AttributeError as e:
+                self.log.error(e)
 
         await self.main_intent.set_room_name(room_id=self.room_id, name=updated_room_name)
 

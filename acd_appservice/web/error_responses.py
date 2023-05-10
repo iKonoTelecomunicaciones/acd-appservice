@@ -121,4 +121,12 @@ NO_PUPPET_IN_PORTAL = {
 
 UNABLE_TO_FIND_PUPPET = {"data": {"error": "Unable to find puppet"}, "status": 409}
 
-INVALID_ROOM_ID = {"data": {"error": "Given room id is invalid"}, "status": 409}
+PORTAL_DOESNOT_EXIST = {
+    "data": {"error": "Portal with given room id was not found."},
+    "status": 404,
+}
+
+ROOM_NAME_NOT_UPDATED = {
+    "data": {"error": "The name of room was not updated"},
+    "status": 409,
+}

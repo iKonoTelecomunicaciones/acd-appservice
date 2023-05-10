@@ -1535,8 +1535,15 @@ components:
             $ref: '#/components/schemas/Error'
 
     UpdateRoomNameSuccess:
-      description: Room name was updated.
+      description: Room name updated successfully.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/MessageDataOk'
+            $ref: '#/components/schemas/Success'
+
+    UpdateRoomNameUnsuccessful:
+      description: Room name was not updated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
