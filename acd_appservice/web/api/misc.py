@@ -3,10 +3,9 @@ from __future__ import annotations
 import logging
 from typing import Dict
 
-from acd_appservice.portal import Portal
-
 from aiohttp import web
 
+from ...portal import Portal
 from ...puppet import Puppet
 from ...user import User, UserRoles
 from ...util import Util
