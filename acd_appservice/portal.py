@@ -61,7 +61,8 @@ class Portal(DBPortal, MatrixRoom):
         await self.save()
 
     async def update_room_name(self, new_room_name: Optional[str] = None) -> None:
-        """If the room name is not set to be kept, get the updated name and set it
+        """
+        If the room name is not set to be kept, get the updated name and set it
 
         Parameters
         ----------
@@ -73,16 +74,19 @@ class Portal(DBPortal, MatrixRoom):
             The updated room name.
 
         """
-        emoji_number = ""
-        phone_match = re.findall(r"\d+", self.creator)
-
         if not new_room_name:
             updated_room_name = await self.get_update_name()
 
             if not updated_room_name:
                 return
         else:
-            updated_room_name = f"{new_room_name} ({phone_match[0].strip()})"
+            emoji_number = ""
+            try:
+                phone_match = re.findall(self.config["utils.username_regex"], self.creator)
+                updated_room_name = f"{new_room_name} ({phone_match[0][1]})"
+            except:
+                updated_room_name = f"{new_room_name}"
+
             if self.config["acd.numbers_in_rooms"]:
                 emoji_number = Util.get_emoji_number(number=str(self.fk_puppet))
                 updated_room_name = f"{updated_room_name} {emoji_number}"
