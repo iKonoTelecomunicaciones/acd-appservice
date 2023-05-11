@@ -66,7 +66,7 @@ class Portal(DBPortal, MatrixRoom):
         Parameters
         ----------
         new_room_name : str, optional
-            holds the new room name to update
+            holds the new room name to update when update the customer name
 
         Returns
         -------
@@ -74,24 +74,18 @@ class Portal(DBPortal, MatrixRoom):
 
         """
         emoji_number = ""
+        phone_match = re.findall(r"\d+", self.creator)
+
         if not new_room_name:
             updated_room_name = await self.get_update_name()
 
             if not updated_room_name:
                 return
         else:
-            phone_match = re.findall(r"\d+", self.creator)
             updated_room_name = f"{new_room_name} ({phone_match[0].strip()})"
-
-        if self.config["acd.numbers_in_rooms"]:
-            try:
+            if self.config["acd.numbers_in_rooms"]:
                 emoji_number = Util.get_emoji_number(number=str(self.fk_puppet))
-                if emoji_number:
-                    updated_room_name = (
-                        f"{new_room_name} ({phone_match[0].strip()}) {emoji_number}"
-                    )
-            except AttributeError as e:
-                self.log.error(e)
+                updated_room_name = f"{updated_room_name} {emoji_number}"
 
         await self.main_intent.set_room_name(room_id=self.room_id, name=updated_room_name)
 

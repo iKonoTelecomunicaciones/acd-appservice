@@ -281,7 +281,6 @@ async def update_room_name(request: web.Request) -> web.Response:
     list_room_id = data.get("room_id")
 
     for room_id in list_room_id:
-
         puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
         if not puppet:
             return web.json_response(**PUPPET_DOESNOT_EXIST)
@@ -296,9 +295,12 @@ async def update_room_name(request: web.Request) -> web.Response:
         if not portal:
             return web.json_response(**PORTAL_DOESNOT_EXIST)
 
-        try:
-            await portal.update_room_name(new_room_name=data.get("room_name"))
-        except:
-            return web.json_response(**ROOM_NAME_NOT_UPDATED)
+        if data.get("room_name"):
+            try:
+                await portal.update_room_name(new_room_name=data.get("room_name"))
+            except:
+                return web.json_response(**ROOM_NAME_NOT_UPDATED)
+        else:
+            await portal.update_room_name()
 
     return web.json_response(data={"detail": "Room name updated successfully"}, status=200)
