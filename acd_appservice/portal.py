@@ -80,7 +80,6 @@ class Portal(DBPortal, MatrixRoom):
             if not updated_room_name:
                 return
         else:
-            emoji_number = ""
             try:
                 phone_match = re.findall(self.config["utils.username_regex"], self.creator)
                 updated_room_name = f"{new_room_name} ({phone_match[0][1]})"

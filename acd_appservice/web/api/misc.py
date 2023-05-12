@@ -261,7 +261,7 @@ async def update_room_name(request: web.Request) -> web.Response:
                             items:
                                 type: string
                     example:
-                        room_name: John Doe | Joaquin Andrés | Pablo Emilio | {1-9, a-z, A-Z}
+                        room_name: John Doe
                         room_id: ['!XorbLOaYvnrsasAROq:domain','!ZorbLRaAvnrZasAOWL:domain']
 
     responses:
@@ -271,6 +271,8 @@ async def update_room_name(request: web.Request) -> web.Response:
             $ref: '#/components/responses/BadRequest'
         '404':
             $ref: '#/components/responses/NotFound'
+        '409':
+            $ref: '#/components/responses/UpdateRoomNameUnsuccessful'
     """
     await _resolve_user_identifier(request=request)
 
@@ -278,9 +280,9 @@ async def update_room_name(request: web.Request) -> web.Response:
         return web.json_response(**NOT_DATA)
     data: Dict = await request.json()
 
-    list_room_id = data.get("room_id")
+    room_id_list = data.get("room_id")
 
-    for room_id in list_room_id:
+    for room_id in room_id_list:
         puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
         if not puppet:
             return web.json_response(**PUPPET_DOESNOT_EXIST)
@@ -295,12 +297,9 @@ async def update_room_name(request: web.Request) -> web.Response:
         if not portal:
             return web.json_response(**PORTAL_DOESNOT_EXIST)
 
-        if data.get("room_name"):
-            try:
-                await portal.update_room_name(new_room_name=data.get("room_name"))
-            except:
-                return web.json_response(**ROOM_NAME_NOT_UPDATED)
-        else:
-            await portal.update_room_name()
+        try:
+            await portal.update_room_name(new_room_name=data.get("room_name"))
+        except:
+            return web.json_response(**ROOM_NAME_NOT_UPDATED)
 
     return web.json_response(data={"detail": "Room name updated successfully"}, status=200)
