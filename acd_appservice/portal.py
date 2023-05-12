@@ -69,10 +69,6 @@ class Portal(DBPortal, MatrixRoom):
         new_room_name : str, optional
             holds the new room name to update when update the customer name
 
-        Returns
-        -------
-            The updated room name.
-
         """
         if not new_room_name:
             updated_room_name = await self.get_update_name()
@@ -81,8 +77,9 @@ class Portal(DBPortal, MatrixRoom):
                 return
         else:
             try:
-                phone_match = re.findall(self.config["utils.username_regex"], self.creator)
-                updated_room_name = f"{new_room_name} ({phone_match[0][1]})"
+                user_name_match = re.match(self.config["utils.username_regex"], self.creator)
+                phone = user_name_match.group("number")
+                updated_room_name = f"{new_room_name} ({phone})"
             except:
                 updated_room_name = f"{new_room_name}"
 

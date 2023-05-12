@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict
+from typing import Dict, List
 
 from aiohttp import web
+from mautrix.types import RoomID
 
 from ...portal import Portal
 from ...puppet import Puppet
@@ -256,7 +257,7 @@ async def update_room_name(request: web.Request) -> web.Response:
                     properties:
                         room_name:
                             type: string
-                        room_id:
+                        room_id_list:
                             type: array
                             items:
                                 type: string
@@ -280,6 +281,7 @@ async def update_room_name(request: web.Request) -> web.Response:
         return web.json_response(**NOT_DATA)
     data: Dict = await request.json()
 
+    room_id_list: List[RoomID]
     room_id_list = data.get("room_id")
 
     for room_id in room_id_list:
