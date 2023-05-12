@@ -5,7 +5,7 @@ import json
 import logging
 import re
 from datetime import datetime
-from typing import Dict, List, cast
+from typing import Dict, List, Optional, cast
 
 from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI
@@ -60,19 +60,32 @@ class Portal(DBPortal, MatrixRoom):
         self.state_date = self.now()
         await self.save()
 
-    async def update_room_name(self) -> None:
-        """If the room name is not set to be kept, get the updated name and set it
+    async def update_room_name(self, new_room_name: Optional[str] = None) -> None:
+        """
+        If the room name is not set to be kept, get the updated name and set it
 
-        Returns
-        -------
-            The updated room name.
+        Parameters
+        ----------
+        new_room_name : str, optional
+            holds the new room name to update when update the customer name
 
         """
+        if not new_room_name:
+            updated_room_name = await self.get_update_name()
 
-        updated_room_name = await self.get_update_name()
+            if not updated_room_name:
+                return
+        else:
+            try:
+                user_name_match = re.match(self.config["utils.username_regex"], self.creator)
+                phone = user_name_match.group("number")
+                updated_room_name = f"{new_room_name} ({phone})"
+            except:
+                updated_room_name = f"{new_room_name}"
 
-        if not updated_room_name:
-            return
+            if self.config["acd.numbers_in_rooms"]:
+                emoji_number = Util.get_emoji_number(number=str(self.fk_puppet))
+                updated_room_name = f"{updated_room_name} {emoji_number}"
 
         await self.main_intent.set_room_name(room_id=self.room_id, name=updated_room_name)
 
