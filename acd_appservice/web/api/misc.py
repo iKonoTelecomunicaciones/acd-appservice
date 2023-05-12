@@ -249,7 +249,7 @@ async def update_room_name(request: web.Request) -> web.Response:
 
     requestBody:
         required: false
-        description: A json with `room_name` and `room_id`
+        description: A json with `room_name` and `room_id_list`
         content:
             application/json:
                 schema:
@@ -263,7 +263,7 @@ async def update_room_name(request: web.Request) -> web.Response:
                                 type: string
                     example:
                         room_name: John Doe
-                        room_id: ['!XorbLOaYvnrsasAROq:domain','!ZorbLRaAvnrZasAOWL:domain']
+                        room_id_list: ['!XorbLOaYvnrsasAROq:domain','!ZorbLRaAvnrZasAOWL:domain']
 
     responses:
         '200':
@@ -281,8 +281,7 @@ async def update_room_name(request: web.Request) -> web.Response:
         return web.json_response(**NOT_DATA)
     data: Dict = await request.json()
 
-    room_id_list: List[RoomID]
-    room_id_list = data.get("room_id")
+    room_id_list: List[RoomID] = data.get("room_id_list")
 
     for room_id in room_id_list:
         puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
