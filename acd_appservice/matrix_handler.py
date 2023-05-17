@@ -297,8 +297,6 @@ class MatrixHandler:
         # as there can't be two acd[n] users in the same room, this will affect
         # the performance of the software
 
-        await asyncio.sleep(60)
-
         if await Portal.is_portal(evt.room_id):
             self.log.debug(f"Room {evt.room_id} is a portal")
             if not puppet:
