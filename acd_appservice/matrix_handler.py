@@ -306,7 +306,7 @@ class MatrixHandler:
             # Checking if there is already a puppet in the room.
             # If there is, it will leave the room.
             puppet_inside: Puppet = await Puppet.get_by_portal(portal_room_id=evt.room_id)
-            if puppet_inside:
+            if puppet_inside and puppet != puppet_inside:
                 detail = (
                     f"There is already a puppet {puppet_inside.custom_mxid} "
                     f"in the room {evt.room_id}"
