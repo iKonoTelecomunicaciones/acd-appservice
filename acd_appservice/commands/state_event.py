@@ -1,22 +1,23 @@
 from __future__ import annotations
 
 import json
-from typing import Dict
+from argparse import ArgumentParser, Namespace
+from typing import Any, Dict
 
-from mautrix.types import EventType
+from mautrix.types import EventType, StateEvent
 
 from ..puppet import Puppet
 from .handler import CommandArg, CommandEvent, command_handler
 
 event_type = CommandArg(
-    name="event_type",
+    name="--event-type or -e",
     help_text="Event_type you want to send",
     is_required=True,
     example="`m.room.name` | `m.custom.event`",
 )
 
 content = CommandArg(
-    name="content",
+    name="--content or -c",
     help_text="The content to send",
     is_required=True,
     example=(
@@ -30,18 +31,32 @@ content = CommandArg(
 )
 
 room_id = CommandArg(
-    name="room_id",
+    name="--room-id or -r",
     help_text="Room where the status event is to be sent",
     is_required=True,
     example="`!foo:foo.com`",
-    sub_args=[event_type, content],
 )
+
+
+def args_parser():
+    parser = ArgumentParser(description="STATE EVENT", exit_on_error=False)
+    parser.add_argument("--event-type", "-e", dest="event_type", type=str, required=True)
+    parser.add_argument("--content", "-c", dest="content", type=str, required=True)
+    parser.add_argument(
+        "--room-id",
+        "-r",
+        dest="room_id",
+        type=str,
+    )
+
+    return parser
 
 
 @command_handler(
     name="state_event",
     help_text=("Command that sends a state event to matrix"),
-    help_args=[room_id],
+    help_args=[room_id, event_type, content],
+    args_parser=args_parser(),
 )
 async def state_event(evt: CommandEvent) -> Dict | None:
     """It receives a message from the client, parses it, and sends a state event to the room
@@ -62,15 +77,10 @@ async def state_event(evt: CommandEvent) -> Dict | None:
     if not puppet:
         return
 
-    try:
-        room_id = evt.args_list[0]
-        event_type = evt.args_list[1]
-        content = evt.args_list[2]
-    except IndexError:
-        detail = "You have not all arguments"
-        evt.log.error(detail)
-        await evt.reply(detail)
-        return {"data": {"error": detail}, "status": 422}
+    args: Namespace = evt.cmd_args
+    room_id: str = args.room_id
+    event_type: StateEvent = args.event_type
+    content: Dict(str, Any) = args.content
 
     event_type = EventType.find(event_type, EventType.Class.STATE)
 

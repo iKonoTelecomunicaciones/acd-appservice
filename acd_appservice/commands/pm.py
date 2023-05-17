@@ -1,6 +1,7 @@
 import asyncio
 import json
 import re
+from argparse import ArgumentParser, Namespace
 from typing import Dict
 
 from markdown import markdown
@@ -12,25 +13,40 @@ from ..signaling import Signaling
 from .handler import CommandArg, CommandEvent, command_handler
 
 message = CommandArg(
-    name="message",
+    name="--message or -m",
     help_text="Message to be sent to the customer",
     is_required=True,
     example="Hey there!",
 )
 
 phone = CommandArg(
-    name="phone",
+    name="--phone or -p",
     help_text="Number of the customer for whom the private chat is to be created",
     is_required=True,
     example="`573123456789` | `+573123456789`",
-    sub_args=[message],
 )
+
+
+def args_parser():
+    parser = ArgumentParser(description="PM", exit_on_error=False)
+
+    parser.add_argument(
+        "--message",
+        "-m",
+        dest="message",
+        type=str,
+        required=True,
+    )
+    parser.add_argument("--phone", "-p", dest="phone", type=str, required=True)
+
+    return parser
 
 
 @command_handler(
     name="pm",
     help_text=("Command that allows send a message to a customer"),
-    help_args=[phone],
+    help_args=[phone, message],
+    args_parser=args_parser(),
 )
 async def pm(evt: CommandEvent) -> Dict:
     """It sends a message to a customer, if the customer is already in a room,
@@ -48,27 +64,29 @@ async def pm(evt: CommandEvent) -> Dict:
         - status: The HTTP status code to be sent to the frontend.
 
     """
-
+    args: Namespace = evt.cmd_args
     puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
 
     if not puppet:
         return
 
-    try:
-        phone = evt.args_list[0]
-    except IndexError:
-        detail = "You have not sent the argument phone number"
-        evt.log.error(detail)
-        await evt.reply(detail)
-        return {"data": {"error": detail}, "status": 422}
+    phone: str = args.phone
+    message: str = args.message
 
-    message = " ".join(evt.args_list[1:])
+    # try:
+    #    phone = evt.args_list[0]
+    # except IndexError:
+    #    detail = "You have not sent the argument phone number"
+    #    evt.log.error(detail)
+    #    await evt.reply(detail)
+    #    return {"data": {"error": detail}, "status": 422}
+    # message = " ".join(evt.args_list[1:])
 
-    if not message:
-        detail = "You have not sent the argument message"
-        evt.log.error(detail)
-        await evt.reply(detail)
-        return {"data": {"error": detail}, "status": 422}
+    # if not message:
+    #    detail = "You have not sent the argument message"
+    #    evt.log.error(detail)
+    #    await evt.reply(detail)
+    #    return {"data": {"error": detail}, "status": 422}
 
     # A dict that will be sent to the frontend.
     return_params = {

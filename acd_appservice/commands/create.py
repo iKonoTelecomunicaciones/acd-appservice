@@ -1,3 +1,5 @@
+from argparse import ArgumentParser
+
 from mautrix.types import PowerLevelStateEventContent
 
 from ..puppet import Puppet
@@ -6,20 +8,34 @@ from ..util import Util
 from .handler import CommandArg, CommandEvent, command_handler
 
 destination = CommandArg(
-    name="destination",
+    name="--destination or -d",
     help_text="Method to distribution of new chats",
-    is_required=False,
+    is_required=True,
     example="`@user_id:foo.com`| `!foo:foo.com`",
 )
 
 
 bridge = CommandArg(
-    name="bridge",
+    name="--bridge or -b",
     help_text="Bridge bot that will be invited to the control room if you want it",
     is_required=False,
     example="`mautrix`| `instagram` | `gupshup`",
-    sub_args=[destination],
 )
+
+
+def args_parser():
+    parser = ArgumentParser(description="CREATE", exit_on_error=False)
+
+    parser.add_argument(
+        "--destination",
+        "-d",
+        dest="destination",
+        type=str,
+    )
+
+    parser.add_argument("--bridge", "-b", dest="bridge", type=str, default="")
+
+    return parser
 
 
 @command_handler(
@@ -33,7 +49,8 @@ bridge = CommandArg(
         "If you send `destination`, then the distribution of new chats related to this acd[n] "
         "will be done following this method. This field can be a room_id or a user_id."
     ),
-    help_args=[bridge],
+    help_args=[bridge, destination],
+    args_parser=args_parser(),
 )
 async def create(evt: CommandEvent) -> Puppet:
     """We create a puppet, we create a control room, we invite the puppet,
@@ -50,8 +67,6 @@ async def create(evt: CommandEvent) -> Puppet:
 
     """
 
-    puppet = None
-
     # We get the following puppet available in the bd
     next_puppet = await Puppet.get_next_puppet()
     invitees = [evt.sender.mxid]
@@ -60,15 +75,10 @@ async def create(evt: CommandEvent) -> Puppet:
         evt.reply("We have not been able to create the `acd[n]`")
         return
 
-    try:
-        bridge = evt.args_list[0]
-    except IndexError:
-        bridge = ""
+    args = evt.cmd_args
 
-    try:
-        destination = evt.args_list[1]
-    except IndexError:
-        destination = ""
+    bridge = args.bridge
+    destination = args.destination
 
     try:
         # We create the puppet with the following pk

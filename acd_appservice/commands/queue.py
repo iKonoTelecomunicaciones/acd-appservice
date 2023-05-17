@@ -1,3 +1,4 @@
+from argparse import ArgumentParser, Namespace
 from typing import Any, Dict, List, Optional
 
 from mautrix.types import RoomDirectoryVisibility, RoomID, UserID
@@ -14,14 +15,14 @@ name = CommandArg(
 )
 
 invitees = CommandArg(
-    name="invitees",
+    name="--invitees or -i",
     help_text="Invitees to the queue",
     is_required=True,
     example="`@user1:foo.com,@user2:foo.com,@user3:foo.com,...`",
 )
 
 description = CommandArg(
-    name="description",
+    name="--description or -i",
     help_text="Short description about the queue",
     is_required=False,
     example='"It is a queue to distribute chats"',
@@ -29,20 +30,27 @@ description = CommandArg(
 
 
 member = CommandArg(
-    name="member",
+    name="--member or -m",
     help_text="Member to be added|deleted",
     is_required=True,
     example="@user1:foo.com",
 )
 
 queue = CommandArg(
-    name="queue",
+    name="--queue or -q",
     help_text=(
         "Queue where the member will be added|deleted, "
         "if no queue is provided the room_id where the command was sent will be taken."
     ),
-    is_required=True,
+    is_required=False,
     example="!foo:foo.com",
+)
+
+force = CommandArg(
+    name="--force or -f",
+    help_text="Do you want to force queue deleting?",
+    is_required=False,
+    example="`yes` | `no`",
 )
 
 action = CommandArg(
@@ -60,8 +68,69 @@ action = CommandArg(
     ),
     is_required=True,
     example="`create` | `add` | `remove` | `info` | `list` | `update` | `delete` | `set`",
-    sub_args=[[name, member], [invitees, queue], description],
+    sub_args=[
+        {"description": "Create", "args": [name, invitees, description]},
+        {"description": "Add", "args": [member, queue]},
+        {"description": "Remove", "args": [member, queue]},
+        {"description": "Delete", "args": [queue, force]},
+        {"description": "Update", "args": [name, queue, description]},
+        {"description": "Info", "args": [queue]},
+    ],
 )
+
+
+def args_parser():
+    parser = ArgumentParser(description="QUEUE", exit_on_error=False)
+    subparsers = parser.add_subparsers(dest="action")
+
+    # Sub command create
+    parser_create: ArgumentParser = subparsers.add_parser("create")
+    parser_create.add_argument("--name", "-n", dest="name", type=str, required=True)
+    parser_create.add_argument(
+        "--invitees", "-i", dest="invitees", action="extend", nargs="+", type=str, required=True
+    )
+    parser_create.add_argument("--description", "-d", dest="description", type=str, required=False)
+
+    # Sub command add
+    parser_add: ArgumentParser = subparsers.add_parser("add")
+    parser_add.add_argument("--member", "-m", dest="member", type=str, required=True)
+    parser_add.add_argument("--queue", "-q", dest="queue", type=str, required=False)
+
+    # Sub command remove
+    parser_add: ArgumentParser = subparsers.add_parser("remove")
+    parser_add.add_argument("--member", "-m", dest="member", type=str, required=True)
+    parser_add.add_argument("--queue", "-q", dest="queue", type=str, required=False)
+
+    # Sub command delete
+    parser_add: ArgumentParser = subparsers.add_parser("delete")
+    parser_add.add_argument("--queue", "-q", dest="queue", type=str, required=False)
+    parser_add.add_argument(
+        "--force",
+        "-f",
+        dest="force",
+        type=str,
+        required=False,
+        choices=["yes", "no"],
+        default="no",
+    )
+
+    # Sub command update
+    parser_add: ArgumentParser = subparsers.add_parser("delete")
+    parser_add.add_argument("--queue", "-q", dest="queue", type=str, required=False)
+    parser_add.add_argument("--name", "-n", dest="name", type=str, required=False)
+    parser_add.add_argument("--description", "-d", dest="description", type=str, required=False)
+
+    # Sub command info
+    parser_add: ArgumentParser = subparsers.add_parser("info")
+    parser_add.add_argument("--queue", "-q", dest="queue", type=str, required=False)
+
+    # Sub command list
+    parser_add: ArgumentParser = subparsers.add_parser("list")
+
+    # Sub command set
+    parser_add: ArgumentParser = subparsers.add_parser("set")
+
+    return parser
 
 
 @command_handler(
@@ -73,6 +142,7 @@ action = CommandArg(
         "for chat distribution. `invitees` is a comma-separated list of user_ids."
     ),
     help_args=[action],
+    args_parser=args_parser(),
 )
 async def queue(evt: CommandEvent) -> Dict:
     """It creates a room, sets the visibility, invites the users,
@@ -89,158 +159,168 @@ async def queue(evt: CommandEvent) -> Dict:
 
     """
 
-    json_response = {"data": None, "status": 0}
+    args: Namespace = evt.cmd_args
+    action = args.action
 
-    try:
-        action = evt.args_list[0]
-    except IndexError:
-        detail = "You have not sent the argument action"
-        evt.log.error(detail)
-        await evt.reply(detail)
-        json_response["data"] = {"error": detail}
-        json_response["status"] = 422
-        return json_response
+    # try:
+    #    action = evt.args_list[0]
+    # except IndexError:
+    #    detail = "You have not sent the argument action"
+    #    evt.log.error(detail)
+    #    await evt.reply(detail)
+    #    json_response["data"] = {"error": detail}
+    #    json_response["status"] = 422
+    #    return json_response
 
     # Creating a queue.
     if action == "create":
         # Checking if the invitees are specified.
         # If they are, it will split them by comma and strip them.
-        if len(evt.args_list) < 3:
-            detail = "You have not sent all arguments"
-            evt.log.error(detail)
-            await evt.reply(detail)
-            json_response["data"] = {"error": detail}
-            json_response["status"] = 422
-            return json_response
+        # if len(evt.args_list) < 3:
+        #    detail = "You have not sent all arguments"
+        #    evt.log.error(detail)
+        #    await evt.reply(detail)
+        #    json_response["data"] = {"error": detail}
+        #    json_response["status"] = 422
+        #    return json_response
 
-        name = evt.args_list[1]
-        invitees = evt.args_list[2] or []
+        name: str = args.name
+        invitees: List[UserID] = args.invitees
+        description: str = args.description
 
-        try:
-            description = evt.args_list[3]
-        except IndexError:
-            description = ""
-
-        if invitees and isinstance(invitees, str) and invitees.strip():
-            invitees: List[UserID] = [invitee.strip() for invitee in invitees.split(",")]
+        # if invitees and isinstance(invitees, str) and invitees.strip():
+        #    invitees: List[UserID] = [invitee.strip() for invitee in invitees.split(",")]
 
         return await create(evt=evt, name=name, invitees=invitees, description=description)
 
     elif action in ["add", "remove"]:
-        try:
-            member: UserID = evt.args_list[1]
-        except:
-            detail = "You have not sent the argument member"
+        member: UserID = args.member
+        queue_room_id: RoomID = args.queue if args.queue else evt.room_id
+
+        # try:
+        #    member: UserID = evt.args_list[1]
+        # except:
+        #    detail = "You have not sent the argument member"
+        #    evt.log.error(detail)
+        #    await evt.reply(detail)
+        #    json_response["data"] = {"error": detail}
+        #    json_response["status"] = 422
+        #    return json_response
+
+        queue = await Queue.get_by_room_id(room_id=queue_room_id, create=False)
+
+        if not queue:
+            msg = "Incomming queue does not exist"
             evt.log.error(detail)
             await evt.reply(detail)
-            json_response["data"] = {"error": detail}
-            json_response["status"] = 422
-            return json_response
+            return Util.create_response_data(detail=msg, room_id=queue_room_id, status=422)
 
-        try:
-            queue_id = evt.args_list[2]
-        except IndexError:
-            queue_id = evt.room_id
-
-        queue = await Queue.get_by_room_id(room_id=queue_id, create=False)
-
-        if not queue or not member:
-            detail = "Arg queue or member not provided"
-            json_response["data"] = {"error": detail}
-            json_response["status"] = 422
-            evt.log.error(detail)
-            await evt.reply(detail)
-            return json_response
-
-        return await add_remove(evt=evt, action=action, member=member, queue_id=queue_id)
+        return await add_remove(evt=evt, action=action, member=member, queue_id=queue_room_id)
 
     elif action == "delete":
         # Checking if the second argument is a room id. If it is,
         # it sets the queue_id to the second argument and the force to the third argument.
         # If it is not, it sets the queue_id to the room id and the force to the second argument.
-        try:
-            queue_id_or_force = evt.args_list[1]
+        # try:
+        #    queue_id_or_force = evt.args_list[1]
+        #
+        #    if Util.is_room_id(queue_id_or_force):
+        #        queue_id = queue_id_or_force
+        #        try:
+        #            force = evt.args_list[2]
+        #        except IndexError:
+        #            force = "n"
+        #    else:
+        #        queue_id = evt.room_id
+        #        force = queue_id_or_force
+        # except IndexError:
+        #    force = "n"
+        #    queue_id = evt.room_id
+        #
+        # force = (
+        #    (True if force.lower() in ["yes", "y", "1"] else False)
+        #    if isinstance(force, str)
+        #    else force
+        # )
 
-            if Util.is_room_id(queue_id_or_force):
-                queue_id = queue_id_or_force
-                try:
-                    force = evt.args_list[2]
-                except IndexError:
-                    force = "n"
-            else:
-                queue_id = evt.room_id
-                force = queue_id_or_force
-        except IndexError:
-            force = "n"
-            queue_id = evt.room_id
+        queue_room_id = args.queue
+        force = False if args.force == "no" else True
 
-        force = (
-            (True if force.lower() in ["yes", "y", "1"] else False)
-            if isinstance(force, str)
-            else force
-        )
+        queue = await Queue.get_by_room_id(room_id=queue_room_id, create=False)
+        if not queue:
+            msg = "Incomming queue does not exist"
+            evt.log.error(detail)
+            await evt.reply(detail)
+            return Util.create_response_data(detail=msg, room_id=queue_room_id, status=422)
 
-        return await delete(evt=evt, queue_id=queue_id, force=force)
+        return await delete(evt=evt, queue_id=queue_room_id, force=force)
 
     elif action == "update":
-        try:
-            # Checking if the room_id is valid.
-            # If it is, it will set the room_id to the first argument,
-            # and the name to the second argument.
-            # If it is not, it will set the room_id to the current room_id,
-            # and the name to the first argument.
-            if Util.is_room_id(evt.args_list[1]):
-                room_id = evt.args_list[1]
-                try:
-                    name = evt.args_list[2]
-                except IndexError:
-                    detail = "Arg name not provided"
-                    json_response["data"] = {"error": detail}
-                    json_response["status"] = 422
-                    evt.log.error(detail)
-                    await evt.reply(detail)
-                    return json_response
-                try:
-                    description = evt.args_list[3]
-                except IndexError:
-                    description = ""
-            else:
-                room_id = evt.room_id
-                name = evt.args_list[1]
-                description = evt.args_list[2]
+        # try:
+        #    # Checking if the room_id is valid.
+        #    # If it is, it will set the room_id to the first argument,
+        #    # and the name to the second argument.
+        #    # If it is not, it will set the room_id to the current room_id,
+        #    # and the name to the first argument.
+        #    if Util.is_room_id(evt.args_list[1]):
+        #        room_id = evt.args_list[1]
+        #        try:
+        #            name = evt.args_list[2]
+        #        except IndexError:
+        #            detail = "Arg name not provided"
+        #            json_response["data"] = {"error": detail}
+        #            json_response["status"] = 422
+        #            evt.log.error(detail)
+        #            await evt.reply(detail)
+        #            return json_response
+        #        try:
+        #            description = evt.args_list[3]
+        #        except IndexError:
+        #            description = ""
+        #    else:
+        #        room_id = evt.room_id
+        #        name = evt.args_list[1]
+        #        description = evt.args_list[2]
+        #
+        # except IndexError:
+        #    # Checking if the name is provided or not.
+        #    room_id = evt.room_id
+        #    try:
+        #        name = evt.args_list[1]
+        #    except IndexError:
+        #        detail = "Arg name not provided"
+        #        json_response["data"] = {"error": detail}
+        #        json_response["status"] = 422
+        #        evt.log.error(detail)
+        #        await evt.reply(detail)
+        #        return json_response
+        #
+        #    try:
+        #        description = evt.args_list[2]
+        #    except IndexError:
+        #        description = ""
 
-        except IndexError:
-            # Checking if the name is provided or not.
-            room_id = evt.room_id
-            try:
-                name = evt.args_list[1]
-            except IndexError:
-                detail = "Arg name not provided"
-                json_response["data"] = {"error": detail}
-                json_response["status"] = 422
-                evt.log.error(detail)
-                await evt.reply(detail)
-                return json_response
+        queue_room_id = args.queue if args.queue else evt.room_id
+        name = args.name
+        description = args.description
 
-            try:
-                description = evt.args_list[2]
-            except IndexError:
-                description = ""
+        return await update(evt=evt, room_id=queue_room_id, name=name, description=description)
 
-        return await update(evt=evt, room_id=room_id, name=name, description=description)
+    elif action == "info":
+        # try:
+        #    room_id = evt.args_list[1]
+        # except IndexError:
+        #    room_id = evt.room_id
 
-    elif action in ["info", "ingo"]:
-        try:
-            room_id = evt.args_list[1]
-        except IndexError:
-            room_id = evt.room_id
+        queue_room_id = args.queue if args.queue else evt.room_id
 
-        return await info(evt=evt, room_id=room_id)
+        return await info(evt=evt, room_id=queue_room_id)
 
     elif action == "list":
         return await _list(evt=evt)
     elif action == "set":
-        return await _set(evt=evt)
+        queue_room_id: RoomID = args.queue if args.queue else evt.room_id
+        return await _set(evt=evt, queue_room_id=queue_room_id)
 
 
 async def create(
@@ -606,7 +686,7 @@ async def _list(evt: CommandEvent) -> Dict:
     }
 
 
-async def _set(evt: CommandEvent) -> Dict:
+async def _set(evt: CommandEvent, queue_room_id: RoomID) -> Dict:
     """This function will add a queue to the database and synchronize it with the room
 
     Parameters
@@ -620,12 +700,7 @@ async def _set(evt: CommandEvent) -> Dict:
 
     """
 
-    try:
-        queue_id = evt.args_list[1]
-    except IndexError:
-        queue_id = evt.room_id
-
-    queue = await Queue.get_by_room_id(room_id=queue_id)
+    queue = await Queue.get_by_room_id(room_id=queue_room_id)
     await queue.sync()
 
     detail = "The queue has been added and synchronized"

@@ -4,7 +4,7 @@ from typing import Dict
 from .handler import CommandArg, CommandEvent, command_handler
 
 cmd = CommandArg(
-    name="cmd",
+    name="command",
     help_text="Command that will be forwarded for the acd[n] that listens to it.",
     is_required=True,
     example="!wa help",
@@ -12,7 +12,7 @@ cmd = CommandArg(
 
 
 def args_parser() -> ArgumentParser:
-    parser = ArgumentParser(description="Bridge command")
+    parser = ArgumentParser(description="Bridge command", exit_on_error=False)
     parser.add_argument("command", type=str, help="Command that will be relayed")
     return parser
 

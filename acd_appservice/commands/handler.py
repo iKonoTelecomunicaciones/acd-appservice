@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentError, ArgumentParser, ArgumentTypeError, Namespace
 from typing import Any, Awaitable, Callable, Dict, List, NamedTuple, Type
 
 from attr import dataclass
@@ -12,6 +12,9 @@ from mautrix.util.logging import TraceLogger
 
 from ..config import Config
 from ..user import User
+from ..util import Util
+
+logger = logging.getLogger()
 
 command_handlers: dict[str, CommandHandler] = {}
 command_aliases: dict[str, CommandHandler] = {}
@@ -60,6 +63,7 @@ class CommandEvent:
             The text to send.
 
         """
+
         if not text or not self.room_id:
             return
 
@@ -84,33 +88,30 @@ class CommandArg:
     help_text: str
     example: str
     is_required: bool = False
-    sub_args: List[List[CommandArg] | CommandArg] = []
+    sub_args: List[Dict[str, Any] | CommandArg] = []
 
     @property
     def _name(self) -> str:
-        return f"<_{self.name}_>" if self.is_required else f"[_{self.name}_]"
+        return f"<_ {self.name} _>" if self.is_required else f"[_ {self.name} _]"
 
     @property
-    def detail(self) -> str:
-        help_text = f"**{self._name}**: {self.help_text} -> **example**: {self.example}\n\n"
+    def help(self) -> str:
+        return f"**{self._name}**: {self.help_text} -> **example**: {self.example}\n\n"
+
+    @property
+    def sub_commands_help(self) -> str:
+        help_text = ""
 
         if not self.sub_args:
             return help_text
 
         help_text += 2 * "\n"
-        help_text += "##### SubArgs"
-
-        counter = 1
+        help_text += "##### Sub Commands"
 
         for sub_arg in self.sub_args:
-            help_text += f"\n\n __**Argument order: {counter}**__"
-            if not isinstance(sub_arg, list):
-                help_text += f"\n\n- {sub_arg.detail}"
-            else:
-                help_text += f"\n\n- {'- '.join([arg.detail for arg in sub_arg])}"
-                help_text += "---"
-
-            counter += 1
+            help_text += f"\n\n __**{sub_arg.get('description')}:**__"
+            help_text += f"\n\n- {'- '.join([arg.help for arg in sub_arg.get('args')])}"
+            help_text += "---"
 
         return help_text
 
@@ -219,7 +220,10 @@ class CommandHandler:
             text += f"##### MainArgs\n\n"
 
             for cmd_arg in self._help_args:
-                text += f"- {cmd_arg.detail}\n"
+                text += f"- {cmd_arg.help}\n"
+
+            for cmd_ags in self._help_args:
+                text += cmd_ags.sub_commands_help
 
         return text
 
@@ -291,8 +295,6 @@ class CommandProcessor:
         if handler is None:
             handler = command_handlers["unknown_command"]
 
-        command_arguments = handler._args_parser.parse_args(args_list)
-
         evt = self.event_class(
             processor=self,
             room_id=room_id,
@@ -300,23 +302,9 @@ class CommandProcessor:
             intent=intent,
             sender=sender,
             command=command,
-            cmd_args=command_arguments,
             text=content.body.strip() if content else "",
             is_management=is_management,
         )
-
-        _args: Dict[str, CommandArg] = {}
-
-        for arg in handler._help_args:
-            if arg.sub_args:
-                for sub_arg in arg.sub_args:
-                    if not isinstance(sub_arg, list):
-                        _args[sub_arg.name] = sub_arg
-                    else:
-                        for aux_arg in sub_arg:
-                            _args[aux_arg.name] = aux_arg
-
-            _args[arg.name] = arg
 
         if len(args_list) == 1 and args_list[0] == "help":
             return await evt.reply(handler.detail)
@@ -324,13 +312,14 @@ class CommandProcessor:
         elif evt.command == "help":
             return await self._run_handler(handler, evt)
 
-        elif len(args_list) > 1 and args_list[-1] == "help":
-            try:
-                return await evt.reply(_args[args_list[-2]].detail)
-            except KeyError:
-                return await evt.reply(
-                    f"**{args_list[-2]}** is not a parameter that has help text"
-                )
+        try:
+            evt.cmd_args = handler._args_parser.parse_args(args_list)
+        except SystemExit:
+            detail = "Missing arguments in command or invalid argument value"
+            await evt.reply(detail)
+            return Util.create_response_data(detail=detail, room_id=room_id, status=400)
+        except AttributeError:
+            self.log.info("Incoming command has no argument processor")
 
         try:
             # Trying to delete the log from the result.

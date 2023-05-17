@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 from typing import Dict
 
 from mautrix.types import UserID
@@ -8,33 +9,50 @@ from ..user import User
 from ..util.util import Util
 from .handler import CommandArg, CommandEvent, command_handler
 
-agent_id = CommandArg(
-    name="agent_id",
+agent = CommandArg(
+    name="--agent or -a",
     help_text="Agent to whom the operation applies",
     is_required=False,
     example="@agent1:foo.com",
 )
 
 pause_reason = CommandArg(
-    name="pause_reason",
+    name="--pause_reason or -p",
     help_text="Why are you going to pause?",
     is_required=False,
     example="Pause to see the sky",
 )
 
 action = CommandArg(
-    name="action",
+    name="--action or -a",
     help_text="Agent operation",
     is_required=True,
     example="`login | logout | pause | unpause`",
-    sub_args=[agent_id, pause_reason],
 )
+
+
+def args_parser():
+    parser = ArgumentParser(description="MEMBER", exit_on_error=False)
+
+    parser.add_argument(
+        "--action",
+        "-a",
+        dest="action",
+        type=str,
+        required=True,
+        choices=["login", "logout", "pause", "unpause"],
+    )
+    parser.add_argument("--agent", dest="agent", type=str, required=False)
+    parser.add_argument("--pause_reason", "-p", dest="pause_reason", type=str, required=False)
+
+    return parser
 
 
 @command_handler(
     name="member",
     help_text="Agent operations like login, logout, pause, unpause",
-    help_args=[action],
+    help_args=[action, agent, pause_reason],
+    args_parser=args_parser(),
 )
 async def member(evt: CommandEvent) -> Dict:
     """Agent operations like login, logout, pause, unpause
@@ -56,47 +74,43 @@ async def member(evt: CommandEvent) -> Dict:
 
     """
 
-    json_response: Dict = {
-        "data": {"detail": "", "room_id": evt.room_id, "room_name": ""},
-        "status": 0,
-    }
+    args = evt.cmd_args
+    # json_response: Dict = {
+    #    "data": {"detail": "", "room_id": evt.room_id, "room_name": ""},
+    #    "status": 0,
+    # }
 
-    try:
-        action = evt.args_list[0]
-    except IndexError:
-        detail = "You have not sent the argument action"
-        evt.log.error(detail)
-        await evt.reply(detail)
-        return {"data": {"error": detail}, "status": 422}
+    # try:
+    #    action = evt.args_list[0]
+    # except IndexError:
+    #    detail = "You have not sent the argument action"
+    #    evt.log.error(detail)
+    #    await evt.reply(detail)
+    #    return {"data": {"error": detail}, "status": 422}
 
-    try:
-        agent_id: UserID = evt.args_list[1]
-    except IndexError:
-        agent_id = ""
+    action: str = args.action
+    agent_id: UserID = args.agent
+    pause_reason: str = args.pause_reason
 
-    if not action in ["login", "logout", "pause", "unpause"]:
-        msg = f"{action} is not a valid action"
-        evt.log.error(msg)
-        await evt.reply(text=msg)
-        return
+    # if not action in ["login", "logout", "pause", "unpause"]:
+    #    msg = f"{action} is not a valid action"
+    #    evt.log.error(msg)
+    #    await evt.reply(text=msg)
+    #    return
 
     # Verify if user is able to do an agent operation over other agent
     if not evt.sender.is_admin and Util.is_user_id(agent_id) and agent_id != evt.sender.mxid:
         msg = f"You are unable to use agent operation `{action}` over other agents"
         await evt.reply(text=msg)
         evt.log.warning(msg)
-        json_response.get("data")["detail"] = msg
-        json_response["status"] = 403
-        return json_response
+        return Util.create_response_data(room_id=evt.room_id, detail=msg, status=403)
 
     # Verify that admin do not try to do an agent operation for himself
     elif evt.sender.is_admin and not Util.is_user_id(agent_id):
         msg = f"Admin user can not use agent operation `{action}`"
         await evt.reply(text=msg)
         evt.log.warning(msg)
-        json_response.get("data")["detail"] = msg
-        json_response["status"] = 403
-        return json_response
+        return Util.create_response_data(room_id=evt.room_id, detail=msg, status=403)
 
     # Check if agent_id is empty or is something different to UserID to apply operation to sender
     if not agent_id or not Util.is_user_id(agent_id):
@@ -108,11 +122,8 @@ async def member(evt: CommandEvent) -> Dict:
         msg = f"Agent {agent_id} or queue {evt.room_id} does not exists"
         await evt.reply(text=msg)
         evt.log.error(msg)
-        json_response.get("data")["detail"] = msg
-        json_response["status"] = 422
-        return json_response
+        return Util.create_response_data(room_id=evt.room_id, detail=msg, status=422)
 
-    json_response.get("data")["room_name"] = queue.name
     membership: QueueMembership = await QueueMembership.get_by_queue_and_user(
         fk_user=user.id, fk_queue=queue.id, create=False
     )
@@ -121,9 +132,7 @@ async def member(evt: CommandEvent) -> Dict:
         msg = f"User {agent_id} is not member of the room {evt.room_id}"
         await evt.reply(text=msg)
         evt.log.warning(msg)
-        json_response.get("data")["detail"] = msg
-        json_response["status"] = 422
-        return json_response
+        return Util.create_response_data(room_id=evt.room_id, detail=msg, status=422)
 
     if action in ["login", "logout"]:
         state = QueueMembershipState.ONLINE if action == "login" else QueueMembershipState.OFFLINE
@@ -132,9 +141,7 @@ async def member(evt: CommandEvent) -> Dict:
             msg = f"Agent {agent_id} is already {state.value}"
             await evt.reply(text=msg)
             evt.log.warning(msg)
-            json_response.get("data")["detail"] = msg
-            json_response["status"] = 409
-            return json_response
+            return Util.create_response_data(room_id=evt.room_id, detail=msg, status=409)
 
         membership.state = state
         membership.state_date = QueueMembership.now()
@@ -151,35 +158,24 @@ async def member(evt: CommandEvent) -> Dict:
             msg = f"You should be logged in to execute `{action}` operation"
             await evt.reply(text=msg)
             evt.log.warning(msg)
-            json_response.get("data")["detail"] = msg
-            json_response["status"] = 422
-            return json_response
+            return Util.create_response_data(room_id=evt.room_id, detail=msg, status=422)
 
         state = True if action == "pause" else False
         if membership.paused == state:
             msg = f"Agent {agent_id} is already {action}d"
             await evt.reply(text=msg)
             evt.log.warning(msg)
-            json_response.get("data")["detail"] = msg
-            json_response["status"] = 409
-            return json_response
+            return Util.create_response_data(room_id=evt.room_id, detail=msg, status=409)
 
         membership.paused = state
         membership.pause_date = QueueMembership.now()
-        # The position of the pause_reason argument is variable,
-        # in some cases it can be in the position of the agent_id arg
+        membership.pause_reason = None
+
         if action == "pause":
-            membership.pause_reason = (
-                evt.args_list[2]
-                if evt.sender.is_admin or evt.args_list[1] == evt.sender.mxid
-                else evt.args_list[1]
-            )
-        else:
-            membership.pause_reason = None
+            membership.pause_reason = pause_reason
+
         await membership.save()
 
     msg = f"Agent operation `{action}` was successful, {agent_id} state is `{action}`"
     await evt.reply(text=msg)
-    json_response.get("data")["detail"] = f"Agent operation `{action}` was successful"
-    json_response["status"] = 200
-    return json_response
+    return Util.create_response_data(room_id=evt.room_id, detail=msg, status=200)

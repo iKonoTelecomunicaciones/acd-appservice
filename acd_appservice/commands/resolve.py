@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from argparse import ArgumentParser, Namespace
 from typing import Dict, List
 
 from mautrix.types import RoomID, UserID
@@ -14,33 +15,50 @@ from ..signaling import Signaling
 from ..user import User
 from .handler import CommandArg, CommandEvent, CommandProcessor, command_handler
 
-user_id = CommandArg(
-    name="user_id",
+author = CommandArg(
+    name="--author or -a",
     help_text="User who is solving the room",
     is_required=True,
     example="@user_id:foo.com",
 )
 
 send_message = CommandArg(
-    name="send_message",
+    name="--send_message ",
     help_text="Should I send a resolution message?",
     is_required=False,
     example="`yes` | `y` | `1` | `no` | `n` | `0`",
 )
 
-room_id = CommandArg(
-    name="room_id",
+portal = CommandArg(
+    name="--portal or -p",
     help_text="Room to be resolved",
     is_required=True,
     example="`!foo:foo.com`",
-    sub_args=[user_id, send_message],
 )
+
+
+def args_parser():
+    parser = ArgumentParser(description="RESOLVE", exit_on_error=False)
+    parser.add_argument("--author", "-a", dest="author", type=str, required=True)
+    parser.add_argument("--portal", "-p", dest="portal", type=str, required=True)
+    parser.add_argument(
+        "--send-message",
+        "-sm",
+        dest="send_message",
+        type=str,
+        required=False,
+        choices=["yes", "y", "1", "no", "n", "0"],
+        default="n",
+    )
+
+    return parser
 
 
 @command_handler(
     name="resolve",
     help_text=("Command resolving a chat, ejecting the supervisor and the agent"),
-    help_args=[room_id],
+    help_args=[author, portal, send_message],
+    args_parser=args_parser(),
 )
 async def resolve(evt: CommandEvent) -> Dict:
     """It kicks the agent and menubot from the chat,
@@ -57,42 +75,36 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     """
 
-    try:
-        customer_room_id = evt.args_list[0]
-        user_id = evt.args_list[1]
-    except IndexError:
-        detail = "You have not all arguments"
-        evt.log.error(detail)
-        await evt.reply(detail)
-        return {"data": {"error": detail}, "status": 422}
-
-    try:
-        send_message = evt.args_list[2]
-    except IndexError:
-        send_message = "n"
-
-    if send_message.lower() in ["yes", "y", "1"]:
-        send_message = True
-    else:
-        send_message = False
+    # try:
+    #    customer_room_id = evt.args_list[0]
+    #    user_id = evt.args_list[1]
+    # except IndexError:
+    #    detail = "You have not all arguments"
+    #    evt.log.error(detail)
+    #    await evt.reply(detail)
+    #    return {"data": {"error": detail}, "status": 422}
+    args: Namespace = evt.cmd_args
+    portal_room_id: RoomID = args.portal
+    author: UserID = args.author
+    send_message: str = True if args.send_message.lower() in ["yes", "y", "1"] else False
 
     evt.log.debug(
         (
-            f"The user {user_id} is resolving "
-            f"the room {customer_room_id}, send_message? // {send_message} "
+            f"The user {author} is resolving "
+            f"the room {portal_room_id}, send_message? // {send_message} "
         )
     )
 
-    if not await Portal.is_portal(customer_room_id):
+    if not await Portal.is_portal(portal_room_id):
         detail = "Group queues or control rooms cannot be resolved."
         evt.log.error(detail)
-        await evt.intent.send_notice(room_id=customer_room_id, text=detail)
+        await evt.intent.send_notice(room_id=portal_room_id, text=detail)
         return
 
-    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=portal_room_id)
 
     portal = await Portal.get_by_room_id(
-        room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
+        room_id=portal_room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
     )
     agent = await portal.get_current_agent()
 
@@ -122,7 +134,7 @@ async def resolve(evt: CommandEvent) -> Dict:
     await portal.update_state(PortalState.RESOLVED)
 
     await puppet.agent_manager.signaling.set_chat_status(
-        room_id=portal.room_id, status=Signaling.RESOLVED, agent=user_id
+        room_id=portal.room_id, status=Signaling.RESOLVED, agent=author
     )
 
     # clear campaign in the ik.chat.campaign_selection state event
@@ -133,7 +145,7 @@ async def resolve(evt: CommandEvent) -> Dict:
     if send_message is not None:
         resolve_chat_params = puppet.config["acd.resolve_chat"]
         if send_message:
-            args = [portal.room_id, resolve_chat_params["message"]]
+            args = ["-p", portal.room_id, "-m", resolve_chat_params["message"]]
             await evt.processor.handle(
                 sender=evt.sender,
                 command="template",
