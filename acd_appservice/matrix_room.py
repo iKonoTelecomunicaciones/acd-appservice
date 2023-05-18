@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Dict, List
 from markdown import markdown
 from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import AppService, IntentAPI
-from mautrix.types import Format, MessageType, RoomID, TextMessageEventContent, UserID
+from mautrix.types import Format, Membership, MessageType, RoomID, TextMessageEventContent, UserID
 from mautrix.util.logging import TraceLogger
 
 from .user import User
@@ -360,3 +360,10 @@ class MatrixRoom:
             room_id=self.room_id,
             content=content,
         )
+
+    async def get_room_invitees(self) -> List[User]:
+        room_invitees: List[UserID] = await self.main_intent.get_room_members(
+            self.room_id, allowed_memberships=[Membership.INVITE]
+        )
+
+        return [await User.get_by_mxid(invitee) for invitee in room_invitees]

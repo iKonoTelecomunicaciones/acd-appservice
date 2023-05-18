@@ -160,7 +160,7 @@ class AgentManager:
                     menubot.mxid, "cancel_task", portal.room_id
                 )
                 # --------- end remove -----------
-                await portal.remove_menubot(reason=f"agent [{agent.mxid}] accepted invite")
+            await portal.remove_menubot(reason=f"agent [{agent.mxid}] accepted invite")
         except Exception as e:
             self.log.exception(e)
 
@@ -565,9 +565,9 @@ class AgentManager:
                             menubot.mxid, "cancel_task", portal.room_id
                         )
                         # --------- end remove -----------
-                        await portal.remove_menubot(
-                            reason=detail if detail else f"agent [{agent_id}] accepted invite",
-                        )
+                    await portal.remove_menubot(
+                        reason=detail if detail else f"agent [{agent_id}] accepted invite",
+                    )
                 except Exception as e:
                     self.log.exception(e)
             try:
