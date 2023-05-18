@@ -93,7 +93,7 @@ class TestPortal:
             return_value=[customer, agent_user, supervisor],
         )
 
-        args = ["login", agent_user.mxid]
+        args = ["-a", "login", "--agent", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
             command="member",
