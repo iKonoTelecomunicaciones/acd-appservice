@@ -440,12 +440,12 @@ class Portal(DBPortal, MatrixRoom):
         """It removes the current menubot from the room"""
         current_menubot: User = await self.get_current_menubot()
 
-        # Sometimes menubot miss joining the invite when it's restarted
+        # Sometimes menubot misses joining the invite when it's restarted
         if not current_menubot:
             invitees: List[User] = await self.get_room_invitees()
-            for invite in invitees:
-                if invite.is_menubot:
-                    current_menubot = invite
+            for invitee in invitees:
+                if invitee.is_menubot:
+                    current_menubot = invitee
                     break
 
         if current_menubot:
