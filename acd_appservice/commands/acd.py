@@ -6,7 +6,7 @@ from .handler import CommandArg, CommandEvent, command_handler
 
 agent_arg = CommandArg(
     name="--agent or -a",
-    help_text="Agent mxid where the customer will be distributed",
+    help_text="Mxid of the agent that will be assigned to the chat",
     is_required=True,
     example="`@agent1:foo.com`",
 )
