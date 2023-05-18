@@ -1,26 +1,32 @@
-from re import match
+from argparse import ArgumentParser, Namespace
 
 from ..portal import Portal
 from ..puppet import Puppet
-from ..util import Util
 from .handler import CommandArg, CommandEvent, command_handler
 
-destination = CommandArg(
-    name="destination",
-    help_text="Queue room_id or agent mxid where the customer will be distributed",
+agent_arg = CommandArg(
+    name="--agent or -a",
+    help_text="Mxid of the agent that will be assigned to the chat",
+    is_required=True,
+    example="`@agent1:foo.com`",
+)
+
+queue_arg = CommandArg(
+    name="--queue-room-id or -q",
+    help_text="Queue room_id where the customer will be distributed",
     is_required=True,
     example="`!foo:foo.com`",
 )
 
-joined_message = CommandArg(
-    name="joined_message",
+joined_message_arg = CommandArg(
+    name="--join-message or -j",
     help_text="Message that will be sent when the agent joins the customer room",
     is_required=False,
     example='"{agentname} join to room"',
 )
 
-put_enqueued_portal = CommandArg(
-    name="put_enqueued_portal",
+enqueue_chat_arg = CommandArg(
+    name="--enqueue-chat or -e",
     help_text=(
         "If the chat was not distributed, should the portal be enqueued?\n"
         "Note: This parameter is only used when destination is a queue"
@@ -29,8 +35,8 @@ put_enqueued_portal = CommandArg(
     example="`yes` | `no`",
 )
 
-force_distribution = CommandArg(
-    name="force_distribution",
+force_distribution_arg = CommandArg(
+    name="--force-distribution or -f",
     help_text=(
         "You want to force the agent distribution?\n"
         "Note: This parameter is only used when destination is an agent"
@@ -39,13 +45,66 @@ force_distribution = CommandArg(
     example="`yes` | `no`",
 )
 
-customer_room_id = CommandArg(
-    name="customer_room_id",
+customer_room_arg = CommandArg(
+    name="--customer-room or -c",
     help_text="Customer room_id to be distributed",
     is_required=True,
     example="`!foo:foo.com`",
-    sub_args=[destination, joined_message, put_enqueued_portal, force_distribution],
+    sub_args=[
+        {"description": "Distribute to queue", "args": [queue_arg, enqueue_chat_arg]},
+        {"description": "Distribute to agent", "args": [agent_arg, force_distribution_arg]},
+    ],
 )
+
+
+def args_parser():
+    parser = ArgumentParser(description="ACD", exit_on_error=False)
+
+    parser.add_argument("--customer-room", "-c", dest="customer_room", type=str, required=True)
+    group = parser.add_mutually_exclusive_group(required=True)
+
+    group.add_argument(
+        "--queue-room-id",
+        "-q",
+        dest="queue",
+        type=str,
+        required=False,
+    )
+    group.add_argument(
+        "--agent",
+        "-a",
+        dest="agent",
+        type=str,
+        required=False,
+    )
+
+    parser.add_argument(
+        "--enqueue-chat",
+        "-e",
+        dest="enqueue_chat",
+        required=False,
+        type=str,
+        choices=["yes", "no"],
+        default="yes",
+    )
+    parser.add_argument(
+        "--force-distribution",
+        "-f",
+        dest="force_distribution",
+        required=False,
+        type=str,
+        choices=["yes", "no"],
+        default="no",
+    )
+    parser.add_argument(
+        "--join-message",
+        "-j",
+        dest="join_message",
+        type=str,
+        required=False,
+    )
+
+    return parser
 
 
 @command_handler(
@@ -54,7 +113,8 @@ customer_room_id = CommandArg(
         "Command that allows to distribute the chat of a client, "
         "a queue or agent and an optionally joining message can be given."
     ),
-    help_args=[customer_room_id],
+    help_args=[customer_room_arg, joined_message_arg],
+    args_parser=args_parser(),
 )
 async def acd(evt: CommandEvent) -> str:
     """It allows to distribute the chat of a client,
@@ -67,33 +127,13 @@ async def acd(evt: CommandEvent) -> str:
 
     """
 
-    if len(evt.args_list) < 2:
-        detail = "You have not all arguments"
-        evt.log.error(detail)
-        await evt.reply(detail)
-        return {"data": {"error": detail}, "status": 422}
+    args: Namespace = evt.cmd_args
 
-    customer_room_id = evt.args_list[0]
-    destination = evt.args_list[1]
+    customer_room_id = args.customer_room
+    destination = args.queue if args.queue else args.agent
     joined_message = ""
-    put_enqueued_portal = True
-    force_distribution = False
-
-    if len(evt.args_list) > 2:
-        try:
-            if Util.is_room_id(destination):
-                put_enqueued_portal = False if evt.args_list[3] == "no" else True
-            elif Util.is_user_id(destination):
-                force_distribution = False if evt.args_list[3] == "no" else True
-            joined_message = evt.args_list[2]
-        except IndexError:
-            if match("no|yes", evt.args_list[2]):
-                if Util.is_room_id(destination):
-                    put_enqueued_portal = False if evt.args_list[2] == "no" else True
-                elif Util.is_user_id(destination):
-                    force_distribution = False if evt.args_list[2] == "no" else True
-            else:
-                joined_message = evt.args_list[2]
+    put_enqueued_portal = False if args.enqueue_chat == "no" else True
+    force_distribution = False if args.force_distribution == "no" else True
 
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     if not puppet:
