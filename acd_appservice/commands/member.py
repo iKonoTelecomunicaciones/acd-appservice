@@ -75,28 +75,9 @@ async def member(evt: CommandEvent) -> Dict:
     """
 
     args = evt.cmd_args
-    # json_response: Dict = {
-    #    "data": {"detail": "", "room_id": evt.room_id, "room_name": ""},
-    #    "status": 0,
-    # }
-
-    # try:
-    #    action = evt.args_list[0]
-    # except IndexError:
-    #    detail = "You have not sent the argument action"
-    #    evt.log.error(detail)
-    #    await evt.reply(detail)
-    #    return {"data": {"error": detail}, "status": 422}
-
     action: str = args.action
     agent_id: UserID = args.agent
     pause_reason: str = args.pause_reason
-
-    # if not action in ["login", "logout", "pause", "unpause"]:
-    #    msg = f"{action} is not a valid action"
-    #    evt.log.error(msg)
-    #    await evt.reply(text=msg)
-    #    return
 
     # Verify if user is able to do an agent operation over other agent
     if not evt.sender.is_admin and Util.is_user_id(agent_id) and agent_id != evt.sender.mxid:
