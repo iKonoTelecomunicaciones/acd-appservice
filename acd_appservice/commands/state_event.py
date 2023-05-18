@@ -72,7 +72,7 @@ async def state_event(evt: CommandEvent) -> Dict | None:
 
     """
 
-    puppet: Puppet = await Puppet.get_by_custom_mxid(evt.intent.mxid)
+    puppet: Puppet = await Puppet.get_by_portal(evt.cmd_args.room_id)
 
     if not puppet:
         return

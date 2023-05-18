@@ -73,21 +73,6 @@ async def pm(evt: CommandEvent) -> Dict:
     phone: str = args.phone
     message: str = args.message
 
-    # try:
-    #    phone = evt.args_list[0]
-    # except IndexError:
-    #    detail = "You have not sent the argument phone number"
-    #    evt.log.error(detail)
-    #    await evt.reply(detail)
-    #    return {"data": {"error": detail}, "status": 422}
-    # message = " ".join(evt.args_list[1:])
-
-    # if not message:
-    #    detail = "You have not sent the argument message"
-    #    evt.log.error(detail)
-    #    await evt.reply(detail)
-    #    return {"data": {"error": detail}, "status": 422}
-
     # A dict that will be sent to the frontend.
     return_params = {
         "sender_id": evt.sender.mxid,

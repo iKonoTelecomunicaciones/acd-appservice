@@ -92,7 +92,7 @@ async def transfer(evt: CommandEvent) -> str:
     """
     args: Namespace = evt.cmd_args
     customer_room_id: RoomID = args.portal
-    campaign_room_id: RoomID = evt.queue
+    campaign_room_id: RoomID = args.queue
 
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     portal: Portal = await Portal.get_by_room_id(

@@ -10,7 +10,7 @@ from ..util.util import Util
 from .handler import CommandArg, CommandEvent, command_handler
 
 agent = CommandArg(
-    name="--agent or -a",
+    name="--agent",
     help_text="Agent to whom the operation applies",
     is_required=False,
     example="@agent1:foo.com",

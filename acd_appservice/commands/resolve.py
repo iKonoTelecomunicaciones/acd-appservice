@@ -23,7 +23,7 @@ author = CommandArg(
 )
 
 send_message = CommandArg(
-    name="--send_message ",
+    name="--send_message or -sm",
     help_text="Should I send a resolution message?",
     is_required=False,
     example="`yes` | `y` | `1` | `no` | `n` | `0`",
@@ -75,18 +75,12 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     """
 
-    # try:
-    #    customer_room_id = evt.args_list[0]
-    #    user_id = evt.args_list[1]
-    # except IndexError:
-    #    detail = "You have not all arguments"
-    #    evt.log.error(detail)
-    #    await evt.reply(detail)
-    #    return {"data": {"error": detail}, "status": 422}
     args: Namespace = evt.cmd_args
     portal_room_id: RoomID = args.portal
     author: UserID = args.author
     send_message: str = True if args.send_message.lower() in ["yes", "y", "1"] else False
+
+    evt.log.debug(f"No digas mamadas meriguein {send_message}")
 
     evt.log.debug(
         (
@@ -142,20 +136,19 @@ async def resolve(evt: CommandEvent) -> Dict:
         room_id=portal.room_id, campaign_room_id=None
     )
 
-    if send_message is not None:
-        resolve_chat_params = puppet.config["acd.resolve_chat"]
-        if send_message:
-            args = ["-p", portal.room_id, "-m", resolve_chat_params["message"]]
-            await evt.processor.handle(
-                sender=evt.sender,
-                command="template",
-                args_list=args,
-                is_management=portal.room_id == evt.sender.management_room,
-                intent=puppet.intent,
-                room_id=evt.room_id,
-            )
+    resolve_chat_params = puppet.config["acd.resolve_chat"]
+    if send_message:
+        args = ["-p", portal.room_id, "-m", resolve_chat_params["message"]]
+        await evt.processor.handle(
+            sender=evt.sender,
+            command="template",
+            args_list=args,
+            is_management=portal.room_id == evt.sender.management_room,
+            intent=puppet.intent,
+            room_id=evt.room_id,
+        )
 
-        await portal.send_notice(text=resolve_chat_params["notice"])
+    await portal.send_notice(text=resolve_chat_params["notice"])
 
 
 class BulkResolve:

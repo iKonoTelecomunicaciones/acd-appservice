@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from argparse import ArgumentError, ArgumentParser, ArgumentTypeError, Namespace
+from argparse import ArgumentError, ArgumentParser, Namespace
 from typing import Any, Awaitable, Callable, Dict, List, NamedTuple, Type
 
 from attr import dataclass
@@ -318,6 +318,9 @@ class CommandProcessor:
             detail = "Missing arguments in command or invalid argument value"
             await evt.reply(detail)
             return Util.create_response_data(detail=detail, room_id=room_id, status=400)
+        except ArgumentError as error:
+            await evt.reply(str(error))
+            return Util.create_response_data(detail=str(error), room_id=room_id, status=400)
         except AttributeError:
             self.log.info("Incoming command has no argument processor")
 

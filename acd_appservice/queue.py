@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
-from typing import List, cast
+from typing import List, Optional, cast
 
 from mautrix.appservice import IntentAPI
 from mautrix.errors.base import IntentError
-from mautrix.types import RoomID, UserID
+from mautrix.types import RoomID
 from mautrix.util.logging import TraceLogger
 
 from .db.queue import Queue as DBQueue
@@ -119,7 +119,7 @@ class Queue(DBQueue, MatrixRoom):
 
         return True
 
-    async def update_description(self, new_description: str):
+    async def update_description(self, new_description: Optional[str]):
         """It updates the description of the room
 
         Parameters
@@ -129,7 +129,7 @@ class Queue(DBQueue, MatrixRoom):
         """
         if not new_description:
             return
-        self.description = new_description
+        self.description = new_description.strip()
         await self.main_intent.set_room_topic(room_id=self.room_id, topic=new_description)
         await self.save()
 
