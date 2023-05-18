@@ -1,4 +1,4 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from typing import Dict
 
 from mautrix.types import UserID
@@ -9,21 +9,21 @@ from ..user import User
 from ..util.util import Util
 from .handler import CommandArg, CommandEvent, command_handler
 
-agent = CommandArg(
-    name="--agent",
+agent_arg = CommandArg(
+    name="--agent or -g",
     help_text="Agent to whom the operation applies",
     is_required=False,
     example="@agent1:foo.com",
 )
 
-pause_reason = CommandArg(
+pause_reason_arg = CommandArg(
     name="--pause_reason or -p",
     help_text="Why are you going to pause?",
     is_required=False,
     example="Pause to see the sky",
 )
 
-action = CommandArg(
+action_arg = CommandArg(
     name="--action or -a",
     help_text="Agent operation",
     is_required=True,
@@ -42,7 +42,7 @@ def args_parser():
         required=True,
         choices=["login", "logout", "pause", "unpause"],
     )
-    parser.add_argument("--agent", dest="agent", type=str, required=False)
+    parser.add_argument("--agent", "-g", dest="agent", type=str, required=False)
     parser.add_argument("--pause_reason", "-p", dest="pause_reason", type=str, required=False)
 
     return parser
@@ -51,7 +51,7 @@ def args_parser():
 @command_handler(
     name="member",
     help_text="Agent operations like login, logout, pause, unpause",
-    help_args=[action, agent, pause_reason],
+    help_args=[action_arg, agent_arg, pause_reason_arg],
     args_parser=args_parser(),
 )
 async def member(evt: CommandEvent) -> Dict:
@@ -74,7 +74,7 @@ async def member(evt: CommandEvent) -> Dict:
 
     """
 
-    args = evt.cmd_args
+    args: Namespace = evt.cmd_args
     action: str = args.action
     agent_id: UserID = args.agent
     pause_reason: str = args.pause_reason

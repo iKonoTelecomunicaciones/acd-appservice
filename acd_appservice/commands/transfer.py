@@ -11,28 +11,28 @@ from ..user import User
 from ..util import Util
 from .handler import CommandArg, CommandEvent, command_handler
 
-agent = CommandArg(
+agent_arg = CommandArg(
     name="--agent or -a",
     help_text="Agent to which the chat is distributed",
     is_required=True,
     example="@agent1:foo.com",
 )
 
-force = CommandArg(
+force_arg = CommandArg(
     name="--force or -f",
     help_text="It's a flag that is used to decide if check the agent presence or join directly to room",
     is_required=False,
     example="`yes` | `no`",
 )
 
-queue = CommandArg(
+queue_arg = CommandArg(
     name="--queue-room-id or -q",
     help_text="Campaign room_id  where the customer will be transferred",
     is_required=True,
     example="`!foo:foo.com`",
 )
 
-portal = CommandArg(
+portal_arg = CommandArg(
     name="--portal or -p",
     help_text="Customer room_id to be transferred",
     is_required=True,
@@ -75,7 +75,7 @@ def args_parser():
 @command_handler(
     name="transfer",
     help_text=("Command that transfers a client to an campaign_room."),
-    help_args=[portal, queue],
+    help_args=[portal_arg, queue_arg],
     args_parser=args_parser(),
 )
 async def transfer(evt: CommandEvent) -> str:
@@ -151,7 +151,7 @@ async def transfer(evt: CommandEvent) -> str:
         "if you send `force` in `yes`, "
         "the agent is always going to be assigned to the chat no matter the agent presence."
     ),
-    help_args=[portal, agent, force],
+    help_args=[portal_arg, agent_arg, force_arg],
     args_parser=args_parser(),
 )
 async def transfer_user(evt: CommandEvent) -> str:
@@ -172,7 +172,7 @@ async def transfer_user(evt: CommandEvent) -> str:
     args: NameError = evt.cmd_args
     customer_room_id: RoomID = args.portal
     agent_id: UserID = args.agent
-    force: str = True if args.force == "yes" else False
+    force: bool = True if args.force == "yes" else False
 
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     portal: Portal = await Portal.get_by_room_id(

@@ -5,14 +5,14 @@ from ..portal import Portal
 from ..puppet import Puppet
 from .handler import CommandArg, CommandEvent, command_handler
 
-message = CommandArg(
+message_arg = CommandArg(
     name="--message or -m",
     help_text="Message to be sent",
     is_required=True,
     example="Hello {{1}} your ticket {{2}} has been resolved",
 )
 
-portal = CommandArg(
+portal_arg = CommandArg(
     name="--portal or -p",
     help_text="Room where the template will be sent",
     is_required=True,
@@ -31,7 +31,7 @@ def args_parser():
 @command_handler(
     name="template",
     help_text=("This command is used to send templates"),
-    help_args=[portal, message],
+    help_args=[portal_arg, message_arg],
     args_parser=args_parser(),
 )
 async def template(evt: CommandEvent):

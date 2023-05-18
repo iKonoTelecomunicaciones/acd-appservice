@@ -15,21 +15,21 @@ from ..signaling import Signaling
 from ..user import User
 from .handler import CommandArg, CommandEvent, CommandProcessor, command_handler
 
-author = CommandArg(
+author_arg = CommandArg(
     name="--author or -a",
     help_text="User who is solving the room",
     is_required=True,
     example="@user_id:foo.com",
 )
 
-send_message = CommandArg(
+send_message_arg = CommandArg(
     name="--send_message or -sm",
     help_text="Should I send a resolution message?",
     is_required=False,
     example="`yes` | `y` | `1` | `no` | `n` | `0`",
 )
 
-portal = CommandArg(
+portal_arg = CommandArg(
     name="--portal or -p",
     help_text="Room to be resolved",
     is_required=True,
@@ -57,7 +57,7 @@ def args_parser():
 @command_handler(
     name="resolve",
     help_text=("Command resolving a chat, ejecting the supervisor and the agent"),
-    help_args=[author, portal, send_message],
+    help_args=[author_arg, portal_arg, send_message_arg],
     args_parser=args_parser(),
 )
 async def resolve(evt: CommandEvent) -> Dict:
@@ -78,9 +78,7 @@ async def resolve(evt: CommandEvent) -> Dict:
     args: Namespace = evt.cmd_args
     portal_room_id: RoomID = args.portal
     author: UserID = args.author
-    send_message: str = True if args.send_message.lower() in ["yes", "y", "1"] else False
-
-    evt.log.debug(f"No digas mamadas meriguein {send_message}")
+    send_message: bool = True if args.send_message.lower() in ["yes", "y", "1"] else False
 
     evt.log.debug(
         (

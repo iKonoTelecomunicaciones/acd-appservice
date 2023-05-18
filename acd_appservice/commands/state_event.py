@@ -9,14 +9,14 @@ from mautrix.types import EventType, StateEvent
 from ..puppet import Puppet
 from .handler import CommandArg, CommandEvent, command_handler
 
-event_type = CommandArg(
+event_type_arg = CommandArg(
     name="--event-type or -e",
     help_text="Event_type you want to send",
     is_required=True,
     example="`m.room.name` | `m.custom.event`",
 )
 
-content = CommandArg(
+content_arg = CommandArg(
     name="--content or -c",
     help_text="The content to send",
     is_required=True,
@@ -30,7 +30,7 @@ content = CommandArg(
     ),
 )
 
-room_id = CommandArg(
+room_id_arg = CommandArg(
     name="--room-id or -r",
     help_text="Room where the status event is to be sent",
     is_required=True,
@@ -55,7 +55,7 @@ def args_parser():
 @command_handler(
     name="state_event",
     help_text=("Command that sends a state event to matrix"),
-    help_args=[room_id, event_type, content],
+    help_args=[room_id_arg, event_type_arg, content_arg],
     args_parser=args_parser(),
 )
 async def state_event(evt: CommandEvent) -> Dict | None:

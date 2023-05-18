@@ -3,7 +3,7 @@ from typing import Dict
 
 from .handler import CommandArg, CommandEvent, command_handler
 
-cmd = CommandArg(
+cmd_arg = CommandArg(
     name="command",
     help_text="Command that will be forwarded for the acd[n] that listens to it.",
     is_required=True,
@@ -20,7 +20,7 @@ def args_parser() -> ArgumentParser:
 @command_handler(
     name="br_cmd",
     help_text=("This command works as an echo"),
-    help_args=[cmd],
+    help_args=[cmd_arg],
     args_parser=args_parser(),
 )
 async def br_cmd(evt: CommandEvent) -> Dict:

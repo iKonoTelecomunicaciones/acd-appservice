@@ -10,21 +10,21 @@ from ..user import User
 from ..util import Util
 from .handler import CommandArg, CommandEvent, command_handler
 
-name = CommandArg(
+name_arg = CommandArg(
     name="--name or -n",
     help_text="Queue room name",
     is_required=True,
     example='"My favourite queue"',
 )
 
-invitees = CommandArg(
+invitees_arg = CommandArg(
     name="--invitees or -i",
     help_text="Invitees to the queue",
     is_required=True,
     example="`@user1:foo.com @user2:foo.com @user3:foo.com ...`",
 )
 
-description = CommandArg(
+description_arg = CommandArg(
     name="--description or -d",
     help_text="Short description about the queue",
     is_required=False,
@@ -32,14 +32,14 @@ description = CommandArg(
 )
 
 
-member = CommandArg(
+member_arg = CommandArg(
     name="--member or -m",
     help_text="Member to be added|deleted",
     is_required=True,
     example="@user1:foo.com",
 )
 
-queue = CommandArg(
+queue_arg = CommandArg(
     name="--queue or -q",
     help_text=(
         "Queue where the member will be added|deleted, "
@@ -49,14 +49,14 @@ queue = CommandArg(
     example="!foo:foo.com",
 )
 
-force = CommandArg(
+force_arg = CommandArg(
     name="--force or -f",
     help_text="Do you want to force queue deleting?",
     is_required=False,
     example="`yes` | `no`",
 )
 
-action = CommandArg(
+action_arg = CommandArg(
     name="action",
     help_text=(
         "Action to be taken in the queue.\n\n"
@@ -72,12 +72,12 @@ action = CommandArg(
     is_required=True,
     example="`create` | `add` | `remove` | `info` | `list` | `update` | `delete` | `set`",
     sub_args=[
-        {"description": "Create", "args": [name, invitees, description]},
-        {"description": "Add", "args": [member, queue]},
-        {"description": "Remove", "args": [member, queue]},
-        {"description": "Delete", "args": [queue, force]},
-        {"description": "Update", "args": [name, queue, description]},
-        {"description": "Info", "args": [queue]},
+        {"description": "Create", "args": [name_arg, invitees_arg, description_arg]},
+        {"description": "Add", "args": [member_arg, queue_arg]},
+        {"description": "Remove", "args": [member_arg, queue_arg]},
+        {"description": "Delete", "args": [queue_arg, force_arg]},
+        {"description": "Update", "args": [name_arg, queue_arg, description_arg]},
+        {"description": "Info", "args": [queue_arg]},
     ],
 )
 
@@ -145,7 +145,7 @@ def args_parser():
         "Create a queue. A queue is a matrix room containing agents that will be used "
         "for chat distribution. `invitees` is a comma-separated list of user_ids."
     ),
-    help_args=[action],
+    help_args=[action_arg],
     args_parser=args_parser(),
 )
 async def queue(evt: CommandEvent) -> Dict:
@@ -180,7 +180,7 @@ async def queue(evt: CommandEvent) -> Dict:
         queue = await Queue.get_by_room_id(room_id=queue_room_id, create=False)
 
         if not queue:
-            msg = "Incomming queue does not exist"
+            msg = "Incoming queue does not exist"
             evt.log.error(msg)
             await evt.reply(msg)
             return Util.create_response_data(detail=msg, room_id=queue_room_id, status=422)
@@ -193,7 +193,7 @@ async def queue(evt: CommandEvent) -> Dict:
 
         queue = await Queue.get_by_room_id(room_id=queue_room_id, create=False)
         if not queue:
-            msg = "Incomming queue does not exist"
+            msg = "Incoming queue does not exist"
             evt.log.error(msg)
             await evt.reply(msg)
             return Util.create_response_data(detail=msg, room_id=queue_room_id, status=422)

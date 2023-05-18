@@ -1,4 +1,4 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 
 from mautrix.types import PowerLevelStateEventContent
 
@@ -7,7 +7,7 @@ from ..user import User
 from ..util import Util
 from .handler import CommandArg, CommandEvent, command_handler
 
-destination = CommandArg(
+destination_arg = CommandArg(
     name="--destination or -d",
     help_text="Method to distribution of new chats",
     is_required=True,
@@ -15,7 +15,7 @@ destination = CommandArg(
 )
 
 
-bridge = CommandArg(
+bridge_arg = CommandArg(
     name="--bridge or -b",
     help_text="Bridge bot that will be invited to the control room if you want it",
     is_required=False,
@@ -49,7 +49,7 @@ def args_parser():
         "If you send `destination`, then the distribution of new chats related to this acd[n] "
         "will be done following this method. This field can be a room_id or a user_id."
     ),
-    help_args=[bridge, destination],
+    help_args=[bridge_arg, destination_arg],
     args_parser=args_parser(),
 )
 async def create(evt: CommandEvent) -> Puppet:
@@ -75,7 +75,7 @@ async def create(evt: CommandEvent) -> Puppet:
         evt.reply("We have not been able to create the `acd[n]`")
         return
 
-    args = evt.cmd_args
+    args: Namespace = evt.cmd_args
 
     bridge = args.bridge
     destination = args.destination

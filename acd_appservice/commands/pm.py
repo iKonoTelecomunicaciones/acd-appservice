@@ -12,14 +12,14 @@ from ..puppet import Puppet
 from ..signaling import Signaling
 from .handler import CommandArg, CommandEvent, command_handler
 
-message = CommandArg(
+message_arg = CommandArg(
     name="--message or -m",
     help_text="Message to be sent to the customer",
     is_required=True,
     example="Hey there!",
 )
 
-phone = CommandArg(
+phone_arg = CommandArg(
     name="--phone or -p",
     help_text="Number of the customer for whom the private chat is to be created",
     is_required=True,
@@ -45,7 +45,7 @@ def args_parser():
 @command_handler(
     name="pm",
     help_text=("Command that allows send a message to a customer"),
-    help_args=[phone, message],
+    help_args=[phone_arg, message_arg],
     args_parser=args_parser(),
 )
 async def pm(evt: CommandEvent) -> Dict:

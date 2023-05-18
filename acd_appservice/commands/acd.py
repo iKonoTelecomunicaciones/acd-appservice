@@ -1,31 +1,31 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 
 from ..portal import Portal
 from ..puppet import Puppet
 from .handler import CommandArg, CommandEvent, command_handler
 
-agent = CommandArg(
+agent_arg = CommandArg(
     name="--agent or -a",
     help_text="Agent mxid where the customer will be distributed",
     is_required=True,
     example="`@agent1:foo.com`",
 )
 
-queue = CommandArg(
+queue_arg = CommandArg(
     name="--queue-room-id or -q",
     help_text="Queue room_id where the customer will be distributed",
     is_required=True,
     example="`!foo:foo.com`",
 )
 
-joined_message = CommandArg(
+joined_message_arg = CommandArg(
     name="--join-message or -j",
     help_text="Message that will be sent when the agent joins the customer room",
     is_required=False,
     example='"{agentname} join to room"',
 )
 
-enqueued_chat = CommandArg(
+enqueue_chat_arg = CommandArg(
     name="--enqueue-chat or -e",
     help_text=(
         "If the chat was not distributed, should the portal be enqueued?\n"
@@ -35,7 +35,7 @@ enqueued_chat = CommandArg(
     example="`yes` | `no`",
 )
 
-force_distribution = CommandArg(
+force_distribution_arg = CommandArg(
     name="--force-distribution or -f",
     help_text=(
         "You want to force the agent distribution?\n"
@@ -45,14 +45,14 @@ force_distribution = CommandArg(
     example="`yes` | `no`",
 )
 
-customer_room = CommandArg(
+customer_room_arg = CommandArg(
     name="--customer-room or -c",
     help_text="Customer room_id to be distributed",
     is_required=True,
     example="`!foo:foo.com`",
     sub_args=[
-        {"description": "Distribute to queue", "args": [queue, enqueued_chat]},
-        {"description": "Distribute to agent", "args": [agent, force_distribution]},
+        {"description": "Distribute to queue", "args": [queue_arg, enqueue_chat_arg]},
+        {"description": "Distribute to agent", "args": [agent_arg, force_distribution_arg]},
     ],
 )
 
@@ -113,7 +113,7 @@ def args_parser():
         "Command that allows to distribute the chat of a client, "
         "a queue or agent and an optionally joining message can be given."
     ),
-    help_args=[customer_room, joined_message],
+    help_args=[customer_room_arg, joined_message_arg],
     args_parser=args_parser(),
 )
 async def acd(evt: CommandEvent) -> str:
@@ -127,7 +127,7 @@ async def acd(evt: CommandEvent) -> str:
 
     """
 
-    args = evt.cmd_args
+    args: Namespace = evt.cmd_args
 
     customer_room_id = args.customer_room
     destination = args.queue if args.queue else args.agent
