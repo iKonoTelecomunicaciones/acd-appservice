@@ -153,9 +153,9 @@ class Util:
 
     @classmethod
     def create_response_data(
-        cls, detail: str, status: int, room_id: Optional[str]
+        cls, detail: str, status: int, room_id: Optional[str], additional: Optional[Dict] = None
     ) -> Dict[str, Any]:
-        json_response = {
+        json_response: Dict[str, Any] = {
             "data": {
                 "detail": detail,
             },
@@ -164,5 +164,8 @@ class Util:
 
         if room_id:
             json_response["data"]["room_id"] = room_id
+
+        if additional:
+            json_response["data"].update(additional)
 
         return json_response

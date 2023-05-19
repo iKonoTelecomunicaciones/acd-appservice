@@ -772,11 +772,12 @@ class AgentManager:
 
             self.log.debug(f"Transferring to {selected_queue.room_id}")
 
+            argument_list: List[str] = ["-p", portal.room_id, "-q", selected_queue.room_id]
             await self.commands.handle(
                 room_id=portal.room_id,
                 sender=room_agent,
                 command="transfer",
-                args_list=f"{portal.room_id} {selected_queue.room_id}".split(),
+                args_list=argument_list,
                 intent=self.intent,
                 is_management=portal.room_id == room_agent.management_room,
             )
@@ -840,11 +841,12 @@ class AgentManager:
 
             self.log.debug(f"Transferring to {user_selected_campaign}")
 
+            argument_list: List[str] = ["-p", portal.room_id, "-q", user_selected_campaign]
             await self.commands.handle(
                 room_id=portal.room_id,
                 sender=room_agent,
                 command="transfer",
-                args_list=[portal.room_id, user_selected_campaign],
+                args_list=argument_list,
                 intent=self.intent,
                 is_management=portal.room_id == room_agent.management_room,
             )

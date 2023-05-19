@@ -880,10 +880,14 @@ class MatrixHandler:
                 return True
 
         user: User = await User.get_by_mxid(puppet.custom_mxid, create=False)
-        args = [portal.room_id, puppet.destination]
-        command = "acd" if Util.is_room_id(puppet.destination) else "transfer_user"
+        args = ["-p", portal.room_id, puppet.destination]
+        if Util.is_room_id(puppet.destination):
+            args = args + ["-q", puppet.destination]
+        else:
+            args = args + ["-a", puppet.destination]
+
         await self.commands.handle(
-            sender=user, command=command, args_list=args, is_management=False, intent=puppet.intent
+            sender=user, command="acd", args_list=args, is_management=False, intent=puppet.intent
         )
 
         return True

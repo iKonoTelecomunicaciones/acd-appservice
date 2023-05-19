@@ -225,9 +225,7 @@ class BulkResolve:
                     )
                     continue
 
-                bridge_prefix = puppet.config[f"bridges.{bridge}.prefix"]
-
-                args = [room_id, user_id, send_message, bridge_prefix]
+                args = ["-p", room_id, "-a", user_id, "-sm", send_message]
 
                 tasks.append(
                     self.commands.handle(
