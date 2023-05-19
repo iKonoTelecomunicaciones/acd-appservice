@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Dict, List
 
 import asyncpg
@@ -26,6 +27,7 @@ class Portal:
 
     room_id: RoomID
     state: PortalState = PortalState.INIT
+    state_date: datetime | None = None
     fk_puppet: int | None = None
     selected_option: RoomID | None = None
     id: int | None = None
@@ -36,10 +38,11 @@ class Portal:
             self.room_id,
             self.selected_option,
             self.state.value,
+            self.state_date,
             self.fk_puppet,
         )
 
-    _columns = "room_id, selected_option, state, fk_puppet"
+    _columns = "room_id, selected_option, state, state_date, fk_puppet"
 
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> Portal:
@@ -61,12 +64,15 @@ class Portal:
 
     async def insert(self) -> None:
         """It inserts a new row into the room table"""
-        q = f"INSERT INTO portal ({self._columns}) VALUES ($1, $2, $3, $4)"
+        q = f"INSERT INTO portal ({self._columns}) VALUES ($1, $2, $3, $4, $5)"
         await self.db.execute(q, *self._values)
 
     async def update(self) -> None:
         """It updates the portal's selected_option, state, and fk_puppet in the database"""
-        q = "UPDATE portal SET selected_option=$2, state=$3, fk_puppet=$4 WHERE room_id=$1"
+        q = (
+            "UPDATE portal SET selected_option=$2, state=$3, "
+            "state_date=$4, fk_puppet=$5 WHERE room_id=$1"
+        )
         await self.db.execute(q, *self._values)
 
     @classmethod
@@ -93,7 +99,10 @@ class Portal:
     async def get_rooms_by_state_and_puppet(
         cls, state: PortalState, fk_puppet: int
     ) -> List[Portal] | None:
-        q = f"SELECT id, {cls._columns} FROM portal WHERE state=$1 AND fk_puppet=$2"
+        q = (
+            f"SELECT id, {cls._columns} FROM portal WHERE state=$1 "
+            "AND fk_puppet=$2 ORDER BY selected_option ASC, state_date ASC"
+        )
         rows = await cls.db.fetch(q, state.value, fk_puppet)
         if not rows:
             return []

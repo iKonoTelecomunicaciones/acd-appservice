@@ -52,49 +52,52 @@ class AgentManager:
     async def process_distribution(
         self,
         portal: Portal,
-        queue: Queue = None,
+        destination: RoomID | UserID = None,
         joined_message: str = None,
         put_enqueued_portal: bool = True,
+        force_distribution: bool = False,
     ) -> None:
-        """If there are no online agents in the room, then loop over the agents in the campaign room
-        (or control room if no campaign is provided) and invite them to the customer room
+        """This function init the process distribution of a portal to either a queue or an agent based on the given parameters.
 
         Parameters
         ----------
         portal : Portal
             The room where the customer is.
-        queue : Queue
-            The queue that the customer is being distributed to.
+        destination : RoomID | UserID
+            Queue room id or agent mxid where chat will be distributed
         joined_message : str
             The message that will be sent to the customer when the agent joins the room.
         put_enqueued_portal : bool
             If the chat was not distributed, should the portal be enqueued?
-        """
-        json_response: Dict = {
-            "data": {
-                "detail": "",
-                "room_id": portal.room_id,
-            },
-            "status": 0,
-        }
+        force_distribution : bool
+            "You want to force the agent distribution?
 
+        Returns
+        -------
+            a JSON response with details about the distribution process.
+
+        """
         if portal.is_locked:
             self.log.debug(f"Room [{portal.room_id}] LOCKED")
-            json_response["data"]["detail"] = f"Room [{portal.room_id}] LOCKED"
-            json_response["status"] = 409
+            json_response = Util.create_response_data(
+                detail=f"Room [{portal.room_id}] LOCKED", room_id=portal.room_id, status=409
+            )
             return json_response
 
+        # TODO remove when decide what to do with business hours
         # Send an informative message if the conversation started no within the business hour
         if await self.business_hours.is_not_business_hour():
             await self.business_hours.send_business_hours_message(portal=portal)
-            if put_enqueued_portal:
-                self.log.debug(f"Portal [{portal.room_id}] state has been changed to ENQUEUED")
-                await portal.update_state(state=PortalState.ENQUEUED)
-            portal.selected_option = queue.room_id
-            await portal.update()
+            if Util.is_room_id(destination):
+                if put_enqueued_portal:
+                    self.log.debug(f"Portal [{portal.room_id}] state has been changed to ENQUEUED")
+                    await portal.update_state(state=PortalState.ENQUEUED)
+                portal.selected_option = destination
+                await portal.update()
 
-            json_response["data"]["detail"] = f"Message out of business hours"
-            json_response["status"] = 409
+            json_response = Util.create_response_data(
+                detail=f"Message out of business hours", room_id=portal.room_id, status=409
+            )
             return json_response
 
         self.log.debug(f"Init process distribution for [{portal.room_id}]")
@@ -102,12 +105,87 @@ class AgentManager:
         # lock the room
         portal.lock()
 
+        if Util.is_room_id(destination):
+            queue: Queue = await Queue.get_by_room_id(destination, create=False)
+            return await self.distribute_to_queue(
+                portal=portal,
+                queue=queue,
+                joined_message=joined_message,
+                put_enqueued_portal=put_enqueued_portal,
+            )
+        elif Util.is_user_id(destination):
+            user: User = await User.get_by_mxid(destination, create=False)
+            return await self.distribute_to_agent(
+                portal=portal,
+                agent=user,
+                joined_message=joined_message,
+                force_distribution=force_distribution,
+            )
+
+    async def distribute_to_agent(
+        self, portal: Portal, agent: User, joined_message: str, force_distribution: bool = False
+    ):
+        # Check that the agent is online and unpaused.
+        is_agent_available = await agent.is_available()
+
+        if not is_agent_available and not force_distribution:
+            portal.unlock()
+            json_response = Util.create_response_data(
+                detail=f"Agent {agent.mxid} is not available to be assigned",
+                room_id=portal.room_id,
+                status=409,
+            )
+            return json_response
+
+        await portal.join_user(agent.mxid)
+        if joined_message:
+            msg = joined_message.format(agentname=await agent.get_displayname())
+        else:
+            msg = self.config["acd.joined_agent_message"].format(
+                agentname=await agent.get_displayname()
+            )
+
+        if msg:
+            await portal.send_formatted_message(msg)
+
+        # set chat status to pending when the agent is asigned to the chat
+        await portal.update_state(PortalState.PENDING)
+        portal.unlock()
+
+        self.log.debug(f"Kicking the menubot out of the room {portal.room_id}")
+        try:
+            # TODO remove this code when all clients have menuflow implemented
+            menubot = await portal.get_current_menubot()
+            if menubot:
+                await self.room_manager.send_menubot_command(
+                    menubot.mxid, "cancel_task", portal.room_id
+                )
+                # --------- end remove -----------
+            await portal.remove_menubot(reason=f"agent [{agent.mxid}] accepted invite")
+        except Exception as e:
+            self.log.exception(e)
+
+        json_response = Util.create_response_data(
+            detail="Chat distributed successfully", room_id=portal.room_id, status=200
+        )
+        return json_response
+
+    async def distribute_to_queue(
+        self,
+        portal: Portal,
+        queue: Queue,
+        joined_message: str = None,
+        put_enqueued_portal: bool = True,
+    ):
         online_agents_in_room = await portal.has_online_agents()
 
         if online_agents_in_room == "unlock":
             portal.unlock()
-            json_response["data"]["detail"] = f"No joined members in the room [{portal.room_id}]"
-            json_response["status"] = 409
+            json_response = Util.create_response_data(
+                detail=f"No joined members in the room [{portal.room_id}]",
+                room_id=portal.room_id,
+                status=409,
+            )
             return json_response
 
         if not online_agents_in_room:
@@ -129,94 +207,12 @@ class AgentManager:
         else:
             self.log.debug(f"This room [{portal.room_id}] has online agents")
             portal.unlock()
-            json_response["data"]["detail"] = f"This room [{portal.room_id}] has online agents"
-            json_response["status"] = 409
+            json_response = Util.create_response_data(
+                detail=f"This room [{portal.room_id}] has online agents",
+                room_id=portal.room_id,
+                status=409,
+            )
             return json_response
-
-    async def process_enqueued_rooms(self) -> None:
-        """Task to run every X second looking for enqueued rooms
-
-        Every X seconds, check if there are enqueued rooms, if there are,
-        check if there are online agents in the campaign room, if there are,
-        assign the agent to the enqueued room
-        """
-        try:
-            while True:
-                # Stop process enqueued rooms if the conversation is not within the business hour
-                if await self.business_hours.is_not_business_hour():
-                    self.log.debug(
-                        (
-                            f"[{PortalState.ENQUEUED.value}] rooms process is stopped,"
-                            " the conversation is not within the business hour"
-                        )
-                    )
-                    await sleep(self.config["acd.search_pending_rooms_interval"])
-                    continue
-
-                self.log.debug(f"Searching for [{PortalState.ENQUEUED.value}] rooms...")
-                enqueued_portals: List[Portal] = await Portal.get_rooms_by_state_and_puppet(
-                    state=PortalState.ENQUEUED, fk_puppet=self.puppet_pk
-                )
-
-                if len(enqueued_portals) > 0:
-                    last_campaign_room_id = None
-                    queue_has_online_agent = None
-
-                    for portal in enqueued_portals:
-                        portal.main_intent = self.intent
-                        portal.bridge = self.bridge
-
-                        result = await portal.get_current_agent()
-                        if result:
-                            self.log.debug(
-                                (
-                                    f"Room {portal.room_id} has already an agent, "
-                                    f"removing from [{PortalState.ENQUEUED.value}] rooms..."
-                                )
-                            )
-                            await portal.update_state(state=PortalState.PENDING)
-
-                        else:
-                            queue: Queue = await Queue.get_by_room_id(
-                                room_id=portal.selected_option
-                            )
-
-                            self.log.debug(
-                                "Searching for online agent in campaign "
-                                f"{queue.room_id if queue else '👻'} "
-                                f"to room: {portal.room_id}"
-                            )
-
-                            if queue.room_id != last_campaign_room_id:
-                                queue_has_online_agent = await queue.get_first_online_agent()
-                            else:
-                                self.log.debug(
-                                    f"Same campaign, continue with other room waiting "
-                                    "for other online agent different than last one"
-                                )
-                                continue
-
-                            if queue_has_online_agent:
-                                self.log.debug(
-                                    f"The agent {queue_has_online_agent.mxid} is online to join "
-                                    f"room: {portal.room_id}"
-                                )
-                                try:
-                                    await self.process_distribution(portal, queue)
-                                except Exception as e:
-                                    self.log.exception(e)
-
-                            else:
-                                self.log.debug("There's no online agents yet")
-
-                            last_campaign_room_id = queue.room_id
-
-                else:
-                    self.log.debug(f"There's no [{PortalState.ENQUEUED.value}] rooms")
-
-                await sleep(self.config["acd.search_pending_rooms_interval"])
-        except Exception as e:
-            self.log.exception(e)
 
     async def loop_agents(
         self,
@@ -247,14 +243,6 @@ class AgentManager:
 
         """
 
-        json_response: Dict = {
-            "data": {
-                "detail": "",
-                "room_id": portal.room_id,
-            },
-            "status": 0,
-        }
-
         total_agents = await queue.get_agent_count()
         online_agents = 0
 
@@ -279,12 +267,13 @@ class AgentManager:
                         f"[{queue.room_id}] but it has no agents"
                     )
                     await portal.send_notice(text=msg)
-                    json_response["data"]["detail"] = msg
                 else:
                     await self.show_no_agents_message(portal=portal, queue=queue)
-                    json_response["data"]["detail"] = "There are no agents in queue room"
+                    msg = "There are no agents in queue room"
 
-                json_response["status"] = 404
+                json_response = Util.create_response_data(
+                    detail=msg, room_id=portal.room_id, status=404
+                )
                 portal.unlock(transfer)
                 break
 
@@ -334,8 +323,16 @@ class AgentManager:
                         joined_message=joined_message,
                         transfer_author=transfer_author,
                     )
-                    json_response.get("data")["detail"] = "Chat distribute successfully"
-                    json_response["status"] = 200
+
+                    # Set current agent in queue to avoid distribute
+                    # two chats to the same agent in distribution process,
+                    # it is useful in enqueued portals to have a clean distribution
+                    if not transfer:
+                        self.CURRENT_AGENT[queue.room_id] = agent_id
+
+                    json_response = Util.create_response_data(
+                        detail="Chat distributed successfully", room_id=portal.room_id, status=200
+                    )
                     break
 
             agent_count += 1
@@ -350,11 +347,11 @@ class AgentManager:
 
                 if transfer_author:
                     msg = self.config["acd.no_agents_for_transfer"]
-                    json_response["status"] = 404
+                    status = 404
                     await portal.send_notice(text=msg)
                 else:
                     msg = "The chat could not be distributed"
-                    json_response["status"] = 202
+                    status = 202
                     await self.show_no_agents_message(portal=portal, queue=queue)
                     if put_enqueued_portal:
                         msg = f"{msg}, however, it was enqueued"
@@ -367,7 +364,9 @@ class AgentManager:
                     await portal.update()
 
                 portal.unlock(transfer)
-                json_response["data"]["detail"] = msg
+                json_response = Util.create_response_data(
+                    detail=msg, room_id=portal.room_id, status=status
+                )
                 break
 
             self.log.debug(f"Agent count: [{agent_count}] online_agents: [{online_agents}]")
@@ -581,9 +580,9 @@ class AgentManager:
                             menubot.mxid, "cancel_task", portal.room_id
                         )
                         # --------- end remove -----------
-                        await portal.remove_menubot(
-                            reason=detail if detail else f"agent [{agent_id}] accepted invite",
-                        )
+                    await portal.remove_menubot(
+                        reason=detail if detail else f"agent [{agent_id}] accepted invite",
+                    )
                 except Exception as e:
                     self.log.exception(e)
             try:

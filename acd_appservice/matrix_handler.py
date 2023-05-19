@@ -5,6 +5,7 @@ import logging
 import re
 from shlex import split
 
+from asyncpg.exceptions import UniqueViolationError
 from markdown import markdown
 from mautrix.appservice import AppService
 from mautrix.bridge import config
@@ -41,6 +42,7 @@ from .events import (
     CustomerMessageEvent,
     UICEvent,
 )
+from .matrix_room import MatrixRoom
 from .message import Message
 from .portal import Portal, PortalState
 from .puppet import Puppet
@@ -303,6 +305,7 @@ class MatrixHandler:
         # the performance of the software
 
         if await Portal.is_portal(evt.room_id):
+            self.log.debug(f"Room {evt.room_id} is a portal")
             if not puppet:
                 self.log.warning(f"{evt.state_key} is not a puppet")
                 return
@@ -310,7 +313,7 @@ class MatrixHandler:
             # Checking if there is already a puppet in the room.
             # If there is, it will leave the room.
             puppet_inside: Puppet = await Puppet.get_by_portal(portal_room_id=evt.room_id)
-            if puppet_inside:
+            if puppet_inside and puppet != puppet_inside:
                 detail = (
                     f"There is already a puppet {puppet_inside.custom_mxid} "
                     f"in the room {evt.room_id}"
@@ -325,14 +328,21 @@ class MatrixHandler:
                 f"The puppet {puppet.intent.mxid} is trying join in the room {evt.room_id}"
             )
 
-            # Creates the portal and join it
-            await Portal.get_by_room_id(
-                evt.room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
-            )
+            try:
+                # Creates the portal and join it
+                await Portal.get_by_room_id(
+                    evt.room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
+                )
+            except UniqueViolationError as error:
+                self.log.error(error)
+
+            self.log.debug(f"{puppet.mxid} is joining portal room {evt.room_id}")
             await puppet.intent.join_room(evt.room_id)
 
         else:
+            self.log.debug(f"{evt.room_id} is not a portal")
             if puppet:
+                self.log.debug(f"{puppet.mxid} is joining NOT portal room {evt.room_id}")
                 await puppet.intent.join_room(evt.room_id)
                 return
 
@@ -390,12 +400,45 @@ class MatrixHandler:
         if not await Portal.is_portal(room_id=room_id):
             return
 
-        portal = await Portal.get_by_room_id(room_id=room_id)
+        if await Puppet.get_by_custom_mxid(user_id) or user.is_guest:
+            if user.is_guest:
+                # In the widget, the puppet is not invited,
+                # it joins the room directly, so the portal has not been created yet
+                room_info = await MatrixRoom.get_info(room_id)
+                puppet: Puppet = await Puppet.get_by_custom_mxid(room_info.get("creator"))
+            else:
+                # Sometimes the join event is executed before finishing the invite event handler
+                # operations, so we verify that the portal is properly created
+                puppet: Puppet = await Puppet.get_by_custom_mxid(user_id)
+
+            # Can be occurred the error that the portal is already created,
+            # but this function does not know it and try to create it again,
+            # generating a failure UniqueViolationError.
+            try:
+                await Portal.get_by_room_id(
+                    room_id=room_id,
+                    fk_puppet=puppet.pk,
+                    intent=puppet.intent,
+                    bridge=puppet.bridge,
+                )
+            except UniqueViolationError as error:
+                await asyncio.sleep(1)
+                self.log.error(error)
+
+        puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
+        portal = await Portal.get_by_room_id(
+            room_id=room_id,
+            fk_puppet=puppet.pk,
+            intent=puppet.intent,
+            bridge=puppet.bridge,
+            create=False,
+        )
 
         if not Puppet.get_id_from_mxid(user_id):
             puppet = await Puppet.get_by_portal(room_id)
 
-            # If the joined user is main bot or a puppet then saving the room_id and the user_id to the database.
+            # If the joined user is main bot or a puppet then saving
+            # the room_id and the user_id to the database.
             if puppet.intent and puppet.intent.bot and puppet.intent.bot.mxid == user.mxid:
                 # Si el que se unió es el bot principal, debemos sacarlo para que no dañe
                 # el comportamiento del puppet
@@ -483,7 +526,10 @@ class MatrixHandler:
             return
 
         # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
-        if not room_id in puppet.BIC_ROOMS:
+        if self.config["acd.process_destination_on_joining"] and not room_id in puppet.BIC_ROOMS:
+            # set chat status to start before process the destination
+            await portal.update_state(PortalState.START)
+
             uic_event = UICEvent(
                 event_type=ACDEventTypes.PORTAL,
                 event=ACDPortalEvents.UIC,
@@ -495,9 +541,6 @@ class MatrixHandler:
                 customer_mxid=portal.creator,
             )
             await uic_event.send()
-
-            # set chat status to start before process the destination
-            await portal.update_state(PortalState.START)
 
             if puppet.destination:
                 portal: Portal = await Portal.get_by_room_id(
@@ -554,7 +597,7 @@ class MatrixHandler:
 
         if puppet and not puppet.phone:
             bridge_conector = ProvisionBridge(session=self.az.http_session, config=self.config)
-            response = await bridge_conector.ping(user_id=puppet.custom_mxid)
+            status, response = await bridge_conector.ping(user_id=puppet.custom_mxid)
             if (
                 not response.get("error")
                 and response.get("whatsapp").get("conn")
@@ -624,7 +667,8 @@ class MatrixHandler:
         ):
             puppet = await Puppet.get_by_control_room_id(control_room_id=room_id)
             self.log.warning(
-                f"The puppet {puppet.custom_mxid} with phone {puppet.phone} was logged out :: {message.body}"
+                f"The puppet {puppet.custom_mxid} with phone {puppet.phone} "
+                f"was logged out :: {message.body}"
             )
             await puppet.reset_phone()
             return
@@ -688,8 +732,7 @@ class MatrixHandler:
                 return
 
         # Ignore messages from whatsapp bots
-        bridge = await puppet.room_manager.get_room_bridge(room_id=room_id)
-        if bridge and sender.mxid == self.config[f"bridges.{bridge}.mxid"]:
+        if sender.mxid == self.config[f"bridges.{puppet.bridge}.mxid"]:
             return
 
         # Checking if the room is a control room.
@@ -752,7 +795,7 @@ class MatrixHandler:
         if not await portal.get_room_name():
             await portal.update_room_name()
             self.log.info(
-                f"User {portal.room_id} has changed the name of the room {puppet.intent.mxid}"
+                f"User {puppet.intent.mxid} has changed the name of the room {portal.room_id}"
             )
 
         if puppet.intent.mxid == sender.mxid:

@@ -1,24 +1,41 @@
+from argparse import ArgumentParser, Namespace
+
 from mautrix.types import PowerLevelStateEventContent
 
 from ..puppet import Puppet
+from ..user import User
 from ..util import Util
 from .handler import CommandArg, CommandEvent, command_handler
 
-destination = CommandArg(
-    name="destination",
+destination_arg = CommandArg(
+    name="--destination or -d",
     help_text="Method to distribution of new chats",
-    is_required=False,
+    is_required=True,
     example="`@user_id:foo.com`| `!foo:foo.com`",
 )
 
 
-bridge = CommandArg(
-    name="bridge",
+bridge_arg = CommandArg(
+    name="--bridge or -b",
     help_text="Bridge bot that will be invited to the control room if you want it",
     is_required=False,
     example="`mautrix`| `instagram` | `gupshup`",
-    sub_args=[destination],
 )
+
+
+def args_parser():
+    parser = ArgumentParser(description="CREATE", exit_on_error=False)
+
+    parser.add_argument(
+        "--destination",
+        "-d",
+        dest="destination",
+        type=str,
+    )
+
+    parser.add_argument("--bridge", "-b", dest="bridge", type=str, default="")
+
+    return parser
 
 
 @command_handler(
@@ -32,7 +49,8 @@ bridge = CommandArg(
         "If you send `destination`, then the distribution of new chats related to this acd[n] "
         "will be done following this method. This field can be a room_id or a user_id."
     ),
-    help_args=[bridge],
+    help_args=[bridge_arg, destination_arg],
+    args_parser=args_parser(),
 )
 async def create(evt: CommandEvent) -> Puppet:
     """We create a puppet, we create a control room, we invite the puppet,
@@ -49,8 +67,6 @@ async def create(evt: CommandEvent) -> Puppet:
 
     """
 
-    puppet = None
-
     # We get the following puppet available in the bd
     next_puppet = await Puppet.get_next_puppet()
     invitees = [evt.sender.mxid]
@@ -59,15 +75,10 @@ async def create(evt: CommandEvent) -> Puppet:
         evt.reply("We have not been able to create the `acd[n]`")
         return
 
-    try:
-        bridge = evt.args_list[0]
-    except IndexError:
-        bridge = ""
+    args: Namespace = evt.cmd_args
 
-    try:
-        destination = evt.args_list[1]
-    except IndexError:
-        destination = ""
+    bridge = args.bridge
+    destination = args.destination
 
     try:
         # We create the puppet with the following pk
@@ -83,10 +94,9 @@ async def create(evt: CommandEvent) -> Puppet:
 
         if destination:
             if Util.is_user_id(destination):
-                invitees.append(destination)
-            else:
-                if Util.is_room_alias(destination) or Util.is_room_id(destination):
-                    await evt.intent.bot.join_room(room_id_or_alias=destination)
+                user: User = await User.get_by_mxid(destination, create=False)
+                if user and user.is_menubot:
+                    invitees.append(destination)
 
             puppet.destination = destination
 
@@ -103,7 +113,6 @@ async def create(evt: CommandEvent) -> Puppet:
         )
 
         for user_id in evt.config["bridge.puppet_control_room.invitees"]:
-
             if user_id not in invitees:
                 invitees.append(user_id)
 

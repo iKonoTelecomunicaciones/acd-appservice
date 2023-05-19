@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict
+from typing import Dict, List
 
 from aiohttp import web
+from mautrix.types import RoomID
 
-from ...db.user import User, UserRoles
+from ...portal import Portal
 from ...puppet import Puppet
+from ...user import User, UserRoles
 from ...util import Util
 from ..base import _resolve_user_identifier, routes
 from ..error_responses import (
@@ -15,8 +17,10 @@ from ..error_responses import (
     INVALID_USER_ID,
     INVALID_USER_ROLE,
     NOT_DATA,
+    PORTAL_DOESNOT_EXIST,
     PUPPET_DOESNOT_EXIST,
     REQUIRED_VARIABLES,
+    ROOM_NAME_NOT_UPDATED,
     USER_DOESNOT_EXIST,
 )
 
@@ -89,7 +93,7 @@ async def get_control_rooms() -> web.Response:
 
     responses:
         '200':
-            $ref: '#/components/responses/ControlRoomFound'
+            $ref: '#/components/responses/ControlRooms'
         '400':
             $ref: '#/components/responses/BadRequest'
         '404':
@@ -212,10 +216,91 @@ async def update_puppet(request: web.Request) -> web.Response:
     if data.get("email") and not _utils.is_email(email=data.get("email")):
         return web.json_response(**INVALID_EMAIL)
 
-    puppet.destination = data.get("destination")
+    destination = data.get("destination")
+
+    if Util.is_user_id(destination):
+        user: User = await User.get_by_mxid(destination, create=False)
+        # Check if the new destination is a menubot and
+        # if it's different from the current puppet destination.
+        # If the conditions are fulfilled,
+        # it kicks the current menubot from the control room and invites the new one.
+        if user and user.is_menubot and puppet.destination != destination:
+            current_menubot = await puppet.menubot_id
+            if current_menubot:
+                await puppet.intent.kick_user(puppet.control_room_id, current_menubot)
+            await puppet.intent.invite_user(puppet.control_room_id, destination)
+
+    puppet.destination = destination or puppet.destination
     puppet.email = data.get("email") or puppet.email
     puppet.phone = data.get("phone") or puppet.phone
     await puppet.save()
 
     updated_puppet = await Puppet.get_info_by_custom_mxid(puppet_mxid)
     return web.json_response(data=updated_puppet)
+
+
+@routes.patch("/v1/room_name")
+async def update_room_name(request: web.Request) -> web.Response:
+    """
+    ---
+    summary:    Update the name of rooms
+    tags:
+        - Mis
+
+    requestBody:
+        required: false
+        description: A json with `room_name` and `room_id_list`
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        room_name:
+                            type: string
+                        room_id_list:
+                            type: array
+                            items:
+                                type: string
+                    example:
+                        room_name: John Doe
+                        room_id_list: ['!XorbLOaYvnrsasAROq:domain','!ZorbLRaAvnrZasAOWL:domain']
+
+    responses:
+        '200':
+            $ref: '#/components/responses/UpdateRoomNameSuccess'
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '404':
+            $ref: '#/components/responses/NotFound'
+        '409':
+            $ref: '#/components/responses/UpdateRoomNameUnsuccessful'
+    """
+    await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+    data: Dict = await request.json()
+
+    room_id_list: List[RoomID] = data.get("room_id_list")
+
+    for room_id in room_id_list:
+        puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
+        if not puppet:
+            return web.json_response(**PUPPET_DOESNOT_EXIST)
+
+        portal: Portal = await Portal.get_by_room_id(
+            room_id=room_id,
+            create=False,
+            fk_puppet=puppet.pk,
+            intent=puppet.intent,
+            bridge=puppet.bridge,
+        )
+        if not portal:
+            return web.json_response(**PORTAL_DOESNOT_EXIST)
+
+        try:
+            await portal.update_room_name(new_room_name=data.get("room_name"))
+        except:
+            return web.json_response(**ROOM_NAME_NOT_UPDATED)
+
+    return web.json_response(data={"detail": "Room name updated successfully"}, status=200)

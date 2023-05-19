@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from logging import Logger, getLogger
 from typing import Dict, List
 
 from aiohttp import web
@@ -24,6 +25,8 @@ from ..error_responses import (
     SERVER_ERROR,
     USER_DOESNOT_EXIST,
 )
+
+log: Logger = getLogger()
 
 
 @routes.get("/v1/mautrix/ws_link_phone", allow_head=False)
@@ -192,6 +195,11 @@ async def send_message(request: web.Request) -> web.Response:
         return web.json_response(data=response, status=status)
 
     customer_room_id = response.get("room_id")
+
+    # TODO WORKAROUND FOR NOT LINKING TO THE MENU IN A BIC
+    # This is to avoid inviting the menu to the room
+    log.debug(f"Putting portal {customer_room_id} in BIC rooms")
+    puppet.BIC_ROOMS.add(customer_room_id)
 
     if msg_type == "text":
         content = TextMessageEventContent(
@@ -783,8 +791,8 @@ async def get_bridges_status(request: web.Request) -> web.Response:
         bridge_conector = ProvisionBridge(
             config=puppet.config, session=puppet.intent.api.session, bridge=puppet.bridge
         )
-        status = await bridge_conector.ping(puppet.mxid)
-        bridges_status.append(status)
+        status, response = await bridge_conector.ping(puppet.mxid)
+        bridges_status.append(response)
 
     return web.json_response(data={"bridges_status": bridges_status})
 

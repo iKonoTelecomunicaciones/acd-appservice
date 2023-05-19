@@ -61,6 +61,10 @@ class User(DBUser, BaseUser):
     def is_menubot(self) -> bool:
         return True if self.mxid.startswith(self.config["acd.menubot_prefix"]) else False
 
+    @property
+    def is_guest(self) -> bool:
+        return bool(re.match(self.config["acd.username_regex_guest"], self.mxid))
+
     @classmethod
     def init_cls(cls, bridge: "ACDAppService") -> None:
         cls.bridge = bridge
@@ -159,7 +163,7 @@ class User(DBUser, BaseUser):
             )
             return state
 
-    async def is_paused(self, queue_id: int) -> bool:
+    async def is_paused(self, queue_id: Optional[int] = None) -> bool:
         """This function returns a boolean value that indicates
         whether or not the user is paused in the queue
 
@@ -173,12 +177,34 @@ class User(DBUser, BaseUser):
             A boolean value.
 
         """
-        membership = await self.get_membership(queue_id=queue_id)
+        if queue_id:
+            membership = await self.get_membership(queue_id=queue_id)
 
-        if not membership:
-            return False
+            if not membership:
+                return False
 
-        return membership.paused
+            return membership.paused
+        else:
+            state = bool(
+                await QueueMembership.get_count_by_user_and_paused_state(
+                    fk_user=self.id, paused=True
+                )
+            )
+            return state
+
+    async def is_available(self, queue_id: Optional[int] = None) -> bool:
+        """This function checks if an user is both online and not paused.
+
+        Parameters
+        ----------
+        queue_id : Optional[int]
+
+        Returns
+        -------
+            A boolean value.
+        """
+
+        return await self.is_online(queue_id) and not await self.is_paused(queue_id)
 
     async def get_membership(self, queue_id: int) -> QueueMembership:
         """It gets a queue membership object for a user and a queue

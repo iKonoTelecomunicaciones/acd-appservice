@@ -4,7 +4,8 @@ import asyncio
 import json
 import logging
 import re
-from typing import Dict, List, cast
+from datetime import datetime
+from typing import Dict, List, Optional, cast
 
 from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI
@@ -57,21 +58,35 @@ class Portal(DBPortal, MatrixRoom):
             f"Updating room [{self.room_id}] state [{self.state.value}] to [{state.value}]"
         )
         self.state = state
+        self.state_date = self.now()
         await self.save()
 
-    async def update_room_name(self) -> None:
-        """If the room name is not set to be kept, get the updated name and set it
+    async def update_room_name(self, new_room_name: Optional[str] = None) -> None:
+        """
+        If the room name is not set to be kept, get the updated name and set it
 
-        Returns
-        -------
-            The updated room name.
+        Parameters
+        ----------
+        new_room_name : str, optional
+            holds the new room name to update when update the customer name
 
         """
+        if not new_room_name:
+            updated_room_name = await self.get_update_name()
 
-        updated_room_name = await self.get_update_name()
+            if not updated_room_name:
+                return
+        else:
+            try:
+                user_name_match = re.match(self.config["utils.username_regex"], self.creator)
+                phone = user_name_match.group("number")
+                updated_room_name = f"{new_room_name} ({phone})"
+            except:
+                updated_room_name = f"{new_room_name}"
 
-        if not updated_room_name:
-            return
+            if self.config["acd.numbers_in_rooms"]:
+                emoji_number = Util.get_emoji_number(number=str(self.fk_puppet))
+                updated_room_name = f"{updated_room_name} {emoji_number}"
 
         await self.main_intent.set_room_name(room_id=self.room_id, name=updated_room_name)
 
@@ -410,7 +425,7 @@ class Portal(DBPortal, MatrixRoom):
         for attempt in range(10):
             self.log.debug(f"Inviting menubot {menubot_mxid} to {self.room_id}...")
             try:
-                await self.invite_user(menubot_mxid)
+                await self.add_member(menubot_mxid)
                 # When menubot enters to the portal, set the portal state in ONMENU
                 await self.update_state(PortalState.ONMENU)
                 self.log.debug(f"Menubot {menubot_mxid} invited OK to room {self.room_id}")
@@ -426,6 +441,15 @@ class Portal(DBPortal, MatrixRoom):
     async def remove_menubot(self, reason):
         """It removes the current menubot from the room"""
         current_menubot: User = await self.get_current_menubot()
+
+        # Sometimes menubot misses joining the invite when it's restarted
+        if not current_menubot:
+            invitees: List[User] = await self.get_room_invitees()
+            for invitee in invitees:
+                if invitee.is_menubot:
+                    current_menubot = invitee
+                    break
+
         if current_menubot:
             await self.remove_member(current_menubot.mxid, reason=reason)
 
@@ -502,9 +526,7 @@ class Portal(DBPortal, MatrixRoom):
         if not creator:
             return False
 
-        is_customer_guest = re.search(cls.config[f"acd.username_regex_guest"], creator)
-
-        if is_customer_guest:
+        if await cls.is_guest_room(room_id=room_id):
             return True
 
         bridges = cls.config["bridges"]
@@ -553,6 +575,7 @@ class Portal(DBPortal, MatrixRoom):
             return portal
 
         if create:
+            cls.log.info(f"Creating new portal {room_id}")
             portal = cls(room_id)
 
             if fk_puppet:
@@ -568,6 +591,10 @@ class Portal(DBPortal, MatrixRoom):
                 portal.main_intent = intent
 
             return portal
+
+    @classmethod
+    def now(cls) -> str:
+        return datetime.utcnow()
 
     @property
     def is_locked(self) -> bool:

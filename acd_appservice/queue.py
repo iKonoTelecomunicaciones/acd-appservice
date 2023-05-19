@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
-from typing import List, cast
+from typing import List, Optional, cast
 
 from mautrix.appservice import IntentAPI
 from mautrix.errors.base import IntentError
-from mautrix.types import RoomID, UserID
+from mautrix.types import RoomID
 from mautrix.util.logging import TraceLogger
 
 from .db.queue import Queue as DBQueue
@@ -52,20 +52,24 @@ class Queue(DBQueue, MatrixRoom):
 
     async def clean_up(self):
         """It removes all members from the queue, leaves the queue, and deletes the queue"""
-        members = await self.main_intent.get_joined_members(self.room_id)
+        try:
+            members = await self.main_intent.get_joined_members(self.room_id)
+        except Exception as error:
+            members = None
+            self.log.exception(f"Error getting members of queue {self.room_id}: {error}")
 
-        if not members:
+        if members:
+            reason = "The queue will be removed"
+
+            for member in members.keys():
+                if self.main_intent.mxid == member:
+                    continue
+
+                await self.remove_member(member=member, reason=reason)
+
+            await self.leave(reason=reason)
+        else:
             self.log.error(f"Unable to obtain members in the queue {self.room_id}")
-
-        reason = "The queue will be removed"
-
-        for member in members.keys():
-            if self.main_intent.mxid == member:
-                continue
-
-            await self.remove_member(member=member, reason=reason)
-
-        await self.leave(reason=reason)
 
         self.clean_cache()
 
@@ -115,7 +119,7 @@ class Queue(DBQueue, MatrixRoom):
 
         return True
 
-    async def update_description(self, new_description: str):
+    async def update_description(self, new_description: Optional[str]):
         """It updates the description of the room
 
         Parameters
@@ -125,7 +129,7 @@ class Queue(DBQueue, MatrixRoom):
         """
         if not new_description:
             return
-        self.description = new_description
+        self.description = new_description.strip()
         await self.main_intent.set_room_topic(room_id=self.room_id, topic=new_description)
         await self.save()
 
@@ -154,6 +158,17 @@ class Queue(DBQueue, MatrixRoom):
         agents = await self.get_agents() or []
         return len(agents)
 
+    async def get_available_agents_count(self) -> int:
+        """This function returns the number of available agents.
+
+        Returns
+        -------
+            An integer value which represents the count of available agents.
+
+        """
+        available_agents = await self.get_available_agents()
+        return len(available_agents) if available_agents else 0
+
     async def get_agents(self) -> List[User]:
         """Get all the users in the channel, remove the bots, and return the remaining users
 
@@ -174,6 +189,26 @@ class Queue(DBQueue, MatrixRoom):
 
         # remove bots from member list
         return self.remove_not_agents(members)
+
+    async def get_available_agents(self) -> List[User] | None:
+        """This function returns a list of available agents who are online and not paused,
+           or None if no agents are available.
+
+        Returns
+        -------
+            A list of `User` or `None` if there are no available agents.
+
+        """
+
+        agents: List[User] = await self.get_agents()
+        available_agents = [
+            agent
+            for agent in agents
+            if await agent.is_online(self.id) and not await agent.is_paused(self.id)
+        ]
+        if not available_agents:
+            available_agents = None
+        return available_agents
 
     def remove_not_agents(self, members: List[User]) -> List[User]:
         """Removes non-agents from a list of users

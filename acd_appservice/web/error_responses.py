@@ -113,3 +113,20 @@ INVALID_USER_ROLE = {"data": {"error": "User role does not exist"}, "status": 40
 PUPPET_DOESNOT_EXIST = {"data": {"error": "Puppet with given mxid was not found."}, "status": 404}
 
 INVALID_DESTINATION = {"data": {"error": "Given destination is invalid"}, "status": 409}
+
+NO_PUPPET_IN_PORTAL = {
+    "data": {"error": "Unable to find a puppet inside the portal"},
+    "status": 409,
+}
+
+UNABLE_TO_FIND_PUPPET = {"data": {"error": "Unable to find puppet"}, "status": 409}
+
+PORTAL_DOESNOT_EXIST = {
+    "data": {"error": "Portal with given room id was not found."},
+    "status": 404,
+}
+
+ROOM_NAME_NOT_UPDATED = {
+    "data": {"error": "The name of room was not updated"},
+    "status": 409,
+}

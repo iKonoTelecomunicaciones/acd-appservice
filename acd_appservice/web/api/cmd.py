@@ -25,11 +25,13 @@ from ..error_responses import (
     BRIDGE_INVALID,
     INVALID_ACTION,
     INVALID_USER_ID,
+    NO_PUPPET_IN_PORTAL,
     NOT_DATA,
     QUEUE_DOESNOT_EXIST,
     QUEUE_MEMBERSHIP_DOESNOT_EXIST,
     REQUIRED_VARIABLES,
     SERVER_ERROR,
+    UNABLE_TO_FIND_PUPPET,
     USER_DOESNOT_EXIST,
 )
 
@@ -101,17 +103,14 @@ async def create(request: web.Request) -> web.Response:
     if request.body_exists:
         data = await request.json()
         if data.get("bridge"):
-            args.append(data.get("bridge"))
+            args = args + ["-b", data.get("bridge")]
 
         if data.get("destination"):
-            args.append(data.get("destination"))
-
-        if data.get("control_room_id"):
-            args.append(data.get("control_room_id"))
+            args = args + ["-d", data.get("destination")]
 
         email = data.get("user_email")
 
-    puppet = await get_commands().handle(
+    puppet: Puppet = await get_commands().handle(
         sender=user,
         command="create",
         args_list=args,
@@ -185,8 +184,8 @@ async def pm(request: web.Request) -> web.Response:
             $ref: '#/components/responses/PmSuccessful'
         '400':
             $ref: '#/components/responses/BadRequest'
-        '404':
-            $ref: '#/components/responses/NotExist'
+        '409':
+            $ref: '#/components/responses/UnableToFindPuppet'
         '422':
             $ref: '#/components/responses/NotSendMessage'
     """
@@ -206,9 +205,9 @@ async def pm(request: web.Request) -> web.Response:
     puppet = await _resolve_puppet_identifier(request=request)
 
     if not puppet:
-        return web.json_response(**USER_DOESNOT_EXIST)
+        return web.json_response(**UNABLE_TO_FIND_PUPPET)
 
-    args = [phone, message]
+    args = ["-p", phone, "-m", message]
 
     result = await get_commands().handle(
         sender=user,
@@ -253,7 +252,7 @@ async def resolve(request: web.Request) -> web.Response:
                             description: "The user that makes the action"
                             type: string
                         send_message:
-                            description: "You want to notify the customer his room was resolved?"
+                            description: "Do you want to notify the customer that his room was resolved?"
                             type: string
                     required:
                         - room_id
@@ -267,8 +266,8 @@ async def resolve(request: web.Request) -> web.Response:
     responses:
         '400':
             $ref: '#/components/responses/BadRequest'
-        '404':
-            $ref: '#/components/responses/NotExist'
+        '409':
+            $ref: '#/components/responses/NoPuppetInPortal'
     """
     user = await _resolve_user_identifier(request=request)
 
@@ -282,21 +281,21 @@ async def resolve(request: web.Request) -> web.Response:
 
     room_id = data.get("room_id")
     user_id = data.get("user_id")
-    send_message = data.get("send_message") if data.get("send_message") else None
+    send_message = data.get("send_message") if data.get("send_message") else "no"
 
-    # Obtenemos el puppet de este email si existe
+    # Obtenemos el puppet de este portal si existe
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
     portal: Portal = await Portal.get_by_room_id(
         room_id=room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
     )
 
-    if not puppet or not portal:
-        return web.json_response(**USER_DOESNOT_EXIST)
+    if not puppet:
+        return web.json_response(**NO_PUPPET_IN_PORTAL)
 
     if not portal.bridge:
         return web.json_response(**BRIDGE_INVALID)
 
-    args = [room_id, user_id, send_message, puppet.config[f"bridges.{portal.bridge}.prefix"]]
+    args = ["-p", room_id, "-a", user_id, "-sm", send_message]
 
     await get_commands().handle(
         sender=user,
@@ -312,23 +311,37 @@ async def resolve(request: web.Request) -> web.Response:
 async def bulk_resolve(request: web.Request) -> web.Response:
     """
     ---
-    summary: Command to resolve chats en bloc, expelling the supervisor and the agent.
+    summary: Command to bulk resolve chats, kicking the supervisor and the agent.
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
-        description: A json with `user_email`
+        description: A json with `room_ids`, `send_message`, `user_id`
         content:
             application/json:
                 schema:
                     type: object
                     properties:
-                        data:
-                            type: object
+                        room_ids:
+                            description: "The list of rooms to be resolved"
+                            type: array
+                            items:
+                                type: string
                         user_id:
+                            description: "The user that makes the action"
                             type: string
                         send_message:
+                            description: "You want to notify the customer that his room was resolved?"
                             type: string
                     example:
                         "room_ids": [
@@ -378,18 +391,32 @@ async def state_event(request: web.Request) -> web.Response:
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
-        description: A json with `user_email`
+        description: A json with `room_id`, `event_type`, `content`
         content:
             application/json:
                 schema:
                     type: object
                     properties:
                         room_id:
+                            description: "The room where will be sent the event"
                             type: string
                         event_type:
+                            description: "The event type"
                             type: string
+                        content:
+                            description: "The content of the event that will be sent"
+                            type: object
                     example:
                         room_id: "!foo:foo.com"
                         event_type: "m.custom.event"
@@ -400,8 +427,8 @@ async def state_event(request: web.Request) -> web.Response:
     responses:
         '400':
             $ref: '#/components/responses/BadRequest'
-        '404':
-            $ref: '#/components/responses/NotExist'
+        '409':
+            $ref: '#/components/responses/NoPuppetInPortal'
     """
     user = await _resolve_user_identifier(request=request)
 
@@ -420,9 +447,9 @@ async def state_event(request: web.Request) -> web.Response:
     # Obtenemos el puppet de este email si existe
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
     if not puppet:
-        return web.json_response(**USER_DOESNOT_EXIST)
+        return web.json_response(**NO_PUPPET_IN_PORTAL)
 
-    args = [room_id, event_type, json.dumps(content)]
+    args = ["-r", room_id, "-e", event_type, "-c", json.dumps(content)]
 
     await get_commands().handle(
         sender=user,
@@ -443,17 +470,28 @@ async def template(request: web.Request) -> web.Response:
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
-        description: A json with `user_email`
+        description: A json with `room_id` and `template`
         content:
             application/json:
                 schema:
                     type: object
                     properties:
                         room_id:
+                            description: "The room where will be sent the template"
                             type: string
                         template_message:
+                            description: "The message template that will be sent to room"
                             type: string
                     example:
                         room_id: "!duOWDQQCshKjQvbyoh:foo.com"
@@ -462,8 +500,8 @@ async def template(request: web.Request) -> web.Response:
     responses:
         '400':
             $ref: '#/components/responses/BadRequest'
-        '404':
-            $ref: '#/components/responses/NotExist'
+        '409':
+            $ref: '#/components/responses/NoPuppetInPortal'
     """
     user = await _resolve_user_identifier(request=request)
 
@@ -479,9 +517,9 @@ async def template(request: web.Request) -> web.Response:
 
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
     if not puppet:
-        return web.json_response(**USER_DOESNOT_EXIST)
+        return web.json_response(**NO_PUPPET_IN_PORTAL)
 
-    args = [room_id, template_message]
+    args = ["-p", room_id, "-m", template_message]
 
     await get_commands().handle(
         sender=user, command="template", args_list=args, intent=puppet.intent, is_management=False
@@ -497,6 +535,15 @@ async def transfer(request: web.Request) -> web.Response:
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
         description: A json with `user_email`
@@ -506,18 +553,24 @@ async def transfer(request: web.Request) -> web.Response:
                     type: object
                     properties:
                         customer_room_id:
+                            description: "Customer room to transfer"
                             type: string
                         campaign_room_id:
+                            description: "Target queue to execute the transfer"
                             type: string
                     example:
                         customer_room_id: "!duOWDQQCshKjQvbyoh:foo.com"
                         campaign_room_id: "!TXMsaIzbeURlKPeCxJ:foo.com"
 
     responses:
+        '200':
+            $ref: '#/components/responses/TransferQueueInProcess'
         '400':
             $ref: '#/components/responses/BadRequest'
-        '404':
-            $ref: '#/components/responses/NotExist'
+        '409':
+            $ref: '#/components/responses/NoPuppetInPortal'
+        '423':
+            $ref: '#/components/responses/PortalIsLocked'
     """
     user = await _resolve_user_identifier(request=request)
 
@@ -535,15 +588,15 @@ async def transfer(request: web.Request) -> web.Response:
     # Obtenemos el puppet de este email si existe
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     if not puppet:
-        return web.json_response(**USER_DOESNOT_EXIST)
+        return web.json_response(**NO_PUPPET_IN_PORTAL)
 
-    args = [customer_room_id, campaign_room_id]
+    args = ["-p", customer_room_id, "-q", campaign_room_id]
 
-    await get_commands().handle(
+    cmd_response = await get_commands().handle(
         sender=user, command="transfer", args_list=args, intent=puppet.intent, is_management=False
     )
 
-    return web.json_response()
+    return web.json_response(**cmd_response)
 
 
 @routes.post("/v1/cmd/transfer_user")
@@ -554,19 +607,32 @@ async def transfer_user(request: web.Request) -> web.Response:
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
-        description: A json with `user_email`
+        description: A json with `customer_room_id`, `target_agent_id`, `force`
         content:
             application/json:
                 schema:
                     type: object
                     properties:
                         customer_room_id:
+                            description: "The room that will be transferred"
                             type: string
                         target_agent_id:
+                            description: "Target user that will be joined to customer room"
                             type: string
                         force:
+                            description: "Do you want to force the transfer,
+                                          no matter that the agent will be logged out?"
                             type: string
                     example:
                         customer_room_id: "!duOWDQQCshKjQvbyoh:foo.com"
@@ -575,11 +641,18 @@ async def transfer_user(request: web.Request) -> web.Response:
 
     responses:
         '200':
-            $ref: '#/components/responses/PmSuccessful'
+            $ref: '#/components/responses/OK'
+        '202':
+            $ref: '#/components/responses/TransferSuccessButAgentUnavailable'
         '400':
             $ref: '#/components/responses/BadRequest'
         '404':
             $ref: '#/components/responses/NotExist'
+        '409':
+            $ref: '#/components/responses/NoPuppetInPortal'
+        '423':
+            $ref: '#/components/responses/PortalIsLocked'
+
     """
     user = await _resolve_user_identifier(request=request)
 
@@ -593,15 +666,14 @@ async def transfer_user(request: web.Request) -> web.Response:
 
     customer_room_id = data.get("customer_room_id")
     target_agent_id = data.get("target_agent_id")
+    force = data.get("force") if data.get("force") else "no"
 
     # Obtenemos el puppet de este email si existe
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     if not puppet:
-        return web.json_response(**USER_DOESNOT_EXIST)
+        return web.json_response(**NO_PUPPET_IN_PORTAL)
 
-    args = [customer_room_id, target_agent_id]
-    if data.get("force"):
-        args.append(data.get("force"))
+    args = ["-p", customer_room_id, "-a", target_agent_id, "-f", force]
 
     command_response = await get_commands().handle(
         sender=user,
@@ -622,6 +694,15 @@ async def queue(request: web.Request) -> web.Response:
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
         description: A json with `name`, `invitees` and optional `description`
@@ -631,12 +712,15 @@ async def queue(request: web.Request) -> web.Response:
                     type: object
                     properties:
                         name:
+                            description: "Name of the queue"
                             type: string
                         invitees:
+                            description: "Agents to be joining the queue"
                             type: array
                             items:
                                 type: string
                         description:
+                            description: "A brief overview of the queue"
                             type: string
                     example:
                         name: "My favourite queue"
@@ -650,6 +734,8 @@ async def queue(request: web.Request) -> web.Response:
             $ref: '#/components/responses/BadRequest'
         '422':
             $ref: '#/components/responses/NotExist'
+        '409':
+            $ref: '#/components/responses/QueueExists'
     """
     user = await _resolve_user_identifier(request=request)
 
@@ -659,7 +745,15 @@ async def queue(request: web.Request) -> web.Response:
     data: Dict = await request.json()
     invitees = ",".join(data.get("invitees", "")) if data.get("invitees", "") else ""
 
-    args = ["create", data.get("name", ""), invitees, data.get("description", "")]
+    args = [
+        "create",
+        "-n",
+        data.get("name", ""),
+        "-i",
+        invitees,
+        "-d",
+        data.get("description", ""),
+    ]
 
     result: Dict = await get_commands().handle(
         sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
@@ -676,6 +770,15 @@ async def queue(request: web.Request) -> web.Response:
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
         description: A json with `room_id`and `members`
@@ -685,8 +788,10 @@ async def queue(request: web.Request) -> web.Response:
                     type: object
                     properties:
                         room_id:
+                            description: "Queue room id"
                             type: string
                         members:
+                            description: "Updates members, a list of UserIDs"
                             type: array
                             items:
                                 type: string
@@ -736,7 +841,7 @@ async def queue(request: web.Request) -> web.Response:
 
     async def add_remove_members(action: str, _members: set):
         for new_member in _members:
-            args = [action, new_member, queue.room_id]
+            args = [action, "-m", new_member, "-q", queue.room_id]
             result: Dict = await get_commands().handle(
                 sender=user,
                 command="queue",
@@ -760,6 +865,15 @@ async def queue(request: web.Request) -> web.Response:
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
         description: A json with `member`and `queue_id`
@@ -769,8 +883,10 @@ async def queue(request: web.Request) -> web.Response:
                     type: object
                     properties:
                         member:
+                            description: "New member"
                             type: string
                         queue_id:
+                            description: "Queue room id"
                             type: string
                     example:
                         member: "@foo:foo.com"
@@ -791,7 +907,7 @@ async def queue(request: web.Request) -> web.Response:
 
     data: Dict = await request.json()
 
-    args = ["add", data.get("member", ""), data.get("queue_id", "")]
+    args = ["add", "-m", data.get("member", ""), "-q", data.get("queue_id", "")]
 
     result: Dict = await get_commands().handle(
         sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
@@ -808,6 +924,15 @@ async def queue(request: web.Request) -> web.Response:
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
         description: A json with `member`and `queue_id`
@@ -817,8 +942,10 @@ async def queue(request: web.Request) -> web.Response:
                     type: object
                     properties:
                         member:
+                            description: "Member to remove"
                             type: string
                         queue_id:
+                            description: "Queue room id"
                             type: string
                     example:
                         member: "@foo:foo.com"
@@ -838,7 +965,7 @@ async def queue(request: web.Request) -> web.Response:
 
     data: Dict = await request.json()
 
-    args = ["remove", data.get("member", ""), data.get("queue_id", "")]
+    args = ["remove", "-m", data.get("member", ""), "-q", data.get("queue_id", "")]
 
     result: Dict = await get_commands().handle(
         sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
@@ -856,6 +983,22 @@ async def queue(request: web.Request) -> web.Response:
     tags:
         - Commands
 
+    parameters:
+        - in: header
+          name: Authorization
+          description: User that makes the request
+          required: true
+          schema:
+              type: string
+          example: Mxid @user:example.com
+
+        - in: path
+          name: room_id
+          description: Queue room id
+          required: true
+          schema:
+            type: string
+
     responses:
         '200':
             $ref: '#/components/responses/QueueInfoSuccessful'
@@ -868,7 +1011,7 @@ async def queue(request: web.Request) -> web.Response:
 
     room_id = request.match_info.get("room_id", "")
 
-    args = ["info", room_id]
+    args = ["info", "-q", room_id]
 
     result: Dict = await get_commands().handle(
         sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
@@ -884,6 +1027,15 @@ async def queue(request: web.Request) -> web.Response:
     summary:    Command that shows the all queues.
     tags:
         - Commands
+
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
 
     responses:
         '200':
@@ -912,6 +1064,15 @@ async def queue(request: web.Request) -> web.Response:
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
         description: A json with `room_id`, `name` and optional `description`
@@ -921,10 +1082,13 @@ async def queue(request: web.Request) -> web.Response:
                     type: object
                     properties:
                         room_id:
+                            description: "Queue room id"
                             type: string
                         name:
+                            description: "Queue name"
                             type: string
                         description:
+                            description: "A brief overview of the queue"
                             type: string
                     example:
                         room_id: "!foo:foo.com"
@@ -938,6 +1102,8 @@ async def queue(request: web.Request) -> web.Response:
             $ref: '#/components/responses/BadRequest'
         '422':
             $ref: '#/components/responses/NotExist'
+        '409':
+            $ref: '#/components/responses/QueueExists'
     """
     user = await _resolve_user_identifier(request=request)
 
@@ -946,7 +1112,15 @@ async def queue(request: web.Request) -> web.Response:
 
     data: Dict = await request.json()
 
-    args = ["update", data.get("room_id", ""), data.get("name", ""), data.get("description", "")]
+    args = [
+        "update",
+        "-q",
+        data.get("room_id", ""),
+        "-n",
+        data.get("name", ""),
+        "-d",
+        data.get("description", ""),
+    ]
 
     result: Dict = await get_commands().handle(
         sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
@@ -963,17 +1137,29 @@ async def queue(request: web.Request) -> web.Response:
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
-        description: A json with `room_id`
+        description: A json with `room_id` and `force`
         content:
             application/json:
                 schema:
                     type: object
                     properties:
                         room_id:
+                            description: "Queue room id"
                             type: string
                         force:
+                            description: "This queue has assigned agents.
+                                          Are you sure you want to force delete the queue?"
                             type: boolean
                     example:
                         room_id: "!foo:foo.com"
@@ -994,7 +1180,7 @@ async def queue(request: web.Request) -> web.Response:
 
     data: Dict = await request.json()
 
-    args = ["delete", data.get("room_id", ""), data.get("force", "")]
+    args = ["delete", "-q", data.get("room_id", ""), "-f", data.get("force", "")]
 
     result: Dict = await get_commands().handle(
         sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
@@ -1009,42 +1195,66 @@ async def acd(request: web.Request) -> web.Response:
     ---
     summary: Command that allows to distribute the chat of a client.
 
-    description: Command that allows to distribute the chat of a client, optionally a campaign room and a joining message can be given.
+    description: Command that allows to distribute the chat of a client,
+                 optionally a campaign room and a joining message can be given.
 
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: true
-        description: A JSON with `customer_room_id`, `campaign_room_id` and `joined_message`. The customer_room_id is required.
+        description: A JSON with `customer_room_id`, `destination`,
+                     `joined_message` and `put_enqueued_portal`. The customer_room_id is required.
         content:
             application/json:
                 schema:
                     type: object
                     properties:
                         customer_room_id:
+                            description: "Portal room id to be distributed"
                             type: string
-                        campaign_room_id:
+                        destination:
+                            description: "Queue room id or agent mxid where chat will be distributed"
                             type: string
                         joined_message:
+                            description: "Message to show client when agent will enter the room"
                             type: string
                         put_enqueued_portal:
+                            description: "If the distribution process was not successful,
+                                          do you want to put portal enqueued?\n
+                                          Note: This parameter is only using when destination is a queue"
+                            type: string
+                        force_distribute:
+                            description: "You want to force the agent distribution?\n
+                                         Note: This parameter is only using when destination is an agent"
                             type: string
                     required:
                         - customer_room_id
                     example:
                         customer_room_id: "!duOWDQQCshKjQvbyoh:example.com"
-                        campaign_room_id: "!TXMsaIzbeURlKPeCxJ:example.com"
+                        destination: "!TXMsaIzbeURlKPeCxJ:example.com | @agent1:example.com"
                         joined_message: "{agentname} has joined the chat."
                         put_enqueued_portal: "`yes` | `no`"
+                        force_distribution: "`yes` | `no`"
 
     responses:
         '400':
             $ref: '#/components/responses/BadRequest'
-        '404':
-            $ref: '#/components/responses/NotExist'
+        '409':
+            $ref: '#/components/responses/NoPuppetInPortal'
         '422':
             $ref: '#/components/responses/RequiredVariables'
+        '423':
+            $ref: '#/components/responses/PortalIsLocked'
     """
 
     user = await _resolve_user_identifier(request=request)
@@ -1058,16 +1268,23 @@ async def acd(request: web.Request) -> web.Response:
         return web.json_response(**REQUIRED_VARIABLES)
 
     customer_room_id = data.get("customer_room_id")
+    # TODO change name to destination when menu will be updated
+    # TODO put required destination
     campaign_room_id = data.get("campaign_room_id") or ""
     joined_message = data.get("joined_message") or ""
-    put_enqueued_portal = data.get("put_enqueued_portal") or True
+    put_enqueued_portal = data.get("put_enqueued_portal") or "yes"
+    force_distribution = data.get("force_distribution") or "no"
 
     # Get the puppet from customer_room_id if exists
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     if not puppet:
-        return web.json_response(**USER_DOESNOT_EXIST)
+        return web.json_response(**NO_PUPPET_IN_PORTAL)
 
-    args = [customer_room_id, campaign_room_id, joined_message, put_enqueued_portal]
+    args = ["-c", customer_room_id, "-j", joined_message]
+    if Util.is_room_id(campaign_room_id):
+        args = args + ["-q", campaign_room_id, "-e", put_enqueued_portal]
+    elif Util.is_user_id(campaign_room_id):
+        args = args + ["-a", campaign_room_id, "-f", force_distribution]
 
     response = await get_commands().handle(
         sender=user, command="acd", args_list=args, intent=puppet.intent, is_management=False
@@ -1085,6 +1302,15 @@ async def member(request: web.Request) -> web.Response:
     tags:
         - Commands
 
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
     requestBody:
         required: false
         description: A json with `action`, `agent`, `pause_reason` and optional `list of queues`
@@ -1094,14 +1320,18 @@ async def member(request: web.Request) -> web.Response:
                     type: object
                     properties:
                         action:
+                            description: "Action that will be applied to queue member"
                             type: string
                         agent:
+                            description: "Agent mxid of the queue memeber"
                             type: string
                         queues:
+                            description: "Queue where action will applied"
                             type: array
                             items:
                                 type: string
                         pause_reason:
+                            description: "Only if you are pausing an agent, send this parameter"
                             type: string
                     example:
                         action: login | logout | pause | unpause
@@ -1153,9 +1383,10 @@ async def member(request: web.Request) -> web.Response:
     if not queues:
         return web.json_response(**AGENT_DOESNOT_HAVE_QUEUES)
 
-    args = [action, agent]
+    args = ["-a", action, "--agent", agent]
     if action == "pause":
-        args = [action, agent, pause_reason]
+        args = args + ["-p", pause_reason]
+
     action_responses = []
     status = 200
     for queue in queues:
@@ -1187,6 +1418,15 @@ async def get_memberships(request: web.Request) -> web.Response:
 
     tags:
         - Commands
+
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
 
     parameters:
     - in: query

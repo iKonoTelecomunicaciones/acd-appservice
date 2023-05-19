@@ -1,28 +1,38 @@
+from argparse import ArgumentParser, Namespace
+
 from ..client import ProvisionBridge
 from ..portal import Portal
 from ..puppet import Puppet
 from .handler import CommandArg, CommandEvent, command_handler
 
-message = CommandArg(
-    name="message",
+message_arg = CommandArg(
+    name="--message or -m",
     help_text="Message to be sent",
     is_required=True,
     example="Hello {{1}} your ticket {{2}} has been resolved",
 )
 
-room_id = CommandArg(
-    name="room_id",
+portal_arg = CommandArg(
+    name="--portal or -p",
     help_text="Room where the template will be sent",
     is_required=True,
     example="`!foo:foo.com`",
-    sub_args=[message],
 )
+
+
+def args_parser():
+    parser = ArgumentParser(description="TEMPLATE", exit_on_error=False)
+    parser.add_argument("--message", "-m", dest="message", type=str, required=True)
+    parser.add_argument("--portal", "-p", dest="portal", type=str, required=True)
+
+    return parser
 
 
 @command_handler(
     name="template",
     help_text=("This command is used to send templates"),
-    help_args=[room_id],
+    help_args=[portal_arg, message_arg],
+    args_parser=args_parser(),
 )
 async def template(evt: CommandEvent):
     """This function is used to send a template to a room
@@ -32,19 +42,17 @@ async def template(evt: CommandEvent):
     evt : CommandEvent
         CommandEvent
     """
+    args: Namespace = evt.cmd_args
+    portal_room_id = args.portal
+    message = args.message
 
-    try:
-        room_id = evt.args_list[0]
-        message = evt.args_list[1]
-    except IndexError:
-        detail = "You have not all arguments"
-        evt.log.error(detail)
-        await evt.reply(detail)
-        return {"data": {"error": detail}, "status": 422}
-
-    puppet: Puppet = await Puppet.get_by_portal(room_id)
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id)
     portal: Portal = await Portal.get_by_room_id(
-        room_id, create=False, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
+        portal_room_id,
+        create=False,
+        fk_puppet=puppet.pk,
+        intent=puppet.intent,
+        bridge=puppet.bridge,
     )
 
     if not puppet or not portal:
@@ -57,7 +65,7 @@ async def template(evt: CommandEvent):
 
         # If another bridge must send templates, make this method (gupshup_template) generic.
         await bridge_connector.gupshup_template(
-            room_id=room_id, user_id=evt.intent.mxid, template=message
+            room_id=portal_room_id, user_id=evt.intent.mxid, template=message
         )
     else:
         # If there's no send_template_command the message send directly to client

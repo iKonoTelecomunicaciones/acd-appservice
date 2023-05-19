@@ -31,7 +31,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -62,7 +62,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login", "@agent2:dominio_cliente.com"]
+        args = ["-a", "login", "--agent", "@agent2:dominio_cliente.com"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -93,7 +93,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -131,7 +131,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -140,7 +140,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["logout"]
+        args = ["-a", "logout"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -172,7 +172,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["logout"]
+        args = ["-a", "logout"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -215,7 +215,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login", agent_user.mxid]
+        args = ["-a", "login", "--agent", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
             command="member",
@@ -251,7 +251,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login", agent_user.mxid]
+        args = ["-a", "login", "--agent", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
             command="member",
@@ -291,7 +291,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
 
         response = await processor.handle(
             sender=admin_user,
@@ -324,7 +324,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login", agent_user.mxid]
+        args = ["-a", "login", "--agent", agent_user.mxid]
 
         response = await processor.handle(
             sender=admin_user,
@@ -360,7 +360,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login", agent_user.mxid]
+        args = ["-a", "login", "--agent", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
             command="member",
@@ -369,7 +369,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["logout", agent_user.mxid]
+        args = ["-a", "logout", "--agent", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
             command="member",
@@ -405,7 +405,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["logout", agent_user.mxid]
+        args = ["-a", "logout", "--agent", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
             command="member",
@@ -445,7 +445,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["logout"]
+        args = ["-a", "logout"]
 
         response = await processor.handle(
             sender=admin_user,
@@ -478,7 +478,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["logout", agent_user.mxid]
+        args = ["-a", "logout", "--agent", agent_user.mxid]
 
         response = await processor.handle(
             sender=admin_user,
@@ -509,7 +509,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -518,7 +518,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["pause", "LUNCH"]
+        args = ["-a", "pause", "-p", "LUNCH"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -550,7 +550,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["pause", "LUNCH"]
+        args = ["-a", "pause", "-p", "LUNCH"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -580,7 +580,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -589,7 +589,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["pause", "@agent2:dominio_cliente.com", "LUNCH"]
+        args = ["-a", "pause", "--agent", "@agent2:dominio_cliente.com", "-p", "LUNCH"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -620,7 +620,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -629,7 +629,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["pause", "LUNCH"]
+        args = ["-a", "pause", "-p", "LUNCH"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -667,7 +667,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -676,7 +676,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["pause"]
+        args = ["-a", "pause"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -685,7 +685,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["unpause"]
+        args = ["-a", "unpause"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -716,7 +716,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["pause"]
+        args = ["-a", "pause"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -725,7 +725,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["unpause"]
+        args = ["-a", "unpause"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -756,7 +756,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -765,7 +765,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["pause"]
+        args = ["-a", "pause"]
         await processor.handle(
             sender=agent_user,
             command="member",
@@ -774,7 +774,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["unpause"]
+        args = ["-a", "unpause"]
         await processor.handle(
             sender=agent_user,
             command="member",
@@ -817,7 +817,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -826,7 +826,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["pause", agent_user.mxid, "LUNCH"]
+        args = ["-a", "pause", "--agent", agent_user.mxid, "-p", "LUNCH"]
         response = await processor.handle(
             sender=admin_user,
             command="member",
@@ -863,7 +863,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["pause", agent_user.mxid, "LUNCH"]
+        args = ["-a", "pause", "--agent", agent_user.mxid, "-p", "LUNCH"]
         response = await processor.handle(
             sender=admin_user,
             command="member",
@@ -898,7 +898,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -907,7 +907,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["pause", agent_user.mxid, "LUNCH"]
+        args = ["-a", "pause", "--agent", agent_user.mxid, "-p", "LUNCH"]
         response = await processor.handle(
             sender=admin_user,
             command="member",
@@ -948,7 +948,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -957,7 +957,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["pause", "LUNCH"]
+        args = ["-a", "pause", "-p", "LUNCH"]
         response = await processor.handle(
             sender=admin_user,
             command="member",
@@ -989,7 +989,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -998,7 +998,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["pause", agent_user.mxid, "LUNCH"]
+        args = ["-a", "pause", "--agent", agent_user.mxid, "-p", "LUNCH"]
         response = await processor.handle(
             sender=admin_user,
             command="member",
@@ -1033,7 +1033,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["pause"]
+        args = ["-a", "pause"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -1042,7 +1042,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["unpause", agent_user.mxid]
+        args = ["-a", "unpause", "--agent", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
             command="member",
@@ -1077,7 +1077,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -1086,7 +1086,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["pause"]
+        args = ["-a", "pause"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -1095,7 +1095,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["unpause", agent_user.mxid]
+        args = ["-a", "unpause", "--agent", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
             command="member",
@@ -1131,7 +1131,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -1140,7 +1140,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["pause", agent_user.mxid]
+        args = ["-a", "pause", "--agent", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
             command="member",
@@ -1149,7 +1149,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["unpause", agent_user.mxid]
+        args = ["-a", "unpause", "--agent", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
             command="member",
@@ -1190,7 +1190,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -1199,7 +1199,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["unpause"]
+        args = ["-a", "unpause"]
 
         response = await processor.handle(
             sender=admin_user,
@@ -1232,7 +1232,7 @@ class TestMemberCMD:
 
         """
 
-        args = ["login"]
+        args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
             command="member",
@@ -1241,7 +1241,7 @@ class TestMemberCMD:
             room_id=queue.room_id,
         )
 
-        args = ["unpause", agent_user.mxid]
+        args = ["-a", "unpause", "--agent", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
             command="member",

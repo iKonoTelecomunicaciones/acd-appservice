@@ -117,8 +117,6 @@ acd:
     force_join: false
     # Timeout for agent invites
     agent_invite_timeout: 15
-    # Interval for automatic search pending rooms (3 minutes by default | 180s)
-    search_pending_rooms_interval: 180
     # The prefix to special messages that are going to be processed in frontend.
     frontend_command_prefix: '!element'
     #This is a message that reaches the client when it is transferred
@@ -187,6 +185,16 @@ acd:
             - "@admin:dominio_cliente.com"
             - "@supervisor:dominio_cliente.com"
 
+    enqueued_portals:
+        # Interval for automatic search pending rooms (3 minutes by default | 180s)
+        search_pending_rooms_interval: 180
+        # How many chats will be distributed per agent when portals are enqueued
+        portals_per_agent: 1
+        # Max iterations in enqueued portals
+        max_iterations: 50
+        # Min time to distribute enqueued rooms when max iterations are reached
+        min_time: 20
+
     # Use it to distribute chat when acd doesn't have the campaign selected by customer
     available_agents_room: "!PjgOHubuTvAlzPVTCr:dominio_cliente.com"
 
@@ -197,6 +205,9 @@ acd:
     # Do you want to use synapse presence to distribute chat?,
     # if not, you can use agent operation login to do it.
     use_presence: false
+
+    # When acd* joins to the room before customer message arrived, we need to process destination
+    process_destination_on_joining: true
 
 # ACD will send below commands to interact with any WA bridge
 bridges:
