@@ -19,6 +19,8 @@ class PortalState(SerializableEnum):
     RESOLVED = "RESOLVED"
     ENQUEUED = "ENQUEUED"
     ONMENU = "ONMENU"
+    ON_DISTRIBUTION = "ON_DISTRIBUTION"
+    ASSIGNED = "ASSIGNED"
 
 
 @dataclass

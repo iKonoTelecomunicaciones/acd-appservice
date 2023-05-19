@@ -12,7 +12,7 @@ from mautrix.util.logging import TraceLogger
 
 from .commands.handler import CommandProcessor
 from .config import Config
-from .events import ACDEventTypes, ACDPortalEvents, ConnectEvent
+from .events import ACDEventTypes, ACDPortalEvents, AssignAgent, ConnectEvent, EnterQueueEvent
 from .portal import Portal, PortalState
 from .queue import Queue
 from .room_manager import RoomManager
@@ -125,6 +125,20 @@ class AgentManager:
     async def distribute_to_agent(
         self, portal: Portal, agent: User, joined_message: str, force_distribution: bool = False
     ):
+        portal.update_state(PortalState.ASSIGNED)
+        assign_agent: AssignAgent = AssignAgent(
+            event_type=ACDEventTypes.PORTAL,
+            event=ACDPortalEvents.AssignedAgent,
+            state=PortalState.ASSIGNED,
+            prev_state=PortalState.START,
+            sender=portal.main_intent.mxid,
+            room_id=portal.room_id,
+            acd=portal.main_intent.mxid,
+            customer_mxid=portal.creator,
+            agent_mxid=agent.mxid,
+        )
+        await assign_agent.send()
+
         # Check that the agent is online and unpaused.
         is_agent_available = await agent.is_available()
 
@@ -177,6 +191,22 @@ class AgentManager:
         joined_message: str = None,
         put_enqueued_portal: bool = True,
     ):
+        # Changing room state to ON_DISTRIBUTION by acd command
+        await portal.update_state(PortalState.ON_DISTRIBUTION)
+
+        enter_queue_event = EnterQueueEvent(
+            event_type=ACDEventTypes.PORTAL,
+            event=ACDPortalEvents.EnterQueue,
+            state=PortalState.ON_DISTRIBUTION,
+            prev_state=portal.state,
+            sender=portal.main_intent.mxid,
+            room_id=portal.room_id,
+            acd=portal.main_intent.mxid,
+            customer_mxid=portal.creator,
+            queue=queue.room_id,
+        )
+        await enter_queue_event.send()
+
         online_agents_in_room = await portal.has_online_agents()
 
         if online_agents_in_room == "unlock":
@@ -314,6 +344,20 @@ class AgentManager:
                     )
 
                 if is_agent_available_for_assignment:
+                    portal.update_state(PortalState.ASSIGNED)
+                    assign_agent: AssignAgent = AssignAgent(
+                        event_type=ACDEventTypes.PORTAL,
+                        event=ACDPortalEvents.AssignedAgent,
+                        state=PortalState.ASSIGNED,
+                        prev_state=PortalState.START,
+                        sender=portal.main_intent.mxid,
+                        room_id=portal.room_id,
+                        acd=portal.main_intent.mxid,
+                        customer_mxid=portal.creator,
+                        agent_mxid=agent.mxid,
+                    )
+                    await assign_agent.send()
+
                     online_agents += 1
 
                     await self.force_invite_agent(

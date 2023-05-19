@@ -37,6 +37,11 @@ class ConnectEvent(PortalEvent):
 
 
 @dataclass
+class AssignAgent(PortalEvent):
+    agent_mxid: UserID = ib(factory=UserID)
+
+
+@dataclass
 class AgentMessageEvent(PortalEvent):
     event_mxid: EventID = ib(factory=EventID)
     agent_mxid: UserID = ib(factory=UserID)

@@ -1,6 +1,5 @@
 from argparse import ArgumentParser, Namespace
 
-from ..events import ACDEventTypes, ACDPortalEvents, EnterQueueEvent
 from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from .handler import CommandArg, CommandEvent, command_handler
@@ -145,21 +144,7 @@ async def acd(evt: CommandEvent) -> str:
     )
 
     try:
-        enter_queue_event = EnterQueueEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.EnterQueue,
-            state=PortalState.ENQUEUED,
-            prev_state=portal.state,
-            sender=evt.sender.mxid,
-            room_id=portal.room_id,
-            acd=puppet.mxid,
-            customer_mxid=portal.creator,
-            queue=queue.room_id,
-        )
-        await enter_queue_event.send()
-
-        # Changing room state to ENQUEUED by acd command
-        await portal.update_state(PortalState.ENQUEUED)
+        portal.update_state(PortalState.ON_DISTRIBUTION)
         return await puppet.agent_manager.process_distribution(
             portal=portal,
             destination=destination,

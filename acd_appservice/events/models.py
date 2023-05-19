@@ -14,3 +14,4 @@ class ACDPortalEvents(SerializableEnum):
     CustomerMessage = "CustomerMessage"
     Resolve = "Resolve"
     Transfer = "Transfer"
+    AssignedAgent = "AssignedAgent"

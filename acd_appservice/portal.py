@@ -464,18 +464,19 @@ class Portal(DBPortal, MatrixRoom):
         return await self.main_intent.get_displayname(self.creator)
 
     def creator_identifier(self) -> str | None:
-        """The function takes a creator mxid and returns the his identifier
+        """The function takes a creator mxid and returns his identifier
 
         Returns
         -------
             The creator's identifier.
 
         """
-        creator_identifier = re.findall(r"\d+", self.creator)
-        if not creator_identifier:
+        user_name_match = re.match(self.config["utils.username_regex"], self.creator)
+        identifier = user_name_match.group("number")
+        if not identifier:
             return
 
-        return creator_identifier[0]
+        return identifier
 
     async def send_create_portal_event(self):
         customer = {
