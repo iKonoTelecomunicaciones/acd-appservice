@@ -418,7 +418,14 @@ class MatrixHandler:
                 await asyncio.sleep(1)
                 self.log.error(error)
 
-        portal = await Portal.get_by_room_id(room_id=room_id)
+        puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
+        portal = await Portal.get_by_room_id(
+            room_id=room_id,
+            fk_puppet=puppet.pk,
+            intent=puppet.intent,
+            bridge=puppet.bridge,
+            create=False,
+        )
 
         if not Puppet.get_id_from_mxid(user_id):
             puppet = await Puppet.get_by_portal(room_id)
