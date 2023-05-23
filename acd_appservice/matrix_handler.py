@@ -323,11 +323,12 @@ class MatrixHandler:
 
             try:
                 # Creates the portal and join it
+                self.log.info(f"Creating portal in handle invite {evt.room_id}")
                 await Portal.get_by_room_id(
                     evt.room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
                 )
             except UniqueViolationError as error:
-                self.log.error(error)
+                self.log.error(f"Error creating portal {evt.room_id}: {error}")
 
             self.log.debug(f"{puppet.mxid} is joining portal room {evt.room_id}")
             await puppet.intent.join_room(evt.room_id)
@@ -408,6 +409,7 @@ class MatrixHandler:
             # but this function does not know it and try to create it again,
             # generating a failure UniqueViolationError.
             try:
+                self.log.info(f"Creating portal in handle join {room_id}")
                 await Portal.get_by_room_id(
                     room_id=room_id,
                     fk_puppet=puppet.pk,
@@ -418,7 +420,14 @@ class MatrixHandler:
                 await asyncio.sleep(1)
                 self.log.error(error)
 
-        portal = await Portal.get_by_room_id(room_id=room_id)
+        puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
+        portal = await Portal.get_by_room_id(
+            room_id=room_id,
+            fk_puppet=puppet.pk,
+            intent=puppet.intent,
+            bridge=puppet.bridge,
+            create=False,
+        )
 
         if not Puppet.get_id_from_mxid(user_id):
             puppet = await Puppet.get_by_portal(room_id)

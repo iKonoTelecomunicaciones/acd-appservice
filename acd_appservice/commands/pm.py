@@ -222,9 +222,9 @@ async def pm(evt: CommandEvent) -> Dict:
                     menubot.mxid, "cancel_task", portal.room_id
                 )
                 # ------  end remove -------
-                await portal.remove_menubot(
-                    reason=f"{evt.sender.mxid} pm existing room {portal.room_id}"
-                )
+            await portal.remove_menubot(
+                reason=f"{evt.sender.mxid} pm existing room {portal.room_id}"
+            )
         except Exception as e:
             evt.log.exception(e)
 

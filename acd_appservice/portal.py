@@ -410,7 +410,7 @@ class Portal(DBPortal, MatrixRoom):
         for attempt in range(10):
             self.log.debug(f"Inviting menubot {menubot_mxid} to {self.room_id}...")
             try:
-                await self.invite_user(menubot_mxid)
+                await self.add_member(menubot_mxid)
                 # When menubot enters to the portal, set the portal state in ONMENU
                 await self.update_state(PortalState.ONMENU)
                 self.log.debug(f"Menubot {menubot_mxid} invited OK to room {self.room_id}")
@@ -425,7 +425,18 @@ class Portal(DBPortal, MatrixRoom):
 
     async def remove_menubot(self, reason):
         """It removes the current menubot from the room"""
+
+        self.log.debug(f"Removing menubot from room {self.room_id}...")
         current_menubot: User = await self.get_current_menubot()
+
+        # Sometimes menubot misses joining the invite when it's restarted
+        if not current_menubot:
+            invitees: List[User] = await self.get_room_invitees()
+            for invitee in invitees:
+                if invitee.is_menubot:
+                    current_menubot = invitee
+                    break
+
         if current_menubot:
             await self.remove_member(current_menubot.mxid, reason=reason)
 
