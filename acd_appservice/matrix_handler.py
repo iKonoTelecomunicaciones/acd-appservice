@@ -878,9 +878,6 @@ class MatrixHandler:
                 room_id=portal.room_id, campaign_room_id=None
             )
 
-            # set chat status to start before process the destination
-            await portal.update_state(PortalState.START)
-
             uic_event = UICEvent(
                 event_type=ACDEventTypes.PORTAL,
                 event=ACDPortalEvents.UIC,
@@ -892,6 +889,9 @@ class MatrixHandler:
                 customer_mxid=portal.creator,
             )
             await uic_event.send()
+
+            # set chat status to start before process the destination
+            await portal.update_state(PortalState.START)
 
             if puppet.destination:
                 if await self.process_destination(portal=portal):

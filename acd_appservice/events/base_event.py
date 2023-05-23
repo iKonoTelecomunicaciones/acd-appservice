@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from aiohttp import ClientSession
 from attr import dataclass, ib
@@ -11,7 +11,7 @@ from mautrix.util.logging import TraceLogger
 from ..db.portal import PortalState
 from .models import ACDEventTypes, ACDPortalEvents
 
-log: TraceLogger = logging.getLogger("report.events")
+log: TraceLogger = logging.getLogger("report.event")
 
 
 @dataclass
@@ -23,13 +23,13 @@ class BaseEvent(SerializableAttrs):
     prev_state: Optional[PortalState] = ib(default=None)
     sender: UserID = ib(factory=UserID)
 
-    def fill(self) -> "BaseEvent":
-        return self
-
     async def send(self):
         await self.http_send()
 
     async def http_send(self):
+        file = open("room_events.txt", "a")
+        file.write(f"{self.serialize()}\n")
+        file.close()
         log.error(f"Sending event {self.serialize()}")
         # headers = {"User-Agent": HTTPAPI.default_ua}
         # url = ""

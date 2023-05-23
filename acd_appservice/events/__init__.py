@@ -7,6 +7,7 @@ from .portal_event import (
     CreateEvent,
     CustomerMessageEvent,
     EnterQueueEvent,
+    MenuStartEvent,
     ResolveEvent,
     TransferEvent,
     UICEvent,

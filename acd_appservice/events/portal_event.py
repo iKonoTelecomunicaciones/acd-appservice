@@ -62,3 +62,8 @@ class ResolveEvent(PortalEvent):
 @dataclass
 class TransferEvent(PortalEvent):
     destination: UserID | RoomID = ib(factory=UserID)
+
+
+@dataclass
+class MenuStartEvent(PortalEvent):
+    menubot: UserID = ib(factory=UserID)

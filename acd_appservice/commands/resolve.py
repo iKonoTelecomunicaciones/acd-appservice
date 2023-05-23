@@ -129,11 +129,11 @@ async def resolve(evt: CommandEvent) -> Dict:
         event=ACDPortalEvents.Resolve,
         state=PortalState.RESOLVED,
         prev_state=portal.state,
-        sender=evt.sender.mxid,
+        sender=author,
         room_id=portal.room_id,
         acd=puppet.mxid,
         customer_mxid=portal.creator,
-        agent_mxid=user_id,
+        agent_mxid=agent.mxid if agent else None,
         reason=None,
     )
     await resolve_event.send()

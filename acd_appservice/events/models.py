@@ -15,3 +15,4 @@ class ACDPortalEvents(SerializableEnum):
     Resolve = "Resolve"
     Transfer = "Transfer"
     AssignedAgent = "AssignedAgent"
+    MenuStart = "MenuStart"

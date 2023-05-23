@@ -130,7 +130,7 @@ class AgentManager:
             event_type=ACDEventTypes.PORTAL,
             event=ACDPortalEvents.AssignedAgent,
             state=PortalState.ASSIGNED,
-            prev_state=PortalState.START,
+            prev_state=portal.state,
             sender=portal.main_intent.mxid,
             room_id=portal.room_id,
             acd=portal.main_intent.mxid,
@@ -191,9 +191,6 @@ class AgentManager:
         joined_message: str = None,
         put_enqueued_portal: bool = True,
     ):
-        # Changing room state to ON_DISTRIBUTION by acd command
-        await portal.update_state(PortalState.ON_DISTRIBUTION)
-
         enter_queue_event = EnterQueueEvent(
             event_type=ACDEventTypes.PORTAL,
             event=ACDPortalEvents.EnterQueue,
@@ -206,6 +203,9 @@ class AgentManager:
             queue=queue.room_id,
         )
         await enter_queue_event.send()
+
+        # Changing room state to ON_DISTRIBUTION by acd command
+        await portal.update_state(PortalState.ON_DISTRIBUTION)
 
         online_agents_in_room = await portal.has_online_agents()
 
@@ -344,18 +344,18 @@ class AgentManager:
                     )
 
                 if is_agent_available_for_assignment:
-                    portal.update_state(PortalState.ASSIGNED)
                     assign_agent: AssignAgent = AssignAgent(
                         event_type=ACDEventTypes.PORTAL,
                         event=ACDPortalEvents.AssignedAgent,
                         state=PortalState.ASSIGNED,
-                        prev_state=PortalState.START,
+                        prev_state=portal.state,
                         sender=portal.main_intent.mxid,
                         room_id=portal.room_id,
                         acd=portal.main_intent.mxid,
                         customer_mxid=portal.creator,
                         agent_mxid=agent.mxid,
                     )
+                    portal.update_state(PortalState.ASSIGNED)
                     await assign_agent.send()
 
                     online_agents += 1

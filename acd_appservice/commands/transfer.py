@@ -6,7 +6,7 @@ from typing import Any, Dict
 
 from mautrix.types import RoomID, UserID
 
-from ..events import ACDEventTypes, ACDPortalEvents, TransferEvent
+from ..events import ACDEventTypes, ACDPortalEvents, EnterQueueEvent, TransferEvent
 from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..queue import Queue
@@ -136,8 +136,21 @@ async def transfer(evt: CommandEvent) -> str:
         portal=portal, puppet=puppet, sender=transfer_author.mxid, destination=queue.room_id
     )
 
-    # Changing portal state to ENQUEUED by transfer command
-    await portal.update_state(PortalState.ENQUEUED)
+    enter_queue_event = EnterQueueEvent(
+        event_type=ACDEventTypes.PORTAL,
+        event=ACDPortalEvents.EnterQueue,
+        state=PortalState.ON_DISTRIBUTION,
+        prev_state=portal.state,
+        sender=portal.main_intent.mxid,
+        room_id=portal.room_id,
+        acd=portal.main_intent.mxid,
+        customer_mxid=portal.creator,
+        queue=queue.room_id,
+    )
+    await enter_queue_event.send()
+
+    # Changing portal state to ON_DISTRIBUTION by transfer command
+    await portal.update_state(PortalState.ON_DISTRIBUTION)
 
     # Creating a task that will be executed in the background.
     asyncio.create_task(
@@ -239,6 +252,7 @@ async def transfer_user(evt: CommandEvent) -> str:
                     sender=transfer_author.mxid,
                     destination=agent.mxid,
                 )
+                portal.update_state(PortalState.ASSIGNED)
 
                 await puppet.agent_manager.force_invite_agent(
                     portal=portal,
@@ -303,7 +317,7 @@ async def send_transfer_event(
     transfer_event = TransferEvent(
         event_type=ACDEventTypes.PORTAL,
         event=ACDPortalEvents.Transfer,
-        state=PortalState.PENDING,
+        state=PortalState.ASSIGNED,
         prev_state=portal.state,
         sender=sender,
         room_id=portal.room_id,
