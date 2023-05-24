@@ -153,7 +153,11 @@ class Util:
 
     @classmethod
     def create_response_data(
-        cls, detail: str, status: int, room_id: Optional[str], additional: Optional[Dict] = None
+        cls,
+        detail: str,
+        status: int,
+        room_id: Optional[str],
+        additional_info: Optional[Dict] = None,
     ) -> Dict[str, Any]:
         json_response: Dict[str, Any] = {
             "data": {
@@ -165,7 +169,7 @@ class Util:
         if room_id:
             json_response["data"]["room_id"] = room_id
 
-        if additional:
-            json_response["data"].update(additional)
+        if additional_info:
+            json_response["data"].update(additional_info)
 
         return json_response

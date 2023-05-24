@@ -114,7 +114,7 @@ async def member(evt: CommandEvent) -> Dict:
         await evt.reply(text=msg)
         evt.log.warning(msg)
         return Util.create_response_data(
-            room_id=evt.room_id, detail=msg, status=422, additional={"room_name": queue.name}
+            room_id=evt.room_id, detail=msg, status=422, additional_info={"room_name": queue.name}
         )
 
     if action in ["login", "logout"]:
@@ -125,7 +125,10 @@ async def member(evt: CommandEvent) -> Dict:
             await evt.reply(text=msg)
             evt.log.warning(msg)
             return Util.create_response_data(
-                room_id=evt.room_id, detail=msg, status=409, additional={"room_name": queue.name}
+                room_id=evt.room_id,
+                detail=msg,
+                status=409,
+                additional_info={"room_name": queue.name},
             )
 
         membership.state = state
@@ -144,7 +147,10 @@ async def member(evt: CommandEvent) -> Dict:
             await evt.reply(text=msg)
             evt.log.warning(msg)
             return Util.create_response_data(
-                room_id=evt.room_id, detail=msg, status=422, additional={"room_name": queue.name}
+                room_id=evt.room_id,
+                detail=msg,
+                status=422,
+                additional_info={"room_name": queue.name},
             )
 
         state = True if action == "pause" else False
@@ -153,7 +159,10 @@ async def member(evt: CommandEvent) -> Dict:
             await evt.reply(text=msg)
             evt.log.warning(msg)
             return Util.create_response_data(
-                room_id=evt.room_id, detail=msg, status=409, additional={"room_name": queue.name}
+                room_id=evt.room_id,
+                detail=msg,
+                status=409,
+                additional_info={"room_name": queue.name},
             )
 
         membership.paused = state
@@ -171,5 +180,5 @@ async def member(evt: CommandEvent) -> Dict:
         room_id=evt.room_id,
         detail=f"Agent operation `{action}` was successful",
         status=200,
-        additional={"room_name": queue.name},
+        additional_info={"room_name": queue.name},
     )

@@ -880,11 +880,11 @@ class MatrixHandler:
                 return True
 
         user: User = await User.get_by_mxid(puppet.custom_mxid, create=False)
-        args = ["-p", portal.room_id, puppet.destination]
+        args = ["-c", portal.room_id]
         if Util.is_room_id(puppet.destination):
             args = args + ["-q", puppet.destination]
         else:
-            args = args + ["-a", puppet.destination]
+            args = args + ["-a", puppet.destination, "-f", "yes"]
 
         await self.commands.handle(
             sender=user, command="acd", args_list=args, is_management=False, intent=puppet.intent
