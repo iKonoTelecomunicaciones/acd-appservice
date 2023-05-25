@@ -113,7 +113,9 @@ async def member(evt: CommandEvent) -> Dict:
         msg = f"User {agent_id} is not member of the room {evt.room_id}"
         await evt.reply(text=msg)
         evt.log.warning(msg)
-        return Util.create_response_data(room_id=evt.room_id, detail=msg, status=422)
+        return Util.create_response_data(
+            room_id=evt.room_id, detail=msg, status=422, additional_info={"room_name": queue.name}
+        )
 
     if action in ["login", "logout"]:
         state = QueueMembershipState.ONLINE if action == "login" else QueueMembershipState.OFFLINE
@@ -122,7 +124,12 @@ async def member(evt: CommandEvent) -> Dict:
             msg = f"Agent {agent_id} is already {state.value}"
             await evt.reply(text=msg)
             evt.log.warning(msg)
-            return Util.create_response_data(room_id=evt.room_id, detail=msg, status=409)
+            return Util.create_response_data(
+                room_id=evt.room_id,
+                detail=msg,
+                status=409,
+                additional_info={"room_name": queue.name},
+            )
 
         membership.state = state
         membership.state_date = QueueMembership.now()
@@ -139,14 +146,24 @@ async def member(evt: CommandEvent) -> Dict:
             msg = f"You should be logged in to execute `{action}` operation"
             await evt.reply(text=msg)
             evt.log.warning(msg)
-            return Util.create_response_data(room_id=evt.room_id, detail=msg, status=422)
+            return Util.create_response_data(
+                room_id=evt.room_id,
+                detail=msg,
+                status=422,
+                additional_info={"room_name": queue.name},
+            )
 
         state = True if action == "pause" else False
         if membership.paused == state:
             msg = f"Agent {agent_id} is already {action}d"
             await evt.reply(text=msg)
             evt.log.warning(msg)
-            return Util.create_response_data(room_id=evt.room_id, detail=msg, status=409)
+            return Util.create_response_data(
+                room_id=evt.room_id,
+                detail=msg,
+                status=409,
+                additional_info={"room_name": queue.name},
+            )
 
         membership.paused = state
         membership.pause_date = QueueMembership.now()
@@ -159,4 +176,9 @@ async def member(evt: CommandEvent) -> Dict:
 
     msg = f"Agent operation `{action}` was successful, {agent_id} state is `{action}`"
     await evt.reply(text=msg)
-    return Util.create_response_data(room_id=evt.room_id, detail=msg, status=200)
+    return Util.create_response_data(
+        room_id=evt.room_id,
+        detail=f"Agent operation `{action}` was successful",
+        status=200,
+        additional_info={"room_name": queue.name},
+    )
