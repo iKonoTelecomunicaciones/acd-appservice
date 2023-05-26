@@ -410,7 +410,7 @@ class Portal(DBPortal, MatrixRoom):
         for attempt in range(10):
             self.log.debug(f"Inviting menubot {menubot_mxid} to {self.room_id}...")
             try:
-                await self.add_member(menubot_mxid)
+                await self.invite_user(menubot_mxid)
                 # When menubot enters to the portal, set the portal state in ONMENU
                 await self.update_state(PortalState.ONMENU)
                 self.log.debug(f"Menubot {menubot_mxid} invited OK to room {self.room_id}")
