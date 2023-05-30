@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -23,12 +24,14 @@ class BaseEvent(SerializableAttrs):
     prev_state: Optional[PortalState] = ib(default=None)
     sender: UserID = ib(factory=UserID)
 
-    async def send(self):
-        await self.http_send()
+    def send(self):
+        asyncio.create_task(self.http_send())
 
     async def http_send(self):
-        file = open("room_events.txt", "a")
+        file = open("acd_appservice/events/room_events.txt", "a")
         file.write(f"{self.serialize()}\n")
+        if self.state == PortalState.RESOLVED:
+            file.write(f"################# ------- New conversation ------- #################\n")
         file.close()
         log.error(f"Sending event {self.serialize()}")
         # headers = {"User-Agent": HTTPAPI.default_ua}

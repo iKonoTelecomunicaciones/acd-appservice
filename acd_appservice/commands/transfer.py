@@ -6,7 +6,7 @@ from typing import Any, Dict
 
 from mautrix.types import RoomID, UserID
 
-from ..events import ACDEventTypes, ACDPortalEvents, EnterQueueEvent, TransferEvent
+from ..events import ACDEventTypes, ACDPortalEvents, TransferEvent, send_transfer_status_event
 from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..queue import Queue
@@ -131,26 +131,21 @@ async def transfer(evt: CommandEvent) -> str:
         transfer_author = evt.sender
 
     queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
+    # Locking the room so that no other transfer can be made to the room.
+    portal.lock(transfer=True)
 
-    await send_transfer_event(
-        portal=portal, puppet=puppet, sender=transfer_author.mxid, destination=queue.room_id
-    )
-
-    enter_queue_event = EnterQueueEvent(
+    transfer_event = TransferEvent(
         event_type=ACDEventTypes.PORTAL,
-        event=ACDPortalEvents.EnterQueue,
+        event=ACDPortalEvents.Transfer,
         state=PortalState.ON_DISTRIBUTION,
         prev_state=portal.state,
-        sender=portal.main_intent.mxid,
+        sender=evt.sender.mxid,
         room_id=portal.room_id,
-        acd=portal.main_intent.mxid,
+        acd=puppet.mxid,
         customer_mxid=portal.creator,
-        queue=queue.room_id,
+        destination=queue.room_id,
     )
-    await enter_queue_event.send()
-
-    # Changing portal state to ON_DISTRIBUTION by transfer command
-    await portal.update_state(PortalState.ON_DISTRIBUTION)
+    transfer_event.send()
 
     # Creating a task that will be executed in the background.
     asyncio.create_task(
@@ -192,7 +187,7 @@ async def transfer_user(evt: CommandEvent) -> str:
         Incoming CommandEvent
 
     """
-    args: NameError = evt.cmd_args
+    args: Namespace = evt.cmd_args
     customer_room_id: RoomID = args.portal
     agent_id: UserID = args.agent
     force: bool = True if args.force == "yes" else False
@@ -202,8 +197,33 @@ async def transfer_user(evt: CommandEvent) -> str:
         room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
     )
 
+    portal_prev_state: PortalState = portal.state
     agent: User = await User.get_by_mxid(agent_id, create=False)
+
+    transfer_event = TransferEvent(
+        event_type=ACDEventTypes.PORTAL,
+        event=ACDPortalEvents.Transfer,
+        state=PortalState.ASSIGNED,
+        prev_state=portal.state,
+        sender=evt.sender.mxid,
+        room_id=portal.room_id,
+        acd=puppet.mxid,
+        customer_mxid=portal.creator,
+        destination=agent_id,
+    )
+    transfer_event.send()
+
+    await portal.update_state(PortalState.ASSIGNED)
+
     if not agent:
+        await send_transfer_status_event(
+            portal=portal,
+            status="FAILED",
+            reason="Agent not found",
+            destination=agent_id,
+            prev_portal_state=portal_prev_state,
+        )
+        await portal.update_state(portal_prev_state)
         return Util.create_response_data(
             detail="Agent with given user id does not exist", room_id=portal.room_id, status=404
         )
@@ -213,6 +233,14 @@ async def transfer_user(evt: CommandEvent) -> str:
 
     # Checking if the room is locked, if it is, it returns.
     if portal.is_locked:
+        await send_transfer_status_event(
+            portal=portal,
+            status="FAILED",
+            prev_portal_state=portal_prev_state,
+            destination=agent_id,
+            reason="Room is locked by transfer",
+        )
+        await portal.update_state(portal_prev_state)
         evt.log.debug(f"Room: {portal.room_id} LOCKED by Transfer user")
         return Util.create_response_data(
             detail="Current portal is locked by transfer", room_id=portal.room_id, status=423
@@ -237,6 +265,15 @@ async def transfer_user(evt: CommandEvent) -> str:
     try:
         # Checking if the agent is already in the room, if so, it sends a message to the room.
         if transfer_author.mxid == agent.mxid:
+            await send_transfer_status_event(
+                portal=portal,
+                prev_portal_state=portal_prev_state,
+                destination=agent_id,
+                status="FAILED",
+                reason="Agent is already in the room",
+            )
+            await portal.update_state(portal_prev_state)
+
             msg = (
                 f"The agent [{agent_displayname}][{agent.mxid}] "
                 f"is already in the room {portal.room_id}"
@@ -246,14 +283,6 @@ async def transfer_user(evt: CommandEvent) -> str:
         else:
             agent_is_online = await agent.is_online()
             if agent_is_online or force:
-                await send_transfer_event(
-                    portal=portal,
-                    puppet=puppet,
-                    sender=transfer_author.mxid,
-                    destination=agent.mxid,
-                )
-                portal.update_state(PortalState.ASSIGNED)
-
                 await puppet.agent_manager.force_invite_agent(
                     portal=portal,
                     agent_id=agent.mxid,
@@ -281,6 +310,15 @@ async def transfer_user(evt: CommandEvent) -> str:
                         detail=msg, room_id=evt.room_id, status=200
                     )
             else:
+                await send_transfer_status_event(
+                    portal=portal,
+                    status="FAILED",
+                    reason="Agent not available",
+                    destination=agent_id,
+                    prev_portal_state=portal_prev_state,
+                )
+                await portal.update_state(portal_prev_state)
+
                 msg = f"Agent [{agent_displayname}][{agent.mxid}] is not available"
                 await portal.send_notice(text=msg)
                 json_response = Util.create_response_data(
@@ -294,35 +332,3 @@ async def transfer_user(evt: CommandEvent) -> str:
         portal.unlock(transfer=True)
 
     return json_response
-
-
-async def send_transfer_event(
-    portal: Portal, puppet: Puppet, sender: UserID, destination: UserID | RoomID
-):
-    """It sends a transfer event
-
-    Parameters
-    ----------
-    portal : Portal
-        The Portal object that is being transferred
-    puppet : Puppet
-        The puppet that is sending the event
-    sender : UserID
-        The user who initiated the transfer.
-    destination : UserID | RoomID
-        The user ID or room ID of the destination.
-
-    """
-
-    transfer_event = TransferEvent(
-        event_type=ACDEventTypes.PORTAL,
-        event=ACDPortalEvents.Transfer,
-        state=PortalState.ASSIGNED,
-        prev_state=portal.state,
-        sender=sender,
-        room_id=portal.room_id,
-        acd=puppet.mxid,
-        customer_mxid=portal.creator,
-        destination=destination,
-    )
-    await transfer_event.send()

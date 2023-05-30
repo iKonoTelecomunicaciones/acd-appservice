@@ -22,7 +22,7 @@ from mautrix.util.logging import TraceLogger
 from .config import Config
 from .db.portal import Portal as DBPortal
 from .db.portal import PortalState
-from .events import ACDEventTypes, ACDPortalEvents, CreateEvent, MenuStartEvent
+from .events import ACDEventTypes, ACDPortalEvents, AssignEvent, CreateEvent
 from .matrix_room import MatrixRoom
 from .user import User
 from .util import Util
@@ -426,18 +426,18 @@ class Portal(DBPortal, MatrixRoom):
             self.log.debug(f"Inviting menubot {menubot_mxid} to {self.room_id}...")
             try:
                 await self.add_member(menubot_mxid)
-                menu_start_event: MenuStartEvent = MenuStartEvent(
+                menu_start_event = AssignEvent(
                     event_type=ACDEventTypes.PORTAL,
-                    event=ACDPortalEvents.MenuStart,
+                    event=ACDPortalEvents.Assigned,
                     state=PortalState.ONMENU,
                     prev_state=self.state,
                     sender=self.main_intent.mxid,
                     room_id=self.room_id,
                     acd=self.main_intent.mxid,
                     customer_mxid=self.creator,
-                    menubot=menubot_mxid,
+                    user_mxid=menubot_mxid,
                 )
-                await menu_start_event.send()
+                menu_start_event.send()
 
                 # When menubot enters to the portal, set the portal state in ONMENU
                 await self.update_state(PortalState.ONMENU)
@@ -510,7 +510,7 @@ class Portal(DBPortal, MatrixRoom):
             bridge=self.bridge,
         )
 
-        await create_event.send()
+        create_event.send()
 
     @classmethod
     async def is_portal(cls, room_id: RoomID) -> bool:

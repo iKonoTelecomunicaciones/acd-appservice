@@ -136,7 +136,7 @@ async def resolve(evt: CommandEvent) -> Dict:
         agent_mxid=agent.mxid if agent else None,
         reason=None,
     )
-    await resolve_event.send()
+    resolve_event.send()
 
     # set chat status to resolved
     await portal.update_state(PortalState.RESOLVED)

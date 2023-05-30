@@ -28,7 +28,7 @@ class UICEvent(PortalEvent):
 
 @dataclass
 class EnterQueueEvent(PortalEvent):
-    queue: RoomID = ib(factory=RoomID)
+    queue_room_id: RoomID = ib(factory=RoomID)
 
 
 @dataclass
@@ -37,20 +37,13 @@ class ConnectEvent(PortalEvent):
 
 
 @dataclass
-class AssignAgent(PortalEvent):
-    agent_mxid: UserID = ib(factory=UserID)
+class AssignEvent(PortalEvent):
+    user_mxid: UserID = ib(factory=UserID)
 
 
 @dataclass
-class AgentMessageEvent(PortalEvent):
+class PortalMessageEvent(PortalEvent):
     event_mxid: EventID = ib(factory=EventID)
-    agent_mxid: UserID = ib(factory=UserID)
-
-
-@dataclass
-class CustomerMessageEvent(PortalEvent):
-    event_mxid: EventID = ib(factory=EventID)
-    agent_mxid: UserID = ib(factory=UserID)
 
 
 @dataclass
@@ -66,4 +59,23 @@ class TransferEvent(PortalEvent):
 
 @dataclass
 class MenuStartEvent(PortalEvent):
-    menubot: UserID = ib(factory=UserID)
+    menubot_mxid: UserID = ib(factory=UserID)
+
+
+@dataclass
+class TransferStatusEvent(PortalEvent):
+    destination: UserID | RoomID = ib(factory=UserID)
+    status: str = ib(factory=str)
+    reason: str = ib(factory=str)
+
+
+@dataclass
+class AvailableAgentsEvent(PortalEvent):
+    queue_room_id: str = ib(factory=str)
+    agents_count: int = ib(factory=int)
+    available_agents_count: int = ib(factory=int)
+
+
+@dataclass
+class QueueEmptyEvent(EnterQueueEvent):
+    pass

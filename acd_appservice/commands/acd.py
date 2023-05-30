@@ -144,13 +144,13 @@ async def acd(evt: CommandEvent) -> str:
     )
 
     try:
-        portal.update_state(PortalState.ON_DISTRIBUTION)
         return await puppet.agent_manager.process_distribution(
             portal=portal,
             destination=destination,
             joined_message=joined_message,
             put_enqueued_portal=put_enqueued_portal,
             force_distribution=force_distribution,
+            cmd_sender=evt.sender.mxid,
         )
     except Exception as e:
         evt.log.exception(e)
