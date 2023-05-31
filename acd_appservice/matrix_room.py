@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 from markdown import markdown
 from mautrix.api import Method, SynapseAdminPath
@@ -166,7 +166,7 @@ class MatrixRoom:
         return users
 
     async def add_member(self, new_member: UserID):
-        """If the config value for `acd.queue.user_add_method` is `join`, then join the user,
+        """If user access_control is `join`, then join the user,
         otherwise invite the user
 
         Parameters
@@ -175,13 +175,16 @@ class MatrixRoom:
             The user ID of the user to add to the queue.
 
         """
-        if self.config["acd.queues.user_add_method"] == "join":
+        add_method, _ = self.get_access_control_methods(new_member)
+        self.log.debug(f"Adding {new_member} to {self.room_id} using {add_method}")
+
+        if add_method == "join":
             await self.join_user(user_id=new_member)
         else:
             await self.invite_user(user_id=new_member)
 
     async def remove_member(self, member: UserID, reason: str = None):
-        """If the config value for "acd.remove_method" is "leave", then leave the user,
+        """If user access_control is "leave", then leave the user,
         otherwise kick the user
 
         Parameters
@@ -192,7 +195,10 @@ class MatrixRoom:
             The reason for the removal.
 
         """
-        if self.config["acd.remove_method"] == "leave":
+        _, remove_method = self.get_access_control_methods(member)
+        self.log.debug(f"Removing {member} from {self.room_id} using {remove_method}")
+
+        if remove_method == "leave":
             await self.leave_user(user_id=member, reason=reason)
         else:
             await self.kick_user(user_id=member, reason=reason)
@@ -367,3 +373,26 @@ class MatrixRoom:
         )
 
         return [await User.get_by_mxid(invitee) for invitee in room_invitees]
+
+    def get_access_control_methods(self, user_id: UserID) -> Tuple[str, str]:
+        """It returns the method to add and remove a user from the room
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user to add or remove.
+
+        Returns
+        -------
+            The method to add and remove a user from the room.
+
+        """
+
+        access_control: List = self.config["acd.access_control.users"]
+        default: Dict[str, str] = self.config["acd.access_control.default"]
+
+        for user in access_control:
+            if re.match(user["regex"], user_id):
+                return user["add"], user["remove"]
+
+        return default["add"], default["remove"]

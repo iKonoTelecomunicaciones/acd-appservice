@@ -101,6 +101,7 @@ class Config(BaseBridgeConfig):
         copy("acd.queues.invitees")
         copy("acd.use_presence")
         copy("acd.process_destination_on_joining")
+        copy_dict("acd.access_control")
 
         # Utils
         copy_dict("utils")

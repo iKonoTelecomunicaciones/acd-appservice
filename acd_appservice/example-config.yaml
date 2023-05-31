@@ -209,6 +209,24 @@ acd:
     # When acd* joins to the room before customer message arrived, we need to process destination
     process_destination_on_joining: true
 
+    access_control:
+        users:
+            - regex: '@supervisor[1-9]*:dominio_cliente.com'
+              add: 'join'
+              remove: 'leave'
+            - regex: '@agent[1-9]*:dominio_cliente.com'
+              add: 'join'
+              remove: 'leave'
+            - regex: '@admin:dominio_cliente.com'
+              add: 'invite'
+              remove: 'leave'
+            - regex: '@menubot[1-9]*:dominio_cliente.com'
+              add: 'join'
+              remove: 'leave'
+        default:
+            add: 'invite'
+            remove: 'leave'
+
 # ACD will send below commands to interact with any WA bridge
 bridges:
 
@@ -461,6 +479,8 @@ logging:
             level: DEBUG
         aiohttp:
             level: DEBUG
+        report:
+            level: INFO
     root:
         level: DEBUG
         handlers: [file, console]
