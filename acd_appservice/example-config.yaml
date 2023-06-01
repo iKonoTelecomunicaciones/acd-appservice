@@ -112,9 +112,6 @@ acd:
     menubot_prefix: "@menubot"
     # Prefijo de los comandos del menubot
     menubot_command_prefix: "!menubot"
-    # force join
-    device_name_regex: "Element Android|Móvil|Mobile"
-    force_join: false
     # Timeout for agent invites
     agent_invite_timeout: 15
     # The prefix to special messages that are going to be processed in frontend.
@@ -165,12 +162,6 @@ acd:
         template_data: []
         language: "es"
 
-    # Action to take when we need that some agent get out of a room
-    # NOTE: The namespaces must be properly configured to use the 'leave' option
-    # - leave: it makes an identity assertion of an agent to make it leave the room
-    # - kick: it makes that the room admin kick the agent from the room
-    remove_method: "leave"
-
     queues:
         # Does the ACD have to `invite` users to the queue or do a forced `join`?
         # You can only force `join` users from your own server.
@@ -209,6 +200,14 @@ acd:
     # When acd* joins to the room before customer message arrived, we need to process destination
     process_destination_on_joining: true
 
+    # Action to take when we need that some agent get out of a room or enter to a room
+    # NOTE: The namespaces must be properly configured to use the 'leave' option
+    # remove:
+    # - leave: it makes an identity assertion of an agent to make it leave the room
+    # - kick: it makes that the room admin kick the agent from the room
+    # add:
+    # - invite: it send an invitation to the agent to join the room
+    # - join: it makes that the room admin join the agent to the room with out invitation.
     access_control:
         users:
             - regex: '@supervisor[1-9]*:dominio_cliente.com'
