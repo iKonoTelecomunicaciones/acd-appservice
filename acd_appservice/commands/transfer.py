@@ -1,12 +1,10 @@
-from __future__ import annotations
-
 import asyncio
 from argparse import ArgumentParser, Namespace
 from typing import Any, Dict
 
 from mautrix.types import RoomID, UserID
 
-from ..events import ACDEventTypes, ACDPortalEvents, TransferEvent, send_transfer_status_event
+from ..events import send_transfer_event, send_transfer_failed_event
 from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..queue import Queue
@@ -131,21 +129,13 @@ async def transfer(evt: CommandEvent) -> str:
         transfer_author = evt.sender
 
     queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
-    # Locking the room so that no other transfer can be made to the room.
-    portal.lock(transfer=True)
 
-    transfer_event = TransferEvent(
-        event_type=ACDEventTypes.PORTAL,
-        event=ACDPortalEvents.Transfer,
-        state=PortalState.ON_DISTRIBUTION,
-        prev_state=portal.state,
+    await portal.update_state(PortalState.ON_DISTRIBUTION)
+    send_transfer_event(
+        portal=portal,
         sender=evt.sender.mxid,
-        room_id=portal.room_id,
-        acd=puppet.mxid,
-        customer_mxid=portal.creator,
         destination=queue.room_id,
     )
-    transfer_event.send()
 
     # Creating a task that will be executed in the background.
     asyncio.create_task(
@@ -197,33 +187,18 @@ async def transfer_user(evt: CommandEvent) -> str:
         room_id=customer_room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
     )
 
-    portal_prev_state: PortalState = portal.state
     agent: User = await User.get_by_mxid(agent_id, create=False)
 
-    transfer_event = TransferEvent(
-        event_type=ACDEventTypes.PORTAL,
-        event=ACDPortalEvents.Transfer,
-        state=PortalState.ASSIGNED,
-        prev_state=portal.state,
-        sender=evt.sender.mxid,
-        room_id=portal.room_id,
-        acd=puppet.mxid,
-        customer_mxid=portal.creator,
-        destination=agent_id,
-    )
-    transfer_event.send()
-
     await portal.update_state(PortalState.ASSIGNED)
+    send_transfer_event(portal=portal, sender=evt.sender.mxid, destination=agent_id)
 
     if not agent:
-        await send_transfer_status_event(
+        send_transfer_failed_event(
             portal=portal,
-            status="FAILED",
             reason="Agent not found",
             destination=agent_id,
-            prev_portal_state=portal_prev_state,
         )
-        await portal.update_state(portal_prev_state)
+        await portal.update_state(portal.prev_state)
         return Util.create_response_data(
             detail="Agent with given user id does not exist", room_id=portal.room_id, status=404
         )
@@ -233,14 +208,12 @@ async def transfer_user(evt: CommandEvent) -> str:
 
     # Checking if the room is locked, if it is, it returns.
     if portal.is_locked:
-        await send_transfer_status_event(
+        await portal.update_state(portal.prev_state)
+        send_transfer_failed_event(
             portal=portal,
-            status="FAILED",
-            prev_portal_state=portal_prev_state,
             destination=agent_id,
             reason="Room is locked by transfer",
         )
-        await portal.update_state(portal_prev_state)
         evt.log.debug(f"Room: {portal.room_id} LOCKED by Transfer user")
         return Util.create_response_data(
             detail="Current portal is locked by transfer", room_id=portal.room_id, status=423
@@ -265,14 +238,12 @@ async def transfer_user(evt: CommandEvent) -> str:
     try:
         # Checking if the agent is already in the room, if so, it sends a message to the room.
         if transfer_author.mxid == agent.mxid:
-            await send_transfer_status_event(
+            await portal.update_state(portal.prev_state)
+            send_transfer_failed_event(
                 portal=portal,
-                prev_portal_state=portal_prev_state,
                 destination=agent_id,
-                status="FAILED",
                 reason="Agent is already in the room",
             )
-            await portal.update_state(portal_prev_state)
 
             msg = (
                 f"The agent [{agent_displayname}][{agent.mxid}] "
@@ -310,14 +281,12 @@ async def transfer_user(evt: CommandEvent) -> str:
                         detail=msg, room_id=evt.room_id, status=200
                     )
             else:
-                await send_transfer_status_event(
+                await portal.update_state(portal.prev_state)
+                send_transfer_failed_event(
                     portal=portal,
-                    status="FAILED",
                     reason="Agent not available",
                     destination=agent_id,
-                    prev_portal_state=portal_prev_state,
                 )
-                await portal.update_state(portal_prev_state)
 
                 msg = f"Agent [{agent_displayname}][{agent.mxid}] is not available"
                 await portal.send_notice(text=msg)

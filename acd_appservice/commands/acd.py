@@ -1,6 +1,6 @@
 from argparse import ArgumentParser, Namespace
 
-from ..portal import Portal, PortalState
+from ..portal import Portal
 from ..puppet import Puppet
 from .handler import CommandArg, CommandEvent, command_handler
 

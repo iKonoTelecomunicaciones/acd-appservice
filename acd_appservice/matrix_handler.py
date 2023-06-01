@@ -35,7 +35,7 @@ from acd_appservice import acd_program
 from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
 from .db.user import UserRoles
-from .events import ACDEventTypes, ACDPortalEvents, PortalMessageEvent, UICEvent
+from .events import send_portal_message_event, send_uic_event
 from .matrix_room import MatrixRoom
 from .message import Message
 from .portal import Portal, PortalState
@@ -522,19 +522,8 @@ class MatrixHandler:
         # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
         if self.config["acd.process_destination_on_joining"] and not room_id in puppet.BIC_ROOMS:
             # set chat status to start before process the destination
-
-            uic_event = UICEvent(
-                event_type=ACDEventTypes.PORTAL,
-                event=ACDPortalEvents.UIC,
-                state=PortalState.START,
-                prev_state=portal.state,
-                sender=portal.creator,
-                room_id=portal.room_id,
-                acd=puppet.mxid,
-                customer_mxid=portal.creator,
-            )
-            uic_event.send()
             await portal.update_state(PortalState.START)
+            send_uic_event(portal=portal)
 
             if puppet.destination:
                 portal: Portal = await Portal.get_by_room_id(
@@ -766,19 +755,8 @@ class MatrixHandler:
 
         # Ignore messages from ourselves or agents if not a command
         if sender.is_agent:
-            message_event = PortalMessageEvent(
-                event_type=ACDEventTypes.PORTAL,
-                event=ACDPortalEvents.PortalMessage,
-                state=PortalState.FOLLOWUP,
-                prev_state=portal.state,
-                sender=sender.mxid,
-                room_id=portal.room_id,
-                acd=puppet.mxid,
-                customer_mxid=portal.creator,
-                event_mxid=event_id,
-            )
-            message_event.send()
             await portal.update_state(PortalState.FOLLOWUP)
+            send_portal_message_event(portal=portal, sender=sender.mxid, event_id=event_id)
             await puppet.agent_manager.signaling.set_chat_status(
                 room_id=portal.room_id, status=Signaling.FOLLOWUP, agent=sender.mxid
             )
@@ -807,20 +785,10 @@ class MatrixHandler:
         room_agent = await portal.get_current_agent()
 
         if room_agent:
-            customer_message_event = PortalMessageEvent(
-                event_type=ACDEventTypes.PORTAL,
-                event=ACDPortalEvents.PortalMessage,
-                state=PortalState.PENDING,
-                prev_state=portal.state,
-                sender=portal.creator,
-                room_id=portal.room_id,
-                acd=puppet.mxid,
-                customer_mxid=portal.creator,
-                event_mxid=event_id,
-            )
-            customer_message_event.send()
             # if message is not from agents, bots or ourselves, it is from the customer
             await portal.update_state(PortalState.PENDING)
+            send_portal_message_event(portal=portal, sender=sender.mxid, event_id=event_id)
+
             await puppet.agent_manager.signaling.set_chat_status(
                 room_id=portal.room_id, status=Signaling.PENDING, agent=room_agent.mxid
             )
@@ -869,20 +837,9 @@ class MatrixHandler:
                 room_id=portal.room_id, campaign_room_id=None
             )
 
-            uic_event = UICEvent(
-                event_type=ACDEventTypes.PORTAL,
-                event=ACDPortalEvents.UIC,
-                state=PortalState.START,
-                prev_state=portal.state,
-                sender=portal.creator,
-                room_id=portal.room_id,
-                acd=puppet.mxid,
-                customer_mxid=portal.creator,
-            )
-            uic_event.send()
-
             # set chat status to start before process the destination
             await portal.update_state(PortalState.START)
+            send_uic_event(portal=portal)
 
             if puppet.destination:
                 if await self.process_destination(portal=portal):

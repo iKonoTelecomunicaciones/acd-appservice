@@ -42,6 +42,12 @@ class AssignEvent(PortalEvent):
 
 
 @dataclass
+class AssignFailedEvent(PortalEvent):
+    user_mxid: UserID = ib(factory=UserID)
+    reason: str = ib(factory=str)
+
+
+@dataclass
 class PortalMessageEvent(PortalEvent):
     event_mxid: EventID = ib(factory=EventID)
 
@@ -58,14 +64,8 @@ class TransferEvent(PortalEvent):
 
 
 @dataclass
-class MenuStartEvent(PortalEvent):
-    menubot_mxid: UserID = ib(factory=UserID)
-
-
-@dataclass
-class TransferStatusEvent(PortalEvent):
+class TransferFailedEvent(PortalEvent):
     destination: UserID | RoomID = ib(factory=UserID)
-    status: str = ib(factory=str)
     reason: str = ib(factory=str)
 
 

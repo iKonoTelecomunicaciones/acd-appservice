@@ -22,7 +22,7 @@ from mautrix.util.logging import TraceLogger
 from .config import Config
 from .db.portal import Portal as DBPortal
 from .db.portal import PortalState
-from .events import ACDEventTypes, ACDPortalEvents, AssignEvent, CreateEvent
+from .events import send_assign_event, send_create_portal_event
 from .matrix_room import MatrixRoom
 from .user import User
 from .util import Util
@@ -57,6 +57,7 @@ class Portal(DBPortal, MatrixRoom):
         self.log.debug(
             f"Updating room [{self.room_id}] state [{self.state.value}] to [{state.value}]"
         )
+        self.prev_state = self.state
         self.state = state
         self.state_date = self.now()
         await self.save()
@@ -321,8 +322,8 @@ class Portal(DBPortal, MatrixRoom):
         """
 
         self.log.debug(f"This room will be set up :: {self.room_id}")
-        await self.send_create_portal_event()
         await self.update_state(PortalState.INIT)
+        await send_create_portal_event(portal=self)
 
         bridge = self.bridge
         if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
@@ -426,21 +427,11 @@ class Portal(DBPortal, MatrixRoom):
             self.log.debug(f"Inviting menubot {menubot_mxid} to {self.room_id}...")
             try:
                 await self.add_member(menubot_mxid)
-                menu_start_event = AssignEvent(
-                    event_type=ACDEventTypes.PORTAL,
-                    event=ACDPortalEvents.Assigned,
-                    state=PortalState.ONMENU,
-                    prev_state=self.state,
-                    sender=self.main_intent.mxid,
-                    room_id=self.room_id,
-                    acd=self.main_intent.mxid,
-                    customer_mxid=self.creator,
-                    user_mxid=menubot_mxid,
-                )
-                menu_start_event.send()
-
                 # When menubot enters to the portal, set the portal state in ONMENU
                 await self.update_state(PortalState.ONMENU)
+                send_assign_event(
+                    portal=self, sender=self.main_intent.mxid, user_assigned=menubot_mxid
+                )
                 self.log.debug(f"Menubot {menubot_mxid} invited OK to room {self.room_id}")
                 break
             except Exception as e:
@@ -490,27 +481,6 @@ class Portal(DBPortal, MatrixRoom):
             return
 
         return identifier
-
-    async def send_create_portal_event(self):
-        customer = {
-            "mxid": self.creator,
-            "account_id": self.creator_identifier(),
-            "name": await self.creator_displayname(),
-            "username": None,
-        }
-        create_event = CreateEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.Create,
-            state=PortalState.INIT,
-            prev_state=None,
-            sender=self.creator,
-            room_id=self.room_id,
-            acd=self.main_intent.mxid,
-            customer=customer,
-            bridge=self.bridge,
-        )
-
-        create_event.send()
 
     @classmethod
     async def is_portal(cls, room_id: RoomID) -> bool:

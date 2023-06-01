@@ -111,3 +111,8 @@ async def upgrade_v5(conn: Connection) -> None:
     await conn.execute('ALTER TABLE "user" ADD role VARCHAR(30)')
     await conn.execute('CREATE INDEX idx_role_user ON "user"(role)')
     await conn.execute("ALTER TABLE portal ADD COLUMN state_date TIMESTAMP WITH TIME ZONE")
+
+
+@upgrade_table.register(description="Add column prev_state to portal table")
+async def upgrade_v6(conn: Connection) -> None:
+    await conn.execute("ALTER TABLE portal ADD COLUMN prev_state TEXT")
