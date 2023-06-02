@@ -451,6 +451,12 @@ class Portal(DBPortal, MatrixRoom):
         if current_menubot:
             await self.remove_member(current_menubot.mxid, reason=reason)
 
+    async def add_member(self, new_member: UserID):
+        return await super().add_member(new_member, "acd.access_methods.portal")
+
+    async def remove_member(self, member: UserID, reason: Optional[str] = None):
+        return await super().remove_member(member, "acd.access_methods.portal", reason)
+
     @classmethod
     async def is_portal(cls, room_id: RoomID) -> bool:
         """It checks if the room is a portal by checking if the creator of the room is a

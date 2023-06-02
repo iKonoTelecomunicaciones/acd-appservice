@@ -90,7 +90,6 @@ class Config(BaseBridgeConfig):
         copy_dict("acd.resolve_chat")
         copy("acd.bulk_resolve.block_size")
         copy("acd.available_agents_room")
-        copy("acd.queues.user_add_method")
         copy("acd.queues.visibility")
         copy("acd.enqueued_portals.portals_per_agent")
         copy("acd.enqueued_portals.max_iterations")
@@ -99,7 +98,7 @@ class Config(BaseBridgeConfig):
         copy("acd.queues.invitees")
         copy("acd.use_presence")
         copy("acd.process_destination_on_joining")
-        copy_dict("acd.access_control")
+        copy_dict("acd.access_methods")
 
         # Utils
         copy_dict("utils")

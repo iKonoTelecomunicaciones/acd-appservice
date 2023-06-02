@@ -163,12 +163,6 @@ acd:
         language: "es"
 
     queues:
-        # Does the ACD have to `invite` users to the queue or do a forced `join`?
-        # You can only force `join` users from your own server.
-        # Possible fields:
-        # invite: Invite users to the queue room
-        # join: Forces users to join the queue
-        user_add_method: "invite"
         # Should the queues created by the ACD be `public` or `private`?
         visibility: "private"
         # This will always be invited even if you have `user_add_method` in `join`.
@@ -208,8 +202,8 @@ acd:
     # add:
     # - invite: it send an invitation to the agent to join the room
     # - join: it makes that the room admin join the agent to the room with out invitation.
-    access_control:
-        users:
+    access_methods:
+        portal:
             - regex: '@supervisor[1-9]*:dominio_cliente.com'
               add: 'join'
               remove: 'leave'
@@ -222,6 +216,17 @@ acd:
             - regex: '@menubot[1-9]*:dominio_cliente.com'
               add: 'join'
               remove: 'leave'
+        queue:
+            - regex: '@supervisor[1-9]*:dominio_cliente.com'
+              add: 'join'
+              remove: 'leave'
+            - regex: '@admin:dominio_cliente.com'
+              add: 'join'
+              remove: 'leave'
+            - regex: '@agent[1-9]*:dominio_cliente.com'
+              add: 'join'
+              remove: 'leave'
+
         default:
             add: 'invite'
             remove: 'leave'

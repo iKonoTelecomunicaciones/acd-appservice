@@ -1160,10 +1160,10 @@ async def queue(request: web.Request) -> web.Response:
                         force:
                             description: "This queue has assigned agents.
                                           Are you sure you want to force delete the queue?"
-                            type: boolean
+                            type: string
                     example:
                         room_id: "!foo:foo.com"
-                        force: true
+                        force: "yes | no"
 
     responses:
         '200':
