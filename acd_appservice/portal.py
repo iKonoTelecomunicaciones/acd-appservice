@@ -22,7 +22,7 @@ from mautrix.util.logging import TraceLogger
 from .config import Config
 from .db.portal import Portal as DBPortal
 from .db.portal import PortalState
-from .events import send_assign_event, send_create_portal_event
+from .events import ACDPortalEvents, send_portal_event
 from .matrix_room import MatrixRoom
 from .user import User
 from .util import Util
@@ -323,7 +323,7 @@ class Portal(DBPortal, MatrixRoom):
 
         self.log.debug(f"This room will be set up :: {self.room_id}")
         await self.update_state(PortalState.INIT)
-        await send_create_portal_event(portal=self)
+        await send_portal_event(portal=self, event_type=ACDPortalEvents.Create)
 
         bridge = self.bridge
         if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
@@ -429,8 +429,11 @@ class Portal(DBPortal, MatrixRoom):
                 await self.add_member(menubot_mxid)
                 # When menubot enters to the portal, set the portal state in ONMENU
                 await self.update_state(PortalState.ONMENU)
-                send_assign_event(
-                    portal=self, sender=self.main_intent.mxid, user_assigned=menubot_mxid
+                await send_portal_event(
+                    portal=self,
+                    event_type=ACDPortalEvents.Assigned,
+                    sender=self.main_intent.mxid,
+                    user_assigned=menubot_mxid,
                 )
                 self.log.debug(f"Menubot {menubot_mxid} invited OK to room {self.room_id}")
                 break

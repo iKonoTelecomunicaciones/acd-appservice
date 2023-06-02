@@ -12,14 +12,7 @@ from mautrix.util.logging import TraceLogger
 
 from .commands.handler import CommandProcessor
 from .config import Config
-from .events import (
-    send_assign_event,
-    send_assign_failed_event,
-    send_connect_event,
-    send_enterqueue_event,
-    send_queue_empty_event,
-    send_transfer_failed_event,
-)
+from .events import ACDPortalEvents, send_portal_event
 from .portal import Portal, PortalState
 from .queue import Queue
 from .room_manager import RoomManager
@@ -100,7 +93,11 @@ class AgentManager:
                 if put_enqueued_portal:
                     self.log.debug(f"Portal [{portal.room_id}] state has been changed to ENQUEUED")
                     await portal.update_state(state=PortalState.ENQUEUED)
-                    send_queue_empty_event(portal=portal, queue_room_id=destination)
+                    await send_portal_event(
+                        portal=portal,
+                        event_type=ACDPortalEvents.QueueEmpty,
+                        queue_room_id=destination,
+                    )
                 portal.selected_option = destination
                 await portal.update()
 
@@ -142,7 +139,12 @@ class AgentManager:
         force_distribution: bool = False,
     ):
         await portal.update_state(PortalState.ASSIGNED)
-        send_assign_event(portal=portal, sender=cmd_sender, user_assigned=agent.mxid)
+        await send_portal_event(
+            portal=portal,
+            event_type=ACDPortalEvents.Assigned,
+            sender=cmd_sender,
+            user_assigned=agent.mxid,
+        )
 
         # Check that the agent is online and unpaused.
         is_agent_available = await agent.is_available()
@@ -155,8 +157,9 @@ class AgentManager:
                 status=409,
             )
             await portal.update_state(portal.prev_state)
-            send_assign_failed_event(
+            await send_portal_event(
                 portal=portal,
+                event_type=ACDPortalEvents.AssignFailed,
                 user_mxid=agent.mxid,
                 reason="Agent is not available",
             )
@@ -175,7 +178,7 @@ class AgentManager:
 
         # set chat status to pending when the agent is asigned to the chat
         await portal.update_state(PortalState.PENDING)
-        await send_connect_event(portal=portal)
+        await send_portal_event(portal=portal, event_type=ACDPortalEvents.Connect)
 
         portal.unlock()
 
@@ -222,7 +225,12 @@ class AgentManager:
 
             # Changing room state to ON_DISTRIBUTION by acd command
             await portal.update_state(PortalState.ON_DISTRIBUTION)
-            send_enterqueue_event(portal=portal, queue_room_id=queue.room_id, sender=cmd_sender)
+            await send_portal_event(
+                portal=portal,
+                event_type=ACDPortalEvents.EnterQueue,
+                queue_room_id=queue.room_id,
+                sender=cmd_sender,
+            )
 
             target_room_id = queue.room_id if queue else self.config["acd.available_agents_room"]
             queue: Queue = await Queue.get_by_room_id(room_id=target_room_id)
@@ -293,8 +301,9 @@ class AgentManager:
 
                 if transfer_author:
                     await portal.update_state(portal.prev_state)
-                    send_transfer_failed_event(
+                    await send_portal_event(
                         portal=portal,
+                        event_type=ACDPortalEvents.TransferFailed,
                         destination=queue.room_id,
                         reason="No agents in queue",
                     )
@@ -318,8 +327,9 @@ class AgentManager:
             joined_members = await portal.get_joined_users()
             if not joined_members:
                 await portal.update_state(portal.prev_state)
-                send_transfer_failed_event(
+                await send_portal_event(
                     portal=portal,
+                    event_type=ACDPortalEvents.TransferFailed,
                     reason="No joined members in the room",
                     destination=queue.room_id,
                 )
@@ -329,8 +339,9 @@ class AgentManager:
 
             if len(joined_members) == 1 and joined_members[0].mxid == self.intent.mxid:
                 await portal.update_state(portal.prev_state)
-                send_transfer_failed_event(
+                await send_portal_event(
                     portal=portal,
+                    event_type=ACDPortalEvents.TransferFailed,
                     reason="Room has only one member and it's the bot",
                     destination=queue.room_id,
                 )
@@ -363,8 +374,11 @@ class AgentManager:
 
                 if is_agent_available_for_assignment:
                     await portal.update_state(PortalState.ASSIGNED)
-                    send_assign_event(
-                        portal=portal, sender=portal.main_intent.mxid, user_assigned=agent.mxid
+                    await send_portal_event(
+                        portal=portal,
+                        event_type=ACDPortalEvents.Assigned,
+                        sender=portal.main_intent.mxid,
+                        user_assigned=agent.mxid,
                     )
 
                     online_agents += 1
@@ -403,8 +417,9 @@ class AgentManager:
                     status = 404
                     await portal.send_notice(text=msg)
                     await portal.update_state(state=portal.prev_state)
-                    send_transfer_failed_event(
+                    await send_portal_event(
                         portal=portal,
+                        event_type=ACDPortalEvents.TransferFailed,
                         reason=msg,
                         destination=queue.room_id,
                     )
@@ -419,7 +434,11 @@ class AgentManager:
                         )
 
                         await portal.update_state(state=PortalState.ENQUEUED)
-                        send_queue_empty_event(portal=portal, queue_room_id=queue.room_id)
+                        await send_portal_event(
+                            portal=portal,
+                            event_type=ACDPortalEvents.QueueEmpty,
+                            queue_room_id=queue.room_id,
+                        )
 
                     portal.selected_option = queue.room_id
                     await portal.update()
@@ -604,7 +623,7 @@ class AgentManager:
 
             self.log.debug(f"Removing room [{portal.room_id}] from portal enqueued list")
             await portal.update_state(PortalState.PENDING)
-            await send_connect_event(portal=portal)
+            await send_portal_event(portal=portal, event_type=ACDPortalEvents.Connect)
 
             agent_displayname = await self.intent.get_displayname(user_id=agent_id)
             detail = ""
@@ -695,8 +714,9 @@ class AgentManager:
             self.log.debug(f"Unlocking room {portal.room_id}..., agent {agent_id} already in room")
         else:
             self.log.debug(f"[{agent_id}] DID NOT ACCEPT the invite. Inviting next agent ...")
-            send_assign_failed_event(
+            await send_portal_event(
                 portal=portal,
+                event_type=ACDPortalEvents.AssignFailed,
                 user_mxid=agent_id,
                 reason="Invite timeout",
             )

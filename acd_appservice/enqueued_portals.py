@@ -8,7 +8,7 @@ from mautrix.util.logging import TraceLogger
 
 from .agent_manager import AgentManager
 from .config import Config
-from .events import send_available_agents_event
+from .events import ACDPortalEvents, send_portal_event
 from .portal import Portal, PortalState
 from .queue import Queue
 from .util.business_hours import BusinessHour
@@ -126,7 +126,9 @@ class EnqueuedPortals:
                 continue
 
             await portal.update_state(PortalState.ON_DISTRIBUTION)
-            await send_available_agents_event(portal=portal, queue=queue)
+            await send_portal_event(
+                portal=portal, event_type=ACDPortalEvents.AvailableAgents, queue=queue
+            )
 
             portal.lock()
             create_task(

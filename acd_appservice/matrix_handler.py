@@ -35,7 +35,7 @@ from acd_appservice import acd_program
 from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
 from .db.user import UserRoles
-from .events import send_portal_message_event, send_uic_event
+from .events import ACDPortalEvents, send_portal_event
 from .matrix_room import MatrixRoom
 from .message import Message
 from .portal import Portal, PortalState
@@ -523,7 +523,7 @@ class MatrixHandler:
         if self.config["acd.process_destination_on_joining"] and not room_id in puppet.BIC_ROOMS:
             # set chat status to start before process the destination
             await portal.update_state(PortalState.START)
-            send_uic_event(portal=portal)
+            await send_portal_event(portal=portal, event_type=ACDPortalEvents.UIC)
 
             if puppet.destination:
                 portal: Portal = await Portal.get_by_room_id(
@@ -756,7 +756,12 @@ class MatrixHandler:
         # Ignore messages from ourselves or agents if not a command
         if sender.is_agent:
             await portal.update_state(PortalState.FOLLOWUP)
-            send_portal_message_event(portal=portal, sender=sender.mxid, event_id=event_id)
+            await send_portal_event(
+                portal=portal,
+                event_type=ACDPortalEvents.PortalMessage,
+                sender=sender.mxid,
+                event_id=event_id,
+            )
             await puppet.agent_manager.signaling.set_chat_status(
                 room_id=portal.room_id, status=Signaling.FOLLOWUP, agent=sender.mxid
             )
@@ -787,7 +792,12 @@ class MatrixHandler:
         if room_agent:
             # if message is not from agents, bots or ourselves, it is from the customer
             await portal.update_state(PortalState.PENDING)
-            send_portal_message_event(portal=portal, sender=sender.mxid, event_id=event_id)
+            await send_portal_event(
+                portal=portal,
+                event_type=ACDPortalEvents.PortalMessage,
+                sender=sender.mxid,
+                event_id=event_id,
+            )
 
             await puppet.agent_manager.signaling.set_chat_status(
                 room_id=portal.room_id, status=Signaling.PENDING, agent=room_agent.mxid
@@ -839,7 +849,7 @@ class MatrixHandler:
 
             # set chat status to start before process the destination
             await portal.update_state(PortalState.START)
-            send_uic_event(portal=portal)
+            await send_portal_event(portal=portal, event_type=ACDPortalEvents.UIC)
 
             if puppet.destination:
                 if await self.process_destination(portal=portal):
