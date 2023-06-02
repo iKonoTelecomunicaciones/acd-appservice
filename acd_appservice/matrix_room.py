@@ -391,7 +391,7 @@ class MatrixRoom:
         """
 
         access_method: List = self.config[access_method_key]
-        default: Dict[str, str] = self.config["acd.access_control.default"]
+        default: Dict[str, str] = self.config["acd.access_methods.default"]
 
         for user in access_method:
             if re.match(user["regex"], user_id):

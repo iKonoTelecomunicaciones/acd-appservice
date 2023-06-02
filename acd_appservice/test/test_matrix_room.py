@@ -26,19 +26,31 @@ class TestMatrixRoom:
         )
 
     @pytest.mark.asyncio
-    async def test_get_use_access_control_methods(
-        self, agent_user: User, matrix_room: MatrixRoom, acd_init
+    async def test_get_portal_user_access_methods(
+        self, admin_user: User, matrix_room: MatrixRoom, acd_init
     ):
-        add_method, remove_method = matrix_room.get_access_control_methods(agent_user.mxid)
+        add_method, remove_method = matrix_room.get_access_methods(
+            admin_user.mxid, "acd.access_methods.portal"
+        )
+        assert add_method == "invite"
+        assert remove_method == "leave"
+
+    @pytest.mark.asyncio
+    async def test_get_queue_user_access_methods(
+        self, admin_user: User, matrix_room: MatrixRoom, acd_init
+    ):
+        add_method, remove_method = matrix_room.get_access_methods(
+            admin_user.mxid, "acd.access_methods.queue"
+        )
         assert add_method == "join"
         assert remove_method == "leave"
 
     @pytest.mark.asyncio
-    async def test_get_default_access_control_methods(
-        self, agent_user: User, matrix_room: MatrixRoom, acd_init
-    ):
+    async def test_get_default_access_methods(self, matrix_room: MatrixRoom, acd_init):
         user_id: str = "@mxwa_573521487741:dominio_cliente.com"
-        add_method, remove_method = matrix_room.get_access_control_methods(user_id)
+        add_method, remove_method = matrix_room.get_access_methods(
+            user_id, "acd.access_methods.portal"
+        )
         assert add_method == "invite"
         assert remove_method == "leave"
 
