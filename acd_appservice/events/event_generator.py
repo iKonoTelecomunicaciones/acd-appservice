@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from ..queue import Queue
 from ..user import User
 from .models import ACDEventTypes, ACDPortalEvents
-from .portal_event import (
+from .portal_event_models import (
     AssignEvent,
     AssignFailedEvent,
     AvailableAgentsEvent,
