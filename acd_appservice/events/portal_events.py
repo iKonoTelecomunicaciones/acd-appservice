@@ -55,7 +55,6 @@ class PortalMessageEvent(PortalEvent):
 @dataclass
 class ResolveEvent(PortalEvent):
     agent_mxid: UserID = ib(factory=UserID)
-    reason: str = ib(factory=str)
 
 
 @dataclass

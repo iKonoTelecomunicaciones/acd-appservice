@@ -143,7 +143,7 @@ class AgentManager:
             portal=portal,
             event_type=ACDPortalEvents.Assigned,
             sender=cmd_sender,
-            user_assigned=agent.mxid,
+            assigned_user=agent.mxid,
         )
 
         # Check that the agent is online and unpaused.
@@ -378,7 +378,7 @@ class AgentManager:
                         portal=portal,
                         event_type=ACDPortalEvents.Assigned,
                         sender=portal.main_intent.mxid,
-                        user_assigned=agent.mxid,
+                        assigned_user=agent.mxid,
                     )
 
                     online_agents += 1

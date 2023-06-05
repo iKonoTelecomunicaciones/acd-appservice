@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING
 
 from ..queue import Queue
 from ..user import User
-from .models import ACDEventTypes, ACDPortalEvents
-from .portal_event_models import (
+from .event_types import ACDEventTypes, ACDPortalEvents
+from .portal_events import (
     AssignEvent,
     AssignFailedEvent,
     AvailableAgentsEvent,
@@ -89,7 +89,7 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             room_id=portal.room_id,
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
-            user_mxid=kwargs.get("user_assigned"),
+            user_mxid=kwargs.get("assigned_user"),
         )
     elif event_type == ACDPortalEvents.AssignFailed:
         event = AssignFailedEvent(
@@ -128,7 +128,6 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
             agent_mxid=agent_removed.mxid if agent_removed else None,
-            reason=kwargs.get("reason"),
         )
     elif event_type == ACDPortalEvents.Transfer:
         event = TransferEvent(

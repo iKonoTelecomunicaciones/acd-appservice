@@ -433,7 +433,7 @@ class Portal(DBPortal, MatrixRoom):
                     portal=self,
                     event_type=ACDPortalEvents.Assigned,
                     sender=self.main_intent.mxid,
-                    user_assigned=menubot_mxid,
+                    assigned_user=menubot_mxid,
                 )
                 self.log.debug(f"Menubot {menubot_mxid} invited OK to room {self.room_id}")
                 break

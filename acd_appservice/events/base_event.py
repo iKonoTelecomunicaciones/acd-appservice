@@ -10,7 +10,7 @@ from mautrix.types import SerializableAttrs, UserID
 from mautrix.util.logging import TraceLogger
 
 from ..db.portal import PortalState
-from .models import ACDEventTypes, ACDPortalEvents
+from .event_types import ACDEventTypes, ACDPortalEvents
 
 log: TraceLogger = logging.getLogger("report.event")
 

@@ -130,7 +130,6 @@ async def resolve(evt: CommandEvent) -> Dict:
         portal=portal,
         event_type=ACDPortalEvents.Resolve,
         sender=evt.sender.mxid,
-        reason=puppet.config["acd.resolve_chat.notice"],
         agent_removed=agent,
     )
 
