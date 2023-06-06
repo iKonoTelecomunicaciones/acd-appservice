@@ -4,7 +4,8 @@ from typing import Any, Dict
 
 from mautrix.types import RoomID, UserID
 
-from ..portal import Portal
+from ..events import ACDPortalEvents, send_portal_event
+from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..queue import Queue
 from ..user import User
@@ -129,6 +130,14 @@ async def transfer(evt: CommandEvent) -> str:
 
     queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
 
+    await portal.update_state(PortalState.ON_DISTRIBUTION)
+    await send_portal_event(
+        portal=portal,
+        event_type=ACDPortalEvents.Transfer,
+        sender=evt.sender.mxid,
+        destination=queue.room_id,
+    )
+
     # Creating a task that will be executed in the background.
     asyncio.create_task(
         puppet.agent_manager.loop_agents(
@@ -169,7 +178,7 @@ async def transfer_user(evt: CommandEvent) -> str:
         Incoming CommandEvent
 
     """
-    args: NameError = evt.cmd_args
+    args: Namespace = evt.cmd_args
     customer_room_id: RoomID = args.portal
     agent_id: UserID = args.agent
     force: bool = True if args.force == "yes" else False
@@ -180,7 +189,23 @@ async def transfer_user(evt: CommandEvent) -> str:
     )
 
     agent: User = await User.get_by_mxid(agent_id, create=False)
+
+    await portal.update_state(PortalState.ASSIGNED)
+    await send_portal_event(
+        portal=portal,
+        event_type=ACDPortalEvents.Transfer,
+        sender=evt.sender.mxid,
+        destination=agent_id,
+    )
+
     if not agent:
+        await portal.update_state(portal.prev_state)
+        await send_portal_event(
+            portal=portal,
+            event_type=ACDPortalEvents.TransferFailed,
+            reason="Agent not found",
+            destination=agent_id,
+        )
         return Util.create_response_data(
             detail="Agent with given user id does not exist", room_id=portal.room_id, status=404
         )
@@ -190,6 +215,13 @@ async def transfer_user(evt: CommandEvent) -> str:
 
     # Checking if the room is locked, if it is, it returns.
     if portal.is_locked:
+        await portal.update_state(portal.prev_state)
+        await send_portal_event(
+            portal=portal,
+            event_type=ACDPortalEvents.TransferFailed,
+            destination=agent_id,
+            reason="Room is locked by transfer",
+        )
         evt.log.debug(f"Room: {portal.room_id} LOCKED by Transfer user")
         return Util.create_response_data(
             detail="Current portal is locked by transfer", room_id=portal.room_id, status=423
@@ -214,6 +246,14 @@ async def transfer_user(evt: CommandEvent) -> str:
     try:
         # Checking if the agent is already in the room, if so, it sends a message to the room.
         if transfer_author.mxid == agent.mxid:
+            await portal.update_state(portal.prev_state)
+            await send_portal_event(
+                portal=portal,
+                event_type=ACDPortalEvents.TransferFailed,
+                destination=agent_id,
+                reason="Agent is already in the room",
+            )
+
             msg = (
                 f"The agent [{agent_displayname}][{agent.mxid}] "
                 f"is already in the room {portal.room_id}"
@@ -250,6 +290,14 @@ async def transfer_user(evt: CommandEvent) -> str:
                         detail=msg, room_id=evt.room_id, status=200
                     )
             else:
+                await portal.update_state(portal.prev_state)
+                await send_portal_event(
+                    portal=portal,
+                    event_type=ACDPortalEvents.TransferFailed,
+                    reason="Agent not available",
+                    destination=agent_id,
+                )
+
                 msg = f"Agent [{agent_displayname}][{agent.mxid}] is not available"
                 await portal.send_notice(text=msg)
                 json_response = Util.create_response_data(

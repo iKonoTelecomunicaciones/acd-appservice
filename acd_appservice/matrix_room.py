@@ -165,7 +165,7 @@ class MatrixRoom:
 
         return users
 
-    async def add_member(self, new_member: UserID, access_method_key: str):
+    async def add_member(self, *, new_member: UserID, context: str):
         """If user access_control is `join`, then join the user,
         otherwise invite the user
 
@@ -173,17 +173,19 @@ class MatrixRoom:
         ----------
         new_member : UserID
             The user ID of the user to add to the queue.
+        context: str
+            The config key to get the access method from a user
 
         """
-        add_method, _ = self.get_access_methods(new_member, access_method_key)
+        add_method, _ = self.get_access_methods(user_id=new_member, context=context)
         self.log.debug(f"Adding {new_member} to {self.room_id} using {add_method}")
 
-        if add_method == "join":
-            await self.join_user(user_id=new_member)
-        else:
+        if add_method == "invite":
             await self.invite_user(user_id=new_member)
+        else:
+            await self.join_user(user_id=new_member)
 
-    async def remove_member(self, member: UserID, access_method_key: str, reason: str = None):
+    async def remove_member(self, *, member: UserID, context: str, reason: str = None):
         """If user access_control is "leave", then leave the user,
         otherwise kick the user
 
@@ -191,11 +193,13 @@ class MatrixRoom:
         ----------
         member : UserID
             The user ID of the member to remove.
+        context: str
+            The config key to get the access method from a user
         reason : str
             The reason for the removal.
 
         """
-        _, remove_method = self.get_access_methods(member, access_method_key)
+        _, remove_method = self.get_access_methods(user_id=member, context=context)
         self.log.debug(f"Removing {member} from {self.room_id} using {remove_method}")
 
         if remove_method == "leave":
@@ -374,15 +378,15 @@ class MatrixRoom:
 
         return [await User.get_by_mxid(invitee) for invitee in room_invitees]
 
-    def get_access_methods(self, user_id: UserID, access_method_key: str) -> Tuple[str, str]:
+    def get_access_methods(self, *, user_id: UserID, context: str) -> Tuple[str, str]:
         """It returns the method to add and remove a user from the room
 
         Parameters
         ----------
         user_id : UserID
             The user ID of the user to add or remove.
-        access_method_key : str
-            The config key to get the access control method.
+        context : str
+            The config key to get the access method.
 
         Returns
         -------
@@ -390,7 +394,7 @@ class MatrixRoom:
 
         """
 
-        access_method: List = self.config[access_method_key]
+        access_method: List = self.config[context]
         default: Dict[str, str] = self.config["acd.access_methods.default"]
 
         for user in access_method:

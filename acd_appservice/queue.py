@@ -278,10 +278,12 @@ class Queue(DBQueue, MatrixRoom):
         return membership
 
     async def add_member(self, new_member: UserID):
-        return await super().add_member(new_member, "acd.access_methods.queue")
+        return await super().add_member(new_member=new_member, context="acd.access_methods.queue")
 
     async def remove_member(self, member: UserID, reason: Optional[str] = None):
-        return await super().remove_member(member, "acd.access_methods.queue", reason)
+        return await super().remove_member(
+            member=member, context="acd.access_methods.queue", reason=reason
+        )
 
     @classmethod
     async def get_by_room_id(cls, room_id: RoomID, *, create: bool = True) -> Queue | None:

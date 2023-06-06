@@ -35,6 +35,7 @@ from acd_appservice import acd_program
 from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
 from .db.user import UserRoles
+from .events import ACDPortalEvents, send_portal_event
 from .matrix_room import MatrixRoom
 from .message import Message
 from .portal import Portal, PortalState
@@ -180,7 +181,7 @@ class MatrixHandler:
                 return
 
             sender: User = await User.get_by_mxid(evt.sender)
-            await self.handle_message(evt.room_id, sender, evt.content)
+            await self.handle_message(evt.event_id, evt.room_id, sender, evt.content)
 
         elif evt.type == EventType.ROOM_NAME or evt.type == EventType.ROOM_TOPIC:
             await self.handle_room_name(evt=evt)
@@ -522,6 +523,7 @@ class MatrixHandler:
         if self.config["acd.process_destination_on_joining"] and not room_id in puppet.BIC_ROOMS:
             # set chat status to start before process the destination
             await portal.update_state(PortalState.START)
+            await send_portal_event(portal=portal, event_type=ACDPortalEvents.UIC)
 
             if puppet.destination:
                 portal: Portal = await Portal.get_by_room_id(
@@ -537,7 +539,7 @@ class MatrixHandler:
             if menubot_id:
                 asyncio.create_task(portal.add_menubot(menubot_mxid=menubot_id))
 
-            puppet.BIC_ROOMS.discard(portal.room_id)
+        puppet.BIC_ROOMS.discard(portal.room_id)
 
     async def handle_leave(self, evt: Event):
         self.log.debug(f"The user {evt.state_key} leave from to room {evt.room_id}")
@@ -620,7 +622,7 @@ class MatrixHandler:
         return is_command, text
 
     async def handle_message(
-        self, room_id: RoomID, sender: User, message: MessageEventContent
+        self, event_id: EventID, room_id: RoomID, sender: User, message: MessageEventContent
     ) -> None:
         """If the message is a command, process it. If not, ignore it
 
@@ -725,7 +727,7 @@ class MatrixHandler:
             return
 
         # ignore messages other than commands from supervisor
-        if sender.is_supervisor:
+        if sender.is_supervisor or sender.is_admin:
             return
 
         portal: Portal = await Portal.get_by_room_id(
@@ -754,6 +756,12 @@ class MatrixHandler:
         # Ignore messages from ourselves or agents if not a command
         if sender.is_agent:
             await portal.update_state(PortalState.FOLLOWUP)
+            await send_portal_event(
+                portal=portal,
+                event_type=ACDPortalEvents.PortalMessage,
+                sender=sender.mxid,
+                event_id=event_id,
+            )
             await puppet.agent_manager.signaling.set_chat_status(
                 room_id=portal.room_id, status=Signaling.FOLLOWUP, agent=sender.mxid
             )
@@ -779,12 +787,18 @@ class MatrixHandler:
             if valid_option:
                 return
 
-        # room_agent = await puppet.agent_manager.get_room_agent(room_id=portal.room_id)
         room_agent = await portal.get_current_agent()
 
         if room_agent:
             # if message is not from agents, bots or ourselves, it is from the customer
             await portal.update_state(PortalState.PENDING)
+            await send_portal_event(
+                portal=portal,
+                event_type=ACDPortalEvents.PortalMessage,
+                sender=sender.mxid,
+                event_id=event_id,
+            )
+
             await puppet.agent_manager.signaling.set_chat_status(
                 room_id=portal.room_id, status=Signaling.PENDING, agent=room_agent.mxid
             )
@@ -835,6 +849,7 @@ class MatrixHandler:
 
             # set chat status to start before process the destination
             await portal.update_state(PortalState.START)
+            await send_portal_event(portal=portal, event_type=ACDPortalEvents.UIC)
 
             if puppet.destination:
                 if await self.process_destination(portal=portal):

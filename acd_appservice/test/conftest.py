@@ -1,3 +1,4 @@
+import logging
 import os
 import random
 import string
@@ -23,6 +24,8 @@ from ..queue_membership import QueueMembership
 from ..room_manager import RoomManager
 from ..user import User
 from ..util import Util
+
+logger = logging.getLogger()
 
 load_dotenv()
 
@@ -64,7 +67,15 @@ async def db(config: Config):
 
     await database.start()
 
+    logger.critical("######################################################################")
+    logger.critical("Database started")
+    logger.critical("######################################################################")
+
     yield database
+
+    logger.critical("######################################################################")
+    logger.critical("Database ending")
+    logger.critical("######################################################################")
 
     await database.stop()
     await conn.execute(f"DROP SCHEMA {schema_name} CASCADE")

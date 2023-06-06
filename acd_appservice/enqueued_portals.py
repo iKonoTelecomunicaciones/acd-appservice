@@ -1,6 +1,6 @@
 import itertools
 import logging
-from asyncio import sleep
+from asyncio import create_task, sleep
 from typing import List
 
 from mautrix.appservice import IntentAPI
@@ -8,6 +8,7 @@ from mautrix.util.logging import TraceLogger
 
 from .agent_manager import AgentManager
 from .config import Config
+from .events import ACDPortalEvents, send_portal_event
 from .portal import Portal, PortalState
 from .queue import Queue
 from .util.business_hours import BusinessHour
@@ -124,10 +125,19 @@ class EnqueuedPortals:
                 )
                 continue
 
-            response = await self.agent_manager.process_distribution(
-                portal=portal, destination=queue.room_id
+            await portal.update_state(PortalState.ON_DISTRIBUTION)
+            await send_portal_event(
+                portal=portal, event_type=ACDPortalEvents.AvailableAgents, queue=queue
             )
-            self.log.info(response)
+
+            portal.lock()
+            create_task(
+                self.agent_manager.loop_agents(
+                    portal=portal,
+                    queue=queue,
+                    agent_id=self.agent_manager.CURRENT_AGENT.get(queue.room_id),
+                )
+            )
 
     async def get_grouped_enqueued_portals(self) -> List[List[Portal]]:
         """This function groups enqueued portals by selected option in different lists to be processed later.
