@@ -38,27 +38,27 @@ class ACDAppService(ACD):
     upgrade_table = upgrade_table
 
     def preinit(self) -> None:
-        # Se llama el preinit de la clase padre, en este paso se toman los argumentos del módulo
+        # Call the parent preinit, this will parse the command line arguments
         # python3 -m acd_program <args>
         super().preinit()
 
     def prepare_db(self) -> None:
-        # Se prepara la bd y se hacen las migraciones definidas en db.upgrade.py
+        # Prepares the database and runs the migrations defined in db.upgrade.py
         super().prepare_db()
-        # Se inicializa la bd de con las migraciones definidas
+        # Initialize the database with the migrations defined
         init_db(self.db)
 
     async def start(self) -> None:
-        # Se cargan las acciones iniciales que deberán ser ejecutadas
+        # Load the initial actions that should be executed
         self.add_startup_actions(Puppet.init_cls(self))
         User.init_cls(self)
         MatrixRoom.init_cls(self)
-        # Se sincronizan las salas donde este los puppets en matrix
-        # creando las salas en nuestra bd
+        # Sync all the rooms where the puppets are in matrix
+        # creating the rooms in our database
         self.add_startup_actions(Puppet.init_joined_rooms())
-        # Definimos la ruta por la que se podrá acceder a la API
+        # Define the route to access the ACD API
         api_route = self.config["bridge.provisioning.prefix"]
-        # Creamos la instancia de ProvisioningAPI para luego crear una subapp
+        # Create the ProvisioningAPI instance to create a subapp
         commands = CommandProcessor(config=self.config)
         bulk_resolve = BulkResolve(config=self.config, commands=commands)
         self.provisioning_api = ProvisioningAPI(
@@ -66,17 +66,17 @@ class ACDAppService(ACD):
             loop=self.loop,
             bulk_resolve=bulk_resolve,
         )
-        # Usan la app de aiohttp, creamos una subaplicacion especifica para la API
+        # Use the aiohttp app, create a specific subapplication for the API
         self.az.app.add_subapp(api_route, self.provisioning_api.app)
 
-        # Iniciamos la aplicación
+        # Start the application
         await super().start()
 
         self.matrix.commands = commands
         asyncio.create_task(self.checking_whatsapp_connection())
 
     def prepare_stop(self) -> None:
-        # Detenemos todos los puppets que se estén sincronizando con el Synapse
+        # Stop all puppets that are syncing with Synapse
         for puppet in Puppet.by_custom_mxid.values():
             puppet.stop()
 
@@ -111,8 +111,7 @@ class ACDAppService(ACD):
                             text="✅ I am connected to WhastApp ✅",
                         )
 
-                        # Actualizamos el numero registrado para este puppet
-                        # sin el +
+                        # Update the registered number for this puppet without the +
                         puppet.phone = response.get("whatsapp").get("phone").replace("+", "")
                         await puppet.save()
 
@@ -126,7 +125,7 @@ class ACDAppService(ACD):
                             text=f"🚫 I am not connected to WhastApp 🚫 ::"
                             f" Error {response.get('error')}",
                         )
-                        # Actualizamos en blanco el número del puppet
+                        # Update puppet phone number to None
                         puppet.phone = None
                         await puppet.save()
 
@@ -136,5 +135,5 @@ class ACDAppService(ACD):
             await asyncio.sleep(self.config["utils.wait_ping_time"])
 
 
-# Se corre la aplicación
+# Run the application
 ACDAppService().run()

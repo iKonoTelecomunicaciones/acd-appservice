@@ -11,7 +11,7 @@ from .db import Message as DBMessage
 
 
 class Message(DBMessage):
-    """Representa un mensaje enviado por el endpoint send_message"""
+    """Represent a message sent by the send_message endpoint"""
 
     log: TraceLogger = logging.getLogger("acd.message")
     config: Config

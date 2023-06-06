@@ -586,8 +586,7 @@ class MatrixHandler:
                 and response.get("whatsapp").get("conn")
                 and response.get("whatsapp").get("conn").get("is_connected")
             ):
-                # Actualizamos el numero registrado para este puppet
-                # sin el +
+                # Update the registered number for this puppet without the +
                 puppet.phone = response.get("whatsapp", {}).get("phone", "").replace("+", "")
                 await puppet.save()
 
@@ -702,9 +701,9 @@ class MatrixHandler:
         if puppet.room_manager.in_blacklist_rooms(room_id=room_id):
             return
 
-        # Dado un user_id obtenemos el número y buscamos que el número no sea uno de los ya
-        # registrados en el ACD - AZ, si es así lo agregamos a la lista negra
-        # luego se envía un mensaje indicando personalizado.
+        # Given a user_id we get the number and look for the number not to be one of the already
+        # registered in the ACD - AZ, if so we add it to the blacklist
+        # then a custom message is sent.
         if sender.is_customer and sender.account_id:
             if await puppet.is_another_puppet(phone=sender.account_id):
                 self.log.error(self.config["utils.message_bot_war"])
@@ -748,7 +747,7 @@ class MatrixHandler:
                 await portal.send_text(text=no_call_message)
                 return
 
-        # Ignorar la sala de status broadcast
+        # Ignore the status broadcast room
         if await puppet.room_manager.is_mx_whatsapp_status_broadcast(room_id=room_id):
             self.log.debug(f"Ignoring the room {room_id} because it is whatsapp_status_broadcast")
             return

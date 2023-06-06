@@ -16,7 +16,7 @@ from .base import routes, set_config
 
 
 class ProvisioningAPI:
-    """Clase que tiene todos los endpoints de la API"""
+    """Provisioning API base class"""
 
     log: TraceLogger = logging.getLogger("acd.provisioning")
     app: web.Application

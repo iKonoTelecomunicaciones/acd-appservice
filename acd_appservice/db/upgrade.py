@@ -1,4 +1,4 @@
-"""Este el archivo de migraciones de la bd, se crea cada migración dada una versión"""
+"""This is the migration file of the bd, each migration is created given a version"""
 
 from asyncpg import Connection
 from mautrix.util.async_db import UpgradeTable

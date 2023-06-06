@@ -82,7 +82,7 @@ async def pm(evt: CommandEvent) -> Dict:
         "reply": None,
     }
 
-    # Es el comando que se le enviara al front.
+    # Command that will be sent to frontend.
     cmd_front_msg = None
     agent_displayname = None
 
@@ -171,7 +171,7 @@ async def pm(evt: CommandEvent) -> Dict:
     # Setting the return_params dict with the sender_id, phone_number, room_id and agent_displayname.
     return_params["sender_id"] = evt.sender.mxid
     return_params["phone_number"] = phone
-    # Cuando ya hay otro agente en la sala, se debe enviar room_id en None
+    # When other agent is in the room, room_id must be None
     return_params["room_id"] = (
         None if agent and agent.mxid != evt.sender.mxid else data.get("room_id")
     )
@@ -193,10 +193,8 @@ async def pm(evt: CommandEvent) -> Dict:
         else:
             return_params["reply"] = data.get("error")
 
-    # If the reply is not set, it sets the reply to the default message.
-    # Si reply no tiene contenido, significa que no ha ocurrido ningún error
-    # y se puede concluir que el agente se puede unir a la sala y que
-    # el mensaje fue enviado.
+    # If the reply is not set, it means any error was not occurred.
+    # The agent can join the room and the message was sent.
     if not return_params.get("reply"):
         # the room is marked as followup and campaign from previous room state
         # is not kept

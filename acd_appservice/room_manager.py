@@ -17,7 +17,7 @@ class RoomManager:
     log: TraceLogger = logging.getLogger("acd.room_manager")
     ROOMS: dict[RoomID, Dict] = {}
 
-    # Listado de salas  en la DB
+    # Database rooms list
     by_room_id: dict[RoomID, Portal] = {}
 
     # list of room_ids to know if distribution process is taking place
