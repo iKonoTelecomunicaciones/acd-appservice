@@ -461,6 +461,8 @@ logging:
             level: DEBUG
         aiohttp:
             level: DEBUG
+        report:
+            level: INFO
     root:
         level: DEBUG
         handlers: [file, console]

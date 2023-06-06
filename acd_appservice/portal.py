@@ -22,6 +22,7 @@ from mautrix.util.logging import TraceLogger
 from .config import Config
 from .db.portal import Portal as DBPortal
 from .db.portal import PortalState
+from .events import ACDPortalEvents, send_portal_event
 from .matrix_room import MatrixRoom
 from .user import User
 from .util import Util
@@ -56,6 +57,7 @@ class Portal(DBPortal, MatrixRoom):
         self.log.debug(
             f"Updating room [{self.room_id}] state [{self.state.value}] to [{state.value}]"
         )
+        self.prev_state = self.state
         self.state = state
         self.state_date = self.now()
         await self.save()
@@ -200,7 +202,7 @@ class Portal(DBPortal, MatrixRoom):
         if phone_match:
             self.log.debug(f"Formatting phone number {phone_match[0]}")
 
-            customer_displayname = await self.main_intent.get_displayname(self.creator)
+            customer_displayname = await self.creator_displayname()
             if customer_displayname:
                 room_name = f"{customer_displayname.strip()} ({phone_match[0].strip()})"
             else:
@@ -321,6 +323,7 @@ class Portal(DBPortal, MatrixRoom):
 
         self.log.debug(f"This room will be set up :: {self.room_id}")
         await self.update_state(PortalState.INIT)
+        await send_portal_event(portal=self, event_type=ACDPortalEvents.Create)
 
         bridge = self.bridge
         if bridge and bridge in self.config["bridges"] and bridge != "chatterbox":
@@ -426,6 +429,12 @@ class Portal(DBPortal, MatrixRoom):
                 await self.add_member(menubot_mxid)
                 # When menubot enters to the portal, set the portal state in ONMENU
                 await self.update_state(PortalState.ONMENU)
+                await send_portal_event(
+                    portal=self,
+                    event_type=ACDPortalEvents.Assigned,
+                    sender=self.main_intent.mxid,
+                    assigned_user=menubot_mxid,
+                )
                 self.log.debug(f"Menubot {menubot_mxid} invited OK to room {self.room_id}")
                 break
             except Exception as e:
@@ -450,6 +459,31 @@ class Portal(DBPortal, MatrixRoom):
 
         if current_menubot:
             await self.remove_member(current_menubot.mxid, reason=reason)
+
+    async def creator_displayname(self) -> str | None:
+        """It returns the display name of the creator of the portal
+
+        Returns
+        -------
+            The displayname of the creator of the question.
+
+        """
+        return await self.main_intent.get_displayname(self.creator)
+
+    def creator_identifier(self) -> str | None:
+        """The function takes a creator mxid and returns his identifier
+
+        Returns
+        -------
+            The creator's identifier.
+
+        """
+        user_name_match = re.match(self.config["utils.username_regex"], self.creator)
+        identifier = user_name_match.group("number")
+        if not identifier:
+            return
+
+        return identifier
 
     @classmethod
     async def is_portal(cls, room_id: RoomID) -> bool:

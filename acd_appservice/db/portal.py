@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
 from typing import TYPE_CHECKING, ClassVar, Dict, List
 
 import asyncpg
 from attr import dataclass
-from mautrix.types import RoomID
+from mautrix.types import RoomID, SerializableEnum
 from mautrix.util.async_db import Database
 
 fake_db = Database.create("") if TYPE_CHECKING else None
 
 
-class PortalState(Enum):
+class PortalState(SerializableEnum):
     INIT = "INIT"
     START = "START"
     PENDING = "PENDING"
@@ -20,6 +19,8 @@ class PortalState(Enum):
     RESOLVED = "RESOLVED"
     ENQUEUED = "ENQUEUED"
     ONMENU = "ONMENU"
+    ON_DISTRIBUTION = "ON_DISTRIBUTION"
+    ASSIGNED = "ASSIGNED"
 
 
 @dataclass
@@ -28,6 +29,7 @@ class Portal:
 
     room_id: RoomID
     state: PortalState = PortalState.INIT
+    prev_state: PortalState | None = None
     state_date: datetime | None = None
     fk_puppet: int | None = None
     selected_option: RoomID | None = None
@@ -39,11 +41,12 @@ class Portal:
             self.room_id,
             self.selected_option,
             self.state.value,
+            self.prev_state.value if self.prev_state else None,
             self.state_date,
             self.fk_puppet,
         )
 
-    _columns = "room_id, selected_option, state, state_date, fk_puppet"
+    _columns = "room_id, selected_option, state, prev_state, state_date, fk_puppet"
 
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> Portal:
@@ -61,18 +64,20 @@ class Portal:
         """
         data = {**row}
         state = PortalState(data.pop("state"))
-        return cls(state=state, **data)
+        prev_state = data.pop("prev_state")
+        parsed_prev_state = PortalState(prev_state) if prev_state else None
+        return cls(state=state, prev_state=parsed_prev_state, **data)
 
     async def insert(self) -> None:
         """It inserts a new row into the room table"""
-        q = f"INSERT INTO portal ({self._columns}) VALUES ($1, $2, $3, $4, $5)"
+        q = f"INSERT INTO portal ({self._columns}) VALUES ($1, $2, $3, $4, $5, $6)"
         await self.db.execute(q, *self._values)
 
     async def update(self) -> None:
         """It updates the portal's selected_option, state, and fk_puppet in the database"""
         q = (
-            "UPDATE portal SET selected_option=$2, state=$3, "
-            "state_date=$4, fk_puppet=$5 WHERE room_id=$1"
+            "UPDATE portal SET selected_option=$2, state=$3, prev_state=$4, "
+            "state_date=$5, fk_puppet=$6 WHERE room_id=$1"
         )
         await self.db.execute(q, *self._values)
 

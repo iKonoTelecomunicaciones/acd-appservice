@@ -150,6 +150,7 @@ async def acd(evt: CommandEvent) -> str:
             joined_message=joined_message,
             put_enqueued_portal=put_enqueued_portal,
             force_distribution=force_distribution,
+            cmd_sender=evt.sender.mxid,
         )
     except Exception as e:
         evt.log.exception(e)

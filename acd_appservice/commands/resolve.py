@@ -9,6 +9,7 @@ from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
 from ..config import Config
+from ..events import ACDPortalEvents, send_portal_event
 from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..signaling import Signaling
@@ -125,6 +126,12 @@ async def resolve(evt: CommandEvent) -> Dict:
 
     # set chat status to resolved
     await portal.update_state(PortalState.RESOLVED)
+    await send_portal_event(
+        portal=portal,
+        event_type=ACDPortalEvents.Resolve,
+        sender=evt.sender.mxid,
+        agent_removed=agent,
+    )
 
     await puppet.agent_manager.signaling.set_chat_status(
         room_id=portal.room_id, status=Signaling.RESOLVED, agent=author
