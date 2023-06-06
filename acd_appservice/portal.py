@@ -465,7 +465,7 @@ class Portal(DBPortal, MatrixRoom):
 
     async def remove_member(self, member: UserID, reason: Optional[str] = None):
         return await super().remove_member(
-            user_id=member, context="acd.access_methods.portal", reason=reason
+            member=member, context="acd.access_methods.portal", reason=reason
         )
 
     async def creator_displayname(self) -> str | None:

@@ -166,8 +166,8 @@ class MatrixRoom:
         return users
 
     async def add_member(self, *, new_member: UserID, context: str):
-        """If user access_control is `join`, then join the user,
-        otherwise invite the user
+        """If user access method is `invite`, then invite the user,
+        otherwise join the user
 
         Parameters
         ----------
@@ -186,7 +186,7 @@ class MatrixRoom:
             await self.join_user(user_id=new_member)
 
     async def remove_member(self, *, member: UserID, context: str, reason: str = None):
-        """If user access_control is "leave", then leave the user,
+        """If user access method is "leave", then leave the user,
         otherwise kick the user
 
         Parameters
