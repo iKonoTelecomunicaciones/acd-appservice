@@ -5,7 +5,7 @@ from typing import List, Optional, cast
 
 from mautrix.appservice import IntentAPI
 from mautrix.errors.base import IntentError
-from mautrix.types import RoomID
+from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
 from .db.queue import Queue as DBQueue
@@ -276,6 +276,14 @@ class Queue(DBQueue, MatrixRoom):
             return
 
         return membership
+
+    async def add_member(self, new_member: UserID):
+        return await super().add_member(new_member=new_member, context="acd.access_methods.queue")
+
+    async def remove_member(self, member: UserID, reason: Optional[str] = None):
+        return await super().remove_member(
+            member=member, context="acd.access_methods.queue", reason=reason
+        )
 
     @classmethod
     async def get_by_room_id(cls, room_id: RoomID, *, create: bool = True) -> Queue | None:

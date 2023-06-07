@@ -279,13 +279,8 @@ async def create(
     queue.description = description if description else None
     await queue.save()
 
-    # user_add_method can be 'invite' or 'join'.
-    # When it's 'join' the agente will be force joined to the queue
-    if evt.config["acd.queues.user_add_method"] == "invite":
-        for user_id in evt.config["acd.queues.invitees"]:
-            await queue.invite_user(user_id=user_id)
-    else:
-        invitees += evt.config["acd.queues.invitees"]
+    # Queue default invitees
+    invitees += evt.config["acd.queues.invitees"]
 
     for invitee in invitees:
         try:

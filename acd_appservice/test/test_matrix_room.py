@@ -2,6 +2,7 @@ import nest_asyncio
 import pytest
 
 from ..matrix_room import MatrixRoom
+from ..user import User
 
 nest_asyncio.apply()
 
@@ -23,6 +24,35 @@ class TestMatrixRoom:
             f"[{matrix_room.room_id}](https://matrix.to/#/{matrix_room.room_id})"
             == await matrix_room.get_formatted_room_id()
         )
+
+    @pytest.mark.asyncio
+    async def test_get_portal_user_access_methods(
+        self, admin_user: User, matrix_room: MatrixRoom, acd_init
+    ):
+        add_method, remove_method = matrix_room.get_access_methods(
+            user_id=admin_user.mxid, context="acd.access_methods.portal"
+        )
+        assert add_method == "invite"
+        assert remove_method == "leave"
+
+    @pytest.mark.asyncio
+    async def test_get_queue_user_access_methods(
+        self, admin_user: User, matrix_room: MatrixRoom, acd_init
+    ):
+        add_method, remove_method = matrix_room.get_access_methods(
+            user_id=admin_user.mxid, context="acd.access_methods.queue"
+        )
+        assert add_method == "join"
+        assert remove_method == "leave"
+
+    @pytest.mark.asyncio
+    async def test_get_default_access_methods(self, matrix_room: MatrixRoom, acd_init):
+        user_id: str = "@mxwa_573521487741:dominio_cliente.com"
+        add_method, remove_method = matrix_room.get_access_methods(
+            user_id=user_id, context="acd.access_methods.portal"
+        )
+        assert add_method == "invite"
+        assert remove_method == "leave"
 
     # async def test_get_joined_users(self, matrix_room: MatrixRoom):
     #     pass

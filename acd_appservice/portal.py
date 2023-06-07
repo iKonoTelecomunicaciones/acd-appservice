@@ -460,6 +460,14 @@ class Portal(DBPortal, MatrixRoom):
         if current_menubot:
             await self.remove_member(current_menubot.mxid, reason=reason)
 
+    async def add_member(self, new_member: UserID):
+        return await super().add_member(new_member=new_member, context="acd.access_methods.portal")
+
+    async def remove_member(self, member: UserID, reason: Optional[str] = None):
+        return await super().remove_member(
+            member=member, context="acd.access_methods.portal", reason=reason
+        )
+
     async def creator_displayname(self) -> str | None:
         """It returns the display name of the creator of the portal
 

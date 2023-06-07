@@ -75,7 +75,6 @@ class Config(BaseBridgeConfig):
         copy("acd.namespaces")
         copy("acd.keep_room_name")
         copy("acd.numbers_in_rooms")
-        copy("acd.force_join")
         copy("acd.agent_invite_timeout")
         copy("acd.frontend_command_prefix")
         copy("acd.transfer_message")
@@ -89,10 +88,8 @@ class Config(BaseBridgeConfig):
         copy_dict("acd.offline")
         copy("acd.no_agents_for_transfer")
         copy_dict("acd.resolve_chat")
-        copy("acd.remove_method")
         copy("acd.bulk_resolve.block_size")
         copy("acd.available_agents_room")
-        copy("acd.queues.user_add_method")
         copy("acd.queues.visibility")
         copy("acd.enqueued_portals.portals_per_agent")
         copy("acd.enqueued_portals.max_iterations")
@@ -101,6 +98,7 @@ class Config(BaseBridgeConfig):
         copy("acd.queues.invitees")
         copy("acd.use_presence")
         copy("acd.process_destination_on_joining")
+        copy_dict("acd.access_methods")
 
         # Utils
         copy_dict("utils")

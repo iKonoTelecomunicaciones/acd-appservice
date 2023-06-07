@@ -84,7 +84,7 @@ async def db(config: Config):
 
 @pytest_asyncio.fixture
 async def acd_init(config: Config, db: Database):
-    for table in [User, Queue, QueueMembership, Portal, Puppet]:
+    for table in [User, Queue, QueueMembership, Portal, Puppet, MatrixRoom]:
         table.db = db
         table.config = config
         table.az = None
