@@ -193,7 +193,7 @@ async def pm(evt: CommandEvent) -> Dict:
         else:
             return_params["reply"] = data.get("error")
 
-    # If the reply is not set, it means any error was not occurred.
+    # If the reply is not set, it means there is no error.
     # The agent can join the room and the message was sent.
     if not return_params.get("reply"):
         # the room is marked as followup and campaign from previous room state

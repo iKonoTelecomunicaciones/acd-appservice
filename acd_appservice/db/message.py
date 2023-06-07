@@ -53,8 +53,8 @@ class Message:
         await self.db.execute(q, event_id, room_id, timestamp_read, was_read)
 
         # Whastapp bridge only sends us the read verification of the last message sent
-        # so we can assume that previous messages have already been read, we perform a
-        # correction of the data.
+        # so we can assume that previous messages have already been read,
+        # the read verification information is updated
         await self.fix_message_read_events(
             receiver=receiver, room_id=room_id, timestamp_read=timestamp_read
         )
