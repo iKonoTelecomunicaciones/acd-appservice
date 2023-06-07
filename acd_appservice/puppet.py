@@ -44,7 +44,7 @@ class Puppet(DBPuppet, BasePuppet):
     # ROOMS INITIALIZED BY PM
     BIC_ROOMS: set = set()
 
-    # Sala de control del puppet
+    # Puppet control room
     control_room_id: RoomID
 
     def __init__(
@@ -80,15 +80,14 @@ class Puppet(DBPuppet, BasePuppet):
             base_url=base_url,
             control_room_id=control_room_id,
         )
-        # Aquí colocamos, a nombre de que puppet mostraremos los logs,
-        # ya sea usando el mxid o el email
-        # IMPORTANTE: A cada marioneta de le genera un intent para poder enviar eventos a nombre
-        # de esas marionetas
+
+        # Define puppet logger using mxid or email
+        # IMPORTANT: Each puppet has an intent to send events on behalf of that puppet
         self.custom_mxid = self.get_mxid_from_id(pk)
         if custom_mxid or email:
             self.log = self.log.getChild(custom_mxid or email)
         self.default_mxid_intent = self.az.intent.user(self.custom_mxid)
-        # Refresca el intent de cada marioneta
+        # Refresh the intent of each puppet
         self.intent = self._fresh_intent()
         self.room_manager = RoomManager(
             puppet_pk=self.pk,
@@ -148,8 +147,8 @@ class Puppet(DBPuppet, BasePuppet):
         cls.mx = bridge.matrix
         cls.az = bridge.az
         cls.hs_domain = cls.config["homeserver.domain"]
-        # Este atributo permite generar un template relacionado con los namesapces de usuarios
-        # separados en el registration
+        # This attribute allows to generate a template related to the user namespaces
+        # separated in the registration
         cls.mxid_template = SimpleTemplate(
             cls.config["bridge.username_template"],
             "userid",
@@ -158,7 +157,7 @@ class Puppet(DBPuppet, BasePuppet):
             type=int,
         )
         cls.login_device_name = "ACDAppService"
-        # Sincroniza cada marioneta con su cuenta en el Synapse
+        # Sync each puppet with its account on the Synapse
         return (puppet.try_start() async for puppet in cls.all_with_custom_mxid())
 
     @classmethod
@@ -228,8 +227,7 @@ class Puppet(DBPuppet, BasePuppet):
             self.log.exception(e)
 
     def _add_to_cache(self) -> None:
-        # Mete a cada marioneta en un dict que permite acceder de manera más rápida a las
-        # instancias de cada marioneta
+        # Add each puppet to a dict that allows faster access to the instances of each puppet
         self.by_pk[self.pk] = self
         if self.phone:
             self.by_phone[self.phone] = self
@@ -380,11 +378,10 @@ class Puppet(DBPuppet, BasePuppet):
         """
         next_puppet = None
         try:
-            # Obtenemos todos los UserIDs de los puppets que tengan custom_mxid
+            # Get all the UserIDs of the puppets that have custom_mxid
             all_puppets: list[UserID] = await cls.get_all_puppets()
             if len(all_puppets) > 0:
-                # A cada UserID le sacamos el número en el que va
-                # luego ordenamos la lista de menor a mayor
+                # Get number of each puppet and sort them in a list
                 all_puppets_sorted = list(
                     map(lambda x: int(re.match(cls.config["acd.acd_regex"], x)[1]), all_puppets)
                 )

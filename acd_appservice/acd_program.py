@@ -69,37 +69,36 @@ class ACD(Program):
         )
 
     def preinit(self) -> None:
-        # Esta parte llama el preinit de la clase padre, parsea los args enviados al ejecutar
-        # el módulo
+        # It is the parent preinit, this will parse the command line arguments
+        # sent to execute the module
         super().preinit()
-        # Si entre los args viene la el arg -g, entonces se genera el registration dado el config
+        # If the args come between the arg -g, then the registration is generated given the config
         if self.args.generate_registration:
             self.generate_registration()
             sys.exit(0)
 
     def prepare(self) -> None:
-        # Esta parte llama el prepare de la clase padre
-        # lo que hace es inicializar las taks definidas
+        # It initializes the tasks defined
         super().prepare()
-        # Preparamos la conexión a la bd
+        # Prepare the database connection
         self.prepare_db()
-        # Preparamos el appservice para que pueda funcionar conectado al homeserver
+        # Prepare the appservice so that it can work connected to the homeserver
         self.prepare_appservice()
-        # # Aqui definimos por donde vamos a registrar los handel de matrix
+        # Register the matrix handlers
         self.matrix = self.matrix_class(acd_appservice=self)
 
     def prepare_config(self) -> None:
-        # Se prepara el archivo de configuracionismo para
+        # Prepare the config file
         self.config = self.config_class(
             self.args.config, self.args.registration, self.args.base_config
         )
         if self.args.generate_registration:
             self.config._check_tokens = False
-            # Cargamos y actualizamos el config.yaml dado nuestro example.config.yaml
+            # Load and update the config.yaml given our example.config.yaml
         self.load_and_update_config()
 
     def generate_registration(self) -> None:
-        # Generamos el registration.yaml
+        # Generate registration.yaml
         self.config.generate_registration()
         self.config.save()
 
@@ -111,11 +110,11 @@ class ACD(Program):
                 self.db, self.get_puppet, self.get_double_puppet
             )
         else:
-            # Creamos nuetra conexion singleton a la bd
+            # Create our singleton database connection
             self.state_store = self.state_store_class()
 
     def prepare_appservice(self) -> None:
-        # Se hacen los pasos necesarios para que el appservice funcione bien
+        # Configure the appservice
         self.make_state_store()
         mb = 1024**2
         if self.name not in HTTPAPI.default_ua:
@@ -136,7 +135,7 @@ class ACD(Program):
         )
 
     def prepare_db(self) -> None:
-        # Preparamos la bd para poder tener una conexión con ella
+        # Prepare the database connection
         if not hasattr(self, "upgrade_table") or not self.upgrade_table:
             raise RuntimeError("upgrade_table is not set")
         self.db = Database.create(
@@ -146,7 +145,7 @@ class ACD(Program):
         )
 
     async def start_db(self) -> None:
-        # Iniciamos el servicio de la bd
+        # Start the database connection
         if hasattr(self, "db") and isinstance(self.db, Database):
             self.log.debug("Starting database...")
             await self.db.start()
@@ -160,10 +159,10 @@ class ACD(Program):
     async def start(self) -> None:
         await self.start_db()
         self.log.debug("Starting appservice...")
-        # Definimos el host y puerto para nuestro appservice
+        # Define the host and port for our appservice
         await self.az.start(self.config["appservice.hostname"], self.config["appservice.port"])
         try:
-            # Esperamos que la conexión como appservice sé de correctamente
+            # Wait the database connection as appservice is done correctly
             await self.matrix.wait_for_connection()
         except MUnknownToken:
             self.log.critical(
@@ -178,7 +177,7 @@ class ACD(Program):
                 "correct, and do they match the values in the registration?"
             )
             sys.exit(16)
-        # Iniciamos nuestra conexión al synapse como un bot (whapibot)
+        # Start our connection to synapse as a bot (ACD)
         self.add_startup_actions(self.matrix.init_as_bot())
         await super().start()
         self.az.ready = True

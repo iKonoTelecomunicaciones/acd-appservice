@@ -67,15 +67,7 @@ async def db(config: Config):
 
     await database.start()
 
-    logger.critical("######################################################################")
-    logger.critical("Database started")
-    logger.critical("######################################################################")
-
     yield database
-
-    logger.critical("######################################################################")
-    logger.critical("Database ending")
-    logger.critical("######################################################################")
 
     await database.stop()
     await conn.execute(f"DROP SCHEMA {schema_name} CASCADE")

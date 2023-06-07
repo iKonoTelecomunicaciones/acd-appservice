@@ -52,9 +52,9 @@ class Message:
         q = "UPDATE message SET timestamp_read=$3, was_read=$4 WHERE event_id=$1 AND room_id=$2"
         await self.db.execute(q, event_id, room_id, timestamp_read, was_read)
 
-        # El bridge de wpp solo nos envía la verificación de lectura del último mensaje enviado
-        # entonces podemos suponer que los mensajes previos ya han sido leídos, realizamos una
-        # corrección de los datos.
+        # Whastapp bridge only sends us the read verification of the last message sent
+        # so we can assume that previous messages have already been read,
+        # the read verification information is updated
         await self.fix_message_read_events(
             receiver=receiver, room_id=room_id, timestamp_read=timestamp_read
         )
