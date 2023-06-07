@@ -194,7 +194,7 @@ acd:
     # When acd* joins to the room before customer message arrived, we need to process destination
     process_destination_on_joining: true
 
-    # Action to take when we need that some agent get out of a room or enter to a room
+    # Action to take when we need that some user get out or enter to a room
     # NOTE: The namespaces must be properly configured to use the 'leave' option
     # remove:
     # - leave: it makes an identity assertion of an agent to make it leave the room
@@ -207,7 +207,7 @@ acd:
             - regex: '@supervisor[1-9]*:dominio_cliente.com'
               add: 'join'
               remove: 'leave'
-            - regex: '@agent[1-9]*:dominio_cliente.com'
+            - regex: '@agente[1-9]*:dominio_cliente.com'
               add: 'join'
               remove: 'leave'
             - regex: '@admin:dominio_cliente.com'
@@ -223,7 +223,7 @@ acd:
             - regex: '@admin:dominio_cliente.com'
               add: 'join'
               remove: 'leave'
-            - regex: '@agent[1-9]*:dominio_cliente.com'
+            - regex: '@agente[1-9]*:dominio_cliente.com'
               add: 'join'
               remove: 'leave'
 
