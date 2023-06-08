@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, ClassVar, Dict, List
 
 import asyncpg
 from attr import dataclass
-from mautrix.types import RoomID, SerializableEnum
+from mautrix.types import RoomID, SerializableEnum, UserID
 from mautrix.util.async_db import Database
 
 fake_db = Database.create("") if TYPE_CHECKING else None
@@ -21,6 +21,7 @@ class PortalState(SerializableEnum):
     ONMENU = "ONMENU"
     ON_DISTRIBUTION = "ON_DISTRIBUTION"
     ASSIGNED = "ASSIGNED"
+    ON_TRANSIT = "ON_TRANSIT"
 
 
 @dataclass
@@ -33,6 +34,7 @@ class Portal:
     state_date: datetime | None = None
     fk_puppet: int | None = None
     selected_option: RoomID | None = None
+    destination_on_transit: RoomID | UserID | None = None
     id: int | None = None
 
     @property
@@ -43,10 +45,11 @@ class Portal:
             self.state.value,
             self.prev_state.value if self.prev_state else None,
             self.state_date,
+            self.destination_on_transit,
             self.fk_puppet,
         )
 
-    _columns = "room_id, selected_option, state, prev_state, state_date, fk_puppet"
+    _columns = "room_id, selected_option, state, prev_state, state_date, destination_on_transit, fk_puppet"
 
     @classmethod
     def _from_row(cls, row: asyncpg.Record) -> Portal:
@@ -70,14 +73,14 @@ class Portal:
 
     async def insert(self) -> None:
         """It inserts a new row into the room table"""
-        q = f"INSERT INTO portal ({self._columns}) VALUES ($1, $2, $3, $4, $5, $6)"
+        q = f"INSERT INTO portal ({self._columns}) VALUES ($1, $2, $3, $4, $5, $6, $7)"
         await self.db.execute(q, *self._values)
 
     async def update(self) -> None:
         """It updates the portal's selected_option, state, and fk_puppet in the database"""
         q = (
             "UPDATE portal SET selected_option=$2, state=$3, prev_state=$4, "
-            "state_date=$5, fk_puppet=$6 WHERE room_id=$1"
+            "state_date=$5, destination_on_transit=$6, fk_puppet=$7 WHERE room_id=$1"
         )
         await self.db.execute(q, *self._values)
 

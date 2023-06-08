@@ -1477,3 +1477,92 @@ async def get_memberships(request: web.Request) -> web.Response:
             }
 
     return web.json_response(data={"data": user_memberships}, status=200)
+
+
+@routes.post("/v1/cmd/bic")
+async def bic(request: web.Request) -> web.Response:
+    """
+    ---
+    summary: Initiate a conversation by the bussiness
+
+    description: Initiate a conversation by the bussiness
+
+    tags:
+        - Commands
+
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
+    requestBody:
+        required: false
+        description: A json with `customer_phone`, `company_phone`, `message`, `on_transit`
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        customer_phone:
+                            description: "Target phone number to send message, (use country code)"
+                            type: string
+                        company_phone:
+                            description: "Phone number that will be used to send the message,
+                                         (use country code)"
+                            type: string
+                        message:
+                            description: "Message that will be sent"
+                            type: string
+                        on_transit:
+                            description: "Do not process destination inmediatly, wait for a customer message"
+                            type: string
+                    required:
+                        - customer_phone
+                        - company_phone
+                    example:
+                        customer_phone: "573123456789"
+                        company_phone: "57398765432"
+                        message: "Hola iKono!!"
+                        on_transit: "no"
+
+    responses:
+        '200':
+            $ref: '#/components/responses/PmSuccessful'
+        '404':
+            $ref: '#/components/responses/NotFound'
+        '422':
+            $ref: '#/components/responses/NotSendMessage'
+    """
+
+    user = await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    data: Dict = await request.json()
+
+    if not data.get("customer_phone") or not data.get("company_phone"):
+        return web.json_response(**REQUIRED_VARIABLES)
+
+    puppet = await _resolve_puppet_identifier(request=request)
+
+    phone = data.get("customer_phone")
+    message = data.get("message")
+    on_transit = data.get("on_transit")
+    destination = data.get("destination") if data.get("destination") else ""
+
+    args = ["-p", phone, "-m", message, "-d", destination, "-t", on_transit]
+
+    result = await get_commands().handle(
+        sender=user,
+        command="bic",
+        args_list=args,
+        intent=puppet.intent,
+        is_management=False,
+    )
+
+    return web.json_response(**result)

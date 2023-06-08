@@ -116,3 +116,4 @@ async def upgrade_v5(conn: Connection) -> None:
 @upgrade_table.register(description="Add column prev_state to portal table")
 async def upgrade_v6(conn: Connection) -> None:
     await conn.execute("ALTER TABLE portal ADD COLUMN prev_state TEXT")
+    await conn.execute("ALTER TABLE portal ADD COLUMN destination_on_transit TEXT")
