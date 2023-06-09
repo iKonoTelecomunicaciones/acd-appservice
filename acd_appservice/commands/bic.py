@@ -103,12 +103,17 @@ async def bic(evt: CommandEvent) -> Dict:
         await evt.reply(message)
         return Util.create_response_data(detail=message, status=400, room_id=None)
 
+    if destination and not Util.is_room_id(destination) and not Util.is_room_id(destination):
+        message = "You must specify a valid destination."
+        await evt.reply(message)
+        return Util.create_response_data(detail=message, status=400, room_id=None)
+
     # Sending a message to the customer.
-    formated_phone = phone if phone.startswith("+") else f"+{phone}"
+    formatted_phone = phone if phone.startswith("+") else f"+{phone}"
     bridge_connector = ProvisionBridge(
         session=evt.intent.api.session, config=puppet.config, bridge=puppet.bridge
     )
-    status, data = await bridge_connector.pm(user_id=evt.intent.mxid, phone=formated_phone)
+    status, data = await bridge_connector.pm(user_id=evt.intent.mxid, phone=formatted_phone)
 
     if not status in [200, 201]:
         evt.log.error(data)
@@ -169,33 +174,6 @@ async def bic(evt: CommandEvent) -> Dict:
                 detail="BIC successfully", status=200, room_id=portal.room_id
             )
 
-        if on_transit:
-            if force and current_agent:
-                args = ["-a", portal.main_intent.mxid, "-sm", "no", "-p", portal.room_id]
-                await evt.processor.handle(
-                    sender=evt.sender,
-                    command="resolve",
-                    args_list=args,
-                    is_management=False,
-                    intent=puppet.intent,
-                )
-
-            # Set chat status to ON_TRANSIT
-            await portal.update_state(PortalState.ON_TRANSIT)
-            await send_portal_event(
-                portal=portal, event_type=ACDPortalEvents.BIC, sender=evt.sender
-            )
-
-            # Setting destination that will be processed when the customer sends a message.
-            portal.destination_on_transit = destination
-            await portal.update()
-
-            return Util.create_response_data(
-                detail="BIC successfully, waiting for client message",
-                status=200,
-                room_id=portal.room_id,
-            )
-
         if force and current_agent:
             args = ["-a", portal.main_intent.mxid, "-sm", "no", "-p", portal.room_id]
             await evt.processor.handle(
@@ -204,6 +182,25 @@ async def bic(evt: CommandEvent) -> Dict:
                 args_list=args,
                 is_management=False,
                 intent=puppet.intent,
+            )
+
+        # On transit refers to a state of the chat, if it is on transit, the bic will be start,
+        # but none entity (agent, menubot) enters to the room until customer sends a message.
+        if on_transit:
+            # Set chat status to ON_TRANSIT
+            await portal.update_state(PortalState.ON_TRANSIT)
+            await send_portal_event(
+                portal=portal, event_type=ACDPortalEvents.BIC, sender=evt.sender
+            )
+
+            # Setting destination that will be processed when the customer answers with a message.
+            portal.destination_on_transit = destination
+            await portal.update()
+
+            return Util.create_response_data(
+                detail="BIC successfully, waiting for client message",
+                status=200,
+                room_id=portal.room_id,
             )
 
         await portal.update_state(PortalState.START)
@@ -239,6 +236,9 @@ async def process_bic_destination(
             return Util.create_response_data(
                 detail="Menubot added", status=200, room_id=portal.room_id
             )
+        else:
+            message = "You must specify a valid destination."
+            return Util.create_response_data(detail=message, status=400, room_id=None)
     elif Util.is_room_id(destination):
         args = ["-c", portal.room_id, "-q", destination]
         response = await command_processor.handle(
@@ -249,6 +249,9 @@ async def process_bic_destination(
             intent=puppet.intent,
         )
         return response
+    else:
+        message = "You must specify a valid destination."
+        return Util.create_response_data(detail=message, status=400, room_id=None)
 
 
 async def process_destination_agent(
@@ -260,12 +263,12 @@ async def process_destination_agent(
     agent: User = await User.get_by_mxid(agent_id)
     current_agent = await portal.get_current_agent()
 
-    # If the agent is already in the room, it returns a message to the frontend.
     await portal.update_state(PortalState.FOLLOWUP)
     await puppet.agent_manager.signaling.set_chat_status(
         room_id=portal.room_id, status=Signaling.FOLLOWUP, agent=agent.mxid
     )
 
+    # If the agent is already in the room, it returns a message to the frontend.
     if current_agent and current_agent.mxid == agent.mxid:
         detail = "You are already in room with [number], message was sent."
     else:
