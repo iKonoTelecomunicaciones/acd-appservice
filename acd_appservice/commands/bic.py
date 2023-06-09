@@ -173,7 +173,7 @@ async def bic(evt: CommandEvent) -> Dict:
             if force and current_agent:
                 args = ["-a", portal.main_intent.mxid, "-sm", "no", "-p", portal.room_id]
                 await evt.processor.handle(
-                    sender=portal.main_intent.mxid,
+                    sender=evt.sender,
                     command="resolve",
                     args_list=args,
                     is_management=False,
@@ -181,7 +181,7 @@ async def bic(evt: CommandEvent) -> Dict:
                 )
 
             # Set chat status to ON_TRANSIT
-            portal.update_state(PortalState.ON_TRANSIT)
+            await portal.update_state(PortalState.ON_TRANSIT)
             await send_portal_event(
                 portal=portal, event_type=ACDPortalEvents.BIC, sender=evt.sender
             )
@@ -196,18 +196,18 @@ async def bic(evt: CommandEvent) -> Dict:
                 room_id=portal.room_id,
             )
 
-        await portal.update_state(PortalState.START)
-        await send_portal_event(portal=portal, event_type=ACDPortalEvents.BIC, sender=evt.sender)
-
         if force and current_agent:
             args = ["-a", portal.main_intent.mxid, "-sm", "no", "-p", portal.room_id]
             await evt.processor.handle(
-                sender=portal.main_intent.mxid,
+                sender=evt.sender,
                 command="resolve",
                 args_list=args,
                 is_management=False,
                 intent=puppet.intent,
             )
+
+        await portal.update_state(PortalState.START)
+        await send_portal_event(portal=portal, event_type=ACDPortalEvents.BIC, sender=evt.sender)
 
         return await process_bic_destination(
             destination=destination,
@@ -270,7 +270,7 @@ async def process_destination_agent(
         detail = "You are already in room with [number], message was sent."
     else:
         # Joining the agent to the room.
-        await portal.join_user(user_id=agent_id)
+        await puppet.agent_manager.force_join_agent(room_id=portal.room_id, agent_id=agent_id)
         detail = "Now you are joined in room with [number], message was sent."
 
         # clear campaign in the ik.chat.campaign_selection state event

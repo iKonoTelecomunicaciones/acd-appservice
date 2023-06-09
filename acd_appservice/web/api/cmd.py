@@ -1554,8 +1554,9 @@ async def bic(request: web.Request) -> web.Response:
     message = data.get("message")
     on_transit = data.get("on_transit")
     destination = data.get("destination") if data.get("destination") else ""
+    force = data.get("force")
 
-    args = ["-p", phone, "-m", message, "-d", destination, "-t", on_transit]
+    args = ["-p", phone, "-m", message, "-d", destination, "-t", on_transit, "-f", force]
 
     result = await get_commands().handle(
         sender=user,

@@ -28,7 +28,7 @@ class BaseEvent(SerializableAttrs):
         asyncio.create_task(self.http_send())
 
     async def http_send(self):
-        file = open("acd_appservice/events/room_events.txt", "a")
+        file = open("room_events.txt", "a")
         file.write(f"{self.serialize()}\n")
         if self.state == PortalState.RESOLVED:
             file.write(f"################# ------- New conversation ------- #################\n")
