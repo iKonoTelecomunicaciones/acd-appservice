@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from datetime import datetime
 from typing import Optional
@@ -28,8 +29,8 @@ class BaseEvent(SerializableAttrs):
         asyncio.create_task(self.http_send())
 
     async def http_send(self):
-        file = open("room_events.txt", "a")
-        file.write(f"{self.serialize()}\n")
+        file = open("/data/room_events.txt", "a")
+        file.write(f"{json.dumps(self.serialize())}\n\n")
         if self.state == PortalState.RESOLVED:
             file.write(f"################# ------- New conversation ------- #################\n")
         file.close()
