@@ -63,7 +63,7 @@ class ResolveEvent(PortalEvent):
 
 @dataclass
 class TransferEvent(PortalEvent):
-    destination: UserID | RoomID = ib(factory=UserID | RoomID)
+    destination: UserID | RoomID = ib(factory=UserID)
 
 
 @dataclass
