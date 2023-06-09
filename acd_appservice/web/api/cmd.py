@@ -1520,6 +1520,9 @@ async def bic(request: web.Request) -> web.Response:
                         on_transit:
                             description: "Do not process destination inmediatly, wait for a customer message"
                             type: string
+                        force:
+                            description: "If an agent is in the room, do you want to start a new conversation?"
+                            type: string
                     required:
                         - customer_phone
                         - company_phone
@@ -1528,6 +1531,7 @@ async def bic(request: web.Request) -> web.Response:
                         company_phone: "57398765432"
                         message: "Hola iKono!!"
                         on_transit: "no"
+                        force: "no"
 
     responses:
         '200':

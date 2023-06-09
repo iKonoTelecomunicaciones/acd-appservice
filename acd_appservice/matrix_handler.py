@@ -846,9 +846,9 @@ class MatrixHandler:
                 room_id=portal.room_id, campaign_room_id=None
             )
 
+            await portal.update_state(PortalState.START)
             if portal.state != PortalState.ON_TRANSIT:
                 # set chat status to start before process the destination
-                await portal.update_state(PortalState.START)
                 await send_portal_event(portal=portal, event_type=ACDPortalEvents.UIC)
 
             if puppet.destination or portal.destination_on_transit:
