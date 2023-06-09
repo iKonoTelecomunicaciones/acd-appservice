@@ -13,7 +13,7 @@ fake_db = Database.create("") if TYPE_CHECKING else None
 
 @dataclass
 class Puppet:
-    """Representación en la bd de Puppet"""
+    """Puppet representation in the db"""
 
     db: ClassVar[Database] = fake_db
 

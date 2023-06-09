@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 from markdown import markdown
 from mautrix.api import Method, SynapseAdminPath
@@ -165,34 +165,44 @@ class MatrixRoom:
 
         return users
 
-    async def add_member(self, new_member: UserID):
-        """If the config value for `acd.queue.user_add_method` is `join`, then join the user,
-        otherwise invite the user
+    async def add_member(self, *, new_member: UserID, context: str):
+        """If user access method is `invite`, then invite the user,
+        otherwise join the user
 
         Parameters
         ----------
         new_member : UserID
             The user ID of the user to add to the queue.
+        context: str
+            The config key to get the access method from a user
 
         """
-        if self.config["acd.queues.user_add_method"] == "join":
-            await self.join_user(user_id=new_member)
-        else:
-            await self.invite_user(user_id=new_member)
+        add_method, _ = self.get_access_methods(user_id=new_member, context=context)
+        self.log.debug(f"Adding {new_member} to {self.room_id} using {add_method}")
 
-    async def remove_member(self, member: UserID, reason: str = None):
-        """If the config value for "acd.remove_method" is "leave", then leave the user,
+        if add_method == "invite":
+            await self.invite_user(user_id=new_member)
+        else:
+            await self.join_user(user_id=new_member)
+
+    async def remove_member(self, *, member: UserID, context: str, reason: str = None):
+        """If user access method is "leave", then leave the user,
         otherwise kick the user
 
         Parameters
         ----------
         member : UserID
             The user ID of the member to remove.
+        context: str
+            The config key to get the access method from a user
         reason : str
             The reason for the removal.
 
         """
-        if self.config["acd.remove_method"] == "leave":
+        _, remove_method = self.get_access_methods(user_id=member, context=context)
+        self.log.debug(f"Removing {member} from {self.room_id} using {remove_method}")
+
+        if remove_method == "leave":
             await self.leave_user(user_id=member, reason=reason)
         else:
             await self.kick_user(user_id=member, reason=reason)
@@ -367,3 +377,28 @@ class MatrixRoom:
         )
 
         return [await User.get_by_mxid(invitee) for invitee in room_invitees]
+
+    def get_access_methods(self, *, user_id: UserID, context: str) -> Tuple[str, str]:
+        """It returns the method to add and remove a user from the room
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user to add or remove.
+        context : str
+            The config key to get the access method.
+
+        Returns
+        -------
+            The method to add and remove a user from the room.
+
+        """
+
+        access_method: List = self.config[context]
+        default: Dict[str, str] = self.config["acd.access_methods.default"]
+
+        for user in access_method:
+            if re.match(user["regex"], user_id):
+                return user["add"], user["remove"]
+
+        return default["add"], default["remove"]

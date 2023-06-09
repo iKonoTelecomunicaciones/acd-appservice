@@ -474,7 +474,6 @@ class AgentManager:
             self.log.error(e)
             return
 
-        # print([member.user_id for member in members])
         if members:
             # remove bots from member list
             members = self.remove_not_agents(members)
@@ -722,7 +721,7 @@ class AgentManager:
             )
             await portal.kick_user(
                 user_id=agent_id,
-                reason="Tiempo de espera cumplido para unirse a la conversación",
+                reason="Timeout waiting for agent to accept invite",
             )
             if queue:
                 await self.loop_agents(

@@ -67,15 +67,7 @@ async def db(config: Config):
 
     await database.start()
 
-    logger.critical("######################################################################")
-    logger.critical("Database started")
-    logger.critical("######################################################################")
-
     yield database
-
-    logger.critical("######################################################################")
-    logger.critical("Database ending")
-    logger.critical("######################################################################")
 
     await database.stop()
     await conn.execute(f"DROP SCHEMA {schema_name} CASCADE")
@@ -84,7 +76,7 @@ async def db(config: Config):
 
 @pytest_asyncio.fixture
 async def acd_init(config: Config, db: Database):
-    for table in [User, Queue, QueueMembership, Portal, Puppet]:
+    for table in [User, Queue, QueueMembership, Portal, Puppet, MatrixRoom]:
         table.db = db
         table.config = config
         table.az = None

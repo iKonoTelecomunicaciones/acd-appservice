@@ -283,7 +283,7 @@ async def resolve(request: web.Request) -> web.Response:
     user_id = data.get("user_id")
     send_message = data.get("send_message") if data.get("send_message") else "no"
 
-    # Obtenemos el puppet de este portal si existe
+    # Get puppet from this portal if exists
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
     portal: Portal = await Portal.get_by_room_id(
         room_id=room_id, fk_puppet=puppet.pk, intent=puppet.intent, bridge=puppet.bridge
@@ -444,7 +444,7 @@ async def state_event(request: web.Request) -> web.Response:
     if not (room_id and event_type):
         return web.json_response(**REQUIRED_VARIABLES)
 
-    # Obtenemos el puppet de este email si existe
+    # Get puppet from this portal if exists
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=room_id)
     if not puppet:
         return web.json_response(**NO_PUPPET_IN_PORTAL)
@@ -585,7 +585,7 @@ async def transfer(request: web.Request) -> web.Response:
     customer_room_id = data.get("customer_room_id")
     campaign_room_id = data.get("campaign_room_id")
 
-    # Obtenemos el puppet de este email si existe
+    # Get puppet from this portal if exists
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     if not puppet:
         return web.json_response(**NO_PUPPET_IN_PORTAL)
@@ -668,7 +668,7 @@ async def transfer_user(request: web.Request) -> web.Response:
     target_agent_id = data.get("target_agent_id")
     force = data.get("force") if data.get("force") else "no"
 
-    # Obtenemos el puppet de este email si existe
+    # Get puppet from this portal if exists
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     if not puppet:
         return web.json_response(**NO_PUPPET_IN_PORTAL)
@@ -1160,10 +1160,10 @@ async def queue(request: web.Request) -> web.Response:
                         force:
                             description: "This queue has assigned agents.
                                           Are you sure you want to force delete the queue?"
-                            type: boolean
+                            type: string
                     example:
                         room_id: "!foo:foo.com"
-                        force: true
+                        force: "yes | no"
 
     responses:
         '200':
