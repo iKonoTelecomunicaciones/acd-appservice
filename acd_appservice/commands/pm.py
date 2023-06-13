@@ -7,6 +7,7 @@ from typing import Dict
 from markdown import markdown
 
 from ..client import ProvisionBridge
+from ..events import ACDPortalEvents, send_portal_event
 from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..signaling import Signaling
@@ -142,12 +143,32 @@ async def pm(evt: CommandEvent) -> Dict:
                 "reply"
             ] = "The agent <agent_displayname> is already in room with [number]"
         else:
-            # If the agent is already in the room, it returns a message to the frontend.
-            await portal.update_state(PortalState.FOLLOWUP)
-            await puppet.agent_manager.signaling.set_chat_status(
-                room_id=portal.room_id, status=Signaling.FOLLOWUP, agent=evt.sender.mxid
-            )
+            if puppet.config[f"bridges.{puppet.bridge}.send_template_command"]:
+                status, data = await bridge_connector.gupshup_template(
+                    user_id=evt.intent.mxid, room_id=data.get("room_id"), template=message
+                )
+                message_event_id = data.get("event_id")
+            else:
+                message_event_id = await evt.intent.send_text(
+                    room_id=data.get("room_id"),
+                    text=message,
+                    html=markdown(message),
+                )
+
             if agent and agent.mxid == evt.sender.mxid:
+                await portal.update_state(PortalState.FOLLOWUP)
+                await puppet.agent_manager.signaling.set_chat_status(
+                    room_id=portal.room_id, status=Signaling.FOLLOWUP, agent=evt.sender.mxid
+                )
+
+                await send_portal_event(
+                    portal=portal,
+                    event_type=ACDPortalEvents.PortalMessage,
+                    event_id=message_event_id,
+                    sender=evt.sender.mxid,
+                )
+
+                # If the agent is already in the room, it returns a message to the frontend.
                 return_params["reply"] = "You are already in room with [number], message was sent."
             else:
                 # Joining the agent to the room.
@@ -156,17 +177,6 @@ async def pm(evt: CommandEvent) -> Dict:
                 )
 
             agent_displayname = await evt.intent.get_displayname(user_id=evt.sender.mxid)
-
-            if puppet.config[f"bridges.{puppet.bridge}.send_template_command"]:
-                await bridge_connector.gupshup_template(
-                    user_id=evt.intent.mxid, room_id=data.get("room_id"), template=message
-                )
-            else:
-                await evt.intent.send_text(
-                    room_id=data.get("room_id"),
-                    text=message,
-                    html=markdown(message),
-                )
 
     # Setting the return_params dict with the sender_id, phone_number, room_id and agent_displayname.
     return_params["sender_id"] = evt.sender.mxid
@@ -199,6 +209,12 @@ async def pm(evt: CommandEvent) -> Dict:
         # the room is marked as followup and campaign from previous room state
         # is not kept
         await portal.update_state(PortalState.FOLLOWUP)
+        await send_portal_event(
+            portal=portal,
+            event_type=ACDPortalEvents.BIC,
+            sender=evt.sender.mxid,
+            destination=evt.sender.mxid,
+        )
         await puppet.agent_manager.signaling.set_chat_status(
             room_id=portal.room_id,
             status=Signaling.FOLLOWUP,
