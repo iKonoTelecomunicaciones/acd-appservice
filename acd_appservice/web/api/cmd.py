@@ -1523,6 +1523,11 @@ async def bic(request: web.Request) -> web.Response:
                         force:
                             description: "If an agent is in the room, do you want to start a new conversation?"
                             type: string
+                        enqueued_chat:
+                            description: "If the distribution process was not successful,
+                                          do you want to put portal enqueued?\n
+                                          Note: This parameter is only using when destination is a queue"
+                            type: string
                     required:
                         - customer_phone
                         - company_phone
@@ -1542,7 +1547,7 @@ async def bic(request: web.Request) -> web.Response:
             $ref: '#/components/responses/NotSendMessage'
     """
 
-    user = await _resolve_user_identifier(request=request)
+    user: User = await _resolve_user_identifier(request=request)
 
     if not request.body_exists:
         return web.json_response(**NOT_DATA)
@@ -1552,15 +1557,29 @@ async def bic(request: web.Request) -> web.Response:
     if not data.get("customer_phone") or not data.get("company_phone"):
         return web.json_response(**REQUIRED_VARIABLES)
 
-    puppet = await _resolve_puppet_identifier(request=request)
+    puppet: Puppet = await _resolve_puppet_identifier(request=request)
 
-    phone = data.get("customer_phone")
-    message = data.get("message")
-    on_transit = data.get("on_transit")
-    destination = data.get("destination") if data.get("destination") else ""
-    force = data.get("force")
+    phone: str = data.get("customer_phone")
+    message: str = data.get("message")
+    on_transit: str = data.get("on_transit")
+    destination: str = data.get("destination") if data.get("destination") else ""
+    force: str = data.get("force")
+    enqueued_chat: str = data.get("enqueued_chat")
 
-    args = ["-p", phone, "-m", message, "-d", destination, "-t", on_transit, "-f", force]
+    args = [
+        "-p",
+        phone,
+        "-m",
+        message,
+        "-d",
+        destination,
+        "-t",
+        on_transit,
+        "-f",
+        force,
+        "-e",
+        enqueued_chat,
+    ]
 
     result = await get_commands().handle(
         sender=user,

@@ -58,6 +58,16 @@ fordce_arg = CommandArg(
     example="`yes` | `no`",
 )
 
+enqueue_chat_arg = CommandArg(
+    name="--enqueue-chat or -e",
+    help_text=(
+        "If the chat was not distributed, should the portal be enqueued?\n"
+        "Note: This parameter is only used when destination is a queue"
+    ),
+    is_required=False,
+    example="`yes` | `no`",
+)
+
 
 def args_parser():
     parser = ArgumentParser(description="BIC", exit_on_error=False)
@@ -75,6 +85,16 @@ def args_parser():
         "--on-transit", "-t", dest="on_transit", type=str, required=False, default="no"
     )
     parser.add_argument("--force", "-f", dest="force", type=str, required=False, default="no")
+
+    parser.add_argument(
+        "--enqueue-chat",
+        "-e",
+        dest="enqueue_chat",
+        required=False,
+        type=str,
+        choices=["yes", "no"],
+        default="yes",
+    )
 
     return parser
 
@@ -97,16 +117,24 @@ async def bic(evt: CommandEvent) -> Dict:
     destination: str = args.destination
     on_transit: bool = True if args.on_transit == "yes" else False
     force: bool = True if args.force == "yes" else False
+    enqueue_chat: bool = args.enqueue_chat
 
     if not phone.isdigit():
         message = "You must specify a valid phone number with country prefix."
         await evt.reply(message)
         return Util.create_response_data(detail=message, status=400, room_id=None)
 
-    if destination and not Util.is_room_id(destination) and not Util.is_room_id(destination):
+    if destination and not Util.is_room_id(destination) and not Util.is_user_id(destination):
         message = "You must specify a valid destination."
         await evt.reply(message)
         return Util.create_response_data(detail=message, status=400, room_id=None)
+
+    if destination and Util.is_user_id(destination):
+        user: User = await User.get_by_mxid(destination, create=False)
+        if not user.is_menubot and not user.is_agent:
+            message = "You must specify a valid destination."
+            await evt.reply(message)
+            return Util.create_response_data(detail=message, status=400, room_id=None)
 
     # Sending a message to the customer.
     formatted_phone = phone if phone.startswith("+") else f"+{phone}"
@@ -156,7 +184,7 @@ async def bic(evt: CommandEvent) -> Dict:
                 detail=detail,
                 status=409,
                 additional_info={
-                    "phone_number": portal.creator_identifier(),
+                    "phone_number": phone,
                     "agent_displayname": agent_displayname,
                 },
             )
@@ -190,7 +218,10 @@ async def bic(evt: CommandEvent) -> Dict:
             # Set chat status to ON_TRANSIT
             await portal.update_state(PortalState.ON_TRANSIT)
             await send_portal_event(
-                portal=portal, event_type=ACDPortalEvents.BIC, sender=evt.sender
+                portal=portal,
+                event_type=ACDPortalEvents.BIC,
+                sender=evt.sender,
+                destination=destination,
             )
 
             # Setting destination that will be processed when the customer answers with a message.
@@ -204,7 +235,12 @@ async def bic(evt: CommandEvent) -> Dict:
             )
 
         await portal.update_state(PortalState.START)
-        await send_portal_event(portal=portal, event_type=ACDPortalEvents.BIC, sender=evt.sender)
+        await send_portal_event(
+            portal=portal,
+            event_type=ACDPortalEvents.BIC,
+            sender=evt.sender,
+            destination=destination,
+        )
 
         return await process_bic_destination(
             destination=destination,
@@ -213,6 +249,7 @@ async def bic(evt: CommandEvent) -> Dict:
             sender=evt.sender,
             command_processor=evt.processor,
             logger=evt.log,
+            enqueue_chat=enqueue_chat,
         )
 
 
@@ -223,9 +260,10 @@ async def process_bic_destination(
     sender: User,
     command_processor: CommandProcessor,
     logger: TraceLogger,
+    enqueue_chat: str = "yes",
 ) -> Dict[str, Any]:
     if Util.is_user_id(destination):
-        user: User = await User.get_by_mxid(destination)
+        user: User = await User.get_by_mxid(destination, create=False)
         if user.is_agent:
             response = await process_destination_agent(
                 agent_id=destination, portal=portal, puppet=puppet, logger=logger
@@ -240,7 +278,7 @@ async def process_bic_destination(
             message = "You must specify a valid destination."
             return Util.create_response_data(detail=message, status=400, room_id=None)
     elif Util.is_room_id(destination):
-        args = ["-c", portal.room_id, "-q", destination]
+        args = ["-c", portal.room_id, "-q", destination, "-e", enqueue_chat]
         response = await command_processor.handle(
             sender=sender,
             command="acd",
@@ -260,7 +298,7 @@ async def process_destination_agent(
     puppet: Puppet,
     logger: TraceLogger = None,
 ) -> Dict:
-    agent: User = await User.get_by_mxid(agent_id)
+    agent: User = await User.get_by_mxid(agent_id, create=False)
     current_agent = await portal.get_current_agent()
 
     await portal.update_state(PortalState.FOLLOWUP)

@@ -65,6 +65,7 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             room_id=portal.room_id,
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
+            destination=kwargs.get("destination"),
         )
     elif event_type == ACDPortalEvents.EnterQueue:
         event = EnterQueueEvent(

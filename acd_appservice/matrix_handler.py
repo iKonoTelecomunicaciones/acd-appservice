@@ -885,7 +885,7 @@ class MatrixHandler:
         if portal.destination_on_transit:
             destination = portal.destination_on_transit
             portal.destination_on_transit = None
-            portal.save()
+            await portal.save()
         else:
             destination = puppet.destination
 

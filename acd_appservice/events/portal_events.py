@@ -26,6 +26,7 @@ class UICEvent(PortalEvent):
     pass
 
 
+@dataclass
 class BICEvent(PortalEvent):
     destination: UserID | RoomID = ib(factory=UserID)
 
