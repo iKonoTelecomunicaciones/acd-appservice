@@ -58,7 +58,7 @@ async def create(request: web.Request) -> web.Response:
     requestBody:
         required: false
         description: A json with all optional parameter,
-                     `user_email`, `control_room_id`, `destination`, `bridge`
+                     `user_email`, `destination`, `bridge`
         content:
           application/json:
             schema:
@@ -66,9 +66,6 @@ async def create(request: web.Request) -> web.Response:
               properties:
                 user_email:
                   description: "User email"
-                  type: string
-                control_room_id:
-                  description: "If already exists a control room, you can chain it with the new acd user"
                   type: string
                 destination:
                   description: "It can be a queue, an user or a menu"
@@ -83,7 +80,6 @@ async def create(request: web.Request) -> web.Response:
                     - facebook
               example:
                   user_email: "@acd1:somewhere.com"
-                  control_room_id: "!foo:somewhere.com"
                   destination: "nobody@somewhere.com"
                   bridge: "mautrix"
     responses:
