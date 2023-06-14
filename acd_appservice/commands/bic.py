@@ -43,7 +43,7 @@ destination_arg = CommandArg(
 )
 
 on_transit_arg = CommandArg(
-    name="--on_transit or -t",
+    name="--on-transit or -t",
     help_text="""
         Do you want to process destinations inmediately or wait a customer message to proccess it?
     """,
