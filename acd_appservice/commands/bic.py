@@ -311,7 +311,7 @@ async def process_destination_agent(
         detail = "You are already in room with [number], message was sent."
     else:
         # Joining the agent to the room.
-        await puppet.agent_manager.force_join_agent(room_id=portal.room_id, agent_id=agent_id)
+        await puppet.agent_manager.add_agent(portal=portal, agent_id=agent_id)
         detail = "Now you are joined in room with [number], message was sent."
 
         # clear campaign in the ik.chat.campaign_selection state event
