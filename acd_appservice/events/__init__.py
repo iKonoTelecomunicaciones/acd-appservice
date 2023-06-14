@@ -5,6 +5,7 @@ from .portal_events import (
     AssignEvent,
     AssignFailedEvent,
     AvailableAgentsEvent,
+    BICEvent,
     ConnectEvent,
     CreateEvent,
     EnterQueueEvent,

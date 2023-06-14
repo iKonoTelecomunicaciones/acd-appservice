@@ -69,7 +69,9 @@ async def _resolve_user_identifier(request: web.Request) -> User | None:
     user: User = await User.get_by_mxid(user_request)
 
     if not user:
-        raise web.HTTPUnauthorized(text='{"error": "Invalid authentication"}')
+        raise web.HTTPUnauthorized(
+            body='{"detail": "Invalid authentication"}', content_type="application/json"
+        )
 
     return user
 
@@ -107,6 +109,8 @@ async def _resolve_puppet_identifier(request: web.Request) -> Puppet | None:
         puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
 
     if not puppet:
-        raise web.HTTPBadRequest(text='{"error": "Invalid Authorization"}')
+        raise web.HTTPBadRequest(
+            body='{"detail": "Invalid authorization"}', content_type="application/json"
+        )
 
     return puppet

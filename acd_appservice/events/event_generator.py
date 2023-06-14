@@ -9,6 +9,7 @@ from .portal_events import (
     AssignEvent,
     AssignFailedEvent,
     AvailableAgentsEvent,
+    BICEvent,
     ConnectEvent,
     CreateEvent,
     EnterQueueEvent,
@@ -53,6 +54,18 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             room_id=portal.room_id,
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
+        )
+    elif event_type == ACDPortalEvents.BIC:
+        event = BICEvent(
+            event_type=ACDEventTypes.PORTAL,
+            event=ACDPortalEvents.BIC,
+            state=portal.state,
+            prev_state=portal.prev_state,
+            sender=kwargs.get("sender"),
+            room_id=portal.room_id,
+            acd=portal.main_intent.mxid,
+            customer_mxid=portal.creator,
+            destination=kwargs.get("destination"),
         )
     elif event_type == ACDPortalEvents.EnterQueue:
         event = EnterQueueEvent(

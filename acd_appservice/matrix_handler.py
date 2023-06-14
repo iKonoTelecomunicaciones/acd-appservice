@@ -846,11 +846,12 @@ class MatrixHandler:
                 room_id=portal.room_id, campaign_room_id=None
             )
 
-            # set chat status to start before process the destination
             await portal.update_state(PortalState.START)
-            await send_portal_event(portal=portal, event_type=ACDPortalEvents.UIC)
+            if portal.state != PortalState.ON_TRANSIT:
+                # set chat status to start before process the destination
+                await send_portal_event(portal=portal, event_type=ACDPortalEvents.UIC)
 
-            if puppet.destination:
+            if puppet.destination or portal.destination_on_transit:
                 if await self.process_destination(portal=portal):
                     return
 
@@ -875,30 +876,38 @@ class MatrixHandler:
             A boolean value.
 
         """
+
         puppet: Puppet = await Puppet.get_by_portal(portal_room_id=portal.room_id)
 
         if not puppet:
             return False
 
+        if portal.destination_on_transit:
+            destination = portal.destination_on_transit
+            portal.destination_on_transit = None
+            await portal.save()
+        else:
+            destination = puppet.destination
+
         # If destination exists, distribute chat using it.
         # Destination can be menubot, agent or queue.
-        if not Util.is_room_id(puppet.destination) and not Util.is_user_id(puppet.destination):
+        if not Util.is_room_id(destination) and not Util.is_user_id(destination):
             self.log.debug(f"Wrong destination for room id {portal.room_id}")
             return False
 
         # Verify if destination is a menubot and init the process to invite them to chat room
-        if Util.is_user_id(puppet.destination):
-            probably_menubot: User = await User.get_by_mxid(puppet.destination, create=False)
+        if Util.is_user_id(destination):
+            probably_menubot: User = await User.get_by_mxid(destination, create=False)
             if probably_menubot and probably_menubot.role == UserRoles.MENU:
                 asyncio.create_task(portal.add_menubot(probably_menubot.mxid))
                 return True
 
         user: User = await User.get_by_mxid(puppet.custom_mxid, create=False)
         args = ["-c", portal.room_id]
-        if Util.is_room_id(puppet.destination):
-            args = args + ["-q", puppet.destination]
+        if Util.is_room_id(destination):
+            args = args + ["-q", destination]
         else:
-            args = args + ["-a", puppet.destination, "-f", "yes"]
+            args = args + ["-a", destination, "-f", "yes"]
 
         await self.commands.handle(
             sender=user, command="acd", args_list=args, is_management=False, intent=puppet.intent

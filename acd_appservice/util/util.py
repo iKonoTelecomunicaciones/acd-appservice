@@ -156,7 +156,7 @@ class Util:
         cls,
         detail: str,
         status: int,
-        room_id: Optional[str],
+        room_id: Optional[str] = None,
         additional_info: Optional[Dict] = None,
     ) -> Dict[str, Any]:
         json_response: Dict[str, Any] = {
