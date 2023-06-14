@@ -150,6 +150,23 @@ class Puppet:
         return [cls._from_row(row).custom_mxid for row in rows]
 
     @classmethod
+    async def get_next_puppet_id(cls) -> int | None:
+        """Get the next puppet id to create in the db using the custom_mxid
+        and filter with username_template"""
+        username_template = cls.config["bridge.username_template"].format(userid="")
+        q = f"""
+            SELECT MAX(TO_NUMBER(SUBSTRING(custom_mxid
+            FROM '@{username_template}#"[0-9]+#":%' FOR '#'), '999')) + 1
+            AS next_mxid
+            FROM puppet
+            WHERE custom_mxid ~ '@{username_template}\d+:.+'
+            AND custom_mxid IS NOT NULL;
+        """
+        result = await cls.db.fetchval(q)
+
+        return result if result else None
+
+    @classmethod
     async def get_all_puppets_from_mautrix(cls) -> list[UserID]:
         q = "SELECT * FROM puppet WHERE custom_mxid IS NOT NULL AND bridge = 'mautrix'"
         rows = await cls.db.fetch(q)
