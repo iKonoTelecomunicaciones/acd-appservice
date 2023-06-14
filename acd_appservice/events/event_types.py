@@ -8,6 +8,7 @@ class ACDEventTypes(SerializableEnum):
 class ACDPortalEvents(SerializableEnum):
     Create = "Create"
     UIC = "UIC"
+    BIC = "BIC"
     EnterQueue = "EnterQueue"
     Connect = "Connect"
     PortalMessage = "PortalMessage"

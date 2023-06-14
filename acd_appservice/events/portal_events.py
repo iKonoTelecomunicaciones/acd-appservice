@@ -27,6 +27,11 @@ class UICEvent(PortalEvent):
 
 
 @dataclass
+class BICEvent(PortalEvent):
+    destination: UserID | RoomID = ib(factory=UserID)
+
+
+@dataclass
 class EnterQueueEvent(PortalEvent):
     queue_room_id: RoomID = ib(factory=RoomID)
 
