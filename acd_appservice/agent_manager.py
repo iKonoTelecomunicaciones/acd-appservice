@@ -382,7 +382,7 @@ class AgentManager:
 
                     online_agents += 1
 
-                    await self.add_agent_and_check(
+                    await self.assign_chat_agent(
                         agent_id=agent.mxid,
                         portal=portal,
                         queue=queue,
@@ -499,7 +499,7 @@ class AgentManager:
 
         return
 
-    async def add_agent_and_check(
+    async def assign_chat_agent(
         self,
         portal: Portal,
         agent_id: UserID,
