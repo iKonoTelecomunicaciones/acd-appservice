@@ -172,9 +172,7 @@ async def pm(evt: CommandEvent) -> Dict:
                 return_params["reply"] = "You are already in room with [number], message was sent."
             else:
                 # Joining the agent to the room.
-                await puppet.agent_manager.force_join_agent(
-                    room_id=data.get("room_id"), agent_id=evt.sender.mxid
-                )
+                await puppet.agent_manager.add_agent(portal=portal, agent_id=evt.sender.mxid)
 
             agent_displayname = await evt.intent.get_displayname(user_id=evt.sender.mxid)
 

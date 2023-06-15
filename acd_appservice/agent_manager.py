@@ -5,9 +5,8 @@ from asyncio import Future, create_task, get_running_loop, sleep
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import IntentAPI
-from mautrix.types import Member, RoomAlias, RoomID, UserID
+from mautrix.types import Member, RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
 from .commands.handler import CommandProcessor
@@ -383,7 +382,7 @@ class AgentManager:
 
                     online_agents += 1
 
-                    await self.force_invite_agent(
+                    await self.assign_chat_agent(
                         agent_id=agent.mxid,
                         portal=portal,
                         queue=queue,
@@ -500,7 +499,7 @@ class AgentManager:
 
         return
 
-    async def force_invite_agent(
+    async def assign_chat_agent(
         self,
         portal: Portal,
         agent_id: UserID,
@@ -508,7 +507,7 @@ class AgentManager:
         joined_message: str = None,
         transfer_author: User = None,
     ) -> None:
-        """Given the portal and the queue have the agent forcibly join the portal.
+        """Given the portal and the queue, invite or joins an agent into a portal, and start process to check agent join.
 
         Parameters
         ----------
@@ -550,7 +549,7 @@ class AgentManager:
             )
         )
 
-        await self.force_join_agent(portal.room_id, agent_id)
+        await self.add_agent(portal=portal, agent_id=agent_id)
 
     async def check_agent_joined(
         self,
@@ -713,6 +712,7 @@ class AgentManager:
             self.log.debug(f"Unlocking room {portal.room_id}..., agent {agent_id} already in room")
         else:
             self.log.debug(f"[{agent_id}] DID NOT ACCEPT the invite. Inviting next agent ...")
+            await portal.update_state(portal.prev_state)
             await send_portal_event(
                 portal=portal,
                 event_type=ACDPortalEvents.AssignFailed,
@@ -737,34 +737,27 @@ class AgentManager:
                 await portal.send_notice(text=msg)
                 portal.unlock(transfer)
 
-    async def force_join_agent(
-        self, room_id: RoomID, agent_id: UserID, room_alias: RoomAlias = None
-    ) -> None:
+    async def add_agent(self, portal: Portal, agent_id: UserID) -> None:
         """It takes a room ID, an agent ID, and a room alias (optional) and
         forces the agent to join the room
 
         Parameters
         ----------
-        room_id : RoomID
-            The room ID of the room you want to join.
+        portal : Portal
+            The portal you want to join.
         agent_id : UserID
             The user ID of the agent you want to force join the room.
-        room_alias : RoomAlias
-            The alias of the room to join.
 
         """
-        api = self.intent.bot.api if self.intent.bot else self.intent.api
+
         # Trying to join a room.
         for attempt in range(0, 10):
             self.log.debug(
-                f"Attempt # {attempt} trying the force join room: {room_id} :: agent: {agent_id}"
+                f"Attempt # {attempt} trying the join room:"
+                f"{portal.room_id} :: agent: {agent_id}"
             )
             try:
-                await api.request(
-                    method=Method.POST,
-                    path=SynapseAdminPath.v1.join[room_alias if room_alias else room_id],
-                    content={"user_id": agent_id},
-                )
+                await portal.add_member(agent_id)
                 break
             except Exception as e:
                 self.log.warning(e)

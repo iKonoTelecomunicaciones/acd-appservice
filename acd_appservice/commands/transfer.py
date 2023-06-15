@@ -263,7 +263,7 @@ async def transfer_user(evt: CommandEvent) -> str:
         else:
             agent_is_online = await agent.is_online()
             if agent_is_online or force:
-                await puppet.agent_manager.force_invite_agent(
+                await puppet.agent_manager.assign_chat_agent(
                     portal=portal,
                     agent_id=agent.mxid,
                     transfer_author=transfer_author or evt.sender,
