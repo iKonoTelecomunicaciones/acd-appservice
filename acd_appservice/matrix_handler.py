@@ -520,7 +520,7 @@ class MatrixHandler:
             return
 
         # TODO TEMPORARY SOLUTION TO LINK TO THE MENU IN A UIC
-        if self.config["acd.process_destination_on_joining"] and not room_id in puppet.BIC_ROOMS:
+        if not portal.creator in puppet.BIC_ROOMS:
             # set chat status to start before process the destination
             await portal.update_state(PortalState.START)
             await send_portal_event(portal=portal, event_type=ACDPortalEvents.UIC)
@@ -539,7 +539,7 @@ class MatrixHandler:
             if menubot_id:
                 asyncio.create_task(portal.add_menubot(menubot_mxid=menubot_id))
 
-        puppet.BIC_ROOMS.discard(portal.room_id)
+        puppet.BIC_ROOMS.discard(portal.creator)
 
     async def handle_leave(self, evt: Event):
         self.log.debug(f"The user {evt.state_key} leave from to room {evt.room_id}")

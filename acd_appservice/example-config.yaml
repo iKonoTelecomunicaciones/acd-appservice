@@ -191,9 +191,6 @@ acd:
     # if not, you can use agent operation login to do it.
     use_presence: false
 
-    # When acd* joins to the room before customer message arrived, we need to process destination
-    process_destination_on_joining: true
-
     # Action to take when we need that some user get out or enter to a room
     # NOTE: The namespaces must be properly configured to use the 'leave' option
     # remove:

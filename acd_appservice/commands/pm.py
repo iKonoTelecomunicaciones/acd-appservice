@@ -104,6 +104,14 @@ async def pm(evt: CommandEvent) -> Dict:
         await evt.reply(text=cmd_front_msg)
         return {"data": return_params, "status": 422}
 
+    # TODO WORKAROUND FOR NOT LINKING TO THE MENU IN A BIC
+    user_prefix = evt.config[f"bridges.{puppet.bridge}.user_prefix"]
+    user_domain = evt.config["homeserver.domain"]
+    portal_creator = f"@{user_prefix}_{phone.replace('+', '')}:{user_domain}"
+
+    evt.log.debug(f"Putting portal with creator {portal_creator} in BIC rooms")
+    puppet.BIC_ROOMS.add(portal_creator)
+
     # Sending a message to the customer.
     bridge_connector = ProvisionBridge(
         session=evt.intent.api.session, config=puppet.config, bridge=puppet.bridge
@@ -130,9 +138,6 @@ async def pm(evt: CommandEvent) -> Dict:
             intent=puppet.intent,
             bridge=puppet.bridge,
         )
-
-        # TODO WORKAROUND FOR NOT LINKING TO THE MENU IN A BIC
-        puppet.BIC_ROOMS.add(portal.room_id)
 
         agent = await portal.get_current_agent()
 
