@@ -104,7 +104,8 @@ async def create(request: web.Request) -> web.Response:
         if data.get("destination"):
             args = args + ["-d", data.get("destination")]
 
-        email = data.get("user_email")
+        if data.get("user_email"):
+            args = args + ["-e", data.get("user_email")]
 
     puppet: Puppet = await get_commands().handle(
         sender=user,
@@ -112,10 +113,6 @@ async def create(request: web.Request) -> web.Response:
         args_list=args,
         is_management=True,
     )
-
-    if email:
-        puppet.email = email
-        await puppet.save()
 
     if puppet:
         response = {

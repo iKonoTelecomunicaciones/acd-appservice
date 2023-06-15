@@ -23,17 +23,20 @@ bridge_arg = CommandArg(
 )
 
 
+email_arg = CommandArg(
+    name="--email or -e",
+    help_text="Email to assign to the puppet",
+    is_required=False,
+    example="`user_id@foo.com`| `user_id@gmail.com`",
+)
+
+
 def args_parser():
     parser = ArgumentParser(description="CREATE", exit_on_error=False)
 
-    parser.add_argument(
-        "--destination",
-        "-d",
-        dest="destination",
-        type=str,
-    )
-
+    parser.add_argument("--destination", "-d", dest="destination", type=str)
     parser.add_argument("--bridge", "-b", dest="bridge", type=str, default="")
+    parser.add_argument("--email", "-e", dest="email", type=str, default="")
 
     return parser
 
@@ -49,7 +52,7 @@ def args_parser():
         "If you send `destination`, then the distribution of new chats related to this acd[n] "
         "will be done following this method. This field can be a room_id or a user_id."
     ),
-    help_args=[bridge_arg, destination_arg],
+    help_args=[bridge_arg, destination_arg, email_arg],
     args_parser=args_parser(),
 )
 async def create(evt: CommandEvent) -> Puppet:
@@ -79,6 +82,7 @@ async def create(evt: CommandEvent) -> Puppet:
 
     bridge = args.bridge
     destination = args.destination
+    email = args.email
 
     try:
         # We create the puppet with the following pk
@@ -105,6 +109,11 @@ async def create(evt: CommandEvent) -> Puppet:
             bridge_bot = evt.config[f"bridges.{bridge}.mxid"]
             puppet.bridge = bridge
             invitees.append(bridge_bot)
+
+        if email:
+            # Register the email of the puppet
+            puppet.email = email
+            await puppet.save()
 
         power_level_content = PowerLevelStateEventContent(
             users={

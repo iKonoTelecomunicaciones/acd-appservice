@@ -378,7 +378,6 @@ class Puppet(DBPuppet, BasePuppet):
         """
         next_puppet = None
         try:
-            # Get all the UserIDs of the puppets that have custom_mxid
             next_puppet: int = await cls.get_next_puppet_id()
         except Exception as e:
             cls.log.exception(e)

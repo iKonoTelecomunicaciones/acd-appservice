@@ -151,8 +151,7 @@ class Puppet:
 
     @classmethod
     async def get_next_puppet_id(cls) -> int | None:
-        """Get the next puppet id to create in the db using the custom_mxid
-        and filter with username_template"""
+        """Get the next puppet id using the custom_mxid and filtering with username_template"""
         username_template = cls.config["bridge.username_template"].format(userid="")
         q = f"""
             SELECT MAX(TO_NUMBER(SUBSTRING(custom_mxid
