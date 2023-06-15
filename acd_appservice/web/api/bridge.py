@@ -184,6 +184,14 @@ async def send_message(request: web.Request) -> web.Response:
     message = data.get("message")
     phone = phone if phone.startswith("+") else f"+{phone}"
 
+    # TODO WORKAROUND FOR NOT LINKING TO THE MENU IN A BIC
+    user_prefix = puppet.config[f"bridges.{puppet.bridge}.user_prefix"]
+    user_domain = puppet.config["homeserver.domain"]
+    portal_creator = f"@{user_prefix}_{phone.replace('+', '')}:{user_domain}"
+
+    log.debug(f"Putting portal with creator {portal_creator} in BIC rooms")
+    puppet.BIC_ROOMS.add(portal_creator)
+
     # We create a connector with the bridge
     bridge_connector = ProvisionBridge(
         session=puppet.intent.api.session, config=puppet.config, bridge=bridge
@@ -195,11 +203,6 @@ async def send_message(request: web.Request) -> web.Response:
         return web.json_response(data=response, status=status)
 
     customer_room_id = response.get("room_id")
-
-    # TODO WORKAROUND FOR NOT LINKING TO THE MENU IN A BIC
-    # This is to avoid inviting the menu to the room
-    log.debug(f"Putting portal {customer_room_id} in BIC rooms")
-    puppet.BIC_ROOMS.add(customer_room_id)
 
     if msg_type == "text":
         content = TextMessageEventContent(

@@ -136,6 +136,14 @@ async def bic(evt: CommandEvent) -> Dict:
             await evt.reply(message)
             return Util.create_response_data(detail=message, status=400, room_id=None)
 
+    # TODO WORKAROUND FOR NOT LINKING TO THE MENU IN A BIC
+    user_prefix = evt.config[f"bridges.{puppet.bridge}.user_prefix"]
+    user_domain = evt.config["homeserver.domain"]
+    portal_creator = f"@{user_prefix}_{phone}:{user_domain}"
+
+    evt.log.debug(f"Putting portal with creator {portal_creator} in BIC rooms")
+    puppet.BIC_ROOMS.add(portal_creator)
+
     # Sending a message to the customer.
     formatted_phone = phone if phone.startswith("+") else f"+{phone}"
     bridge_connector = ProvisionBridge(
@@ -188,9 +196,6 @@ async def bic(evt: CommandEvent) -> Dict:
                     "agent_displayname": agent_displayname,
                 },
             )
-
-        # TODO WORKAROUND FOR NOT LINKING TO THE MENU IN A BIC
-        puppet.BIC_ROOMS.add(portal.room_id)
 
         if message:
             await send_bic_message(

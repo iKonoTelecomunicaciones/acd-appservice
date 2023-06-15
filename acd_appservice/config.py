@@ -97,7 +97,6 @@ class Config(BaseBridgeConfig):
         copy("acd.enqueued_portals.search_pending_rooms_interval")
         copy("acd.queues.invitees")
         copy("acd.use_presence")
-        copy("acd.process_destination_on_joining")
         copy_dict("acd.access_methods")
 
         # Utils
