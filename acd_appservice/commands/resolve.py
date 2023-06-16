@@ -124,6 +124,10 @@ async def resolve(evt: CommandEvent) -> Dict:
     # When the supervisor resolves an open chat, menubot is still in the chat
     await portal.remove_menubot(reason=puppet.config["acd.resolve_chat.notice"])
 
+    # Cleaning portal destination
+    portal.destination_on_transit = None
+    await portal.save()
+
     # set chat status to resolved
     await portal.update_state(PortalState.RESOLVED)
     await send_portal_event(
