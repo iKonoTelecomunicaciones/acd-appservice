@@ -584,13 +584,14 @@ async def transfer(request: web.Request) -> web.Response:
 
     customer_room_id = data.get("customer_room_id")
     campaign_room_id = data.get("campaign_room_id")
+    enqueue_chat = data.get("enqueue_chat", "no")
 
     # Get puppet from this portal if exists
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     if not puppet:
         return web.json_response(**NO_PUPPET_IN_PORTAL)
 
-    args = ["-p", customer_room_id, "-q", campaign_room_id]
+    args = ["-p", customer_room_id, "-q", campaign_room_id, "-e", enqueue_chat]
 
     cmd_response = await get_commands().handle(
         sender=user, command="transfer", args_list=args, intent=puppet.intent, is_management=False
