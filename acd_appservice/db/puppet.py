@@ -158,8 +158,7 @@ class Puppet:
             FROM '@{username_template}#"[0-9]+#":%' FOR '#'), '999')) + 1
             AS next_mxid
             FROM puppet
-            WHERE custom_mxid ~ '@{username_template}\d+:.+'
-            AND custom_mxid IS NOT NULL;
+            WHERE custom_mxid IS NOT NULL;
         """
         result = await cls.db.fetchval(q)
 

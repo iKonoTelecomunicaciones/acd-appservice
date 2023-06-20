@@ -85,7 +85,7 @@ async def create(evt: CommandEvent) -> Puppet:
     email = args.email
 
     try:
-        # We create the puppet with the following pk
+        # We create the puppet with the next puppet id
         puppet: Puppet = await Puppet.get_by_pk(pk=next_puppet)
 
         # Initialise the intent of this puppet
@@ -113,7 +113,6 @@ async def create(evt: CommandEvent) -> Puppet:
         if email:
             # Register the email of the puppet
             puppet.email = email
-            await puppet.save()
 
         power_level_content = PowerLevelStateEventContent(
             users={

@@ -376,7 +376,7 @@ class Puppet(DBPuppet, BasePuppet):
             The next available puppet userid.
 
         """
-        next_puppet = None
+        next_puppet: int = 1
         try:
             next_puppet: int = await cls.get_next_puppet_id()
         except Exception as e:
