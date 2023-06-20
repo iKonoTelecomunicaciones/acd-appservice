@@ -402,7 +402,7 @@ class AgentManager:
                         msg = "Transfer completed successfully"
 
                     json_response = Util.create_response_data(
-                        detail="Chat distributed successfully", room_id=portal.room_id, status=200
+                        detail=msg, room_id=portal.room_id, status=200
                     )
                     break
 

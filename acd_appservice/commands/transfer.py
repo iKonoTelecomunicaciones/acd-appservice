@@ -1,4 +1,3 @@
-import asyncio
 from argparse import ArgumentParser, Namespace
 from typing import Any, Dict
 
@@ -42,10 +41,7 @@ portal_arg = CommandArg(
 
 enqueue_chat_arg = CommandArg(
     name="--enqueue-chat or -e",
-    help_text=(
-        "If the chat was not distributed, should the portal be enqueued?\n"
-        "Note: This parameter is only used when destination is a queue"
-    ),
+    help_text=("If the chat was not distributed, should the portal be enqueued?"),
     is_required=False,
     example="`yes` | `no`",
 )
@@ -86,7 +82,7 @@ def args_parser():
         required=False,
         type=str,
         choices=["yes", "no"],
-        default="yes",
+        default="no",
     )
 
     return parser
@@ -113,7 +109,7 @@ async def transfer(evt: CommandEvent) -> str:
     args: Namespace = evt.cmd_args
     customer_room_id: RoomID = args.portal
     campaign_room_id: RoomID = args.queue
-    enqueue_chat: bool = False if args.enqueue_chat == "no" else True
+    enqueue_chat: bool = True if args.enqueue_chat == "yes" else False
 
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     portal: Portal = await Portal.get_by_room_id(
@@ -158,8 +154,8 @@ async def transfer(evt: CommandEvent) -> str:
         destination=queue.room_id,
     )
 
-    if enqueue_chat:
-        current_agent: User = await portal.get_current_agent()
+    current_agent: User = await portal.get_current_agent()
+    if enqueue_chat and current_agent:
         await portal.leave_user(user_id=current_agent.mxid, reason="Transfer")
 
     response = await puppet.agent_manager.loop_agents(
