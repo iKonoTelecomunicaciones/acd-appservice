@@ -376,13 +376,13 @@ class Puppet(DBPuppet, BasePuppet):
             The next available puppet userid.
 
         """
-        next_puppet: int = 1
+        first_puppet: int = 1
         try:
             next_puppet: int = await cls.get_next_puppet_id()
         except Exception as e:
             cls.log.exception(e)
 
-        return next_puppet
+        return next_puppet if next_puppet else first_puppet
 
     @classmethod
     async def get_by_portal(cls, portal_room_id: RoomID):

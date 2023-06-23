@@ -55,7 +55,7 @@ def args_parser():
     help_args=[bridge_arg, destination_arg, email_arg],
     args_parser=args_parser(),
 )
-async def create(evt: CommandEvent) -> Puppet:
+async def create(evt: CommandEvent) -> Puppet | None:
     """We create a puppet, we create a control room, we invite the puppet,
     the bridge and the users that we want to invite
 
@@ -75,7 +75,7 @@ async def create(evt: CommandEvent) -> Puppet:
     invitees = [evt.sender.mxid]
 
     if not next_puppet:
-        evt.reply("We have not been able to create the `acd[n]`")
+        await evt.reply("We have not been able to create the `acd[n]`")
         return
 
     args: Namespace = evt.cmd_args
@@ -148,4 +148,4 @@ async def create(evt: CommandEvent) -> Puppet:
     except Exception as e:
         evt.log.exception(e)
 
-    return puppet
+    return puppet if puppet else None
