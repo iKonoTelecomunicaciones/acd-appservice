@@ -55,7 +55,7 @@ def args_parser():
     help_args=[bridge_arg, destination_arg, email_arg],
     args_parser=args_parser(),
 )
-async def create(evt: CommandEvent) -> Puppet | None:
+async def create(evt: CommandEvent) -> Puppet:
     """We create a puppet, we create a control room, we invite the puppet,
     the bridge and the users that we want to invite
 
@@ -148,4 +148,4 @@ async def create(evt: CommandEvent) -> Puppet | None:
     except Exception as e:
         evt.log.exception(e)
 
-    return puppet if puppet else None
+    return puppet
