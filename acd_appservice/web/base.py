@@ -65,6 +65,7 @@ async def _resolve_user_identifier(request: web.Request) -> User | None:
         raise web.HTTPUnauthorized(
             text='{"error": "You must specify the mxid of the user making the request in headers"}'
         )
+
     user: User = await User.get_by_mxid(user_request)
 
     if not user:

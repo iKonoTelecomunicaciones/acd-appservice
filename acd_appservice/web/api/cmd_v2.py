@@ -4,10 +4,16 @@ from aiohttp import web
 
 from acd_appservice.portal import Portal
 from acd_appservice.user import User
+from acd_appservice.util.util import Util
 
 from ...puppet import Puppet
 from ..base import _resolve_user_identifier, get_commands, routes
-from ..error_responses import NO_PUPPET_IN_PORTAL, NOT_DATA, REQUIRED_VARIABLES
+from ..error_responses import (
+    NO_PUPPET_IN_PORTAL,
+    NOT_DATA,
+    PORTAL_DOESNOT_EXIST,
+    REQUIRED_VARIABLES,
+)
 
 
 @routes.post("/v2/cmd/transfer")
@@ -38,11 +44,8 @@ async def transfer(request: web.Request) -> web.Response:
                         customer_room_id:
                             description: "The room that will be transferred"
                             type: string
-                        campaign_room_id:
-                            description: "Target queue to execute the transfer"
-                            type: string
-                        target_agent_id:
-                            description: "Target user that will be joined to customer room"
+                        destination:
+                            description: "Target queue or the user to execute the transfer"
                             type: string
                         force:
                             description: "Do you want to force the transfer,
@@ -50,8 +53,7 @@ async def transfer(request: web.Request) -> web.Response:
                             type: string
                     example:
                         customer_room_id: "!duOWDQQCshKjQvbyoh:foo.com"
-                        campaign_room_id: "!TXMsaIzbeURlKPeCxJ:foo.com"
-                        target_agent_id: "@agente1:foo.com"
+                        destination: "!TXMsaIzbeURlKPeCxJ:foo.com"
                         force: "yes"
 
     responses:
@@ -65,7 +67,7 @@ async def transfer(request: web.Request) -> web.Response:
             $ref: '#/components/responses/NotExist'
         '409':
             $ref: '#/components/responses/NoPuppetInPortal'
-        '423':
+        '422':
             $ref: '#/components/responses/PortalIsLocked'
     """
     user = await _resolve_user_identifier(request=request)
@@ -78,6 +80,9 @@ async def transfer(request: web.Request) -> web.Response:
     if not data.get("customer_room_id"):
         return web.json_response(**REQUIRED_VARIABLES)
 
+    if not Util.is_room_alias(data.get("customer_room_id")):
+        return web.json_response(**PORTAL_DOESNOT_EXIST)
+
     portal: Portal = await Portal.get_by_room_id(room_id=data.get("customer_room_id"))
     current_agent: User = await portal.get_current_agent()
 
@@ -89,18 +94,9 @@ async def transfer(request: web.Request) -> web.Response:
             }
         )
 
-    if data.get("campaign_room_id"):
-        if data.get("target_agent_id"):
-            return web.json_response(
-                {
-                    "data": {
-                        "error": "You can not transfer a room to a queue and an agent at the same time"
-                    },
-                    "status": 400,
-                }
-            )
+    if Util.is_room_id(data.get("destination")):
         customer_room_id = data.get("customer_room_id")
-        campaign_room_id = data.get("campaign_room_id")
+        campaign_room_id = data.get("destination")
 
         # Get puppet from this portal if exists
         puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
@@ -119,9 +115,9 @@ async def transfer(request: web.Request) -> web.Response:
 
         return web.json_response(**cmd_response)
 
-    elif data.get("target_agent_id"):
+    elif Util.is_user_id(data.get("destination")):
         customer_room_id = data.get("customer_room_id")
-        target_agent_id = data.get("target_agent_id")
+        target_agent_id = data.get("destination")
         force = data.get("force") if data.get("force") else "no"
 
         # Get puppet from this portal if exists
