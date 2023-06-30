@@ -35,7 +35,7 @@ async def transfer(request: web.Request) -> web.Response:
 
     requestBody:
         required: false
-        description: A json with `user_email` or `customer_room_id`, `target_agent_id`, `force`
+        description: A json with `destination` `customer_room_id`, `force`
         content:
             application/json:
                 schema:
@@ -53,7 +53,7 @@ async def transfer(request: web.Request) -> web.Response:
                             type: string
                     example:
                         customer_room_id: "!duOWDQQCshKjQvbyoh:foo.com"
-                        destination: "!TXMsaIzbeURlKPeCxJ:foo.com"
+                        destination: "!TXMsaIzbeURlKPeCxJ:foo.com | @user:foo.com"
                         force: "yes"
 
     responses:
@@ -76,14 +76,18 @@ async def transfer(request: web.Request) -> web.Response:
         return web.json_response(**NOT_DATA)
 
     data: Dict = await request.json()
+    customer_room_id = data.get("customer_room_id")
 
-    if not data.get("customer_room_id"):
+    if not customer_room_id:
         return web.json_response(**REQUIRED_VARIABLES)
 
-    if not Util.is_room_alias(data.get("customer_room_id")):
+    if not Util.is_room_id(customer_room_id):
         return web.json_response(**PORTAL_DOESNOT_EXIST)
 
-    portal: Portal = await Portal.get_by_room_id(room_id=data.get("customer_room_id"))
+    if not data.get("destination"):
+        return web.json_response(**REQUIRED_VARIABLES)
+
+    portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id)
     current_agent: User = await portal.get_current_agent()
 
     if not current_agent:
@@ -94,14 +98,13 @@ async def transfer(request: web.Request) -> web.Response:
             }
         )
 
-    if Util.is_room_id(data.get("destination")):
-        customer_room_id = data.get("customer_room_id")
-        campaign_room_id = data.get("destination")
+    # Get puppet from this portal if exists
+    puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
+    if not puppet:
+        return web.json_response(**NO_PUPPET_IN_PORTAL)
 
-        # Get puppet from this portal if exists
-        puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
-        if not puppet:
-            return web.json_response(**NO_PUPPET_IN_PORTAL)
+    if Util.is_room_id(data.get("destination")):
+        campaign_room_id = data.get("destination")
 
         args = ["-p", customer_room_id, "-q", campaign_room_id]
 
@@ -116,14 +119,8 @@ async def transfer(request: web.Request) -> web.Response:
         return web.json_response(**cmd_response)
 
     elif Util.is_user_id(data.get("destination")):
-        customer_room_id = data.get("customer_room_id")
         target_agent_id = data.get("destination")
         force = data.get("force") if data.get("force") else "no"
-
-        # Get puppet from this portal if exists
-        puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
-        if not puppet:
-            return web.json_response(**NO_PUPPET_IN_PORTAL)
 
         args = ["-p", customer_room_id, "-a", target_agent_id, "-f", force]
 
