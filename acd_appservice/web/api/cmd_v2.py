@@ -1,3 +1,4 @@
+import logging
 from typing import Dict
 
 from aiohttp import web
@@ -14,6 +15,8 @@ from ..error_responses import (
     PORTAL_DOESNOT_EXIST,
     REQUIRED_VARIABLES,
 )
+
+logger = logging.getLogger()
 
 
 @routes.post("/v2/cmd/transfer")
@@ -77,25 +80,21 @@ async def transfer(request: web.Request) -> web.Response:
 
     data: Dict = await request.json()
     customer_room_id = data.get("customer_room_id")
+    destination = data.get("destination")
 
-    if not customer_room_id:
+    if not customer_room_id or not destination:
         return web.json_response(**REQUIRED_VARIABLES)
 
     if not Util.is_room_id(customer_room_id):
         return web.json_response(**PORTAL_DOESNOT_EXIST)
 
-    if not data.get("destination"):
-        return web.json_response(**REQUIRED_VARIABLES)
-
     portal: Portal = await Portal.get_by_room_id(room_id=customer_room_id)
     current_agent: User = await portal.get_current_agent()
 
     if not current_agent:
+        msg = "There is no agent in this room"
         return web.json_response(
-            {
-                "data": {"error": "There is no agent in this room."},
-                "status": 400,
-            }
+            **Util.create_response_data(room_id=customer_room_id, detail=msg, status=400)
         )
 
     # Get puppet from this portal if exists
@@ -103,10 +102,8 @@ async def transfer(request: web.Request) -> web.Response:
     if not puppet:
         return web.json_response(**NO_PUPPET_IN_PORTAL)
 
-    if Util.is_room_id(data.get("destination")):
-        campaign_room_id = data.get("destination")
-
-        args = ["-p", customer_room_id, "-q", campaign_room_id]
+    if Util.is_room_id(destination):
+        args = ["-p", customer_room_id, "-q", destination]
 
         cmd_response = await get_commands().handle(
             sender=user,
@@ -118,11 +115,10 @@ async def transfer(request: web.Request) -> web.Response:
 
         return web.json_response(**cmd_response)
 
-    elif Util.is_user_id(data.get("destination")):
-        target_agent_id = data.get("destination")
+    elif Util.is_user_id(destination):
         force = data.get("force") if data.get("force") else "no"
 
-        args = ["-p", customer_room_id, "-a", target_agent_id, "-f", force]
+        args = ["-p", customer_room_id, "-a", destination, "-f", force]
 
         command_response = await get_commands().handle(
             sender=user,
@@ -132,6 +128,3 @@ async def transfer(request: web.Request) -> web.Response:
             is_management=False,
         )
         return web.json_response(**command_response)
-
-    else:
-        return web.json_response(**REQUIRED_VARIABLES)
