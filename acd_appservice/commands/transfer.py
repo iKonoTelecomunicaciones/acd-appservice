@@ -128,7 +128,7 @@ async def transfer(evt: CommandEvent) -> str:
     else:
         transfer_author = evt.sender
 
-    queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id)
+    queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id, create=False)
 
     await portal.update_state(PortalState.ON_DISTRIBUTION)
     await send_portal_event(

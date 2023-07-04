@@ -18,4 +18,5 @@ from .cmd import (
     transfer,
     transfer_user,
 )
+from .cmd_v2 import transfer
 from .misc import get_control_room, get_control_rooms
