@@ -232,7 +232,7 @@ class AgentManager:
             )
 
             target_room_id = queue.room_id if queue else self.config["acd.available_agents_room"]
-            queue: Queue = await Queue.get_by_room_id(room_id=target_room_id)
+            queue: Queue = await Queue.get_by_room_id(room_id=target_room_id, create=False)
 
             return await self.loop_agents(
                 portal=portal,
@@ -832,12 +832,12 @@ class AgentManager:
 
         if offline_menu_option == "1":
             # user selected transfer to another agent in same campaign
-            selected_queue = await Queue.get_by_room_id(portal.selected_option)
+            selected_queue = await Queue.get_by_room_id(portal.selected_option, create=False)
 
             if not selected_queue:
                 # this can happen if the database is deleted
                 selected_queue = await Queue.get_by_room_id(
-                    self.config["acd.available_agents_room"]
+                    self.config["acd.available_agents_room"], create=False
                 )
 
             # check if that campaign has online agents

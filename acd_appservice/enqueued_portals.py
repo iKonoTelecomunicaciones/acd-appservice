@@ -64,7 +64,15 @@ class EnqueuedPortals:
                 if grouped_enqueued_portals:
                     are_available_agents = False
                     for group in grouped_enqueued_portals:
-                        queue: Queue = await Queue.get_by_room_id(group[0].selected_option)
+                        queue: Queue = await Queue.get_by_room_id(
+                            group[0].selected_option, create=False
+                        )
+
+                        if not queue:
+                            self.log.warning(f"Queue [{group[0].selected_option}] does not exist")
+                            self.log.warning("Removing portals from enqueued rooms")
+                            await self.remove_enqueued_portals(group)
+                            return
 
                         self.log.info(
                             f"Enqueued rooms in [{queue.name} - {queue.room_id}]: {len(group)}"
@@ -187,3 +195,15 @@ class EnqueuedPortals:
             ]
 
         return None
+
+    async def remove_enqueued_portals(self, enqueued_portals: List[Portal]):
+        """This function removes enqueued portals from database.
+
+        Parameters
+        ----------
+        enqueued_portals : List[Portal]
+        """
+        for portal in enqueued_portals:
+            await portal.update_state(portal.prev_state)
+            portal.selected_option = None
+            await portal.save()
