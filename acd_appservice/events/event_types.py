@@ -3,6 +3,8 @@ from mautrix.types import SerializableEnum
 
 class ACDEventTypes(SerializableEnum):
     PORTAL = "PORTAL"
+    MEMBER = "MEMBER"
+    MEMBERSHIP = "MEMBERSHIP"
 
 
 class ACDPortalEvents(SerializableEnum):
@@ -19,3 +21,14 @@ class ACDPortalEvents(SerializableEnum):
     AssignFailed = "AssignFailed"
     QueueEmpty = "QueueEmpty"
     AvailableAgents = "AvailableAgents"
+
+
+class ACDMemberEvents(SerializableEnum):
+    MemberLogin = "MemberLogin"
+    MemberLogout = "MemberLogout"
+    MemberPause = "MemberPause"
+
+
+class ACDMembershipEvents(SerializableEnum):
+    MemberAdd = "MemberAdd"
+    MemberRemove = "MemberRemove"

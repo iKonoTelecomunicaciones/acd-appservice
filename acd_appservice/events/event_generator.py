@@ -4,7 +4,9 @@ from typing import TYPE_CHECKING
 
 from ..queue import Queue
 from ..user import User
-from .event_types import ACDEventTypes, ACDPortalEvents
+from .event_types import ACDEventTypes, ACDMemberEvents, ACDMembershipEvents, ACDPortalEvents
+from .member_events import MemberLoginEvent, MemberLogoutEvent, MemberPauseEvent
+from .membership_events import MemberAddedEvent, MemberRemovedEvent
 from .portal_events import (
     AssignEvent,
     AssignFailedEvent,
@@ -193,6 +195,59 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
             queue_room_id=kwargs.get("queue_room_id"),
+        )
+
+    event.send()
+
+
+async def send_member_event(event_type: ACDMemberEvents, **kwargs):
+    if event_type == ACDMemberEvents.MemberLogin:
+        event = MemberLoginEvent(
+            event_type=ACDEventTypes.MEMBER,
+            event=ACDMemberEvents.MemberLogin,
+            sender=kwargs.get("sender"),
+            queue=kwargs.get("queue"),
+            member=kwargs.get("member"),
+            penalty=kwargs.get("penalty"),
+        )
+    elif event_type == ACDMemberEvents.MemberLogout:
+        event = MemberLogoutEvent(
+            event_type=ACDEventTypes.MEMBER,
+            event=ACDMemberEvents.MemberLogout,
+            sender=kwargs.get("sender"),
+            queue=kwargs.get("queue"),
+            member=kwargs.get("member"),
+        )
+    elif event_type == ACDMemberEvents.MemberPause:
+        event = MemberPauseEvent(
+            event_type=ACDEventTypes.MEMBER,
+            event=ACDMemberEvents.MemberPause,
+            sender=kwargs.get("sender"),
+            queue=kwargs.get("queue"),
+            member=kwargs.get("member"),
+            paused=kwargs.get("paused"),
+            pause_reason=kwargs.get("pause_reason"),
+        )
+
+    event.send()
+
+
+async def send_membership_event(event_type: ACDMembershipEvents, **kwargs):
+    if event_type == ACDMembershipEvents.MemberAdd:
+        event = MemberAddedEvent(
+            event_type=ACDEventTypes.MEMBERSHIP,
+            event=ACDMembershipEvents.MemberAdd,
+            queue=kwargs.get("queue"),
+            member=kwargs.get("member"),
+            penalty=kwargs.get("penalty"),
+        )
+    elif event_type == ACDMembershipEvents.MemberRemove:
+        event = MemberRemovedEvent(
+            event_type=ACDEventTypes.MEMBERSHIP,
+            event=ACDMembershipEvents.MemberRemove,
+            queue=kwargs.get("queue"),
+            member=kwargs.get("member"),
+            penalty=kwargs.get("penalty"),
         )
 
     event.send()
