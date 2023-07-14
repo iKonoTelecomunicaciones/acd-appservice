@@ -26,7 +26,7 @@ lint:
       - isort --check --diff acd_appservice/
 
       - echo "** Ejecutando los test de la API **"
-      - pytest --reruns 5 -vv acd_appservice
+      - pytest --reruns 5 -vv acd_appservice --cache-clear
 
 build-push-image:
   stage: build

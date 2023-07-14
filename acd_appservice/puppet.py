@@ -376,33 +376,13 @@ class Puppet(DBPuppet, BasePuppet):
             The next available puppet userid.
 
         """
-        next_puppet = None
+        first_puppet: int = 1
         try:
-            # Get all the UserIDs of the puppets that have custom_mxid
-            all_puppets: list[UserID] = await cls.get_all_puppets()
-            if len(all_puppets) > 0:
-                # Get number of each puppet and sort them in a list
-                all_puppets_sorted = list(
-                    map(lambda x: int(re.match(cls.config["acd.acd_regex"], x)[1]), all_puppets)
-                )
-                all_puppets_sorted.sort()
-
-                for i in range(0, len(all_puppets_sorted)):
-                    if i < len(all_puppets_sorted) - 1:
-                        if (all_puppets_sorted[i] + 1) != (all_puppets_sorted[i + 1]):
-                            next_puppet = all_puppets_sorted[i] + 1
-                            break
-
-                if i == len(all_puppets_sorted) - 1:
-                    next_puppet = all_puppets_sorted[i] + 1
-
-            else:
-                next_puppet = 1
-
+            next_puppet: int = await cls.get_next_puppet_id()
         except Exception as e:
             cls.log.exception(e)
 
-        return next_puppet
+        return next_puppet if next_puppet else first_puppet
 
     @classmethod
     async def get_by_portal(cls, portal_room_id: RoomID):
