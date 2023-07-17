@@ -396,8 +396,13 @@ class AgentManager:
                     if not transfer:
                         self.CURRENT_AGENT[queue.room_id] = agent_id
 
+                    msg = "Chat distributed successfully"
+
+                    if transfer:
+                        msg = "Transfer completed successfully"
+
                     json_response = Util.create_response_data(
-                        detail="Chat distributed successfully", room_id=portal.room_id, status=200
+                        detail=msg, room_id=portal.room_id, status=200
                     )
                     break
 
@@ -411,7 +416,7 @@ class AgentManager:
                 else:
                     self.log.debug("THERE ARE ONLINE AGENTS BUT ERROR ON INVITE")
 
-                if transfer_author:
+                if transfer_author and not put_enqueued_portal:
                     msg = self.config["acd.no_agents_for_transfer"]
                     status = 404
                     await portal.send_notice(text=msg)
@@ -423,24 +428,24 @@ class AgentManager:
                         destination=queue.room_id,
                     )
                 else:
-                    msg = "The chat could not be distributed"
-                    status = 202
+                    msg = "The chat could not be distributed, there are no agents available"
+                    status = 409
                     await self.show_no_agents_message(portal=portal, queue=queue)
-                    if put_enqueued_portal:
-                        msg = f"{msg}, however, it was enqueued"
-                        self.log.debug(
-                            f"Portal [{portal.room_id}] state has been changed to ENQUEUED"
-                        )
 
-                        await portal.update_state(state=PortalState.ENQUEUED)
-                        await send_portal_event(
-                            portal=portal,
-                            event_type=ACDPortalEvents.QueueEmpty,
-                            queue_room_id=queue.room_id,
-                        )
+                if put_enqueued_portal:
+                    msg = f"There are no agents available, however, the chat was enqueued"
+                    status = 202
 
                     portal.selected_option = queue.room_id
                     await portal.update()
+
+                    self.log.debug(f"Portal [{portal.room_id}] state has been changed to ENQUEUED")
+                    await portal.update_state(state=PortalState.ENQUEUED)
+                    await send_portal_event(
+                        portal=portal,
+                        event_type=ACDPortalEvents.QueueEmpty,
+                        queue_room_id=queue.room_id,
+                    )
 
                 portal.unlock(transfer)
                 json_response = Util.create_response_data(

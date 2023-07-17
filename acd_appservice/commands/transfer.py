@@ -1,4 +1,3 @@
-import asyncio
 from argparse import ArgumentParser, Namespace
 from typing import Any, Dict
 
@@ -40,6 +39,13 @@ portal_arg = CommandArg(
     example="`!foo:foo.com`",
 )
 
+enqueue_chat_arg = CommandArg(
+    name="--enqueue-chat or -e",
+    help_text=("If the chat was not distributed, should the portal be enqueued?"),
+    is_required=False,
+    example="`yes` | `no`",
+)
+
 
 def args_parser():
     parser = ArgumentParser(description="TRANSFER", exit_on_error=False)
@@ -69,6 +75,15 @@ def args_parser():
         choices=["yes", "no"],
         default="no",
     )
+    parser.add_argument(
+        "--enqueue-chat",
+        "-e",
+        dest="enqueue_chat",
+        required=False,
+        type=str,
+        choices=["yes", "no"],
+        default="no",
+    )
 
     return parser
 
@@ -76,7 +91,7 @@ def args_parser():
 @command_handler(
     name="transfer",
     help_text=("Command that transfers a client to an campaign_room."),
-    help_args=[portal_arg, queue_arg],
+    help_args=[portal_arg, queue_arg, enqueue_chat_arg],
     args_parser=args_parser(),
 )
 async def transfer(evt: CommandEvent) -> str:
@@ -94,6 +109,7 @@ async def transfer(evt: CommandEvent) -> str:
     args: Namespace = evt.cmd_args
     customer_room_id: RoomID = args.portal
     campaign_room_id: RoomID = args.queue
+    enqueue_chat: bool = True if args.enqueue_chat == "yes" else False
 
     puppet: Puppet = await Puppet.get_by_portal(portal_room_id=customer_room_id)
     portal: Portal = await Portal.get_by_room_id(
@@ -138,19 +154,19 @@ async def transfer(evt: CommandEvent) -> str:
         destination=queue.room_id,
     )
 
-    # Creating a task that will be executed in the background.
-    asyncio.create_task(
-        puppet.agent_manager.loop_agents(
-            portal=portal,
-            queue=queue,
-            agent_id=puppet.agent_manager.CURRENT_AGENT.get(campaign_room_id),
-            transfer_author=transfer_author,
-        )
+    current_agent: User = await portal.get_current_agent()
+    if enqueue_chat and current_agent:
+        await portal.leave_user(user_id=current_agent.mxid, reason="Transfer")
+
+    response = await puppet.agent_manager.loop_agents(
+        portal=portal,
+        queue=queue,
+        agent_id=puppet.agent_manager.CURRENT_AGENT.get(campaign_room_id),
+        transfer_author=transfer_author,
+        put_enqueued_portal=enqueue_chat,
     )
 
-    return Util.create_response_data(
-        detail="Transfer action in process", room_id=evt.room_id, status=200
-    )
+    return response
 
 
 @command_handler(
