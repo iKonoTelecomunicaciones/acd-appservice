@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from typing import Optional
+
 from attr import dataclass, ib
 from mautrix.types import EventID, RoomID, UserID
 
+from ..db.portal import PortalState
 from .base_event import BaseEvent
 
 
@@ -11,6 +14,8 @@ class PortalEvent(BaseEvent):
     room_id: RoomID = ib(factory=RoomID)
     acd: UserID = ib(factory=UserID)
     customer_mxid: UserID = ib(factory=UserID)
+    state: PortalState = ib(default=None)
+    prev_state: Optional[PortalState] = ib(default=None)
 
 
 @dataclass
@@ -19,6 +24,8 @@ class CreateEvent(BaseEvent):
     acd: UserID = ib(factory=UserID)
     customer: dict = ib(factory=dict)
     bridge: str = ib(factory=str)
+    state: PortalState = ib(default=None)
+    prev_state: Optional[PortalState] = ib(default=None)
 
 
 @dataclass

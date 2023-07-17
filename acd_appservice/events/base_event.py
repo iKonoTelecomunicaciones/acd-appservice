@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
 from datetime import datetime
-from typing import Optional
 
 from aiohttp import ClientSession
 from attr import dataclass, ib
@@ -11,7 +12,7 @@ from mautrix.types import SerializableAttrs, UserID
 from mautrix.util.logging import TraceLogger
 
 from ..db.portal import PortalState
-from .event_types import ACDEventTypes, ACDPortalEvents
+from .event_types import ACDEventTypes, ACDMemberEvents, ACDMembershipEvents, ACDPortalEvents
 
 log: TraceLogger = logging.getLogger("report.event")
 
@@ -19,10 +20,8 @@ log: TraceLogger = logging.getLogger("report.event")
 @dataclass
 class BaseEvent(SerializableAttrs):
     event_type: ACDEventTypes = ib(default=None)
-    event: ACDPortalEvents = ib(default=None)
+    event: ACDPortalEvents | ACDMemberEvents | ACDMembershipEvents = ib(default=None)
     timestamp: float = ib(default=datetime.utcnow().timestamp())
-    state: PortalState = ib(default=None)
-    prev_state: Optional[PortalState] = ib(default=None)
     sender: UserID = ib(factory=UserID)
 
     def send(self):
@@ -31,7 +30,7 @@ class BaseEvent(SerializableAttrs):
     async def http_send(self):
         file = open("/data/room_events.txt", "a")
         file.write(f"{json.dumps(self.serialize())}\n\n")
-        if self.state == PortalState.RESOLVED:
+        if self.event_type == ACDEventTypes.PORTAL and self.state == PortalState.RESOLVED:
             file.write(f"################# ------- New conversation ------- #################\n")
         file.close()
         log.error(f"Sending event {self.serialize()}")

@@ -3,6 +3,7 @@ from typing import Dict
 
 from mautrix.types import UserID
 
+from ..events import ACDMemberEvents, send_member_event
 from ..queue import Queue
 from ..queue_membership import QueueMembership, QueueMembershipState
 from ..user import User
@@ -43,7 +44,9 @@ def args_parser():
         choices=["login", "logout", "pause", "unpause"],
     )
     parser.add_argument("--agent", "-g", dest="agent", type=str, required=False)
-    parser.add_argument("--pause_reason", "-p", dest="pause_reason", type=str, required=False)
+    parser.add_argument(
+        "--pause_reason", "-p", dest="pause_reason", type=str, required=False, default=None
+    )
 
     return parser
 
@@ -140,6 +143,30 @@ async def member(evt: CommandEvent) -> Dict:
             membership.pause_reason = None
         await membership.save()
 
+        if action == "login":
+            await send_member_event(
+                event_type=ACDMemberEvents.MemberLogin,
+                sender=evt.sender.mxid,
+                queue=evt.room_id,
+                member=agent_id,
+                penalty=None,
+            )
+        else:
+            await send_member_event(
+                event_type=ACDMemberEvents.MemberLogout,
+                sender=evt.sender.mxid,
+                queue=evt.room_id,
+                member=agent_id,
+            )
+            if membership.paused:
+                await send_member_event(
+                    event_type=ACDMemberEvents.MemberPause,
+                    sender=evt.sender.mxid,
+                    queue=evt.room_id,
+                    member=agent_id,
+                    paused=False,
+                )
+
     elif action in ["pause", "unpause"]:
         # An offline agent is unable to use pause or unpause operations
         if membership.state == QueueMembershipState.OFFLINE:
@@ -173,6 +200,15 @@ async def member(evt: CommandEvent) -> Dict:
             membership.pause_reason = pause_reason
 
         await membership.save()
+
+        await send_member_event(
+            event_type=ACDMemberEvents.MemberPause,
+            sender=evt.sender.mxid,
+            queue=evt.room_id,
+            member=agent_id,
+            paused=state,
+            pause_reason=pause_reason,
+        )
 
     msg = f"Agent operation `{action}` was successful, {agent_id} state is `{action}`"
     await evt.reply(text=msg)

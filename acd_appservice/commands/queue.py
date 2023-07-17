@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 from mautrix.types import RoomDirectoryVisibility, RoomID, UserID
 from slugify import slugify
 
+from ..events import ACDMembershipEvents, send_membership_event
 from ..queue import Queue
 from ..queue_membership import QueueMembership
 from ..user import User
@@ -330,8 +331,16 @@ async def add_remove(
     try:
         if action == "add":
             await queue.add_member(member)
+            await send_membership_event(
+                event_type=ACDMembershipEvents.MemberAdd, queue=queue, member=member, penalty=None
+            )
         elif action == "remove":
             await queue.remove_member(member)
+            await send_membership_event(
+                event_type=ACDMembershipEvents.MemberRemove,
+                queue=queue,
+                member=member,
+            )
     except Exception as e:
         evt.log.error(e)
         await evt.reply(str(e))
