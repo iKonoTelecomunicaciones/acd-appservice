@@ -808,7 +808,7 @@ async def queue(request: web.Request) -> web.Response:
 
     data: Dict = await request.json()
 
-    queue: Queue = await Queue.get_by_room_id(data.get("room_id"))
+    queue: Queue = await Queue.get_by_room_id(data.get("room_id"), create=False)
 
     if not queue:
         return web.json_response(**QUEUE_DOESNOT_EXIST)
