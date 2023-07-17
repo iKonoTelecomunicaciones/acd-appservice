@@ -30,7 +30,7 @@ class BaseEvent(SerializableAttrs):
     async def http_send(self):
         file = open("/data/room_events.txt", "a")
         file.write(f"{json.dumps(self.serialize())}\n\n")
-        if self.event == ACDEventTypes.PORTAL and self.state == PortalState.RESOLVED:
+        if self.event_type == ACDEventTypes.PORTAL and self.state == PortalState.RESOLVED:
             file.write(f"################# ------- New conversation ------- #################\n")
         file.close()
         log.error(f"Sending event {self.serialize()}")

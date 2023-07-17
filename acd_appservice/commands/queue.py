@@ -340,7 +340,6 @@ async def add_remove(
                 event_type=ACDMembershipEvents.MemberRemove,
                 queue=queue,
                 member=member,
-                penalty=None,
             )
     except Exception as e:
         evt.log.error(e)

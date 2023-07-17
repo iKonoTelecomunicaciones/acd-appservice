@@ -247,7 +247,6 @@ async def send_membership_event(event_type: ACDMembershipEvents, **kwargs):
             event=ACDMembershipEvents.MemberRemove,
             queue=kwargs.get("queue"),
             member=kwargs.get("member"),
-            penalty=kwargs.get("penalty"),
         )
 
     event.send()

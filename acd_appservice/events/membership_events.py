@@ -16,5 +16,4 @@ class MemberAddedEvent(BaseEvent):
 @dataclass
 class MemberRemovedEvent(BaseEvent):
     queue: RoomID = ib(factory=RoomID)
-    penalty: int = ib(factory=int)
     member: UserID = ib(factory=UserID)
