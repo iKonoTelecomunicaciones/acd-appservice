@@ -539,7 +539,7 @@ async def transfer(request: web.Request) -> web.Response:
 
     requestBody:
         required: false
-        description: A json with `user_email`
+        description: A json with `customer_room_id`, `campaign_room_id` and `enqueue_chat`
         content:
             application/json:
                 schema:
@@ -551,9 +551,13 @@ async def transfer(request: web.Request) -> web.Response:
                         campaign_room_id:
                             description: "Target queue to execute the transfer"
                             type: string
+                        enqueue_chat:
+                            description: "If there are no agents available, enqueue the chat"
+                            type: string
                     example:
                         customer_room_id: "!duOWDQQCshKjQvbyoh:foo.com"
                         campaign_room_id: "!TXMsaIzbeURlKPeCxJ:foo.com"
+                        enqueue_chat: "no | yes"
 
     responses:
         '200':

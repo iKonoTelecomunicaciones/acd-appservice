@@ -38,7 +38,7 @@ async def transfer(request: web.Request) -> web.Response:
 
     requestBody:
         required: false
-        description: A json with `destination` `customer_room_id`, `force`
+        description: A json with `destination` `customer_room_id`, `force`, `enqueue_chat`
         content:
             application/json:
                 schema:
@@ -52,12 +52,17 @@ async def transfer(request: web.Request) -> web.Response:
                             type: string
                         force:
                             description: "Do you want to force the transfer,
-                                          no matter that the agent will be logged out?"
+                            no matter that the agent will be logged out?"
+                            type: string
+                        enqueue_chat:
+                            description: "If destination is a queue
+                            and there are no available agents, do you want to enqueue the chat?"
                             type: string
                     example:
                         customer_room_id: "!duOWDQQCshKjQvbyoh:foo.com"
                         destination: "!TXMsaIzbeURlKPeCxJ:foo.com | @user:foo.com"
                         force: "yes"
+                        enqueue_chat: "no | yes"
 
     responses:
         '200':
@@ -103,7 +108,8 @@ async def transfer(request: web.Request) -> web.Response:
         return web.json_response(**NO_PUPPET_IN_PORTAL)
 
     if Util.is_room_id(destination):
-        args = ["-p", customer_room_id, "-q", destination]
+        enqueue_chat = data.get("enqueue_chat") if data.get("enqueue_chat") else "no"
+        args = ["-p", customer_room_id, "-q", destination, "-e", enqueue_chat]
 
         cmd_response = await get_commands().handle(
             sender=user,
