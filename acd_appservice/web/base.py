@@ -8,7 +8,6 @@ from ..config import Config
 from ..puppet import Puppet
 from ..user import User
 from ..util import Util
-from .error_responses import INVALID_EMAIL, UNABLE_TO_FIND_PUPPET
 
 _config: Config | None = None
 _util: Util | None = None
@@ -104,13 +103,17 @@ async def _resolve_puppet_identifier(request: web.Request) -> Puppet | None:
         if _util.is_email(email=puppet_email):
             puppet = await Puppet.get_by_email(puppet_email)
         else:
-            raise Exception(INVALID_EMAIL)
+            raise web.HTTPNotAcceptable(
+                body='{"detail": "Not a valid email"}', content_type="application/json"
+            )
 
     puppet_mxid = request.rel_url.query.get("user_id") or data.get("user_id")
     if puppet_mxid:
         puppet = await Puppet.get_by_custom_mxid(puppet_mxid)
 
     if not puppet:
-        raise Exception(UNABLE_TO_FIND_PUPPET)
+        raise web.HTTPConflict(
+            body='{"detail": "Unable to find puppet"}', content_type="application/json"
+        )
 
     return puppet
