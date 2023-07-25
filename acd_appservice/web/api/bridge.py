@@ -684,7 +684,11 @@ async def gupshup_register(request: web.Request) -> web.Response:
         "app_id": gupshup_data.get("app_id"),
     }
 
-    puppet = await _resolve_puppet_identifier(request=request)
+    try:
+        puppet = await _resolve_puppet_identifier(request=request)
+    except Exception as error:
+        log.error(f"Error: {error}")
+        return web.json_response(**error.args[0])
 
     bridge_connector = ProvisionBridge(
         session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
