@@ -16,10 +16,12 @@ RUN apk add --virtual .build-deps python3-dev libffi-dev build-base \
  && apk del .build-deps
 
 COPY . /opt/acd-appservice
-RUN apk add --no-cache git && pip3 install .[all] && apk del git \
-  # This doesn't make the image smaller, but it's needed so that the `version` command works properly
- && cp acd_appservice/example-config.yaml . && cp acd_appservice/web/api/components.yaml . \
- && rm -rf acd_appservice .git build
+RUN apk add --no-cache git \
+      && pip3 install .[all] \
+      && apk del git \
+      # This doesn't make the image smaller, but it's needed so that the `version` command works properly
+      && cp acd_appservice/example-config.yaml . \
+      && rm -rf acd_appservice .git build
 VOLUME /data
 
 CMD ["/opt/acd-appservice/docker-run.sh"]

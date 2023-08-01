@@ -31,10 +31,14 @@ class ProvisioningAPI:
         swagger = SwaggerDocs(
             self.app,
             info=SwaggerInfo(
-                title="ACD AppService documentation",
+                title="ACD AppService API",
+                description=(
+                    "Documentation for the ACD application service of [iKonoChat](https://ikono.co/ikono-chat) "
+                    "project by **iKono Telecomunicaciones S.A.S.**"
+                ),
                 version=version,
             ),
-            components=f"/data/components.yaml",
+            components="acd_appservice/web/api/components.yaml",
             swagger_ui_settings=SwaggerUiSettings(
                 path="/docs",
                 layout="BaseLayout",
