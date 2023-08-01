@@ -17,15 +17,18 @@ if [ ! -f /data/registration.yaml ]; then
 	exit
 fi
 
-# if [ ! -f /data/components.yaml ]; then
-# 	mv components.yaml /data
-# 	echo "Didn't find a components file."
-# 	echo "Moved components file to /data/components.yaml"
-# fi
-
 if [ "$1" = "dev" ]; then
+	# Install requirements for development
 	pip install -r requirements-dev.txt
-    watchmedo auto-restart --recursive --pattern="*.py" --directory="." /opt/acd-appservice/docker-run.sh
+	# Configure git to use the safe directory
+	if ! [ $(git config --global --get safe.directory) ]; then
+		echo "Setting safe.directory config to /opt/acd-appservice"
+		git config --global --add safe.directory /opt/acd-appservice
+	fi
+	# Getting the version from git repository
+	python3 setup.py --version
+	# Run the app
+  watchmedo auto-restart --recursive --pattern="*.py" --directory="." /opt/acd-appservice/docker-run.sh
 fi
 
 exec python3 -m acd_appservice -c /data/config.yaml

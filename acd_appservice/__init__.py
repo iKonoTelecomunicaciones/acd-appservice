@@ -1,3 +1,2 @@
-__version__ = "0.2.7.5"
-
-__all__ = ["__version__"]
+# Generated from setup.py
+__version__ = '0.2.7.4'

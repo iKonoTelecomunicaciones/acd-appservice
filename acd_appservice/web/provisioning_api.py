@@ -36,7 +36,7 @@ class ProvisioningAPI:
                     "Documentation for the ACD application service of [iKonoChat](https://ikono.co/ikono-chat) "
                     "project by **iKono Telecomunicaciones S.A.S.**"
                 ),
-                version=version,
+                version=f"v{version}",
             ),
             components="acd_appservice/web/api/components.yaml",
             swagger_ui_settings=SwaggerUiSettings(
