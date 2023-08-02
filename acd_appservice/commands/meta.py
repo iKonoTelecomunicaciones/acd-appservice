@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from mautrix.types import EventID
 
-from ..version import linkified_version
+from ..version import version_link
 from .handler import CommandEvent, command_handler, command_handlers
 
 
@@ -54,4 +54,4 @@ async def help_cmd(evt: CommandEvent) -> EventID:
     help_text="Show the current project version.",
 )
 async def version(evt: CommandEvent) -> EventID:
-    return await evt.reply(linkified_version)
+    return await evt.reply(version_link)

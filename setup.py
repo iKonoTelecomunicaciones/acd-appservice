@@ -1,7 +1,13 @@
 import setuptools
 
 from acd_appservice import __version__
-from acd_appservice.get_version import git_revision, git_tag, linkified_version, version
+from acd_appservice.get_version import (
+    get_latest_revision,
+    get_latest_tag,
+    get_version,
+    get_version_link,
+)
+from acd_appservice.version import version
 
 try:
     long_desc = open("README.md").read()
@@ -28,15 +34,15 @@ if version != __version__:
     with open("acd_appservice/version.py", "w") as version_file:
         version_file.write(
             "# Generated from setup.py\n"
-            f"git_tag = {git_tag!r}\n"
-            f"git_revision = {git_revision!r}\n"
-            f"version = {version!r}\n"
-            f"linkified_version = {linkified_version!r}\n"
+            f'git_tag = "{get_latest_tag()}"\n'
+            f'git_revision = "{get_latest_revision()}"\n'
+            f'version = "{get_version()}"\n'
+            f'version_link = "{get_version_link()}"\n'
         )
 
 setuptools.setup(
     name="acd-appservice",
-    version=version,
+    version=get_version(),
     url="https://gitlab.com/iKono/acd-appservice",
     project_urls={
         "Changelog": "https://gitlab.com/iKono/acd-appservice/blob/master/CHANGELOG.md",
