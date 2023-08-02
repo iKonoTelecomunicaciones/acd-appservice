@@ -413,7 +413,7 @@ bridges:
 
   meta:
     # Meta UserID
-    mxid: "@metametabot:dominio_cliente.com"
+    mxid: "@metabot:dominio_cliente.com"
     # Prefix to be listened by bridge
     prefix: "!meta"
     # Prefix for users created
@@ -436,7 +436,7 @@ bridges:
                 m.room.topic: 0
     # Settings for provisioning API
     provisioning:
-        url_base: "http://meta:29320/_matrix/provision"
+        url_base: "http://meta:29322/_matrix/provision"
         shared_secret: ""
         endpoints:
             register_app: "/v1/register_app"
