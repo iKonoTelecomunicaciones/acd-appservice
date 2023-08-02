@@ -1,7 +1,7 @@
 import setuptools
 
 from acd_appservice import __version__
-from acd_appservice.get_version import (
+from acd_appservice.git_utils import (
     get_latest_revision,
     get_latest_tag,
     get_version,
