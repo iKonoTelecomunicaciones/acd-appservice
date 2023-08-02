@@ -56,7 +56,7 @@ def is_latest_revision_tag(git_tag):
 # Update the __version__ variable in the init file
 def update_init_file(version):
     with open("acd_appservice/__init__.py", "w") as init_file:
-        init_file.write(f"# Generated from setup.py\n" f'__version__ = "{version}"')
+        init_file.write(f"# Generated from setup.py\n" f'__version__ = "{version}"\n')
 
 
 # Get tag project from repository
