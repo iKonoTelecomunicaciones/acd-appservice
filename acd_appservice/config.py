@@ -104,6 +104,7 @@ class Config(BaseBridgeConfig):
         copy("acd.queues.invitees")
         copy("acd.use_presence")
         copy_dict("acd.access_methods")
+        copy("acd.mute_command_replys")
 
         # Utils
         copy_dict("utils")

@@ -41,6 +41,7 @@ class CommandEvent:
         room_id: RoomID = None,
         text: str = None,
         cmd_args: Namespace = None,
+        mute_reply: bool | None = None,
     ):
         self.command = command
         self.processor = processor
@@ -53,6 +54,7 @@ class CommandEvent:
         self.is_management = is_management
         self.text = text
         self.cmd_args = cmd_args
+        self.mute_reply = mute_reply
 
     async def reply(self, text: str) -> None:
         """It sends a message to the room that the event was received from
@@ -64,7 +66,7 @@ class CommandEvent:
 
         """
 
-        if not text or not self.room_id:
+        if not text or not self.room_id or self.mute_reply:
             return
 
         try:
@@ -135,6 +137,7 @@ class CommandHandler:
         help_args: List[CommandArg],
         needs_admin: bool,
         args_parser: ArgumentParser,
+        mute_reply: bool | None,
     ) -> None:
         self.management_only = management_only
         self.needs_admin = needs_admin
@@ -143,6 +146,7 @@ class CommandHandler:
         self._help_text = help_text
         self._help_args = help_args
         self._args_parser = args_parser
+        self.mute_reply = mute_reply
 
     async def get_permission_error(self, evt: CommandEvent) -> str | None:
         """Returns the reason why the command could not be issued.
@@ -304,6 +308,7 @@ class CommandProcessor:
             command=command,
             text=content.body.strip() if content else "",
             is_management=is_management,
+            mute_reply=handler.mute_reply or self.config["acd.mute_command_replys"],
         )
 
         if len(args_list) == 1 and args_list[0] == "help":
@@ -346,6 +351,7 @@ def command_handler(
     help_args: Dict[CommandArg] = {},
     needs_admin: bool = False,
     args_parser: ArgumentParser = None,
+    mute_reply: bool | None = None,
     _handler_class: Type[CommandHandler] = CommandHandler,
 ) -> Callable[[CommandHandlerFunc], CommandHandler]:
     """It takes a function and returns a decorator that takes a function and returns a class
@@ -385,6 +391,7 @@ def command_handler(
             help_args=help_args,
             needs_admin=needs_admin,
             args_parser=args_parser,
+            mute_reply=mute_reply,
         )
         command_handlers[handler.name] = handler
         return handler

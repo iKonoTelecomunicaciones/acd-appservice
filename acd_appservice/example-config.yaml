@@ -228,6 +228,9 @@ acd:
             add: 'invite'
             remove: 'leave'
 
+    # Avoid to send replys about results of commands to the rooms where the command was executed
+    mute_command_replys: true
+
 # ACD will send below commands to interact with any WA bridge
 bridges:
 
