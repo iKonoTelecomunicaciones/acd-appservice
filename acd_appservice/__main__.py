@@ -13,7 +13,7 @@ from .matrix_handler import MatrixHandler
 from .matrix_room import MatrixRoom
 from .puppet import Puppet
 from .user import User
-from .version import linkified_version, version
+from .version import version, version_link
 from .web.provisioning_api import ProvisioningAPI
 
 
@@ -25,7 +25,7 @@ class ACDAppService(ACD):
 
     repo_url = "https://gitlab.com/iKono/acd-appservice"
     version = version
-    markdown_version = linkified_version
+    markdown_version = version_link
 
     config_class = Config
     matrix_class = MatrixHandler

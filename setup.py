@@ -1,6 +1,13 @@
 import setuptools
 
-from acd_appservice.get_version import git_revision, git_tag, linkified_version, version
+from acd_appservice import __version__
+from acd_appservice.git_utils import (
+    get_latest_revision,
+    get_latest_tag,
+    get_version,
+    get_version_link,
+)
+from acd_appservice.version import version
 
 try:
     long_desc = open("README.md").read()
@@ -23,26 +30,24 @@ with open("requirements-dev.txt") as reqs:
 
 extras_require["all"] = list({dep for deps in extras_require.values() for dep in deps})
 
-
-with open("acd_appservice/version.py", "w") as version_file:
-    version_file.write(
-        f"""# Generated in setup.py
-
-git_tag = {git_tag!r}
-git_revision = {git_revision!r}
-version = {version!r}
-linkified_version = {linkified_version!r}
-"""
-    )
+if version != __version__:
+    with open("acd_appservice/version.py", "w") as version_file:
+        version_file.write(
+            "# Generated from setup.py\n"
+            f'git_tag = "{get_latest_tag()}"\n'
+            f'git_revision = "{get_latest_revision()}"\n'
+            f'version = "{get_version()}"\n'
+            f'version_link = "{get_version_link()}"\n'
+        )
 
 setuptools.setup(
     name="acd-appservice",
-    version=version,
+    version=get_version(),
     url="https://gitlab.com/iKono/acd-appservice",
     project_urls={
         "Changelog": "https://gitlab.com/iKono/acd-appservice/blob/master/CHANGELOG.md",
     },
-    author="iKono Telecomomunicaciones S.A.S",
+    author="iKono Telecomunicaciones S.A.S",
     author_email="desarrollo@ikono.com.co",
     description="An AppService created with the mautrix-python framework.",
     long_description=long_desc,
