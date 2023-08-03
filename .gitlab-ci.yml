@@ -24,6 +24,7 @@ lint:
     - ls -la .
     - cat acd_appservice/__init__.py
     - cat acd_appservice/version.py
+    - git config --global --add safe.directory /builds/iKono/acd-appservice
     - python3 setup.py --version
   script:
       - echo "** Ejecutando Black **"
