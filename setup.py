@@ -30,7 +30,7 @@ with open("requirements-dev.txt") as reqs:
 
 extras_require["all"] = list({dep for deps in extras_require.values() for dep in deps})
 
-if version != __version__:
+if version != __version__ and get_latest_tag():
     with open("acd_appservice/version.py", "w") as version_file:
         version_file.write(
             "# Generated from setup.py\n"
