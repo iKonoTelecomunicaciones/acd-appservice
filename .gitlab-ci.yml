@@ -18,6 +18,7 @@ lint:
     - pip install --upgrade pip
     - python3 -m pip install -r requirements.txt
     - python3 -m pip install -r requirements-dev.txt
+    - python3 setup.py --version
   script:
       - echo "** Ejecutando Black **"
       - black --check --diff acd_appservice/
@@ -35,6 +36,11 @@ build-push-image:
     - docker:dind
   before_script:
     - echo "$DOCKER_HUB_PASSWORD" | docker login docker.io --username $DOCKER_HUB_USERNAME --password-stdin
+    - python --version
+    - pip install --upgrade pip
+    - python3 -m pip install -r requirements.txt
+    - python3 -m pip install -r requirements-dev.txt
+    - python3 setup.py --version
   script:
 
     # Testing
