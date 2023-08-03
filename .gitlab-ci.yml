@@ -18,21 +18,15 @@ lint:
     - pip install --upgrade pip
     - python3 -m pip install -r requirements.txt
     - python3 -m pip install -r requirements-dev.txt
-    - cat acd_appservice/__init__.py
-    - cat acd_appservice/version.py
-    - git fetch --tags
-    - python3 setup.py --version
-    - cat acd_appservice/__init__.py
-    - cat acd_appservice/version.py
   script:
-      - echo "** Ejecutando Black **"
-      - black --check --diff acd_appservice/
+    - echo "** Running Black **"
+    - black --check --diff acd_appservice/
 
-      - echo "** Ejecutando Isort **"
-      - isort --check --diff acd_appservice/
+    - echo "** Running Isort **"
+    - isort --check --diff acd_appservice/
 
-      - echo "** Ejecutando los test de la API **"
-      - pytest --reruns 5 -vv acd_appservice --cache-clear
+    - echo "** Running the test of the API **"
+    - pytest --reruns 5 -vv acd_appservice --cache-clear
 
 build-push-image:
   stage: build
@@ -41,23 +35,18 @@ build-push-image:
     - docker:dind
   before_script:
     - echo "$DOCKER_HUB_PASSWORD" | docker login docker.io --username $DOCKER_HUB_USERNAME --password-stdin
-    - python --version
-    - pip install --upgrade pip
-    - python3 -m pip install -r requirements.txt
-    - python3 -m pip install -r requirements-dev.txt
-    - python3 setup.py --version
   script:
-
     # Testing
+    - echo "** Building and pushing Testing docker image **"
     - docker build -t $ACD_IMAGE:$TAG_TESTING .
     - docker push $ACD_IMAGE:$TAG_TESTING
-
     # Dev
+    - echo "** Building and pushing Dev docker image **"
     - docker build -t $ACD_IMAGE:$TAG_DEV .
     - docker push $ACD_IMAGE:$TAG_DEV
-
   only:
     - master
+    - 159-update-ci-config-to-automate-versions
 
 deploy-testing:
   stage: deploy
@@ -67,7 +56,7 @@ deploy-testing:
     # -qq hace que la ejecucion sea menos ruidosa
     - apt-get update -qq
     # Pregunta si existe ssh-agent; sino instala openssh-client
-    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
+    - "which ssh-agent || ( apt-get install -qq openssh-client )"
     # ssh-agent es un programa en segundo plano que maneja contraseñas para claves privadas SSH.
     # "ssh-agent -s" genera las variables de entorno que necesita para conectarse
     # y al llamar eval, carga inmediatamente esas variables en su entorno.
