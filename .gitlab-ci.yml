@@ -40,6 +40,12 @@ build-push-image:
     - pip install --upgrade pip
     - python3 -m pip install -r requirements.txt
     - python3 -m pip install -r requirements-dev.txt
+    - git config --list
+    - pwd
+    - ls -la .git/
+    - ls -la .
+    - cat acd_appservice/__init__.py
+    - cat acd_appservice/version.py
     - python3 setup.py --version
   script:
 
