@@ -41,6 +41,7 @@ class CommandEvent:
         room_id: RoomID = None,
         text: str = None,
         cmd_args: Namespace = None,
+        mute_reply: bool = False,
     ):
         self.command = command
         self.processor = processor
@@ -53,6 +54,7 @@ class CommandEvent:
         self.is_management = is_management
         self.text = text
         self.cmd_args = cmd_args
+        self.mute_reply = mute_reply
 
     async def reply(self, text: str) -> None:
         """It sends a message to the room that the event was received from
@@ -64,7 +66,7 @@ class CommandEvent:
 
         """
 
-        if not text or not self.room_id:
+        if not text or not self.room_id or self.mute_reply:
             return
 
         try:
@@ -258,6 +260,7 @@ class CommandProcessor:
         content: MessageEventContent = None,
         intent: IntentAPI = None,
         room_id: RoomID = "",
+        mute_reply: bool = False,
     ) -> Dict:
         """It handles the incoming command.
 
@@ -304,6 +307,7 @@ class CommandProcessor:
             command=command,
             text=content.body.strip() if content else "",
             is_management=is_management,
+            mute_reply=mute_reply,
         )
 
         if len(args_list) == 1 and args_list[0] == "help":

@@ -112,6 +112,7 @@ async def create(request: web.Request) -> web.Response:
         command="create",
         args_list=args,
         is_management=True,
+        mute_reply=True,
     )
 
     if puppet:
@@ -208,6 +209,7 @@ async def pm(request: web.Request) -> web.Response:
         args_list=args,
         intent=puppet.intent,
         is_management=False,
+        mute_reply=True,
     )
 
     return web.json_response(**result)
@@ -296,6 +298,7 @@ async def resolve(request: web.Request) -> web.Response:
         args_list=args,
         intent=puppet.intent,
         is_management=False,
+        mute_reply=True,
     )
     return web.json_response()
 
@@ -450,6 +453,7 @@ async def state_event(request: web.Request) -> web.Response:
         args_list=args,
         intent=puppet.intent,
         is_management=False,
+        mute_reply=True,
     )
 
     return web.json_response()
@@ -515,7 +519,12 @@ async def template(request: web.Request) -> web.Response:
     args = ["-p", room_id, "-m", template_message]
 
     await get_commands().handle(
-        sender=user, command="template", args_list=args, intent=puppet.intent, is_management=False
+        sender=user,
+        command="template",
+        args_list=args,
+        intent=puppet.intent,
+        is_management=False,
+        mute_reply=True,
     )
     return web.json_response()
 
@@ -591,7 +600,12 @@ async def transfer(request: web.Request) -> web.Response:
     args = ["-p", customer_room_id, "-q", campaign_room_id, "-e", enqueue_chat]
 
     cmd_response = await get_commands().handle(
-        sender=user, command="transfer", args_list=args, intent=puppet.intent, is_management=False
+        sender=user,
+        command="transfer",
+        args_list=args,
+        intent=puppet.intent,
+        is_management=False,
+        mute_reply=True,
     )
 
     return web.json_response(**cmd_response)
@@ -679,6 +693,7 @@ async def transfer_user(request: web.Request) -> web.Response:
         args_list=args,
         intent=puppet.intent,
         is_management=False,
+        mute_reply=True,
     )
     return web.json_response(**command_response)
 
@@ -754,7 +769,12 @@ async def queue(request: web.Request) -> web.Response:
     ]
 
     result: Dict = await get_commands().handle(
-        sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
+        sender=user,
+        command="queue",
+        args_list=args,
+        intent=user.az.intent,
+        is_management=True,
+        mute_reply=True,
     )
 
     return web.json_response(**result)
@@ -846,6 +866,7 @@ async def queue(request: web.Request) -> web.Response:
                 args_list=args,
                 intent=user.az.intent,
                 is_management=True,
+                mute_reply=True,
             )
             results.append(result)
 
@@ -908,7 +929,12 @@ async def queue(request: web.Request) -> web.Response:
     args = ["add", "-m", data.get("member", ""), "-q", data.get("queue_id", "")]
 
     result: Dict = await get_commands().handle(
-        sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
+        sender=user,
+        command="queue",
+        args_list=args,
+        intent=user.az.intent,
+        is_management=True,
+        mute_reply=True,
     )
 
     return web.json_response(**result)
@@ -966,7 +992,12 @@ async def queue(request: web.Request) -> web.Response:
     args = ["remove", "-m", data.get("member", ""), "-q", data.get("queue_id", "")]
 
     result: Dict = await get_commands().handle(
-        sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
+        sender=user,
+        command="queue",
+        args_list=args,
+        intent=user.az.intent,
+        is_management=True,
+        mute_reply=True,
     )
 
     return web.json_response(**result)
@@ -1012,7 +1043,12 @@ async def queue(request: web.Request) -> web.Response:
     args = ["info", "-q", room_id]
 
     result: Dict = await get_commands().handle(
-        sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
+        sender=user,
+        command="queue",
+        args_list=args,
+        intent=user.az.intent,
+        is_management=True,
+        mute_reply=True,
     )
 
     return web.json_response(**result)
@@ -1048,7 +1084,12 @@ async def queue(request: web.Request) -> web.Response:
     args = ["list"]
 
     result: Dict = await get_commands().handle(
-        sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
+        sender=user,
+        command="queue",
+        args_list=args,
+        intent=user.az.intent,
+        is_management=True,
+        mute_reply=True,
     )
 
     return web.json_response(**result)
@@ -1121,7 +1162,12 @@ async def queue(request: web.Request) -> web.Response:
     ]
 
     result: Dict = await get_commands().handle(
-        sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
+        sender=user,
+        command="queue",
+        args_list=args,
+        intent=user.az.intent,
+        is_management=True,
+        mute_reply=True,
     )
 
     return web.json_response(**result)
@@ -1181,7 +1227,12 @@ async def queue(request: web.Request) -> web.Response:
     args = ["delete", "-q", data.get("room_id", ""), "-f", data.get("force", "")]
 
     result: Dict = await get_commands().handle(
-        sender=user, command="queue", args_list=args, intent=user.az.intent, is_management=True
+        sender=user,
+        command="queue",
+        args_list=args,
+        intent=user.az.intent,
+        is_management=True,
+        mute_reply=True,
     )
 
     return web.json_response(**result)
@@ -1285,7 +1336,12 @@ async def acd(request: web.Request) -> web.Response:
         args = args + ["-a", campaign_room_id, "-f", force_distribution]
 
     response = await get_commands().handle(
-        sender=user, command="acd", args_list=args, intent=puppet.intent, is_management=False
+        sender=user,
+        command="acd",
+        args_list=args,
+        intent=puppet.intent,
+        is_management=False,
+        mute_reply=True,
     )
 
     return web.json_response(**response)
@@ -1396,6 +1452,7 @@ async def member(request: web.Request) -> web.Response:
             intent=user.az.intent,
             is_management=False,
             room_id=queue,
+            mute_reply=True,
         )
         # If the operation fails in at least one of the queues,
         # the endpoint returns the last error code
@@ -1585,6 +1642,7 @@ async def bic(request: web.Request) -> web.Response:
         args_list=args,
         intent=puppet.intent,
         is_management=False,
+        mute_reply=True,
     )
 
     return web.json_response(**result)

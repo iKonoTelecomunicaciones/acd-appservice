@@ -436,7 +436,7 @@ bridges:
                 m.room.topic: 0
     # Settings for provisioning API
     provisioning:
-        url_base: "http://meta:29322/_matrix/provision"
+        url_base: "http://meta:29328/_matrix/provision"
         shared_secret: ""
         endpoints:
             register_app: "/v1/register_app"
