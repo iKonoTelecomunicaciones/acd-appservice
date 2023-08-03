@@ -117,6 +117,7 @@ async def transfer(request: web.Request) -> web.Response:
             args_list=args,
             intent=puppet.intent,
             is_management=False,
+            mute_reply=True,
         )
 
         return web.json_response(**cmd_response)
@@ -132,5 +133,6 @@ async def transfer(request: web.Request) -> web.Response:
             args_list=args,
             intent=puppet.intent,
             is_management=False,
+            mute_reply=True,
         )
         return web.json_response(**command_response)
