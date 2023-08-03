@@ -18,17 +18,12 @@ lint:
     - pip install --upgrade pip
     - python3 -m pip install -r requirements.txt
     - python3 -m pip install -r requirements-dev.txt
-    - git config --list
-    - pwd
-    - ls -la .git/
-    - ls -la .
     - cat acd_appservice/__init__.py
     - cat acd_appservice/version.py
     - git fetch --tags
-    # - git config --global --add safe.directory /builds/iKono/acd-appservice
-    - git describe --abbrev=0 --tags
-    - git tag -l -n
     - python3 setup.py --version
+    - cat acd_appservice/__init__.py
+    - cat acd_appservice/version.py
   script:
       - echo "** Ejecutando Black **"
       - black --check --diff acd_appservice/
