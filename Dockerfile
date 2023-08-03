@@ -19,7 +19,8 @@ COPY . /opt/acd-appservice
 RUN apk add --no-cache git \
       && python3 setup.py --version \
       && pip3 install .[all] \
-      && cp acd_appservice/example-config.yaml . \
+      && cp -f acd_appservice/example-config.yaml . \
+      && cp -f acd_appservice/web/api/components.yaml . \
       && rm -rf acd_appservice .git build
 VOLUME /data
 

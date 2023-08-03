@@ -38,7 +38,7 @@ class ProvisioningAPI:
                 ),
                 version=f"v{version}",
             ),
-            components="acd_appservice/web/api/components.yaml",
+            components="components.yaml",
             swagger_ui_settings=SwaggerUiSettings(
                 path="/docs",
                 layout="BaseLayout",
