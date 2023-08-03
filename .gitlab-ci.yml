@@ -24,7 +24,8 @@ lint:
     - ls -la .
     - cat acd_appservice/__init__.py
     - cat acd_appservice/version.py
-    - git config --global --add safe.directory /builds/iKono/acd-appservice
+    - git fetch --tags
+    # - git config --global --add safe.directory /builds/iKono/acd-appservice
     - git describe --abbrev=0 --tags
     - git tag -l -n
     - python3 setup.py --version
