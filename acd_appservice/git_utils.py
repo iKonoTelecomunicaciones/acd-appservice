@@ -65,8 +65,8 @@ def get_tag():
     git_tag = get_latest_tag()
 
     # Getting tag
-    if git_tag and is_latest_revision_tag(git_tag):
-        # If the tag is linked to latest commit
+    if git_tag and (is_latest_revision_tag(git_tag) or git_tag.endswith("+dev")):
+        # If the tag is linked to latest commit or is a developer tag
         return git_tag
     elif git_tag and not git_tag.endswith("+dev"):
         # If the tag is not linked to latest commit, we add the revision to the developer version

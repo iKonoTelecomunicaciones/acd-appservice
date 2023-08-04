@@ -19,14 +19,15 @@ lint:
     - python3 -m pip install -r requirements.txt
     - python3 -m pip install -r requirements-dev.txt
   script:
-      - echo "** Ejecutando Black **"
-      - black --check --diff acd_appservice/
-
-      - echo "** Ejecutando Isort **"
-      - isort --check --diff acd_appservice/
-
-      - echo "** Ejecutando los test de la API **"
-      - pytest --reruns 5 -vv acd_appservice --cache-clear
+    # Black formatting check
+    - echo "** Running Black **"
+    - black --check --diff acd_appservice/
+    # Isort formatting check
+    - echo "** Running Isort **"
+    - isort --check --diff acd_appservice/
+    # Pytest unit tests
+    - echo "** Running the API test **"
+    - pytest --reruns 5 acd_appservice --cache-clear
 
 build-push-image:
   stage: build
@@ -36,15 +37,19 @@ build-push-image:
   before_script:
     - echo "$DOCKER_HUB_PASSWORD" | docker login docker.io --username $DOCKER_HUB_USERNAME --password-stdin
   script:
-
+    # Version tag
+    - TAG_VERSION=$(grep "version = " acd_appservice/version.py | cut -d"=" -f2 | sed 's/"//g; s/+dev.*/-dev/g' | xargs)
+    - echo "** Building and pushing '${TAG_VERSION}' docker image **"
+    - docker build -t ${ACD_IMAGE}:v${TAG_VERSION} .
+    - docker push ${ACD_IMAGE}:v${TAG_VERSION}
     # Testing
-    - docker build -t $ACD_IMAGE:$TAG_TESTING .
-    - docker push $ACD_IMAGE:$TAG_TESTING
-
+    - echo "** Building and pushing Testing docker image **"
+    - docker build -t ${ACD_IMAGE}:${TAG_TESTING} .
+    - docker push ${ACD_IMAGE}:${TAG_TESTING}
     # Dev
-    - docker build -t $ACD_IMAGE:$TAG_DEV .
-    - docker push $ACD_IMAGE:$TAG_DEV
-
+    - echo "** Building and pushing Dev docker image **"
+    - docker build -t ${ACD_IMAGE}:${TAG_DEV} .
+    - docker push ${ACD_IMAGE}:${TAG_DEV}
   only:
     - master
 
@@ -52,31 +57,47 @@ deploy-testing:
   stage: deploy
   image: ubuntu:latest
   before_script:
-    - echo "** Conectando al servidor de testing **"
-    # -qq hace que la ejecucion sea menos ruidosa
+    - echo "** Connecting to testing server **"
+    # Update the apt package index
     - apt-get update -qq
-    # Pregunta si existe ssh-agent; sino instala openssh-client
-    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
-    # ssh-agent es un programa en segundo plano que maneja contraseñas para claves privadas SSH.
-    # "ssh-agent -s" genera las variables de entorno que necesita para conectarse
-    # y al llamar eval, carga inmediatamente esas variables en su entorno.
+    # If ssh-agent does not exist, install openssh-client
+    - "which ssh-agent || ( apt-get install -qq openssh-client )"
+    # Start the ssh-agent in the background
     - eval $(ssh-agent -s)
-    # El comando ssh-add solicita al usuario una contraseña de clave privada y la agrega a la lista mantenida por ssh-agent.
+    # Add the SSH key stored in SSH_PRIVATE_KEY variable to the agent store
     - ssh-add <(echo "$SSH_PRIVATE_KEY")
-    # Se crea el directorio .ssh, no hay error si existen, crea los directorios padres en caso necesario
+    # Create the SSH config directory
     - mkdir -p ~/.ssh
-    # Deshabilitar la verificación de la clave del host
+    # Disable StrictHostKeyChecking ask in SSH config
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
   script:
-    - echo ""** Bajamos la nueva imagen **""
-    - ssh $TESTING "docker pull $ACD_IMAGE:$TAG_TESTING"
-    - echo "** Actualizar imagen del acd en los dominios registrados **"
-    - |+
-      for DOMAIN in  $DOMAINS
-      do
-        ACD_SERVICE=$(ssh $TESTING "cd /mnt/shared/matrix/$DOMAIN && docker stack services $(basename $DOMAIN | tr -d '.') --format '{{.Name}}|{{.Image}}' | grep $ACD_IMAGE:$TAG_TESTING | cut -d '|' -f 1")
-        ssh $TESTING "cd /mnt/shared/matrix/$DOMAIN &&  if docker service ls | grep $ACD_SERVICE; then  docker service rm $ACD_SERVICE; else echo "El servicio $ACD_SERVICE NO EXISTE"; fi"
-        ssh $TESTING "cd /mnt/shared/matrix/$DOMAIN && docker-compose config | docker stack deploy -c - $(basename $DOMAIN | tr -d '.')"
+    # Download updated docker image to testing server
+    - echo "** Download updated docker image **"
+    - ssh -tt $TESTING "docker pull $ACD_IMAGE:$TAG_TESTING"
+    - echo "** Update acd image in registered domains **"
+    - >
+      for domain in ${DOMAINS}; do
+
+        echo " >> Setting service variables"
+        stack_name=$(echo ${domain} | tr -d '.')
+        service=$(echo ${domain} | cut -d '.' -f1)
+        acd_service="${stack_name}_${service}-acd-as"
+
+        echo " >> Remove the service if exists"
+        ssh -tt $TESTING " \
+          if docker service ps ${acd_service}; then \
+            docker service rm ${acd_service}; \
+          else \
+            echo 'The service ${acd_service} is not exists'; \
+          fi;
+        "
+
+        echo " >> Deploy the service"
+        docker_compose_file="/mnt/shared/matrix/${domain}/docker-compose.yml"
+        ssh -tt $TESTING " \
+          docker-compose -f ${docker_compose_file} config | \
+            docker stack deploy -c - ${stack_name};
+        "
       done
   only:
     - master
