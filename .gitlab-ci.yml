@@ -52,7 +52,6 @@ build-push-image:
     - docker push ${ACD_IMAGE}:${TAG_DEV}
   only:
     - master
-    - 159-update-ci-config-to-automate-versions
 
 deploy-testing:
   stage: deploy
@@ -102,4 +101,3 @@ deploy-testing:
       done
   only:
     - master
-    - 159-update-ci-config-to-automate-versions
