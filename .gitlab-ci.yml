@@ -78,12 +78,12 @@ deploy-testing:
     - echo "** Update acd image in registered domains **"
     - |
       for domain in ${DOMAINS}; do
-        # Setting service variables
+        echo "Setting service variables"
         stack_name=$(echo ${domain} | tr -d '.')
         service=$(echo ${domain} | cut -d '.' -f1)
         acd_service="${stack_name}_${service}-acd-as"
 
-        # Remove the service if exists
+        echo "Remove the service if exists"
         command="
           if docker service ps ${acd_service}; then \
             docker service rm ${acd_service} \
@@ -93,7 +93,7 @@ deploy-testing:
         "
         ssh -tt $TESTING ${command}
 
-        # Deploy the service
+        echo "Deploy the service"
         docker_compose_file="/mnt/shared/matrix/${domain}/docker-compose.yml"
         command="
           docker-compose -f ${docker_compose_file} config | \
