@@ -60,7 +60,7 @@ deploy-testing:
     - echo "** Connecting to testing server **"
     # Update the apt package index
     - apt-get update -qq
-    # If ssh-agent is not exists, install openssh-client
+    # If ssh-agent does not exist, install openssh-client
     - "which ssh-agent || ( apt-get install -qq openssh-client )"
     # Start the ssh-agent in the background
     - eval $(ssh-agent -s)
@@ -71,9 +71,9 @@ deploy-testing:
     # Disable StrictHostKeyChecking ask in SSH config
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
   script:
-    # Download updated the docker image to testing server
-    - echo ""** Download updated the docker image **""
-    - ssh $TESTING "docker pull $ACD_IMAGE:$TAG_TESTING"
+    # Download updated docker image to testing server
+    - echo "** Download updated docker image **"
+    - ssh -tt $TESTING "docker pull $ACD_IMAGE:$TAG_TESTING"
     - echo "** Update acd image in registered domains **"
     - >
       for domain in ${DOMAINS}; do
