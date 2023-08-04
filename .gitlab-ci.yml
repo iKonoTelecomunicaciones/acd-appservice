@@ -38,7 +38,7 @@ build-push-image:
     - echo "$DOCKER_HUB_PASSWORD" | docker login docker.io --username $DOCKER_HUB_USERNAME --password-stdin
   script:
     # Version tag
-    - TAG_VERSION=$(grep "version = " acd_appservice/version.py | cut -d"=" -f2 | sed 's/"//g; s/+/./g' | xargs)
+    - TAG_VERSION=$(grep "version = " acd_appservice/version.py | cut -d"=" -f2 | sed 's/"//g; s/+dev.*/-dev/g' | xargs)
     - echo "** Building and pushing '${TAG_VERSION}' docker image **"
     - docker build -t ${ACD_IMAGE}:v${TAG_VERSION} .
     - docker push ${ACD_IMAGE}:v${TAG_VERSION}
@@ -58,31 +58,48 @@ deploy-testing:
   stage: deploy
   image: ubuntu:latest
   before_script:
-    - echo "** Conectando al servidor de testing **"
-    # -qq hace que la ejecucion sea menos ruidosa
+    - echo "** Connecting to testing server **"
+    # Update the apt package index
     - apt-get update -qq
-    # Pregunta si existe ssh-agent; sino instala openssh-client
+    # If ssh-agent is not exists, install openssh-client
     - "which ssh-agent || ( apt-get install -qq openssh-client )"
-    # ssh-agent es un programa en segundo plano que maneja contraseñas para claves privadas SSH.
-    # "ssh-agent -s" genera las variables de entorno que necesita para conectarse
-    # y al llamar eval, carga inmediatamente esas variables en su entorno.
+    # Start the ssh-agent in the background
     - eval $(ssh-agent -s)
-    # El comando ssh-add solicita al usuario una contraseña de clave privada y la agrega a la lista mantenida por ssh-agent.
+    # Add the SSH key stored in SSH_PRIVATE_KEY variable to the agent store
     - ssh-add <(echo "$SSH_PRIVATE_KEY")
-    # Se crea el directorio .ssh, no hay error si existen, crea los directorios padres en caso necesario
+    # Create the SSH config directory
     - mkdir -p ~/.ssh
-    # Deshabilitar la verificación de la clave del host
+    # Disable StrictHostKeyChecking ask in SSH config
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
   script:
-    - echo ""** Bajamos la nueva imagen **""
+    # Download updated the docker image to testing server
+    - echo ""** Download updated the docker image **""
     - ssh $TESTING "docker pull $ACD_IMAGE:$TAG_TESTING"
-    - echo "** Actualizar imagen del acd en los dominios registrados **"
+    - echo "** Update acd image in registered domains **"
     - |+
-      for DOMAIN in  $DOMAINS
-      do
-        ACD_SERVICE=$(ssh $TESTING "cd /mnt/shared/matrix/$DOMAIN && docker stack services $(basename $DOMAIN | tr -d '.') --format '{{.Name}}|{{.Image}}' | grep $ACD_IMAGE:$TAG_TESTING | cut -d '|' -f 1")
-        ssh $TESTING "cd /mnt/shared/matrix/$DOMAIN &&  if docker service ls | grep $ACD_SERVICE; then  docker service rm $ACD_SERVICE; else echo "El servicio $ACD_SERVICE NO EXISTE"; fi"
-        ssh $TESTING "cd /mnt/shared/matrix/$DOMAIN && docker-compose config | docker stack deploy -c - $(basename $DOMAIN | tr -d '.')"
+      for domain in ${DOMAINS}; do
+        # Setting service variables
+        stack_name=$(echo ${domain} | tr -d '.')
+        service=$(echo ${domain} | cut -d '.' -f1)
+        acd_service="${stack_name}_${service}-acd-as"
+
+        # Remove the service if exists
+        command="
+          if docker service ps ${acd_service}; then \
+            docker service rm ${acd_service} \
+          else; \
+            echo 'The service ${acd_service} is not exists' \
+          fi; \
+        "
+        ssh -tt $TESTING ${command}
+
+        # Deploy the service
+        docker_compose_file="/mnt/shared/matrix/${domain}/docker-compose.yml"
+        command="
+          docker-compose -f ${docker_compose_file} config | \
+            docker stack deploy -c - ${stack_name}; \
+        "
+        ssh -tt $TESTING ${command}
       done
   only:
     - master
