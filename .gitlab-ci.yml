@@ -38,7 +38,7 @@ build-push-image:
     - echo "$DOCKER_HUB_PASSWORD" | docker login docker.io --username $DOCKER_HUB_USERNAME --password-stdin
   script:
     # Version tag
-    - TAG_VERSION=$(grep "version = " acd_appservice/version.py | cut -d"=" -f2 | sed 's/"//g' | xargs)
+    - TAG_VERSION=$(grep "version = " acd_appservice/version.py | cut -d"=" -f2 | sed 's/"//g; s/+/./g' | xargs)
     - echo "** Building and pushing '${TAG_VERSION}' docker image **"
     - docker build -t ${ACD_IMAGE}:v${TAG_VERSION} .
     - docker push ${ACD_IMAGE}:v${TAG_VERSION}
