@@ -38,19 +38,18 @@ build-push-image:
     - echo "$DOCKER_HUB_PASSWORD" | docker login docker.io --username $DOCKER_HUB_USERNAME --password-stdin
   script:
     # Version tag
-    - TAG_VERSION=$(grep "version = " acd_appservice/version.py | cut -d"=" -f2 | sed 's/"//g')
-    - echo "** Building and pushing ${TAG_VERSION} docker image **"
-    - echo "docker build -t $ACD_IMAGE:v$TAG_VERSION ."
-    - docker build -t $ACD_IMAGE:v$TAG_VERSION .
-    - docker push $ACD_IMAGE:v$TAG_VERSION
+    - TAG_VERSION=$(grep "version = " acd_appservice/version.py | cut -d"=" -f2 | sed 's/"//g' | xargs)
+    - echo "** Building and pushing '${TAG_VERSION}' docker image **"
+    - docker build -t ${ACD_IMAGE}:v${TAG_VERSION} .
+    - docker push ${ACD_IMAGE}:v${TAG_VERSION}
     # Testing
     - echo "** Building and pushing Testing docker image **"
-    - docker build -t $ACD_IMAGE:$TAG_TESTING .
-    - docker push $ACD_IMAGE:$TAG_TESTING
+    - docker build -t ${ACD_IMAGE}:${TAG_TESTING} .
+    - docker push ${ACD_IMAGE}:${TAG_TESTING}
     # Dev
     - echo "** Building and pushing Dev docker image **"
-    - docker build -t $ACD_IMAGE:$TAG_DEV .
-    - docker push $ACD_IMAGE:$TAG_DEV
+    - docker build -t ${ACD_IMAGE}:${TAG_DEV} .
+    - docker push ${ACD_IMAGE}:${TAG_DEV}
   only:
     - master
     - 159-update-ci-config-to-automate-versions
