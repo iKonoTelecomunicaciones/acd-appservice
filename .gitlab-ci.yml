@@ -84,7 +84,7 @@ deploy-testing:
         acd_service="${stack_name}_${service}-acd-as"
 
         echo " >> Remove the service if exists"
-        command="
+        command=" \
           if docker service ps ${acd_service}; then \
             docker service rm ${acd_service} \
           else; \
@@ -95,7 +95,7 @@ deploy-testing:
 
         echo " >> Deploy the service"
         docker_compose_file="/mnt/shared/matrix/${domain}/docker-compose.yml"
-        command="
+        command=" \
           docker-compose -f ${docker_compose_file} config | \
             docker stack deploy -c - ${stack_name}; \
         "
