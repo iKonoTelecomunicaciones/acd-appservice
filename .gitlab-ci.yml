@@ -19,14 +19,15 @@ lint:
     - python3 -m pip install -r requirements.txt
     - python3 -m pip install -r requirements-dev.txt
   script:
+    # Black formatting check
     - echo "** Running Black **"
     - black --check --diff acd_appservice/
-
+    # Isort formatting check
     - echo "** Running Isort **"
     - isort --check --diff acd_appservice/
-
-    - echo "** Running the test of the API **"
-    - pytest --reruns 5 -vv acd_appservice --cache-clear
+    # Pytest unit tests
+    - echo "** Running the API test **"
+    - pytest --reruns 5 acd_appservice --cache-clear
 
 build-push-image:
   stage: build
@@ -36,6 +37,10 @@ build-push-image:
   before_script:
     - echo "$DOCKER_HUB_PASSWORD" | docker login docker.io --username $DOCKER_HUB_USERNAME --password-stdin
   script:
+    # Version tag
+    - TAG_VERSION=$(python3 -c "from acd_appservice.version import version; print(version)")
+    - docker build -t $ACD_IMAGE:v$TAG_VERSION .
+    - docker push $ACD_IMAGE:v$TAG_VERSION
     # Testing
     - echo "** Building and pushing Testing docker image **"
     - docker build -t $ACD_IMAGE:$TAG_TESTING .
@@ -80,3 +85,4 @@ deploy-testing:
       done
   only:
     - master
+    - 159-update-ci-config-to-automate-versions

@@ -42,7 +42,7 @@ if version != __version__ and get_latest_tag():
 
 setuptools.setup(
     name="acd-appservice",
-    version=get_version(),
+    version=get_version() if get_latest_tag() else version,
     url="https://gitlab.com/iKono/acd-appservice",
     project_urls={
         "Changelog": "https://gitlab.com/iKono/acd-appservice/blob/master/CHANGELOG.md",
