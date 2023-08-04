@@ -39,6 +39,8 @@ build-push-image:
   script:
     # Version tag
     - TAG_VERSION=$(grep "version = " acd_appservice/version.py | cut -d"=" -f2 | sed 's/"//g')
+    - echo "** Building and pushing ${TAG_VERSION} docker image **"
+    - echo "docker build -t $ACD_IMAGE:v$TAG_VERSION ."
     - docker build -t $ACD_IMAGE:v$TAG_VERSION .
     - docker push $ACD_IMAGE:v$TAG_VERSION
     # Testing
