@@ -76,7 +76,7 @@ deploy-testing:
     - echo ""** Download updated the docker image **""
     - ssh $TESTING "docker pull $ACD_IMAGE:$TAG_TESTING"
     - echo "** Update acd image in registered domains **"
-    - >
+    - |
       for domain in ${DOMAINS}; do
         # Setting service variables
         stack_name=$(echo ${domain} | tr -d '.')
