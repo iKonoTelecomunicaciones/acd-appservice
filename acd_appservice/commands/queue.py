@@ -391,6 +391,10 @@ async def delete(evt: CommandEvent, queue_id: RoomID, force: Optional[bool] = Fa
     members = await queue.get_joined_users()
 
     async def delete_queue() -> Dict:
+        for member in members:
+            # Remove the room (queue) tag for the member
+            user: User = await User.get_by_mxid(member.mxid)
+            await user.remove_room_tag(room_id=queue_id, tag="m.queue")
         await queue.clean_up()
         detail = "The queue has been deleted"
         json_response["status"] = 200

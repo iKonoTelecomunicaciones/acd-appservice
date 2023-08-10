@@ -304,3 +304,28 @@ class User(DBUser, BaseUser):
             return user
 
         return None
+
+    async def set_room_tag(self, room_id: RoomID, tag: str, info: dict = {}) -> None:
+        self.log.debug(f"Setting tag {tag} in room {room_id} for user {self.mxid}")
+        result = await self.az.intent.api.session.put(
+            url=f"{self.az.intent.api.base_url}/_matrix/client/v3/user/{self.mxid}/rooms/{room_id}/tags/{tag}",
+            headers={"Authorization": f"Bearer {self.az.intent.api.token}"},
+            json=info,
+            params={"user_id": self.mxid},
+        )
+        if result.status == 403:
+            self.log.error(await result.json())
+        elif not result.ok:
+            self.log.error(f"Tag {tag} in room {room_id} for user {self.mxid} failed to set")
+
+    async def remove_room_tag(self, room_id: RoomID, tag: str) -> None:
+        self.log.debug(f"Removing tag {tag} in room {room_id} for user {self.mxid}")
+        result = await self.az.intent.api.session.delete(
+            url=f"{self.az.intent.api.base_url}/_matrix/client/v3/user/{self.mxid}/rooms/{room_id}/tags/{tag}",
+            headers={"Authorization": f"Bearer {self.az.intent.api.token}"},
+            params={"user_id": self.mxid},
+        )
+        if result.status == 403:
+            self.log.error(await result.json())
+        elif not result.ok:
+            self.log.error(f"Tag {tag} in room {room_id} for user {self.mxid} failed to remove")

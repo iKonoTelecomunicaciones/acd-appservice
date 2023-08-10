@@ -388,6 +388,8 @@ class MatrixHandler:
 
         if is_queue:
             await QueueMembership.get_by_queue_and_user(user.id, is_queue.id)
+            # Set the room (queue) tag for the member
+            await user.set_room_tag(room_id=is_queue.room_id, tag="m.queue")
             return
 
         # Ignoring join events in a non-portal room

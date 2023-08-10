@@ -94,6 +94,10 @@ class Queue(DBQueue, MatrixRoom):
             if member == self.main_intent.mxid:
                 continue
             user: User = await User.get_by_mxid(member)
+
+            # Set the room (queue) tag for the member
+            await user.set_room_tag(room_id=self.room_id, tag="m.queue")
+
             await QueueMembership.get_by_queue_and_user(fk_queue=self.id, fk_user=user.id)
 
         await self.save()
