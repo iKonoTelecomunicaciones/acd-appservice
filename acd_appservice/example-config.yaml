@@ -417,7 +417,7 @@ bridges:
     # Prefix to be listened by bridge
     prefix: "!meta"
     # Prefix for users created
-    user_prefix: "meta"
+    user_prefix: "mt"
     set_permissions: "set-pl {mxid} {power_level}"
     set_relay: "set-relay"
     # Bridge support formated messages
