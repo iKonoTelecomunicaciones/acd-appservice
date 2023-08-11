@@ -1569,6 +1569,9 @@ async def bic(request: web.Request) -> web.Response:
                             description: "Phone number that will be used to send the message,
                                          (use country code)"
                             type: string
+                        destination:
+                            description: "Queue room id, agent or menu mxid where chat will be distributed"
+                            type: string
                         message:
                             description: "Message that will be sent"
                             type: string
@@ -1578,7 +1581,7 @@ async def bic(request: web.Request) -> web.Response:
                         force:
                             description: "If an agent is in the room, do you want to start a new conversation?"
                             type: string
-                        enqueued_chat:
+                        enqueue_chat:
                             description: "If the distribution process was not successful,
                                           do you want to put portal enqueued?\n
                                           Note: This parameter is only using when destination is a queue"
@@ -1586,10 +1589,13 @@ async def bic(request: web.Request) -> web.Response:
                     required:
                         - customer_phone
                         - company_phone
+                        - message
                     example:
                         customer_phone: "573123456789"
                         company_phone: "57398765432"
+                        destination: "@agent1:example.com | !TXMsaIzbeURlKPeCxJ:example.com | @menu:example.com"
                         message: "Hola iKono!!"
+                        enqueue_chat: "yes"
                         on_transit: "no"
                         force: "no"
 
@@ -1619,7 +1625,7 @@ async def bic(request: web.Request) -> web.Response:
     on_transit: str = data.get("on_transit")
     destination: str = data.get("destination") if data.get("destination") else ""
     force: str = data.get("force")
-    enqueued_chat: str = data.get("enqueued_chat")
+    enqueue_chat: str = data.get("enqueue_chat")
 
     args = [
         "-p",
@@ -1633,7 +1639,7 @@ async def bic(request: web.Request) -> web.Response:
         "-f",
         force,
         "-e",
-        enqueued_chat,
+        enqueue_chat,
     ]
 
     result = await get_commands().handle(
