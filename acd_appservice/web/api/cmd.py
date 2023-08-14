@@ -1601,11 +1601,15 @@ async def bic(request: web.Request) -> web.Response:
 
     responses:
         '200':
-            $ref: '#/components/responses/PmSuccessful'
-        '404':
-            $ref: '#/components/responses/NotFound'
+            $ref: '#/components/responses/BICSuccessful'
+        '400':
+            $ref: '#/components/responses/BadRequest'
         '422':
-            $ref: '#/components/responses/NotSendMessage'
+            $ref: '#/components/responses/RequiredVariables'
+        '409':
+            $ref: '#/components/responses/BICConflict'
+        '404':
+            $ref: '#/components/responses/BICFailed'
     """
 
     user: User = await _resolve_user_identifier(request=request)
@@ -1622,10 +1626,10 @@ async def bic(request: web.Request) -> web.Response:
 
     phone: str = data.get("customer_phone")
     message: str = data.get("message")
-    on_transit: str = data.get("on_transit")
     destination: str = data.get("destination") if data.get("destination") else ""
-    force: str = data.get("force")
-    enqueue_chat: str = data.get("enqueue_chat")
+    on_transit: str = data.get("on_transit", "no")
+    force: str = data.get("force", "no")
+    enqueue_chat: str = data.get("enqueue_chat", "yes")
 
     args = [
         "-p",

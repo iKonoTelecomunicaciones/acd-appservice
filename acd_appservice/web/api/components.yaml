@@ -961,6 +961,56 @@ components:
         custom_mxid: "@acd1:foo.com"
         control_room_id: "!JdnIUgdsspvfpVSndG:foo.com"
 
+    BicOk:
+      type: object
+      properties:
+        detail:
+          type: string
+        room_id:
+          type: string
+        phone_number:
+          type: string
+        agent_displayname:
+          type: string
+      example:
+        detail: "Now you are joined in room with [number], message was sent."
+        room_id: "!JybcUWgTGpGTRtDzfG:foo.com"
+        phone_number: "573000000000"
+        agent_displayname: "agent1"
+
+    BICFail:
+      type: object
+      properties:
+        detail:
+          type: string
+        phone_number:
+          type: string
+        agent_displayname:
+          type: string
+      example:
+        detail: "The server said [number] is not on WhatsApp"
+        phone_number: "57500000000"
+        agent_display_name: null
+
+    BICAgentAlreadyInRoom:
+      type: object
+      properties:
+        detail:
+          type: string
+        room_id:
+          type: string
+        phone_number:
+          type: string
+        agent_displayname:
+          type: string
+      example:
+        detail: "You are already in room with [number], message was sent."
+        room_id: "!JybcUWgTGpGTRtDzfG:darknet"
+        phone_number: "573000000000"
+        agent_displayname: "agent1"
+
+
+
 
   # Respuestas de la API
   responses:
@@ -1547,3 +1597,26 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+
+    BICSuccessful:
+      description: "BIC send successfuly"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BicOk'
+
+    BICFailed:
+      description: "Information not found"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BICFail'
+
+    BICConflict:
+      description: "BIC conflict"
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/BICAgentAlreadyInRoom'
+              - $ref: '#/components/schemas/Error'
