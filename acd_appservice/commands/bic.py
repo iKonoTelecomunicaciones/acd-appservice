@@ -51,7 +51,7 @@ on_transit_arg = CommandArg(
     example="`yes` | `no`",
 )
 
-fordce_arg = CommandArg(
+force_arg = CommandArg(
     name="--force or -f",
     help_text="Force to start a new chat by the bussines",
     is_required=False,
@@ -102,7 +102,14 @@ def args_parser():
 @command_handler(
     name="bic",
     help_text="Command to create a private chat with a customer by the business",
-    help_args=[phone_arg, message_arg, destination_arg, on_transit_arg],
+    help_args=[
+        phone_arg,
+        message_arg,
+        destination_arg,
+        on_transit_arg,
+        force_arg,
+        enqueue_chat_arg,
+    ],
     args_parser=args_parser(),
 )
 async def bic(evt: CommandEvent) -> Dict:
