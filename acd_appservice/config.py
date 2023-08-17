@@ -113,6 +113,9 @@ class Config(BaseBridgeConfig):
         # Third-party APIs
         copy_dict("ikono_api")
 
+        # NATS
+        copy_dict("nats")
+
     @property
     def namespaces(self) -> dict[str, list[dict[str, Any]]]:
         """

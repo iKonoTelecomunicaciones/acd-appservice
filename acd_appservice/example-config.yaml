@@ -482,6 +482,16 @@ ikono_api:
   holidays_url: "/v1/holidays"
   password: ""
 
+# Nats configuration
+nats:
+    enabled: false
+    # Nats server address
+    address: "nats://nats:4222"
+    # Nats user
+    user: "foo"
+    # Nats password
+    password: "secretfoo"
+
 
 logging:
     version: 1

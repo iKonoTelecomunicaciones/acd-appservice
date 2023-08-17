@@ -5,14 +5,14 @@ import json
 import logging
 from datetime import datetime
 
-from aiohttp import ClientSession
 from attr import dataclass, ib
-from mautrix.api import HTTPAPI
 from mautrix.types import SerializableAttrs, UserID
 from mautrix.util.logging import TraceLogger
+from nats.js.client import JetStreamContext
 
 from ..db.portal import PortalState
 from .event_types import ACDEventTypes, ACDMemberEvents, ACDMembershipEvents, ACDPortalEvents
+from .nats_client import NatsClient
 
 log: TraceLogger = logging.getLogger("report.event")
 
@@ -28,27 +28,21 @@ class BaseEvent(SerializableAttrs):
         asyncio.create_task(self.http_send())
 
     async def http_send(self):
+        jetstream: JetStreamContext = None
+
         file = open("/data/room_events.txt", "a")
         file.write(f"{json.dumps(self.serialize())}\n\n")
         if self.event_type == ACDEventTypes.PORTAL and self.state == PortalState.RESOLVED:
             file.write(f"################# ------- New conversation ------- #################\n")
         file.close()
-        log.error(f"Sending event {self.serialize()}")
-        # headers = {"User-Agent": HTTPAPI.default_ua}
-        # url = ""
-        # try:
-        #     async with ClientSession() as sess, sess.post(
-        #         url, json=self.serialize(), headers=headers
-        #     ) as resp:
-        #         if not 200 <= resp.status < 300:
-        #             text = await resp.text()
-        #             text = text.replace("\n", "\\n")
-        #             log.warning(
-        #                 f"Unexpected status code {resp.status} "
-        #                 f"sending bridge state update: {text}"
-        #             )
-        #             return False
+        log.info(f"Sending event {self.serialize()}")
 
-        # except Exception as e:
-        #     log.warning(f"Failed to send updated bridge state: {e}")
-        #     return False
+        _, jetstream = await NatsClient.get_connection()
+        if jetstream:
+            try:
+                await jetstream.publish(
+                    subject=f"events.{self.event_type}",
+                    payload=json.dumps(self.serialize()).encode(),
+                )
+            except Exception as e:
+                log.error(f"Error publishing event to NATS: {e}")
