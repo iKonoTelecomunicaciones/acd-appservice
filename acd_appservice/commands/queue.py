@@ -332,7 +332,11 @@ async def add_remove(
         if action == "add":
             await queue.add_member(member)
             await send_membership_event(
-                event_type=ACDMembershipEvents.MemberAdd, queue=queue, member=member, penalty=None
+                event_type=ACDMembershipEvents.MemberAdd,
+                queue=queue,
+                member=member,
+                penalty=None,
+                sender=evt.sender.mxid,
             )
         elif action == "remove":
             await queue.remove_member(member)
@@ -340,6 +344,7 @@ async def add_remove(
                 event_type=ACDMembershipEvents.MemberRemove,
                 queue=queue,
                 member=member,
+                sender=evt.sender.mxid,
             )
     except Exception as e:
         evt.log.error(e)
