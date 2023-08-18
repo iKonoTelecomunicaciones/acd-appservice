@@ -9,7 +9,7 @@ from .commands.resolve import BulkResolve
 from .config import Config
 from .db import init as init_db
 from .db import upgrade_table
-from .events.nats_client import NatsClient
+from .events.nats_publisher import NatsPublisher
 from .matrix_handler import MatrixHandler
 from .matrix_room import MatrixRoom
 from .puppet import Puppet
@@ -54,7 +54,7 @@ class ACDAppService(ACD):
         self.add_startup_actions(Puppet.init_cls(self))
         User.init_cls(self)
         MatrixRoom.init_cls(self)
-        NatsClient.init_cls(self.config)
+        NatsPublisher.init_cls(self.config)
 
         # Sync all the rooms where the puppets are in matrix
         # creating the rooms in our database

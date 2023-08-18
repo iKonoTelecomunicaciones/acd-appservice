@@ -12,7 +12,7 @@ from nats.js.client import JetStreamContext
 
 from ..db.portal import PortalState
 from .event_types import ACDEventTypes, ACDMemberEvents, ACDMembershipEvents, ACDPortalEvents
-from .nats_client import NatsClient
+from .nats_publisher import NatsPublisher
 
 log: TraceLogger = logging.getLogger("report.event")
 
@@ -37,11 +37,12 @@ class BaseEvent(SerializableAttrs):
         file.close()
         log.info(f"Sending event {self.serialize()}")
 
-        _, jetstream = await NatsClient.get_connection()
+        _, jetstream = await NatsPublisher.get_connection()
         if jetstream:
             try:
+                subject = NatsPublisher.config["nats.subject"]
                 await jetstream.publish(
-                    subject=f"events.{self.event_type}",
+                    subject=f"{subject}.{self.event_type}",
                     payload=json.dumps(self.serialize()).encode(),
                 )
             except Exception as e:

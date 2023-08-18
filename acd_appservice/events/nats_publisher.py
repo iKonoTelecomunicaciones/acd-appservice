@@ -10,7 +10,7 @@ from ..config import Config
 log: TraceLogger = logging.getLogger("acd.nats")
 
 
-class NatsClient:
+class NatsPublisher:
     _nats_conn: NATSClient = None
     _jetstream_conn: JetStreamContext = None
     config: Config = None
@@ -24,7 +24,7 @@ class NatsClient:
         if not cls.config["nats.enabled"]:
             return None, None
 
-        if cls._nats_conn is None:
+        if not cls._nats_conn:
             try:
                 cls._nats_conn, cls._jetstream_conn = await cls.nats_jetstream_connection()
             except Exception as e:
@@ -37,12 +37,13 @@ class NatsClient:
         log.info("Connecting to NATS JetStream")
         nc: NATSClient = await nats_connect(cls.config["nats.address"])
         js = nc.jetstream()
-        await js.add_stream(name="events", subjects=["events.*"])
+        subject = f"{cls.config['nats.subject']}.*"
+        await js.add_stream(name="acd", subjects=[subject])
         return nc, js
 
     @classmethod
     async def close_connection(cls):
-        if cls._nats_conn is not None:
+        if cls._nats_conn:
             log.info("Closing NATS connection")
             await cls._nats_conn.close()
             cls._nats_conn = None

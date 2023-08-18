@@ -491,6 +491,8 @@ nats:
     user: "foo"
     # Nats password
     password: "secretfoo"
+    # Subject to publish messages
+    subject: "acd.client"
 
 
 logging:
