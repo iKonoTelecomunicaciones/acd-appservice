@@ -16,6 +16,7 @@ from mautrix.types import UserID
 from mautrix.util.async_db import Database, UpgradeTable
 from mautrix.util.program import Program
 
+from .events.nats_publisher import NatsPublisher
 from .matrix_handler import MatrixHandler
 from .puppet import Puppet
 
@@ -183,6 +184,7 @@ class ACD(Program):
         self.az.ready = True
 
     async def stop(self) -> None:
+        await NatsPublisher.close_connection()
         await self.az.stop()
         await super().stop()
         await self.stop_db()
