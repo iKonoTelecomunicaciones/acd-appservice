@@ -349,7 +349,7 @@ async def process_destination_agent(
 
     agent_displayname = await agent.get_displayname()
     payload = {
-        "phone_number": portal.creator_identifier(),
+        "phone_number": await portal.creator_identifier(),
         "agent_displayname": agent_displayname if agent_displayname else agent_id,
     }
 

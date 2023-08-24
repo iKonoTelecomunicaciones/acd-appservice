@@ -31,7 +31,7 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
     if event_type == ACDPortalEvents.Create:
         customer = {
             "mxid": portal.creator,
-            "account_id": portal.creator_identifier(),
+            "account_id": await portal.creator_identifier(),
             "name": await portal.creator_displayname(),
             "username": None,
         }
