@@ -478,7 +478,7 @@ class Portal(DBPortal, MatrixRoom):
         """
         return await self.main_intent.get_displayname(self.creator)
 
-    def creator_identifier(self) -> str | None:
+    async def creator_identifier(self) -> str | None:
         """The function takes a creator mxid and returns his identifier
 
         Returns
@@ -486,8 +486,17 @@ class Portal(DBPortal, MatrixRoom):
             The creator's identifier.
 
         """
-        user_name_match = re.match(self.config["utils.username_regex"], self.creator)
-        identifier = user_name_match.group("number")
+        if not self.creator:
+            self.log.error(f"The creator of room {self.room_id} is not set")
+            await self.post_init()
+
+        try:
+            user_name_match = re.match(self.config["utils.username_regex"], self.creator)
+            identifier = user_name_match.group("number")
+        except Exception as e:
+            self.log.error(f"Error getting creator identifier: {e}")
+            return
+
         if not identifier:
             return
 
