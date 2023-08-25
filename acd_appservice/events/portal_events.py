@@ -21,6 +21,7 @@ class PortalEvent(BaseEvent):
 @dataclass
 class CreateEvent(BaseEvent):
     room_id: RoomID = ib(factory=RoomID)
+    room_name: str = ib(factory=str)
     acd: UserID = ib(factory=UserID)
     customer: dict = ib(factory=dict)
     bridge: str = ib(factory=str)

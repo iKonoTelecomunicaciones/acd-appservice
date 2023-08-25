@@ -2,9 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ..matrix_room import RoomType
 from ..queue import Queue
 from ..user import User
-from .event_types import ACDEventTypes, ACDMemberEvents, ACDMembershipEvents, ACDPortalEvents
+from .event_types import (
+    ACDConversationEvents,
+    ACDEventTypes,
+    ACDMemberEvents,
+    ACDMembershipEvents,
+    ACDRoomEvents,
+)
 from .member_events import MemberLoginEvent, MemberLogoutEvent, MemberPauseEvent
 from .membership_events import MemberAddedEvent, MemberRemovedEvent
 from .portal_events import (
@@ -22,13 +29,14 @@ from .portal_events import (
     TransferFailedEvent,
     UICEvent,
 )
+from .room_events import RoomNameEvent
 
 if TYPE_CHECKING:
     from ..portal import Portal
 
 
-async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kwargs):
-    if event_type == ACDPortalEvents.Create:
+async def send_conversation_event(*, portal: Portal, event_type: ACDConversationEvents, **kwargs):
+    if event_type == ACDConversationEvents.Create:
         customer = {
             "mxid": portal.creator,
             "account_id": await portal.creator_identifier(),
@@ -36,20 +44,21 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             "username": None,
         }
         event = CreateEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.Create,
+            event_type=ACDEventTypes.CONVERSATION,
+            event=ACDConversationEvents.Create,
             state=portal.state,
             prev_state=None,
             sender=portal.creator,
             room_id=portal.room_id,
+            room_name=await portal.get_update_name(),
             acd=portal.main_intent.mxid,
             customer=customer,
             bridge=portal.bridge,
         )
-    elif event_type == ACDPortalEvents.UIC:
+    elif event_type == ACDConversationEvents.UIC:
         event = UICEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.UIC,
+            event_type=ACDEventTypes.CONVERSATION,
+            event=ACDConversationEvents.UIC,
             state=portal.state,
             prev_state=portal.prev_state,
             sender=portal.creator,
@@ -57,10 +66,10 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
         )
-    elif event_type == ACDPortalEvents.BIC:
+    elif event_type == ACDConversationEvents.BIC:
         event = BICEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.BIC,
+            event_type=ACDEventTypes.CONVERSATION,
+            event=ACDConversationEvents.BIC,
             state=portal.state,
             prev_state=portal.prev_state,
             sender=kwargs.get("sender"),
@@ -69,10 +78,10 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             customer_mxid=portal.creator,
             destination=kwargs.get("destination"),
         )
-    elif event_type == ACDPortalEvents.EnterQueue:
+    elif event_type == ACDConversationEvents.EnterQueue:
         event = EnterQueueEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.EnterQueue,
+            event_type=ACDEventTypes.CONVERSATION,
+            event=ACDConversationEvents.EnterQueue,
             state=portal.state,
             prev_state=portal.prev_state,
             sender=kwargs.get("sender"),
@@ -81,11 +90,11 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             customer_mxid=portal.creator,
             queue_room_id=kwargs.get("queue_room_id"),
         )
-    elif event_type == ACDPortalEvents.Connect:
+    elif event_type == ACDConversationEvents.Connect:
         current_agent = await portal.get_current_agent()
         event = ConnectEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.Connect,
+            event_type=ACDEventTypes.CONVERSATION,
+            event=ACDConversationEvents.Connect,
             state=portal.state,
             prev_state=portal.prev_state,
             sender=portal.main_intent.mxid,
@@ -94,10 +103,10 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             customer_mxid=portal.creator,
             agent_mxid=current_agent.mxid,
         )
-    elif event_type == ACDPortalEvents.Assigned:
+    elif event_type == ACDConversationEvents.Assigned:
         event = AssignEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.Assigned,
+            event_type=ACDEventTypes.CONVERSATION,
+            event=ACDConversationEvents.Assigned,
             state=portal.state,
             prev_state=portal.prev_state,
             sender=kwargs.get("sender"),
@@ -106,10 +115,10 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             customer_mxid=portal.creator,
             user_mxid=kwargs.get("assigned_user"),
         )
-    elif event_type == ACDPortalEvents.AssignFailed:
+    elif event_type == ACDConversationEvents.AssignFailed:
         event = AssignFailedEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.AssignFailed,
+            event_type=ACDEventTypes.CONVERSATION,
+            event=ACDConversationEvents.AssignFailed,
             state=portal.state,
             prev_state=portal.prev_state,
             sender=portal.main_intent.mxid,
@@ -119,10 +128,10 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             user_mxid=kwargs.get("user_mxid"),
             reason=kwargs.get("reason"),
         )
-    elif event_type == ACDPortalEvents.PortalMessage:
+    elif event_type == ACDConversationEvents.PortalMessage:
         event = PortalMessageEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.PortalMessage,
+            event_type=ACDEventTypes.CONVERSATION,
+            event=ACDConversationEvents.PortalMessage,
             state=portal.state,
             prev_state=portal.prev_state,
             sender=kwargs.get("sender"),
@@ -131,11 +140,11 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             customer_mxid=portal.creator,
             event_mxid=kwargs.get("event_id"),
         )
-    elif event_type == ACDPortalEvents.Resolve:
+    elif event_type == ACDConversationEvents.Resolve:
         agent_removed: User = kwargs.get("agent_removed")
         event = ResolveEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.Resolve,
+            event_type=ACDEventTypes.CONVERSATION,
+            event=ACDConversationEvents.Resolve,
             state=portal.state,
             prev_state=portal.prev_state,
             sender=kwargs.get("sender"),
@@ -144,10 +153,10 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             customer_mxid=portal.creator,
             agent_mxid=agent_removed.mxid if agent_removed else None,
         )
-    elif event_type == ACDPortalEvents.Transfer:
+    elif event_type == ACDConversationEvents.Transfer:
         event = TransferEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.Transfer,
+            event_type=ACDEventTypes.CONVERSATION,
+            event=ACDConversationEvents.Transfer,
             state=portal.state,
             prev_state=portal.prev_state,
             sender=kwargs.get("sender"),
@@ -156,10 +165,10 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             customer_mxid=portal.creator,
             destination=kwargs.get("destination"),
         )
-    elif event_type == ACDPortalEvents.TransferFailed:
+    elif event_type == ACDConversationEvents.TransferFailed:
         event = TransferFailedEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.TransferFailed,
+            event_type=ACDEventTypes.CONVERSATION,
+            event=ACDConversationEvents.TransferFailed,
             state=portal.state,
             prev_state=portal.prev_state,
             sender=portal.main_intent.mxid,
@@ -169,11 +178,11 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             destination=kwargs.get("destination"),
             reason=kwargs.get("reason"),
         )
-    elif event_type == ACDPortalEvents.AvailableAgents:
+    elif event_type == ACDConversationEvents.AvailableAgents:
         queue: Queue = kwargs.get("queue")
         event = AvailableAgentsEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.AvailableAgents,
+            event_type=ACDEventTypes.CONVERSATION,
+            event=ACDConversationEvents.AvailableAgents,
             state=portal.state,
             prev_state=portal.prev_state,
             sender=portal.main_intent.mxid,
@@ -184,10 +193,10 @@ async def send_portal_event(*, portal: Portal, event_type: ACDPortalEvents, **kw
             agents_count=await queue.get_agent_count(),
             available_agents_count=await queue.get_available_agents_count(),
         )
-    elif event_type == ACDPortalEvents.QueueEmpty:
+    elif event_type == ACDConversationEvents.QueueEmpty:
         event = QueueEmptyEvent(
-            event_type=ACDEventTypes.PORTAL,
-            event=ACDPortalEvents.QueueEmpty,
+            event_type=ACDEventTypes.CONVERSATION,
+            event=ACDConversationEvents.QueueEmpty,
             state=portal.state,
             prev_state=portal.prev_state,
             sender=portal.main_intent.mxid,
@@ -249,6 +258,25 @@ async def send_membership_event(event_type: ACDMembershipEvents, **kwargs):
             queue=kwargs.get("queue"),
             member=kwargs.get("member"),
             sender=kwargs.get("sender"),
+        )
+
+    event.send()
+
+
+async def send_room_event(event_type: ACDRoomEvents, room: Portal | Queue, **kwargs):
+    if event_type == ACDRoomEvents.NameChange:
+        room_type = RoomType.PORTAL if await room.is_portal(room.room_id) else RoomType.QUEUE
+        room_name = (
+            await room.get_update_name() if await room.is_portal(room.room_id) else room.name
+        )
+
+        event = RoomNameEvent(
+            event_type=ACDEventTypes.ROOM,
+            event=ACDRoomEvents.NameChange,
+            sender=room.main_intent.mxid,
+            room_id=room.room_id,
+            room_name=room_name,
+            room_type=room_type,
         )
 
     event.send()

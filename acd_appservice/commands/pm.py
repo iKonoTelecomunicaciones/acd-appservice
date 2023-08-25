@@ -7,7 +7,7 @@ from typing import Dict
 from markdown import markdown
 
 from ..client import ProvisionBridge
-from ..events import ACDPortalEvents, send_portal_event
+from ..events import ACDConversationEvents, send_conversation_event
 from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..signaling import Signaling
@@ -166,9 +166,9 @@ async def pm(evt: CommandEvent) -> Dict:
                     room_id=portal.room_id, status=Signaling.FOLLOWUP, agent=evt.sender.mxid
                 )
 
-                await send_portal_event(
+                await send_conversation_event(
                     portal=portal,
-                    event_type=ACDPortalEvents.PortalMessage,
+                    event_type=ACDConversationEvents.PortalMessage,
                     event_id=message_event_id,
                     sender=evt.sender.mxid,
                 )
@@ -212,9 +212,9 @@ async def pm(evt: CommandEvent) -> Dict:
         # the room is marked as followup and campaign from previous room state
         # is not kept
         await portal.update_state(PortalState.FOLLOWUP)
-        await send_portal_event(
+        await send_conversation_event(
             portal=portal,
-            event_type=ACDPortalEvents.BIC,
+            event_type=ACDConversationEvents.BIC,
             sender=evt.sender.mxid,
             destination=evt.sender.mxid,
         )

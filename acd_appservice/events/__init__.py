@@ -1,6 +1,17 @@
 from .base_event import BaseEvent
-from .event_generator import send_member_event, send_membership_event, send_portal_event
-from .event_types import ACDEventTypes, ACDMemberEvents, ACDMembershipEvents, ACDPortalEvents
+from .event_generator import (
+    send_conversation_event,
+    send_member_event,
+    send_membership_event,
+    send_room_event,
+)
+from .event_types import (
+    ACDConversationEvents,
+    ACDEventTypes,
+    ACDMemberEvents,
+    ACDMembershipEvents,
+    ACDRoomEvents,
+)
 from .nats_publisher import NatsPublisher
 from .portal_events import (
     AssignEvent,

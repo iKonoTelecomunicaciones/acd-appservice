@@ -10,7 +10,7 @@ from mautrix.types import RoomID, UserID
 from mautrix.util.logging import TraceLogger
 
 from ..client import ProvisionBridge
-from ..events import ACDPortalEvents, send_portal_event
+from ..events import ACDConversationEvents, send_conversation_event
 from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..signaling import Signaling
@@ -229,9 +229,9 @@ async def bic(evt: CommandEvent) -> Dict:
         if on_transit:
             # Set chat status to ON_TRANSIT
             await portal.update_state(PortalState.ON_TRANSIT)
-            await send_portal_event(
+            await send_conversation_event(
                 portal=portal,
-                event_type=ACDPortalEvents.BIC,
+                event_type=ACDConversationEvents.BIC,
                 sender=evt.sender,
                 destination=destination,
             )
@@ -247,9 +247,9 @@ async def bic(evt: CommandEvent) -> Dict:
             )
 
         await portal.update_state(PortalState.START)
-        await send_portal_event(
+        await send_conversation_event(
             portal=portal,
-            event_type=ACDPortalEvents.BIC,
+            event_type=ACDConversationEvents.BIC,
             sender=evt.sender,
             destination=destination,
         )

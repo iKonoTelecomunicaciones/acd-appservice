@@ -35,7 +35,7 @@ from acd_appservice import acd_program
 from .client import ProvisionBridge
 from .commands.handler import CommandProcessor
 from .db.user import UserRoles
-from .events import ACDPortalEvents, send_portal_event
+from .events import ACDConversationEvents, ACDRoomEvents, send_conversation_event, send_room_event
 from .matrix_room import MatrixRoom
 from .message import Message
 from .portal import Portal, PortalState
@@ -525,7 +525,7 @@ class MatrixHandler:
         if not portal.creator in puppet.BIC_ROOMS:
             # set chat status to start before process the destination
             await portal.update_state(PortalState.START)
-            await send_portal_event(portal=portal, event_type=ACDPortalEvents.UIC)
+            await send_conversation_event(portal=portal, event_type=ACDConversationEvents.UIC)
 
             if puppet.destination:
                 portal: Portal = await Portal.get_by_room_id(
@@ -593,13 +593,24 @@ class MatrixHandler:
                 await puppet.save()
 
     async def handle_room_name(self, evt: StrippedStateEvent):
-        queue: Queue = await Queue.get_by_room_id(room_id=evt.room_id, create=False)
-        if queue:
+        if not await Portal.is_portal(evt.room_id) and not await Queue.is_queue(evt.room_id):
+            return
+
+        # If current_room is not None,
+        # then the room is a Queue and we have to update the name or topic
+        if await Queue.is_queue(evt.room_id):
+            current_room = await Queue.get_by_room_id(room_id=evt.room_id, create=False)
             if evt.type == EventType.ROOM_NAME:
-                queue.name = evt.content.name
+                current_room.name = evt.content.name
             else:
-                queue.description = evt.content.topic
-            await queue.save()
+                current_room.description = evt.content.topic
+            await current_room.save()
+        elif await Portal.is_portal(evt.room_id):
+            current_room = await Portal.get_by_room_id(room_id=evt.room_id, create=False)
+
+        # Only send the event if is a room name change
+        if evt.type == EventType.ROOM_NAME:
+            await send_room_event(room=current_room, event_type=ACDRoomEvents.NameChange)
 
     def is_command(self, message: MessageEventContent) -> tuple[bool, str]:
         """It checks if a message starts with the command prefix, and if it does,
@@ -757,9 +768,9 @@ class MatrixHandler:
         # Ignore messages from ourselves or agents if not a command
         if sender.is_agent:
             await portal.update_state(PortalState.FOLLOWUP)
-            await send_portal_event(
+            await send_conversation_event(
                 portal=portal,
-                event_type=ACDPortalEvents.PortalMessage,
+                event_type=ACDConversationEvents.PortalMessage,
                 sender=sender.mxid,
                 event_id=event_id,
             )
@@ -793,9 +804,9 @@ class MatrixHandler:
         if room_agent:
             # if message is not from agents, bots or ourselves, it is from the customer
             await portal.update_state(PortalState.PENDING)
-            await send_portal_event(
+            await send_conversation_event(
                 portal=portal,
-                event_type=ACDPortalEvents.PortalMessage,
+                event_type=ACDConversationEvents.PortalMessage,
                 sender=sender.mxid,
                 event_id=event_id,
             )
@@ -851,7 +862,7 @@ class MatrixHandler:
             await portal.update_state(PortalState.START)
             if portal.state != PortalState.ON_TRANSIT:
                 # set chat status to start before process the destination
-                await send_portal_event(portal=portal, event_type=ACDPortalEvents.UIC)
+                await send_conversation_event(portal=portal, event_type=ACDConversationEvents.UIC)
 
             if puppet.destination or portal.destination_on_transit:
                 if await self.process_destination(portal=portal):
