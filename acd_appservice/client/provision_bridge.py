@@ -210,6 +210,37 @@ class ProvisionBridge(Base):
 
         return response.status, data
 
+    async def meta_register_app(self, user_id: UserID, data: Dict) -> tuple[int, Dict]:
+        """It registers an app with Meta.
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user who is registering the app.
+        data : Dict
+            The data necessary to register a meta facebook or instagram app
+        Returns
+        -------
+            A tuple of the status code and the data.
+
+        """
+        try:
+            response = await self.session.post(
+                url=f"{self.url_base}{self.endpoints['register_app']}",
+                headers=self.headers,
+                json=data,
+                params={"user_id": user_id},
+            )
+        except Exception as e:
+            self.log.error(e)
+            return 500, {"error": str(e)}
+
+        data = await response.json()
+        if not response.status in [200, 201]:
+            self.log.error(data)
+
+        return response.status, data
+
     async def ping(self, user_id: UserID) -> tuple[int, Dict]:
         """It sends a ping to the user with the given user_id.
 
