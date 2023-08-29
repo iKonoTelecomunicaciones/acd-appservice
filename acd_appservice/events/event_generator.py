@@ -5,16 +5,7 @@ from typing import TYPE_CHECKING
 from ..matrix_room import RoomType
 from ..queue import Queue
 from ..user import User
-from .event_types import (
-    ACDConversationEvents,
-    ACDEventTypes,
-    ACDMemberEvents,
-    ACDMembershipEvents,
-    ACDRoomEvents,
-)
-from .member_events import MemberLoginEvent, MemberLogoutEvent, MemberPauseEvent
-from .membership_events import MemberAddedEvent, MemberRemovedEvent
-from .portal_events import (
+from .conversation_events import (
     AssignEvent,
     AssignFailedEvent,
     AvailableAgentsEvent,
@@ -29,6 +20,15 @@ from .portal_events import (
     TransferFailedEvent,
     UICEvent,
 )
+from .event_types import (
+    ACDConversationEvents,
+    ACDEventTypes,
+    ACDMemberEvents,
+    ACDMembershipEvents,
+    ACDRoomEvents,
+)
+from .member_events import MemberLoginEvent, MemberLogoutEvent, MemberPauseEvent
+from .membership_events import MemberAddedEvent, MemberRemovedEvent
 from .room_events import RoomNameEvent
 
 if TYPE_CHECKING:

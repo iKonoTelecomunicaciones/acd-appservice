@@ -1,19 +1,5 @@
 from .base_event import BaseEvent
-from .event_generator import (
-    send_conversation_event,
-    send_member_event,
-    send_membership_event,
-    send_room_event,
-)
-from .event_types import (
-    ACDConversationEvents,
-    ACDEventTypes,
-    ACDMemberEvents,
-    ACDMembershipEvents,
-    ACDRoomEvents,
-)
-from .nats_publisher import NatsPublisher
-from .portal_events import (
+from .conversation_events import (
     AssignEvent,
     AssignFailedEvent,
     AvailableAgentsEvent,
@@ -28,3 +14,17 @@ from .portal_events import (
     TransferFailedEvent,
     UICEvent,
 )
+from .event_generator import (
+    send_conversation_event,
+    send_member_event,
+    send_membership_event,
+    send_room_event,
+)
+from .event_types import (
+    ACDConversationEvents,
+    ACDEventTypes,
+    ACDMemberEvents,
+    ACDMembershipEvents,
+    ACDRoomEvents,
+)
+from .nats_publisher import NatsPublisher
