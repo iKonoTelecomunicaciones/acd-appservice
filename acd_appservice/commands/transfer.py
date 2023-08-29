@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 from mautrix.types import RoomID, UserID
 
-from ..events import ACDPortalEvents, send_portal_event
+from ..events import ACDConversationEvents, send_conversation_event
 from ..portal import Portal, PortalState
 from ..puppet import Puppet
 from ..queue import Queue
@@ -147,9 +147,9 @@ async def transfer(evt: CommandEvent) -> str:
     queue: Queue = await Queue.get_by_room_id(room_id=campaign_room_id, create=False)
 
     await portal.update_state(PortalState.ON_DISTRIBUTION)
-    await send_portal_event(
+    await send_conversation_event(
         portal=portal,
-        event_type=ACDPortalEvents.Transfer,
+        event_type=ACDConversationEvents.Transfer,
         sender=evt.sender.mxid,
         destination=queue.room_id,
     )
@@ -207,18 +207,18 @@ async def transfer_user(evt: CommandEvent) -> str:
     agent: User = await User.get_by_mxid(agent_id, create=False)
 
     await portal.update_state(PortalState.ASSIGNED)
-    await send_portal_event(
+    await send_conversation_event(
         portal=portal,
-        event_type=ACDPortalEvents.Transfer,
+        event_type=ACDConversationEvents.Transfer,
         sender=evt.sender.mxid,
         destination=agent_id,
     )
 
     if not agent:
         await portal.update_state(portal.prev_state)
-        await send_portal_event(
+        await send_conversation_event(
             portal=portal,
-            event_type=ACDPortalEvents.TransferFailed,
+            event_type=ACDConversationEvents.TransferFailed,
             reason="Agent not found",
             destination=agent_id,
         )
@@ -232,9 +232,9 @@ async def transfer_user(evt: CommandEvent) -> str:
     # Checking if the room is locked, if it is, it returns.
     if portal.is_locked:
         await portal.update_state(portal.prev_state)
-        await send_portal_event(
+        await send_conversation_event(
             portal=portal,
-            event_type=ACDPortalEvents.TransferFailed,
+            event_type=ACDConversationEvents.TransferFailed,
             destination=agent_id,
             reason="Room is locked by transfer",
         )
@@ -263,9 +263,9 @@ async def transfer_user(evt: CommandEvent) -> str:
         # Checking if the agent is already in the room, if so, it sends a message to the room.
         if transfer_author.mxid == agent.mxid:
             await portal.update_state(portal.prev_state)
-            await send_portal_event(
+            await send_conversation_event(
                 portal=portal,
-                event_type=ACDPortalEvents.TransferFailed,
+                event_type=ACDConversationEvents.TransferFailed,
                 destination=agent_id,
                 reason="Agent is already in the room",
             )
@@ -307,9 +307,9 @@ async def transfer_user(evt: CommandEvent) -> str:
                     )
             else:
                 await portal.update_state(portal.prev_state)
-                await send_portal_event(
+                await send_conversation_event(
                     portal=portal,
-                    event_type=ACDPortalEvents.TransferFailed,
+                    event_type=ACDConversationEvents.TransferFailed,
                     reason="Agent not available",
                     destination=agent_id,
                 )

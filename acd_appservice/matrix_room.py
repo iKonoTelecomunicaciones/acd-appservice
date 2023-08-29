@@ -7,7 +7,15 @@ from typing import TYPE_CHECKING, Dict, List, Tuple
 from markdown import markdown
 from mautrix.api import Method, SynapseAdminPath
 from mautrix.appservice import AppService, IntentAPI
-from mautrix.types import Format, Membership, MessageType, RoomID, TextMessageEventContent, UserID
+from mautrix.types import (
+    Format,
+    Membership,
+    MessageType,
+    RoomID,
+    SerializableEnum,
+    TextMessageEventContent,
+    UserID,
+)
 from mautrix.util.logging import TraceLogger
 
 from .user import User
@@ -15,6 +23,12 @@ from .util import Util
 
 if TYPE_CHECKING:
     from .__main__ import ACDAppService
+
+
+class RoomType(SerializableEnum):
+    CONTROL = "CONTROL"
+    QUEUE = "QUEUE"
+    PORTAL = "PORTAL"
 
 
 class MatrixRoom:

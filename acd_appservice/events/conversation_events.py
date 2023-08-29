@@ -10,7 +10,7 @@ from .base_event import BaseEvent
 
 
 @dataclass
-class PortalEvent(BaseEvent):
+class ConversationEvent(BaseEvent):
     room_id: RoomID = ib(factory=RoomID)
     acd: UserID = ib(factory=UserID)
     customer_mxid: UserID = ib(factory=UserID)
@@ -21,6 +21,7 @@ class PortalEvent(BaseEvent):
 @dataclass
 class CreateEvent(BaseEvent):
     room_id: RoomID = ib(factory=RoomID)
+    room_name: str = ib(factory=str)
     acd: UserID = ib(factory=UserID)
     customer: dict = ib(factory=dict)
     bridge: str = ib(factory=str)
@@ -29,59 +30,59 @@ class CreateEvent(BaseEvent):
 
 
 @dataclass
-class UICEvent(PortalEvent):
+class UICEvent(ConversationEvent):
     pass
 
 
 @dataclass
-class BICEvent(PortalEvent):
+class BICEvent(ConversationEvent):
     destination: UserID | RoomID = ib(factory=UserID)
 
 
 @dataclass
-class EnterQueueEvent(PortalEvent):
+class EnterQueueEvent(ConversationEvent):
     queue_room_id: RoomID = ib(factory=RoomID)
 
 
 @dataclass
-class ConnectEvent(PortalEvent):
+class ConnectEvent(ConversationEvent):
     agent_mxid: UserID = ib(factory=UserID)
 
 
 @dataclass
-class AssignEvent(PortalEvent):
+class AssignEvent(ConversationEvent):
     user_mxid: UserID = ib(factory=UserID)
 
 
 @dataclass
-class AssignFailedEvent(PortalEvent):
+class AssignFailedEvent(ConversationEvent):
     user_mxid: UserID = ib(factory=UserID)
     reason: str = ib(factory=str)
 
 
 @dataclass
-class PortalMessageEvent(PortalEvent):
+class PortalMessageEvent(ConversationEvent):
     event_mxid: EventID = ib(factory=EventID)
 
 
 @dataclass
-class ResolveEvent(PortalEvent):
+class ResolveEvent(ConversationEvent):
     agent_mxid: UserID = ib(factory=UserID)
 
 
 @dataclass
-class TransferEvent(PortalEvent):
+class TransferEvent(ConversationEvent):
     destination: UserID | RoomID = ib(factory=UserID)
 
 
 @dataclass
-class TransferFailedEvent(PortalEvent):
+class TransferFailedEvent(ConversationEvent):
     destination: UserID | RoomID = ib(factory=UserID)
     reason: str = ib(factory=str)
 
 
 @dataclass
-class AvailableAgentsEvent(PortalEvent):
+class AvailableAgentsEvent(ConversationEvent):
     queue_room_id: str = ib(factory=str)
     agents_count: int = ib(factory=int)
     available_agents_count: int = ib(factory=int)
