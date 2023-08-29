@@ -211,7 +211,7 @@ class ProvisionBridge(Base):
         return response.status, data
 
     async def meta_register_app(self, user_id: UserID, data: Dict) -> tuple[int, Dict]:
-        """It registers an app with Meta.
+        """Register an application in the Meta bridge.
 
         Parameters
         ----------

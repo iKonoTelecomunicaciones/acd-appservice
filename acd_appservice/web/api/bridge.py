@@ -860,9 +860,9 @@ async def logout(request: web.Request) -> web.Response:
 @routes.post("/v1/meta/register")
 async def meta_register(request: web.Request) -> web.Response:
     """
-    Register a meta app
+    Register an application in the Meta bridge.
     ---
-    summary: Send information to register a new facebook or instagram meta app.
+    summary: Send information to register a new facebook or instagram Meta bridge.
 
     tags:
         - Bridge
@@ -878,25 +878,27 @@ async def meta_register(request: web.Request) -> web.Response:
 
     requestBody:
         required: false
-        description: A json with `admin_user` of the puppet
-                    , `meta_app_page_id`, `meta_outgoing_page_id`, `meta_app_name`
-                    , `meta_page_access_token`
+        description: A json with `admin_user`, `meta_app_page_id`, `meta_outgoing_page_id`,
+                    `meta_app_name`, `meta_page_access_token`
         content:
           application/json:
               schema:
                 type: object
                 properties:
                     meta_app_page_id:
-                        description: "id of the meta app"
+                        description: "Id of the meta app"
                         type: string
                     meta_outgoing_page_id:
-                        description: "id where the app send the messages to meta"
+                        description: "Meta page id that will be use by send messages"
                         type: string
                     meta_app_name:
-                        description: "Name of the application in gupshup platform"
+                        description: "Name of the application in Meta platform"
                         type: string
                     user_id:
                         description: "Puppet user_id"
+                        type: string
+                    user_email:
+                        description: "Puppet email"
                         type: string
                     meta_page_access_token:
                         description: "Token of the meta app"
@@ -905,13 +907,14 @@ async def meta_register(request: web.Request) -> web.Response:
                     - meta_app_page_id
                     - meta_outgoing_page_id
                     - meta_app_name
-                    - user_id
+                    - user_id | user_email
                     - meta_page_access_token
                 example:
                     meta_app_page_id: 123456789
                     meta_outgoing_page_id: 456789123
                     meta_app_name: AppName
                     user_id: '@acd1:somewhere.com'
+                    user_email: nobody@somewhere.com
                     meta_page_access_token: 7a4QUR5UvYvZAfAQPO1Cwr3ZC
 
     responses:
@@ -919,6 +922,11 @@ async def meta_register(request: web.Request) -> web.Response:
             $ref: '#/components/responses/BadRequest'
         '404':
             $ref: '#/components/responses/NotExist'
+        '406':
+            $ref: '#/components/responses/EmailError'
+        '409':
+            $ref: '#/components/responses/NoPuppetInPortal'
+
     """
     await _resolve_user_identifier(request=request)
 
