@@ -250,7 +250,7 @@ async def bic(evt: CommandEvent) -> Dict:
         await send_conversation_event(
             portal=portal,
             event_type=ACDConversationEvents.BIC,
-            sender=evt.sender,
+            sender=evt.sender.mxid,
             destination=destination,
         )
 

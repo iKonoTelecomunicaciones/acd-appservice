@@ -31,12 +31,15 @@ class CreateEvent(BaseEvent):
 
 @dataclass
 class UICEvent(ConversationEvent):
-    pass
+    room_name: str = ib(default=None)
+    bridge: str = ib(default=None)
 
 
 @dataclass
 class BICEvent(ConversationEvent):
     destination: UserID | RoomID = ib(factory=UserID)
+    room_name: str = ib(default=None)
+    bridge: str = ib(default=None)
 
 
 @dataclass

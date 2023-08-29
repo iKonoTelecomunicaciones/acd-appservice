@@ -62,8 +62,10 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             state=portal.state,
             prev_state=portal.prev_state,
             sender=portal.creator,
+            room_name=await portal.get_update_name(),
             room_id=portal.room_id,
             acd=portal.main_intent.mxid,
+            bridge=portal.bridge,
             customer_mxid=portal.creator,
         )
     elif event_type == ACDConversationEvents.BIC:
@@ -73,9 +75,11 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             state=portal.state,
             prev_state=portal.prev_state,
             sender=kwargs.get("sender"),
+            room_name=await portal.get_update_name(),
             room_id=portal.room_id,
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
+            bridge=portal.bridge,
             destination=kwargs.get("destination"),
         )
     elif event_type == ACDConversationEvents.EnterQueue:
