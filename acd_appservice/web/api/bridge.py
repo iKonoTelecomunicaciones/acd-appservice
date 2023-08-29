@@ -862,7 +862,7 @@ async def meta_register(request: web.Request) -> web.Response:
     """
     Register a meta app
     ---
-    summary: Sending information you can register a new meta facebook or instagram.
+    summary: Send information to register a new facebook or instagram meta app.
 
     tags:
         - Bridge
