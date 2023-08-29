@@ -78,6 +78,7 @@ async def create(request: web.Request) -> web.Response:
                     - gupshup
                     - instagram
                     - facebook
+                    - meta
               example:
                   user_email: "@acd1:somewhere.com"
                   destination: "nobody@somewhere.com"
