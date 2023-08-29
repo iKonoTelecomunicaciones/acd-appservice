@@ -1098,6 +1098,13 @@ components:
           schema:
             $ref: '#/components/schemas/MessageDataOk'
 
+    EmailError:
+      description: Not a valid email.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
     ControlRoomFound:
       description: ControlRoom.
       content:

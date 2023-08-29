@@ -855,3 +855,103 @@ async def logout(request: web.Request) -> web.Response:
     )
     status, response = await bridge_conector.logout(user_id=puppet.mxid)
     return web.json_response(data=response, status=status)
+
+
+@routes.post("/v1/meta/register")
+async def meta_register(request: web.Request) -> web.Response:
+    """
+    Register an application in the Meta bridge.
+    ---
+    summary: Send information to register a new facebook or instagram Meta bridge.
+
+    tags:
+        - Bridge
+
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
+    requestBody:
+        required: false
+        description: A json with `admin_user`, `meta_app_page_id`, `meta_outgoing_page_id`,
+                    `meta_app_name`, `meta_page_access_token`
+        content:
+          application/json:
+              schema:
+                type: object
+                properties:
+                    meta_app_page_id:
+                        description: "Id of the meta app"
+                        type: string
+                    meta_outgoing_page_id:
+                        description: "Meta page id that will be use by send messages"
+                        type: string
+                    meta_app_name:
+                        description: "Name of the application in Meta platform"
+                        type: string
+                    user_id:
+                        description: "Puppet user_id"
+                        type: string
+                    user_email:
+                        description: "Puppet email"
+                        type: string
+                    meta_page_access_token:
+                        description: "Token of the meta app"
+                        type: string
+                required:
+                    - meta_app_page_id
+                    - meta_outgoing_page_id
+                    - meta_app_name
+                    - user_id | user_email
+                    - meta_page_access_token
+                example:
+                    meta_app_page_id: 123456789
+                    meta_outgoing_page_id: 456789123
+                    meta_app_name: AppName
+                    user_id: '@acd1:somewhere.com'
+                    user_email: nobody@somewhere.com
+                    meta_page_access_token: 7a4QUR5UvYvZAfAQPO1Cwr3ZC
+
+    responses:
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '404':
+            $ref: '#/components/responses/NotExist'
+        '406':
+            $ref: '#/components/responses/EmailError'
+        '409':
+            $ref: '#/components/responses/NoPuppetInPortal'
+
+    """
+    await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response(**NOT_DATA)
+
+    meta_data = await request.json()
+
+    meta_app_data = {
+        "meta_app_name": meta_data.get("meta_app_name"),
+        "meta_app_page_id": meta_data.get("meta_app_page_id"),
+        "meta_outgoing_page_id": meta_data.get("meta_outgoing_page_id"),
+        "admin_user": meta_data.get("user_id"),
+        "meta_page_access_token": meta_data.get("meta_page_access_token"),
+    }
+
+    puppet = await _resolve_puppet_identifier(request=request)
+    meta_app_data["notice_room"] = puppet.control_room_id
+
+    bridge_connector = ProvisionBridge(
+        session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
+    )
+
+    status, data = await bridge_connector.meta_register_app(
+        user_id=puppet.custom_mxid, data=meta_app_data
+    )
+
+    return web.json_response(status=status, data=data)
