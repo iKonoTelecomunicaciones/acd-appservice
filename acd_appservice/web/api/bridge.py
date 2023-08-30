@@ -907,7 +907,6 @@ async def meta_register(request: web.Request) -> web.Response:
                     - meta_app_page_id
                     - meta_outgoing_page_id
                     - meta_app_name
-                    - user_id | user_email
                     - meta_page_access_token
                 example:
                     meta_app_page_id: 123456789
