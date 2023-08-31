@@ -201,26 +201,26 @@ acd:
     # - join: it makes that the room admin join the agent to the room with out invitation.
     access_methods:
         portal:
-            - regex: '@supervisor[1-9]*:dominio_cliente.com'
+            - regex: '@supervisor[0-9]*:dominio_cliente.com'
               add: 'join'
               remove: 'leave'
-            - regex: '@agente[1-9]*:dominio_cliente.com'
+            - regex: '@agente[0-9]*:dominio_cliente.com'
               add: 'join'
               remove: 'leave'
             - regex: '@admin:dominio_cliente.com'
               add: 'invite'
               remove: 'leave'
-            - regex: '@menubot[1-9]*:dominio_cliente.com'
+            - regex: '@menubot[0-9]*:dominio_cliente.com'
               add: 'join'
               remove: 'leave'
         queue:
-            - regex: '@supervisor[1-9]*:dominio_cliente.com'
+            - regex: '@supervisor[0-9]*:dominio_cliente.com'
               add: 'join'
               remove: 'leave'
             - regex: '@admin:dominio_cliente.com'
               add: 'join'
               remove: 'leave'
-            - regex: '@agente[1-9]*:dominio_cliente.com'
+            - regex: '@agente[0-9]*:dominio_cliente.com'
               add: 'join'
               remove: 'leave'
 

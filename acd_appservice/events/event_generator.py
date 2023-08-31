@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from ..matrix_room import RoomType
@@ -54,6 +55,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             acd=portal.main_intent.mxid,
             customer=customer,
             bridge=portal.bridge,
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDConversationEvents.UIC:
         event = UICEvent(
@@ -67,6 +69,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             acd=portal.main_intent.mxid,
             bridge=portal.bridge,
             customer_mxid=portal.creator,
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDConversationEvents.BIC:
         event = BICEvent(
@@ -81,6 +84,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             customer_mxid=portal.creator,
             bridge=portal.bridge,
             destination=kwargs.get("destination"),
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDConversationEvents.EnterQueue:
         event = EnterQueueEvent(
@@ -93,6 +97,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
             queue_room_id=kwargs.get("queue_room_id"),
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDConversationEvents.Connect:
         current_agent = await portal.get_current_agent()
@@ -106,6 +111,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
             agent_mxid=current_agent.mxid,
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDConversationEvents.Assigned:
         event = AssignEvent(
@@ -118,6 +124,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
             user_mxid=kwargs.get("assigned_user"),
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDConversationEvents.AssignFailed:
         event = AssignFailedEvent(
@@ -131,6 +138,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             customer_mxid=portal.creator,
             user_mxid=kwargs.get("user_mxid"),
             reason=kwargs.get("reason"),
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDConversationEvents.PortalMessage:
         event = PortalMessageEvent(
@@ -143,6 +151,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
             event_mxid=kwargs.get("event_id"),
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDConversationEvents.Resolve:
         agent_removed: User = kwargs.get("agent_removed")
@@ -156,6 +165,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
             agent_mxid=agent_removed.mxid if agent_removed else None,
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDConversationEvents.Transfer:
         event = TransferEvent(
@@ -168,6 +178,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
             destination=kwargs.get("destination"),
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDConversationEvents.TransferFailed:
         event = TransferFailedEvent(
@@ -181,6 +192,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             customer_mxid=portal.creator,
             destination=kwargs.get("destination"),
             reason=kwargs.get("reason"),
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDConversationEvents.AvailableAgents:
         queue: Queue = kwargs.get("queue")
@@ -196,6 +208,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             queue_room_id=queue.room_id,
             agents_count=await queue.get_agent_count(),
             available_agents_count=await queue.get_available_agents_count(),
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDConversationEvents.QueueEmpty:
         event = QueueEmptyEvent(
@@ -208,6 +221,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
             queue_room_id=kwargs.get("queue_room_id"),
+            timestamp=datetime.utcnow().timestamp(),
         )
 
     event.send()
@@ -220,8 +234,10 @@ async def send_member_event(event_type: ACDMemberEvents, **kwargs):
             event=ACDMemberEvents.MemberLogin,
             sender=kwargs.get("sender"),
             queue=kwargs.get("queue"),
+            queue_name=kwargs.get("queue_name"),
             member=kwargs.get("member"),
             penalty=kwargs.get("penalty"),
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDMemberEvents.MemberLogout:
         event = MemberLogoutEvent(
@@ -229,7 +245,9 @@ async def send_member_event(event_type: ACDMemberEvents, **kwargs):
             event=ACDMemberEvents.MemberLogout,
             sender=kwargs.get("sender"),
             queue=kwargs.get("queue"),
+            queue_name=kwargs.get("queue_name"),
             member=kwargs.get("member"),
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDMemberEvents.MemberPause:
         event = MemberPauseEvent(
@@ -237,9 +255,11 @@ async def send_member_event(event_type: ACDMemberEvents, **kwargs):
             event=ACDMemberEvents.MemberPause,
             sender=kwargs.get("sender"),
             queue=kwargs.get("queue"),
+            queue_name=kwargs.get("queue_name"),
             member=kwargs.get("member"),
             paused=kwargs.get("paused"),
             pause_reason=kwargs.get("pause_reason"),
+            timestamp=datetime.utcnow().timestamp(),
         )
 
     event.send()
@@ -254,6 +274,7 @@ async def send_membership_event(event_type: ACDMembershipEvents, **kwargs):
             member=kwargs.get("member"),
             penalty=kwargs.get("penalty"),
             sender=kwargs.get("sender"),
+            timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDMembershipEvents.MemberRemove:
         event = MemberRemovedEvent(
@@ -262,6 +283,7 @@ async def send_membership_event(event_type: ACDMembershipEvents, **kwargs):
             queue=kwargs.get("queue"),
             member=kwargs.get("member"),
             sender=kwargs.get("sender"),
+            timestamp=datetime.utcnow().timestamp(),
         )
 
     event.send()
@@ -281,6 +303,7 @@ async def send_room_event(event_type: ACDRoomEvents, room: Portal | Queue, **kwa
             room_id=room.room_id,
             room_name=room_name,
             room_type=room_type,
+            timestamp=datetime.utcnow().timestamp(),
         )
 
     event.send()
