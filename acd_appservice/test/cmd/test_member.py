@@ -1,7 +1,10 @@
+from unittest.mock import AsyncMock
+
 import nest_asyncio
 import pytest
 
 from ...commands.handler import CommandProcessor
+from ...events import BaseEvent
 from ...queue import Queue
 from ...queue_membership import QueueMembership, QueueMembershipState
 from ...user import User
@@ -30,6 +33,9 @@ class TestMemberCMD:
             A list of queue that the user is a member of.
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login"]
         response = await processor.handle(
@@ -62,6 +68,9 @@ class TestMemberCMD:
 
         """
 
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
+
         args = ["-a", "login", "--agent", "@agent2:dominio_cliente.com"]
         response = await processor.handle(
             sender=agent_user,
@@ -92,6 +101,9 @@ class TestMemberCMD:
             A list of queue that the user is a member of.
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login"]
         response = await processor.handle(
@@ -130,6 +142,9 @@ class TestMemberCMD:
             A list of queue that the user is a member of.
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login"]
         response = await processor.handle(
@@ -171,6 +186,9 @@ class TestMemberCMD:
             A list of queue that the user is a member of.
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "logout"]
         response = await processor.handle(
@@ -215,6 +233,9 @@ class TestMemberCMD:
 
         """
 
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
+
         args = ["-a", "login", "--agent", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
@@ -250,6 +271,9 @@ class TestMemberCMD:
             QueueMembership
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login", "--agent", agent_user.mxid]
         response = await processor.handle(
@@ -291,6 +315,9 @@ class TestMemberCMD:
 
         """
 
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
+
         args = ["-a", "login"]
 
         response = await processor.handle(
@@ -323,6 +350,9 @@ class TestMemberCMD:
             Queue - this is the queue that the command is being run in
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login", "--agent", agent_user.mxid]
 
@@ -359,6 +389,9 @@ class TestMemberCMD:
             QueueMembership
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login", "--agent", agent_user.mxid]
         response = await processor.handle(
@@ -405,6 +438,9 @@ class TestMemberCMD:
 
         """
 
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
+
         args = ["-a", "logout", "--agent", agent_user.mxid]
         response = await processor.handle(
             sender=admin_user,
@@ -445,6 +481,9 @@ class TestMemberCMD:
 
         """
 
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
+
         args = ["-a", "logout"]
 
         response = await processor.handle(
@@ -478,6 +517,9 @@ class TestMemberCMD:
 
         """
 
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
+
         args = ["-a", "logout", "--agent", agent_user.mxid]
 
         response = await processor.handle(
@@ -508,6 +550,9 @@ class TestMemberCMD:
             A list of queue that the user is a member of.
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login"]
         response = await processor.handle(
@@ -550,6 +595,9 @@ class TestMemberCMD:
 
         """
 
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
+
         args = ["-a", "pause", "-p", "LUNCH"]
         response = await processor.handle(
             sender=agent_user,
@@ -579,6 +627,9 @@ class TestMemberCMD:
             A list of queue that the user is a member of.
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login"]
         response = await processor.handle(
@@ -619,6 +670,9 @@ class TestMemberCMD:
             A list of queue that the user is a member of.
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login"]
         response = await processor.handle(
@@ -666,6 +720,9 @@ class TestMemberCMD:
             A list of queue that the user is a member of.
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login"]
         response = await processor.handle(
@@ -716,6 +773,9 @@ class TestMemberCMD:
 
         """
 
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
+
         args = ["-a", "pause"]
         response = await processor.handle(
             sender=agent_user,
@@ -755,6 +815,9 @@ class TestMemberCMD:
             A list of queue that the user is a member of.
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login"]
         response = await processor.handle(
@@ -817,6 +880,9 @@ class TestMemberCMD:
 
         """
 
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
+
         args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
@@ -863,6 +929,9 @@ class TestMemberCMD:
 
         """
 
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
+
         args = ["-a", "pause", "--agent", agent_user.mxid, "-p", "LUNCH"]
         response = await processor.handle(
             sender=admin_user,
@@ -897,6 +966,9 @@ class TestMemberCMD:
             QueueMembership
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login"]
         response = await processor.handle(
@@ -948,6 +1020,9 @@ class TestMemberCMD:
 
         """
 
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
+
         args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
@@ -988,6 +1063,9 @@ class TestMemberCMD:
             Queue - this is the queue that the command is being run in
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login"]
         response = await processor.handle(
@@ -1033,6 +1111,9 @@ class TestMemberCMD:
 
         """
 
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
+
         args = ["-a", "pause"]
         response = await processor.handle(
             sender=agent_user,
@@ -1076,6 +1157,9 @@ class TestMemberCMD:
             QueueMembership
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login"]
         response = await processor.handle(
@@ -1130,6 +1214,9 @@ class TestMemberCMD:
             QueueMembership
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login"]
         response = await processor.handle(
@@ -1190,6 +1277,9 @@ class TestMemberCMD:
 
         """
 
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
+
         args = ["-a", "login"]
         response = await processor.handle(
             sender=agent_user,
@@ -1231,6 +1321,9 @@ class TestMemberCMD:
             Queue - this is the queue that the command is being run in
 
         """
+
+        User.get_displayname = AsyncMock(return_value="Agent 1")
+        BaseEvent.send_to_nats = AsyncMock()
 
         args = ["-a", "login"]
         response = await processor.handle(
