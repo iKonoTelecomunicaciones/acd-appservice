@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime
 
 from attr import dataclass, ib
 from mautrix.types import SerializableAttrs, UserID
@@ -29,7 +28,7 @@ class BaseEvent(SerializableAttrs):
     event: ACDConversationEvents | ACDMemberEvents | ACDMembershipEvents | ACDRoomEvents = ib(
         default=None
     )
-    timestamp: float = ib(default=datetime.utcnow().timestamp())
+    timestamp: float = ib(factory=float)
     sender: UserID = ib(factory=UserID)
 
     def send(self):
