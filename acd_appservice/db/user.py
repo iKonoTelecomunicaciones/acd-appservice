@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-from enum import Enum
 from typing import TYPE_CHECKING, ClassVar, Dict, List
 
 import asyncpg
 from attr import dataclass
-from mautrix.types import RoomID, UserID
+from mautrix.types import RoomID, SerializableEnum, UserID
 from mautrix.util.async_db import Database
 
 fake_db = Database.create("") if TYPE_CHECKING else None
 
 
-class UserRoles(Enum):
+class UserRoles(SerializableEnum):
     SUPERVISOR = "SUPERVISOR"
     AGENT = "AGENT"
     MENU = "MENU"

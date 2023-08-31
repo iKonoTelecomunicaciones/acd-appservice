@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Dict
+
 from attr import dataclass, ib
 from mautrix.types import RoomID, UserID
 
@@ -7,21 +9,23 @@ from .base_event import BaseEvent
 
 
 @dataclass
-class MemberLoginEvent(BaseEvent):
+class MemberEvent(BaseEvent):
     queue: RoomID = ib(factory=RoomID)
-    member: UserID = ib(factory=UserID)
+    queue_name: str = ib(default=None)
+    member: Dict = ib(factory=Dict)
+
+
+@dataclass
+class MemberLoginEvent(MemberEvent):
     penalty: int = ib(factory=int)
 
 
 @dataclass
-class MemberLogoutEvent(BaseEvent):
-    queue: RoomID = ib(factory=RoomID)
-    member: UserID = ib(factory=UserID)
+class MemberLogoutEvent(MemberEvent):
+    pass
 
 
 @dataclass
-class MemberPauseEvent(BaseEvent):
-    queue: RoomID = ib(factory=RoomID)
-    member: UserID = ib(factory=UserID)
+class MemberPauseEvent(MemberEvent):
     paused: bool = ib(factory=bool)
     pause_reason: str = ib(default=None)

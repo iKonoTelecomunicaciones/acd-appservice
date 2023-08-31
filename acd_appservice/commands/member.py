@@ -148,7 +148,12 @@ async def member(evt: CommandEvent) -> Dict:
                 event_type=ACDMemberEvents.MemberLogin,
                 sender=evt.sender.mxid,
                 queue=evt.room_id,
-                member=agent_id,
+                queue_name=queue.name,
+                member={
+                    "mxid": user.mxid,
+                    "display_name": await user.get_displayname(),
+                    "role": user.role,
+                },
                 penalty=None,
             )
         else:
@@ -156,14 +161,24 @@ async def member(evt: CommandEvent) -> Dict:
                 event_type=ACDMemberEvents.MemberLogout,
                 sender=evt.sender.mxid,
                 queue=evt.room_id,
-                member=agent_id,
+                queue_name=queue.name,
+                member={
+                    "mxid": user.mxid,
+                    "display_name": await user.get_displayname(),
+                    "role": user.role,
+                },
             )
             if membership.paused:
                 await send_member_event(
                     event_type=ACDMemberEvents.MemberPause,
                     sender=evt.sender.mxid,
                     queue=evt.room_id,
-                    member=agent_id,
+                    queue_name=queue.name,
+                    member={
+                        "mxid": user.mxid,
+                        "display_name": await user.get_displayname(),
+                        "role": user.role,
+                    },
                     paused=False,
                 )
 
@@ -205,8 +220,13 @@ async def member(evt: CommandEvent) -> Dict:
             event_type=ACDMemberEvents.MemberPause,
             sender=evt.sender.mxid,
             queue=evt.room_id,
-            member=agent_id,
+            member={
+                "mxid": user.mxid,
+                "display_name": await user.get_displayname(),
+                "role": user.role,
+            },
             paused=state,
+            queue_name=queue.name,
             pause_reason=pause_reason,
         )
 
