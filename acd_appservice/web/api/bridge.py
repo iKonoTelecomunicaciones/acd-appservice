@@ -760,27 +760,25 @@ async def gupshup_update(request: web.Request) -> web.Response:
     if not request.body_exists:
         return web.json_response({"detail": {"data": None, "message": "Please provide some data"}})
 
+    puppet = await _resolve_puppet_identifier(request=request)
+    if puppet.bridge != "gupshup":
+        return web.json_response({"detail": {"data": None, "message": "Bridge invalid"}})
+
     gupshup_data = await request.json()
+
+    if not gupshup_data.get("app_name") and not gupshup_data.get("api_key"):
+        return web.json_response(
+            {"detail": {"data": None, "message": "Please provide required variables"}}
+        )
+
+    bridge_connector = ProvisionBridge(
+        session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
+    )
 
     gs_app_data = {
         "app_name": gupshup_data.get("app_name"),
         "api_key": gupshup_data.get("api_key"),
     }
-
-    if not gs_app_data.get("app_name") and not gs_app_data.get("api_key"):
-        return web.json_response(
-            {"detail": {"data": None, "message": "Please provide required variables"}}
-        )
-
-    puppet = await _resolve_puppet_identifier(request=request)
-    log.critical(puppet)
-
-    if puppet.bridge != "gupshup":
-        return web.json_response({"detail": {"data": None, "message": "Bridge invalid"}})
-
-    bridge_connector = ProvisionBridge(
-        session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
-    )
 
     status, data = await bridge_connector.gupshup_update_app(
         user_id=puppet.custom_mxid, data=gs_app_data
@@ -1107,19 +1105,12 @@ async def meta_update(request: web.Request) -> web.Response:
         return web.json_response({"detail": {"data": None, "message": "Please provide some data"}})
 
     puppet = await _resolve_puppet_identifier(request=request)
-
     if puppet.bridge != "meta":
         return web.json_response({"detail": {"data": None, "message": "Bridge invalid"}})
 
     meta_data = await request.json()
 
-    meta_app_data = {
-        "app_name": meta_data.get("app_name"),
-        "page_access_token": meta_data.get("page_access_token"),
-        "admin_user": puppet.custom_mxid,
-    }
-
-    if not meta_app_data.get("app_name") and not meta_app_data.get("page_access_token"):
+    if not meta_data.get("app_name") and not meta_data.get("page_access_token"):
         return web.json_response(
             {"detail": {"data": None, "message": "Please provide required variables"}}
         )
@@ -1128,7 +1119,14 @@ async def meta_update(request: web.Request) -> web.Response:
         session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
     )
 
-    status, data = await bridge_connector.meta_update_app(data=meta_app_data)
+    meta_app_data = {
+        "app_name": meta_data.get("app_name"),
+        "page_access_token": meta_data.get("page_access_token"),
+    }
+
+    status, data = await bridge_connector.meta_update_app(
+        user_id=puppet.custom_mxid, data=meta_app_data
+    )
 
     if status in [200, 201]:
         await puppet.save()

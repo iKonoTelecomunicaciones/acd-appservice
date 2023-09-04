@@ -273,7 +273,7 @@ class ProvisionBridge(Base):
 
         return response.status, data
 
-    async def meta_update_app(self, data: Dict) -> tuple[int, Dict]:
+    async def meta_update_app(self, user_id: UserID, data: Dict) -> tuple[int, Dict]:
         """It update the app_name or the token of the Meta app.
 
         Parameters
@@ -289,10 +289,11 @@ class ProvisionBridge(Base):
         """
 
         try:
-            response = await self.session.post(
+            response = await self.session.patch(
                 url=f"{self.url_base}{self.endpoints['update_app']}",
                 headers=self.headers,
                 json=data,
+                params={"user_id": user_id},
             )
         except Exception as e:
             self.log.error(e)
