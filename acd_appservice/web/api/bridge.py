@@ -766,7 +766,7 @@ async def gupshup_update(request: web.Request) -> web.Response:
 
     gupshup_data = await request.json()
 
-    if not gupshup_data.get("app_name") and not gupshup_data.get("api_key"):
+    if not gupshup_data.get("api_key"):
         return web.json_response(
             {"detail": {"data": None, "message": "Please provide required variables"}}
         )
@@ -775,13 +775,8 @@ async def gupshup_update(request: web.Request) -> web.Response:
         session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
     )
 
-    gs_app_data = {
-        "app_name": gupshup_data.get("app_name"),
-        "api_key": gupshup_data.get("api_key"),
-    }
-
     status, data = await bridge_connector.gupshup_update_app(
-        user_id=puppet.custom_mxid, data=gs_app_data
+        user_id=puppet.custom_mxid, data={"api_key": gupshup_data.get("api_key")}
     )
 
     if status in [200, 201]:
