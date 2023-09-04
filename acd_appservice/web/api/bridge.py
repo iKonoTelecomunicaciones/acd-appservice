@@ -701,6 +701,86 @@ async def gupshup_register(request: web.Request) -> web.Response:
     return web.json_response(status=status, data=data)
 
 
+@routes.patch("/v1/gupshup/update")
+async def gupshup_update(request: web.Request) -> web.Response:
+    """
+    Update a gupshup app
+    ---
+    summary: Sending information you can update a gupshup line.
+
+    tags:
+        - Bridge
+
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
+    requestBody:
+        required: false
+        description: A json with `user_email` or `user_id` of the puppet
+                     (You must use one of them), `app_name`, `api_key`
+        content:
+          application/json:
+              schema:
+                type: object
+                properties:
+                    user_email:
+                        description: "Puppet email"
+                        type: string
+                    user_id:
+                        description: "Puppet user_id"
+                        type: string
+                    api_key:
+                        description: "Api key provided by gupshup partner"
+                        type: string
+                example:
+                    user_email: nobody@somewhere.com
+                    user_id: '@acd1:somewhere.com'
+                    api_key: your_api_key
+
+    responses:
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '409':
+            $ref: '#/components/responses/Conflict'
+        '422':
+            $ref: '#/components/responses/RequiredVariables'
+    """
+    await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response({"detail": {"data": None, "message": "Please provide some data"}})
+
+    puppet = await _resolve_puppet_identifier(request=request)
+    if puppet.bridge != "gupshup":
+        return web.json_response({"detail": {"data": None, "message": "Bridge invalid"}})
+
+    gupshup_data = await request.json()
+
+    if not gupshup_data.get("api_key"):
+        return web.json_response(
+            {"detail": {"data": None, "message": "Please provide required variables"}}
+        )
+
+    bridge_connector = ProvisionBridge(
+        session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
+    )
+
+    status, data = await bridge_connector.gupshup_update_app(
+        user_id=puppet.custom_mxid, data={"api_key": gupshup_data.get("api_key")}
+    )
+
+    if status in [200, 201]:
+        await puppet.save()
+
+    return web.json_response(status=status, data=data)
+
+
 @routes.get("/v1/read_check", allow_head=False)
 async def read_check(request: web.Request) -> web.Response:
     """
@@ -952,5 +1032,94 @@ async def meta_register(request: web.Request) -> web.Response:
     status, data = await bridge_connector.meta_register_app(
         user_id=puppet.custom_mxid, data=meta_app_data
     )
+
+    return web.json_response(status=status, data=data)
+
+
+@routes.patch("/v1/meta/update")
+async def meta_update(request: web.Request) -> web.Response:
+    """
+    Update a meta app
+    ---
+    summary: Sending information you can update a meta line.
+
+    tags:
+        - Bridge
+
+    parameters:
+    - in: header
+      name: Authorization
+      description: User that makes the request
+      required: true
+      schema:
+        type: string
+      example: Mxid @user:example.com
+
+    requestBody:
+        required: false
+        description: A json with `user_email` or `user_id` of the puppet
+                     (You must use one of them), `app_name`, `page_access_token`
+        content:
+          application/json:
+              schema:
+                type: object
+                properties:
+                    user_email:
+                        description: "Puppet email"
+                        type: string
+                    user_id:
+                        description: "Puppet user_id"
+                        type: string
+                    app_name:
+                        description: "Name of the application in meta platform"
+                        type: string
+                    page_access_token:
+                        description: "Token provided by meta partner"
+                        type: string
+                example:
+                    user_email: nobody@somewhere.com
+                    user_id: '@acd1:somewhere.com'
+                    app_name: AppName
+                    page_access_token: your_token
+
+    responses:
+        '400':
+            $ref: '#/components/responses/BadRequest'
+        '409':
+            $ref: '#/components/responses/Conflict'
+        '422':
+            $ref: '#/components/responses/RequiredVariables'
+    """
+    await _resolve_user_identifier(request=request)
+
+    if not request.body_exists:
+        return web.json_response({"detail": {"data": None, "message": "Please provide some data"}})
+
+    puppet = await _resolve_puppet_identifier(request=request)
+    if puppet.bridge != "meta":
+        return web.json_response({"detail": {"data": None, "message": "Bridge invalid"}})
+
+    meta_data = await request.json()
+
+    if not meta_data.get("app_name") and not meta_data.get("page_access_token"):
+        return web.json_response(
+            {"detail": {"data": None, "message": "Please provide required variables"}}
+        )
+
+    bridge_connector = ProvisionBridge(
+        session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
+    )
+
+    meta_app_data = {
+        "app_name": meta_data.get("app_name"),
+        "page_access_token": meta_data.get("page_access_token"),
+    }
+
+    status, data = await bridge_connector.meta_update_app(
+        user_id=puppet.custom_mxid, data=meta_app_data
+    )
+
+    if status in [200, 201]:
+        await puppet.save()
 
     return web.json_response(status=status, data=data)

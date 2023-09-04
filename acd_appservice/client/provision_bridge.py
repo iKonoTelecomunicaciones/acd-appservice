@@ -210,6 +210,38 @@ class ProvisionBridge(Base):
 
         return response.status, data
 
+    async def gupshup_update_app(self, user_id: UserID, data: Dict) -> tuple[int, Dict]:
+        """Update the api_key of the Gupshup app.
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user who is updating the app.
+        data : Dict
+            The data necessary to update the gupshup app
+        Returns
+        -------
+            A tuple of the status code and the data.
+
+        """
+
+        try:
+            response = await self.session.patch(
+                url=f"{self.url_base}{self.endpoints['update_app']}",
+                headers=self.headers,
+                json=data,
+                params={"user_id": user_id},
+            )
+        except Exception as e:
+            self.log.error(e)
+            return 500, {"detail": {"data": None, "message": str(e)}}
+
+        data = await response.json()
+        if not response.status in [200, 201]:
+            self.log.error(data)
+
+        return response.status, data
+
     async def meta_register_app(self, user_id: UserID, data: Dict) -> tuple[int, Dict]:
         """Register an application in the Meta bridge.
 
@@ -234,6 +266,38 @@ class ProvisionBridge(Base):
         except Exception as e:
             self.log.error(e)
             return 500, {"error": str(e)}
+
+        data = await response.json()
+        if not response.status in [200, 201]:
+            self.log.error(data)
+
+        return response.status, data
+
+    async def meta_update_app(self, user_id: UserID, data: Dict) -> tuple[int, Dict]:
+        """Update the app_name or the token of the Meta app.
+
+        Parameters
+        ----------
+        user_id : UserID
+            The user ID of the user who is updating the app.
+        data : Dict
+            The data necessary to update the meta app
+        Returns
+        -------
+            A tuple of the status code and the data.
+
+        """
+
+        try:
+            response = await self.session.patch(
+                url=f"{self.url_base}{self.endpoints['update_app']}",
+                headers=self.headers,
+                json=data,
+                params={"user_id": user_id},
+            )
+        except Exception as e:
+            self.log.error(e)
+            return 500, {"detail": {"data": None, "message": e}}
 
         data = await response.json()
         if not response.status in [200, 201]:
