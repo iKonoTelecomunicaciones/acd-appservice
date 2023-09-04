@@ -735,16 +735,12 @@ async def gupshup_update(request: web.Request) -> web.Response:
                     user_id:
                         description: "Puppet user_id"
                         type: string
-                    app_name:
-                        description: "Name of the application in gupshup platform"
-                        type: string
                     api_key:
                         description: "Api key provided by gupshup partner"
                         type: string
                 example:
                     user_email: nobody@somewhere.com
                     user_id: '@acd1:somewhere.com'
-                    app_name: AppName
                     api_key: your_api_key
 
     responses:

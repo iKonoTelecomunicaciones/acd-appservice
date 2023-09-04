@@ -211,7 +211,7 @@ class ProvisionBridge(Base):
         return response.status, data
 
     async def gupshup_update_app(self, user_id: UserID, data: Dict) -> tuple[int, Dict]:
-        """It update the app_name or the api_key of the Gupshup app.
+        """Update the api_key of the Gupshup app.
 
         Parameters
         ----------
@@ -274,7 +274,7 @@ class ProvisionBridge(Base):
         return response.status, data
 
     async def meta_update_app(self, user_id: UserID, data: Dict) -> tuple[int, Dict]:
-        """It update the app_name or the token of the Meta app.
+        """Update the app_name or the token of the Meta app.
 
         Parameters
         ----------
