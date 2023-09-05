@@ -71,11 +71,17 @@ class Config(BaseBridgeConfig):
         copy("bridges.chatterbox.initial_state.enabled")
         copy_dict("bridges.chatterbox.initial_state.power_levels")
 
-        copy("bridges.meta.mxid")
-        copy("bridges.meta.provisioning.url_base")
-        copy("bridges.meta.provisioning.shared_secret")
-        copy("bridges.meta.initial_state.enabled")
-        copy_dict("bridges.meta.initial_state.power_levels")
+        copy("bridges.meta_instagram.mxid")
+        copy("bridges.meta_instagram.provisioning.url_base")
+        copy("bridges.meta_instagram.provisioning.shared_secret")
+        copy("bridges.meta_instagram.initial_state.enabled")
+        copy_dict("bridges.meta_instagram.initial_state.power_levels")
+
+        copy("bridges.meta_facebook.mxid")
+        copy("bridges.meta_facebook.provisioning.url_base")
+        copy("bridges.meta_facebook.provisioning.shared_secret")
+        copy("bridges.meta_facebook.initial_state.enabled")
+        copy_dict("bridges.meta_facebook.initial_state.power_levels")
 
         # ACD
         copy("acd.namespaces")

@@ -412,13 +412,43 @@ bridges:
                 m.room.name: 0
                 m.room.topic: 0
 
-  meta:
+  meta_facebook:
     # Meta UserID
     mxid: "@metabot:dominio_cliente.com"
     # Prefix to be listened by bridge
     prefix: "!meta"
     # Prefix for users created
-    user_prefix: "mt"
+    user_prefix: "mtfb"
+    set_permissions: "set-pl {mxid} {power_level}"
+    set_relay: "set-relay"
+    # Bridge support formated messages
+    format_messages: true
+    # If you are already a room administrator, configure your power levels.
+    initial_state:
+        # if enabled, these power levels will be configured at room initialization.
+        enabled: false
+        power_levels:
+            events_default: 0
+            users_default: 0
+            state_default: 50
+            events:
+                m.room.avatar: 0
+                m.room.name: 0
+                m.room.topic: 0
+    # Settings for provisioning API
+    provisioning:
+        url_base: "http://meta:29328/_matrix/provision"
+        shared_secret: ""
+        endpoints:
+            register_app: "/v1/register_app"
+
+  meta_instagram:
+    # Meta UserID
+    mxid: "@metabot:dominio_cliente.com"
+    # Prefix to be listened by bridge
+    prefix: "!meta"
+    # Prefix for users created
+    user_prefix: "mtig"
     set_permissions: "set-pl {mxid} {power_level}"
     set_relay: "set-relay"
     # Bridge support formated messages

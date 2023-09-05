@@ -19,7 +19,7 @@ bridge_arg = CommandArg(
     name="--bridge or -b",
     help_text="Bridge bot that will be invited to the control room if you want it",
     is_required=False,
-    example="`mautrix`| `instagram` | `gupshup`",
+    example="`mautrix`| `instagram` | `gupshup | facebook | meta_instagram | meta_facebook`",
 )
 
 
