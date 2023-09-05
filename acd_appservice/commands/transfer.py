@@ -158,6 +158,15 @@ async def transfer(evt: CommandEvent) -> str:
     if enqueue_chat and current_agent:
         await portal.leave_user(user_id=current_agent.mxid, reason="Transfer")
 
+    # Changing room state to ON_DISTRIBUTION by acd command
+    await send_conversation_event(
+        portal=portal,
+        event_type=ACDConversationEvents.EnterQueue,
+        queue_room_id=queue.room_id,
+        queue_name=queue.name,
+        sender=evt.sender.mxid,
+    )
+
     response = await puppet.agent_manager.loop_agents(
         portal=portal,
         queue=queue,

@@ -97,6 +97,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
             queue_room_id=kwargs.get("queue_room_id"),
+            queue_name=kwargs.get("queue_name"),
             timestamp=datetime.utcnow().timestamp(),
         )
     elif event_type == ACDConversationEvents.Connect:
@@ -166,6 +167,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             customer_mxid=portal.creator,
             agent_mxid=agent_removed.mxid if agent_removed else None,
             timestamp=datetime.utcnow().timestamp(),
+            reason=kwargs.get("reason", None),
         )
     elif event_type == ACDConversationEvents.Transfer:
         event = TransferEvent(
@@ -221,6 +223,7 @@ async def send_conversation_event(*, portal: Portal, event_type: ACDConversation
             acd=portal.main_intent.mxid,
             customer_mxid=portal.creator,
             queue_room_id=kwargs.get("queue_room_id"),
+            enqueued=kwargs.get("enqueued"),
             timestamp=datetime.utcnow().timestamp(),
         )
 
