@@ -45,6 +45,7 @@ class BICEvent(ConversationEvent):
 @dataclass
 class EnterQueueEvent(ConversationEvent):
     queue_room_id: RoomID = ib(factory=RoomID)
+    queue_name: str = ib(factory=str)
 
 
 @dataclass
@@ -71,6 +72,7 @@ class PortalMessageEvent(ConversationEvent):
 @dataclass
 class ResolveEvent(ConversationEvent):
     agent_mxid: UserID = ib(factory=UserID)
+    reason: str = ib(default=None)
 
 
 @dataclass
@@ -93,4 +95,4 @@ class AvailableAgentsEvent(ConversationEvent):
 
 @dataclass
 class QueueEmptyEvent(EnterQueueEvent):
-    pass
+    enqueued: bool = ib(factory=bool)

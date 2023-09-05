@@ -96,6 +96,7 @@ class AgentManager:
                         portal=portal,
                         event_type=ACDConversationEvents.QueueEmpty,
                         queue_room_id=destination,
+                        enqueued=put_enqueued_portal,
                     )
                 portal.selected_option = destination
                 await portal.update()
@@ -228,6 +229,7 @@ class AgentManager:
                 portal=portal,
                 event_type=ACDConversationEvents.EnterQueue,
                 queue_room_id=queue.room_id,
+                queue_name=queue.name,
                 sender=cmd_sender,
             )
 
@@ -441,11 +443,13 @@ class AgentManager:
 
                     self.log.debug(f"Portal [{portal.room_id}] state has been changed to ENQUEUED")
                     await portal.update_state(state=PortalState.ENQUEUED)
-                    await send_conversation_event(
-                        portal=portal,
-                        event_type=ACDConversationEvents.QueueEmpty,
-                        queue_room_id=queue.room_id,
-                    )
+
+                await send_conversation_event(
+                    portal=portal,
+                    event_type=ACDConversationEvents.QueueEmpty,
+                    queue_room_id=queue.room_id,
+                    enqueued=put_enqueued_portal,
+                )
 
                 portal.unlock(transfer)
                 json_response = Util.create_response_data(
