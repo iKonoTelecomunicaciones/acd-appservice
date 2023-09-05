@@ -78,7 +78,8 @@ async def create(request: web.Request) -> web.Response:
                     - gupshup
                     - instagram
                     - facebook
-                    - meta
+                    - meta_facebook
+                    - meta_instagram
               example:
                   user_email: "@acd1:somewhere.com"
                   destination: "nobody@somewhere.com"
@@ -95,7 +96,6 @@ async def create(request: web.Request) -> web.Response:
     user = await _resolve_user_identifier(request=request)
 
     args = []
-    email = ""
 
     if request.body_exists:
         data = await request.json()
@@ -116,7 +116,7 @@ async def create(request: web.Request) -> web.Response:
         mute_reply=True,
     )
 
-    if puppet:
+    if isinstance(puppet, Puppet):
         response = {
             "user_id": puppet.custom_mxid,
             "control_room_id": puppet.control_room_id,
@@ -125,7 +125,7 @@ async def create(request: web.Request) -> web.Response:
 
         return web.json_response(response, status=201)
     else:
-        return web.json_response(**SERVER_ERROR)
+        return web.json_response(**puppet)
 
 
 @routes.post("/v1/cmd/pm")
