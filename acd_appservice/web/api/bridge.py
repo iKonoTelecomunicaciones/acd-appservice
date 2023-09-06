@@ -754,17 +754,21 @@ async def gupshup_update(request: web.Request) -> web.Response:
     await _resolve_user_identifier(request=request)
 
     if not request.body_exists:
-        return web.json_response({"detail": {"data": None, "message": "Please provide some data"}})
+        return web.json_response(
+            {"detail": {"data": None, "message": "Please provide some data"}}, status=422
+        )
 
     puppet = await _resolve_puppet_identifier(request=request)
     if puppet.bridge != "gupshup":
-        return web.json_response({"detail": {"data": None, "message": "Bridge invalid"}})
+        return web.json_response(
+            {"detail": {"data": None, "message": "Bridge invalid"}}, status=400
+        )
 
     gupshup_data = await request.json()
 
     if not gupshup_data.get("api_key"):
         return web.json_response(
-            {"detail": {"data": None, "message": "Please provide required variables"}}
+            {"detail": {"data": None, "message": "Please provide required variables"}}, status=422
         )
 
     bridge_connector = ProvisionBridge(
@@ -1093,17 +1097,21 @@ async def meta_update(request: web.Request) -> web.Response:
     await _resolve_user_identifier(request=request)
 
     if not request.body_exists:
-        return web.json_response({"detail": {"data": None, "message": "Please provide some data"}})
+        return web.json_response(
+            {"detail": {"data": None, "message": "Please provide some data"}}, status=422
+        )
 
     puppet = await _resolve_puppet_identifier(request=request)
-    if puppet.bridge != "meta":
-        return web.json_response({"detail": {"data": None, "message": "Bridge invalid"}})
+    if puppet.bridge != "meta_facebook" and puppet.bridge != "meta_instagram":
+        return web.json_response(
+            {"detail": {"data": None, "message": "Bridge invalid"}}, status=400
+        )
 
     meta_data = await request.json()
 
     if not meta_data.get("app_name") and not meta_data.get("page_access_token"):
         return web.json_response(
-            {"detail": {"data": None, "message": "Please provide required variables"}}
+            {"detail": {"data": None, "message": "Please provide required variables"}}, status=422
         )
 
     bridge_connector = ProvisionBridge(
