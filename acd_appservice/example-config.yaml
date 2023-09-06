@@ -441,6 +441,7 @@ bridges:
         shared_secret: ""
         endpoints:
             register_app: "/v1/register_app"
+            update_app: "/v1/update_app"
 
   meta_instagram:
     # Meta UserID
