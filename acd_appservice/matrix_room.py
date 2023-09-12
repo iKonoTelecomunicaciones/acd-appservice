@@ -107,7 +107,7 @@ class MatrixRoom:
         if not self.room_id:
             return
 
-        if not self.room_id in self.by_room_id:
+        if self.room_id not in self.by_room_id:
             self.by_room_id[self.room_id] = self
 
         if not self.main_intent:
