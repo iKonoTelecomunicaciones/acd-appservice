@@ -1026,16 +1026,26 @@ async def meta_register(request: web.Request) -> web.Response:
         "meta_page_access_token": meta_data.get("meta_page_access_token"),
     }
 
+    # Search if the puppet exist
     puppet = await _resolve_puppet_identifier(request=request)
+
+    # Add the notice room to the meta_app_data
     meta_app_data["notice_room"] = puppet.control_room_id
 
+    # We create a connector with the bridge
     bridge_connector = ProvisionBridge(
         session=puppet.intent.api.session, config=puppet.config, bridge=puppet.bridge
     )
 
+    # Register the app in the bridge
     status, data = await bridge_connector.meta_register_app(
         user_id=puppet.custom_mxid, data=meta_app_data
     )
+
+    # Update the puppet with the meta_app_id
+    if status in [200, 201]:
+        puppet.phone = meta_app_data.get("meta_app_page_id")
+        await puppet.update()
 
     return web.json_response(status=status, data=data)
 
