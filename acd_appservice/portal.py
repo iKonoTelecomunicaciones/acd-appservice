@@ -82,7 +82,7 @@ class Portal(DBPortal, MatrixRoom):
                 user_name_match = re.match(self.config["utils.username_regex"], self.creator)
                 phone = user_name_match.group("number")
                 updated_room_name = f"{new_room_name} ({phone})"
-            except:
+            except Exception:
                 updated_room_name = f"{new_room_name}"
 
             if self.config["acd.numbers_in_rooms"]:
@@ -165,6 +165,10 @@ class Portal(DBPortal, MatrixRoom):
         new_room_name = None
         emoji_number = ""
         bridges = self.config["bridges"]
+
+        if not self.creator:
+            return None
+
         for bridge in bridges:
             user_prefix = self.config[f"bridges.{bridge}.user_prefix"]
             if self.creator.startswith(f"@{user_prefix}"):
@@ -198,6 +202,10 @@ class Portal(DBPortal, MatrixRoom):
             A string
 
         """
+
+        if not self.creator:
+            return None
+
         phone_match = re.findall(r"\d+", self.creator)
         if phone_match:
             self.log.debug(f"Formatting phone number {phone_match[0]}")
